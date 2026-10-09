@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# duzy oryginalny model (strona uzywa kitchen-opt.glb)
+/public/models/kitchen.glb
+*.bak
