@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import OfertaDemoPage from "../demo/page";
-import OfferSync from "@/components/panel/OfferSync";
+import ClientOffer from "@/components/panel/ClientOffer";
 
 /*
  * Link wysłany klientowi z panelu: /oferta/<identyfikator>.
@@ -8,7 +7,7 @@ import OfferSync from "@/components/panel/OfferSync";
  * Strona jest eksportowana statycznie (output: "export"), więc nie da się
  * zbudować osobnej strony dla każdego linku. Budujemy jedną: /oferta/view,
  * a public/_redirects na Cloudflare podaje ją pod każdym /oferta/<id> (rewrite 200).
- * OfferSync czyta identyfikator z adresu i pobiera ofertę z API.
+ * ClientOffer czyta identyfikator z adresu i pobiera ofertę z API.
  * Przy zwykłym `next dev` (bez _redirects) działa /oferta/view?id=<identyfikator>.
  */
 export const metadata: Metadata = {
@@ -24,10 +23,5 @@ export function generateStaticParams() {
 }
 
 export default function OfertaPage() {
-  return (
-    <>
-      <OfertaDemoPage />
-      <OfferSync />
-    </>
-  );
+  return <ClientOffer />;
 }

@@ -57,6 +57,32 @@ export type OfferLink = {
   views: number;
 };
 
+export type CompanyData = {
+  name: string;
+  nip: string;
+  regon: string;
+  krs: string;
+  legalForm: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  vatStatus: string;
+};
+
+const COMPANY_LIMITS: Record<keyof CompanyData, number> = {
+  name: 300,
+  nip: 20,
+  regon: 20,
+  krs: 20,
+  legalForm: 200,
+  street: 200,
+  postalCode: 12,
+  city: 120,
+  vatStatus: 40,
+};
+
+const CLIENT_TYPES = ["private", "company"] as const;
+
 export type OfferEvent = { t: string; k: (typeof EVENT_KINDS)[number]; x: string };
 
 export type Offer = {
@@ -64,6 +90,9 @@ export type Offer = {
   title: string;
   client: string;
   greet: string | null;
+  clientType?: (typeof CLIENT_TYPES)[number];
+  company?: CompanyData;
+  contactPerson?: string;
   contact: string;
   layout: (typeof LAYOUTS)[number];
   base: number;
@@ -234,6 +263,17 @@ function validateLink(v: unknown): OfferLink | null {
   };
 }
 
+function validateCompany(v: unknown): CompanyData | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "object" || Array.isArray(v)) throw bad("Pole company ma zły format.");
+  const c = v as Record<string, unknown>;
+  const out = {} as CompanyData;
+  for (const key of Object.keys(COMPANY_LIMITS) as (keyof CompanyData)[]) {
+    out[key] = c[key] === undefined || c[key] === null ? "" : str(c[key], `company.${key}`, COMPANY_LIMITS[key]);
+  }
+  return out;
+}
+
 export function validateOffer(input: unknown): Offer {
   if (!input || typeof input !== "object" || Array.isArray(input)) throw bad("Oczekiwano obiektu oferty.");
   const o = input as Record<string, unknown>;
@@ -249,12 +289,19 @@ export function validateOffer(input: unknown): Offer {
     return { t: str(ev.t, "events.t", 40), k: oneOf(ev.k, EVENT_KINDS, "events.k"), x: str(ev.x, "events.x", 300) };
   });
   const greet = o.greet === null || o.greet === undefined ? null : str(o.greet, "greet", 60);
+  const clientType = o.clientType === undefined || o.clientType === null ? undefined : oneOf(o.clientType, CLIENT_TYPES, "clientType");
+  const company = validateCompany(o.company);
+  const contactPerson =
+    o.contactPerson === undefined || o.contactPerson === null ? undefined : str(o.contactPerson, "contactPerson", 200);
   const comment = o.comment === undefined || o.comment === null ? undefined : str(o.comment, "comment", 2000);
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
     client: str(o.client, "client", 200, { min: 1 }),
     greet,
+    ...(clientType ? { clientType } : {}),
+    ...(company ? { company } : {}),
+    ...(contactPerson !== undefined ? { contactPerson } : {}),
     contact: str(o.contact, "contact", 200),
     layout: oneOf(o.layout, LAYOUTS, "layout"),
     base: Math.round(o.base * 100) / 100,
@@ -325,7 +372,8 @@ export function publicView(o: Offer) {
   return {
     id: o.id,
     title: o.title,
-    greet: o.greet,
+    // Tylko nazwa, którą strona klienta pokazuje w "Oferta dla: …" (bez kontaktu, NIP-u, adresu).
+    who: o.clientType === "company" ? o.contactPerson || o.client : o.client,
     front: o.front,
     countertop: o.countertop,
     hardware: o.hardware,

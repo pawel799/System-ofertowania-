@@ -23,6 +23,7 @@ buduje je sam przy deployu), a oferty leżą w **Workers KV**.
 | `offer:KUCH-2026_12` | pełna oferta (JSON); numer oferty z `/` zamienionym na `_` |
 | `slug:<id-linku>` | klucz oferty, żeby strona klienta znalazła ofertę po linku |
 | `pinfail:<id-linku>` | licznik błędnych PIN-ów (wygasa po godzinie, max 10 prób) |
+| `firma:<nip>` | odpowiedź wyszukiwania firmy (znaleziona / brak w wykazie), wygasa po 24 h |
 
 ## API
 
@@ -33,6 +34,7 @@ buduje je sam przy deployu), a oferty leżą w **Workers KV**.
 | `GET/PUT/DELETE /api/offers/:id` | panel (token) | jedna oferta; `:id` = `KUCH-2026_12` |
 | `GET /api/public/:link` | klient | tylko materiały i podstawowe dane oferty (404 / 410 wygasła / 401 PIN) |
 | `POST /api/public/:link/open` | klient | zapis otwarcia (licznik, historia, status „Otwarta”) |
+| `GET /api/firma?nip=…` | panel (token) | dane firmy po NIP: biała lista VAT (MF) + KRS; wynik 24 h w KV pod `firma:<nip>` |
 
 Panel wysyła nagłówek `Authorization: Bearer <PANEL_TOKEN>`. Token wpisuje się
 raz w panelu, zostaje w localStorage tej przeglądarki. W kodzie nie ma żadnego sekretu.
@@ -93,3 +95,12 @@ npm run pages:dev             # http://localhost:8788, KV lokalne w .wrangler/
 wymaga Node 22+; nie jest w zależnościach, żeby build na Cloudflare był lżejszy).
 Zwykłe `npm run dev` działa jak dotąd, ale bez API: panel przechodzi wtedy
 w „Dane demo” (localStorage + przykładowe oferty).
+
+## Wyszukiwanie firmy po NIP
+
+`functions/api/firma.ts` (dawniej Next route handler, który nie działa w eksporcie
+statycznym). Ta sama odpowiedź (`CompanyLookup` z `src/components/panel/company.ts`)
+i te same kody: 400 zły NIP, 404 brak w wykazie, 429 limit, 502 usługa nie odpowiada.
+Wymaga tokenu panelu (401 bez niego), bo wykaz VAT ma limit 100 zapytań dziennie
+z jednego IP. Bufor w KV, bo pamięć funkcji nie przetrwa między instancjami, a Cache
+API nie działa na domenach `*.pages.dev`. Bez bindingu `OFFERS` działa bez bufora.

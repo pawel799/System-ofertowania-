@@ -19,11 +19,14 @@ function OptionGroup({
   options,
   value,
   onChange,
+  showDelta = true,
 }: {
   title: string;
   options: Option[];
   value: string;
   onChange: (id: string) => void;
+  /** false, gdy oferta ukrywa ceny – wtedy bez dopłat przy opcjach. */
+  showDelta?: boolean;
 }) {
   return (
     <div>
@@ -46,7 +49,7 @@ function OptionGroup({
             >
               {option.name}
               {/* Dopłaty tylko tam, gdzie są – „w cenie” przy każdej opcji zaśmieca pasek. */}
-              {option.delta !== 0 && (
+              {showDelta && option.delta !== 0 && (
                 <span
                   className={`text-xs tabular-nums ${
                     selected ? "text-white/60" : "text-stone-500"
@@ -65,8 +68,14 @@ function OptionGroup({
 
 export default function MaterialsPanel({
   className = "",
+  base,
+  showPrice = true,
 }: {
   className?: string;
+  /** Cena bazowa zabudowy; domyślnie cennik demo (BASE_PRICE). */
+  base?: number;
+  /** false = zamiast kwoty informacja, że cena będzie po pomiarze. */
+  showPrice?: boolean;
 }) {
   // Front, blat i okucia są wspólne z modelem 3D (osobne magazyny stanu).
   const front = useFront();
@@ -75,7 +84,7 @@ export default function MaterialsPanel({
   const [requested, setRequested] = useState(false);
 
   const selectedFront = FRONTS.find((f) => f.id === front) ?? FRONTS[0];
-  const total = totalPrice({ front, countertop, hardware });
+  const total = totalPrice({ front, countertop, hardware }, base);
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
@@ -124,6 +133,7 @@ export default function MaterialsPanel({
             options={COUNTERTOPS}
             value={countertop}
             onChange={setCountertop}
+            showDelta={showPrice}
           />
 
           <OptionGroup
@@ -131,6 +141,7 @@ export default function MaterialsPanel({
             options={HARDWARE}
             value={hardware}
             onChange={setHardware}
+            showDelta={showPrice}
           />
         </div>
 
@@ -141,7 +152,7 @@ export default function MaterialsPanel({
               className="text-2xl leading-tight tabular-nums text-stone-900"
               aria-live="polite"
             >
-              {formatPln(total)}
+              {showPrice ? formatPln(total) : "Po pomiarze"}
             </p>
             {requested ? (
               <p className="text-[11px] text-stone-500" role="status">

@@ -137,6 +137,7 @@
 .pnl .vp-tag { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); font-size: 11.5px; color: rgba(245, 245, 244, 0.72); padding: 5px 8px; border-radius: 7px; background: var(--material); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
 .pnl .vp-open { flex: none; white-space: nowrap; pointer-events: auto; height: 30px; padding: 0 10px; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: #f5f5f4; background: var(--material); -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); display: inline-flex; align-items: center; gap: 6px; transition: transform 160ms var(--ease-out); }
 .pnl .vp-open:active { transform: scale(0.97); }
+.pnl .vp-open-off { color: rgba(245, 245, 244, 0.55); }
 .pnl .vp-open svg { width: 13px; height: 13px; }
 
 .pnl .specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 20px; margin: 20px 0 0; padding: 0; }
@@ -239,6 +240,24 @@
 .pnl .m-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--g3); background: var(--g2); }
 .pnl .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 14px; }
 .pnl .err { color: var(--red); font-size: 12.5px; margin: 8px 0 0; }
+.pnl .specs.company { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--g3); }
+
+/* Firma: NIP + dane z rejestrów */
+.pnl .nip-row { display: flex; gap: 8px; }
+.pnl .nip-row .input { flex: 1; min-width: 0; }
+.pnl .nip-row .btn { height: 34px; flex: none; }
+.pnl .mono-input { font-family: var(--mono); letter-spacing: 0.02em; }
+.pnl .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 60%, transparent); }
+.pnl .nip-msg { margin: 2px 0 0; font-size: 12.5px; color: var(--text-2); display: flex; align-items: center; gap: 7px; }
+.pnl .nip-msg.ok { color: var(--green); }
+.pnl .nip-msg.err { color: var(--red); }
+.pnl .spin { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--g4); border-top-color: var(--text-2); animation: pnl-spin 600ms linear infinite; flex: none; }
+@keyframes pnl-spin { to { transform: rotate(360deg); } }
+.pnl .grid-addr { display: grid; grid-template-columns: minmax(0, 2fr) minmax(90px, 0.8fr) minmax(0, 1.2fr); gap: 0 14px; }
+@media (max-width: 520px) { .pnl .grid-addr { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .pnl .grid-addr > :first-child { grid-column: 1 / -1; } }
+/* Zmiana prywatny/firma: tylko przenikanie, bez ruchu (formularz ma się nie przesuwać pod palcem). */
+.pnl .swap-in { animation: pnl-fade 200ms var(--ease-out); }
+@keyframes pnl-fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Tooltip: zaczepiony przy przycisku, sąsiednie bez opóźnienia */
 .pnl .tip { position: fixed; z-index: 90; pointer-events: none; padding: 5px 8px; border-radius: 7px; background: var(--ink); color: var(--ink-text); font-size: 12px; font-weight: 500; white-space: nowrap; display: flex; gap: 6px; align-items: center; opacity: 0; transform: scale(0.97); transition: opacity 125ms var(--ease-out), transform 125ms var(--ease-out); }
@@ -270,5 +289,6 @@
 @media (prefers-reduced-motion: reduce) {
   .pnl .modal, .pnl .menu, .pnl .tip, .pnl .toast { transform: none !important; }
   .pnl .seg-copy { transition: none; }
+  .pnl .spin { animation-duration: 1.6s; }
   .pnl .btn:active, .pnl .sw:active, .pnl .copy:active, .pnl .icon-btn:active, .pnl .vp-open:active, .pnl .hold[data-holding] { transform: none; }
 }

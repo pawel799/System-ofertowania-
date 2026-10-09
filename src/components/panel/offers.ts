@@ -1,3 +1,5 @@
+import type { CompanyData } from "./company";
+
 /*
  * Dane panelu ofert. Zapisywane w Cloudflare KV przez API (/api/offers, patrz
  * offerApi.ts i functions/). localStorage i SAMPLE_OFFERS zostają tylko jako
@@ -67,10 +69,19 @@ export type EventKind =
 
 export type OfferEvent = { t: string; k: EventKind; x: string };
 
+export type ClientType = "private" | "company";
+
 export type Offer = {
   id: string;
   title: string;
+  /** Imię i nazwisko albo nazwa firmy – to widać na liście i w ofercie. */
   client: string;
+  /** Brak = klient prywatny (starsze zapisy). */
+  clientType?: ClientType;
+  /** Dane firmy (tylko dla clientType = "company"). */
+  company?: CompanyData;
+  /** Osoba kontaktowa po stronie firmy. */
+  contactPerson?: string;
   /** Imię do powitania w wiadomości; null = "Dzień dobry!". */
   greet: string | null;
   contact: string;
@@ -170,7 +181,20 @@ export const SAMPLE_OFFERS: Offer[] = [
     id: "KUCH-2026/13",
     title: "Dąb wędzony, podkowa",
     client: "Apartamenty Nadwiślańskie",
-    greet: null,
+    clientType: "company",
+    company: {
+      name: "Apartamenty Nadwiślańskie",
+      nip: "",
+      regon: "",
+      krs: "",
+      legalForm: "",
+      street: "ul. Wioślarska 4",
+      postalCode: "00-001",
+      city: "Warszawa",
+      vatStatus: "",
+    },
+    contactPerson: "Joanna Lis",
+    greet: "Joanna",
     contact: "biuro@nadwislanskie.example.pl",
     layout: "U",
     base: 52_000,
@@ -228,7 +252,6 @@ export function saveOffers(offers: Offer[]) {
 const MONTHS = ["sty", "lut", "mar", "kwi", "maj", "cze", "lip", "sie", "wrz", "paź", "lis", "gru"];
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/** Znacznik czasu zdarzenia. Pełna data, bo historia jest teraz trwała ("dziś" by się zestarzało). */
 export function stamp() {
   const d = new Date();
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`;

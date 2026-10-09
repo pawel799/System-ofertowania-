@@ -62,7 +62,9 @@ async function call<T>(method: string, path: string, opts: { body?: unknown; hea
   return data as T;
 }
 
-const auth = () => ({ authorization: `Bearer ${getToken()}` });
+/** Nagłówek z tokenem panelu (oferty, wyszukiwanie firmy po NIP). */
+export const panelAuth = () => ({ authorization: `Bearer ${getToken()}` });
+const auth = panelAuth;
 
 export const panelApi = {
   list: () => call<{ offers: Offer[] }>("GET", "/api/offers", { headers: auth() }).then((r) => r.offers),
@@ -77,7 +79,8 @@ export const panelApi = {
 export type PublicOffer = {
   id: string;
   title: string;
-  greet: string | null;
+  /** Imię i nazwisko (albo osoba kontaktowa firmy) do "Oferta dla: …". */
+  who: string;
   front: string;
   countertop: string;
   hardware: string;

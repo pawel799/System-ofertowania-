@@ -31,11 +31,16 @@ import {
   offerMessage,
   stamp,
   type Channel,
+  type ClientType,
   type EventKind,
   type Layout,
   type Offer,
   type Status,
 } from "./offers";
+import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
+import { panelAuth } from "./offerApi";
+import { PanelState, TokenDialog } from "./PanelGate";
+import { usePanelOffers } from "./usePanelOffers";
 import {
   CopyButton,
   Counter,
@@ -46,8 +51,6 @@ import {
   Tooltips,
   toast,
 } from "./ui";
-import { PanelState, TokenDialog } from "./PanelGate";
-import { usePanelOffers } from "./usePanelOffers";
 
 // Ta sama scena co na stronie oferty, osadzona w okienku podglądu.
 const KitchenGlbScene = dynamic(() => import("../KitchenGlbScene"), {
@@ -570,7 +573,8 @@ export default function PanelApp() {
                       style={{ background: FRONTS.find((f) => f.id === o.front)?.color }}
                     />
                     <span className="row-sub">
-                      <span className="mono">{o.id}</span> · {o.client} · {lastTime(o)}
+                      <span className="mono">{o.id}</span> · {o.clientType === "company" ? "Firma: " : ""}
+                      {o.client} · {lastTime(o)}
                     </span>
                   </button>
                 </li>
@@ -619,7 +623,20 @@ export default function PanelApp() {
                     <path d="M6 3.5h6.5V10M12.5 3.5 4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </a>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  className="vp-open vp-open-off"
+                  onClick={() =>
+                    toast("Najpierw utwórz link", {
+                      type: "info",
+                      desc: "Strona klienta działa pod linkiem z sekcji „Link dla klienta”.",
+                    })
+                  }
+                >
+                  Otwórz jako klient
+                </button>
+              )}
             </div>
           </div>
 
@@ -641,6 +658,37 @@ export default function PanelApp() {
               <dd>{offer.contact || "—"}</dd>
             </div>
           </dl>
+
+          {offer.clientType === "company" && offer.company ? (
+            <dl className="specs company">
+              <div>
+                <dt>Firma</dt>
+                <dd>{offer.company.name}</dd>
+              </div>
+              <div>
+                <dt>NIP</dt>
+                <dd className="mono">{offer.company.nip ? formatNip(offer.company.nip) : "—"}</dd>
+              </div>
+              <div>
+                <dt>Adres</dt>
+                <dd>
+                  {[offer.company.street, [offer.company.postalCode, offer.company.city].filter(Boolean).join(" ")]
+                    .filter(Boolean)
+                    .join(", ") || "—"}
+                </dd>
+              </div>
+              <div>
+                <dt>Osoba kontaktowa</dt>
+                <dd>{offer.contactPerson || "—"}</dd>
+              </div>
+              {offer.company.krs ? (
+                <div>
+                  <dt>KRS</dt>
+                  <dd className="mono">{offer.company.krs}</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
 
           <div className="mats">
             <div>
@@ -841,6 +889,36 @@ function StatusMenu({
 
 /* ---------- Nowa oferta (modal zostaje na środku) ---------- */
 
+type CompanyForm = {
+  nip: string;
+  name: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  regon: string;
+  krs: string;
+  legalForm: string;
+  vatStatus: string;
+};
+
+const EMPTY_COMPANY: CompanyForm = {
+  nip: "",
+  name: "",
+  street: "",
+  postalCode: "",
+  city: "",
+  regon: "",
+  krs: "",
+  legalForm: "",
+  vatStatus: "",
+};
+
+type Lookup =
+  | { state: "idle" }
+  | { state: "loading"; nip: string }
+  | { state: "done"; nip: string; sources: ("vat" | "krs")[]; vatStatus: string }
+  | { state: "error"; nip: string; message: string };
+
 function NewOfferDialog({
   instant,
   nextId,
@@ -855,9 +933,16 @@ function NewOfferDialog({
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState("");
+  const [type, setType] = useState<ClientType>("private");
+  const [company, setCompany] = useState<CompanyForm>(EMPTY_COMPANY);
+  const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
+  const formRef = useRef<HTMLFormElement>(null);
   const firstRef = useRef<HTMLInputElement>(null);
+  const nipRef = useRef<HTMLInputElement>(null);
+  const lastFetched = useRef("");
   const [form, setForm] = useState({
     client: "",
+    contactPerson: "",
     contact: "",
     title: "",
     layout: "L" as Layout,
@@ -880,12 +965,79 @@ function NewOfferDialog({
     setTimeout(onClose, instant ? 0 : 150);
   };
 
+  const switchType = (t: ClientType) => {
+    setType(t);
+    setError("");
+    requestAnimationFrame(() => (t === "company" ? nipRef : firstRef).current?.focus());
+  };
+
+  const nipDigits = cleanNip(company.nip);
+  const nipInvalid = nipDigits.length === 10 && !isValidNip(nipDigits);
+
+  const fetchCompany = useCallback(async (nip: string) => {
+    lastFetched.current = nip;
+    setLookup({ state: "loading", nip });
+    try {
+      const res = await fetch(`/api/firma?nip=${nip}`, { headers: panelAuth() });
+      const data = (await res.json()) as CompanyLookup;
+      if (lastFetched.current !== nip) return; // w międzyczasie wpisano inny NIP
+      if (!data.ok) {
+        setLookup({ state: "error", nip, message: data.error });
+        return;
+      }
+      const c = data.company;
+      setCompany((prev) => ({
+        ...prev,
+        name: c.name,
+        street: c.street,
+        postalCode: c.postalCode,
+        city: c.city,
+        regon: c.regon,
+        krs: c.krs,
+        legalForm: c.legalForm,
+        vatStatus: c.vatStatus,
+      }));
+      setLookup({ state: "done", nip, sources: data.sources, vatStatus: c.vatStatus });
+      // Krótkie podświetlenie pól, które się uzupełniły (bez ruchu – tylko kolor).
+      requestAnimationFrame(() => {
+        formRef.current?.querySelectorAll<HTMLElement>("[data-autofill]").forEach((el) => {
+          el.animate(
+            [
+              { backgroundColor: "color-mix(in srgb, var(--accent) 16%, var(--g2))" },
+              { backgroundColor: "var(--g2)" },
+            ],
+            { duration: 900, easing: "ease" },
+          );
+        });
+      });
+    } catch {
+      if (lastFetched.current !== nip) return;
+      setLookup({ state: "error", nip, message: "Nie udało się połączyć z serwerem. Sprawdź internet albo wpisz dane ręcznie." });
+    }
+  }, []);
+
+  // Pełny, poprawny NIP pobiera dane sam – bez klikania.
+  useEffect(() => {
+    if (type !== "company" || !isValidNip(nipDigits) || lastFetched.current === nipDigits) return;
+    const t = setTimeout(() => void fetchCompany(nipDigits), 250);
+    return () => clearTimeout(t);
+  }, [type, nipDigits, fetchCompany]);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const client = form.client.trim();
     const title = form.title.trim();
-    if (!client || !title) {
-      setError("Uzupełnij klienta i nazwę oferty.");
+    const isCompany = type === "company";
+    const client = isCompany ? company.name.trim() : form.client.trim();
+    if (!client) {
+      setError(isCompany ? "Uzupełnij nazwę firmy albo pobierz ją po NIP-ie." : "Wpisz imię i nazwisko klienta.");
+      return;
+    }
+    if (isCompany && company.nip.trim() && !isValidNip(company.nip)) {
+      setError("NIP ma błąd. Popraw go albo zostaw puste pole.");
+      return;
+    }
+    if (!title) {
+      setError("Wpisz nazwę oferty.");
       return;
     }
     const base = Number(form.base.replace(/\s/g, "").replace(",", "."));
@@ -893,12 +1045,17 @@ function NewOfferDialog({
       setError("Cena bazowa musi być liczbą większą od zera.");
       return;
     }
-    const company = /^(pracownia|firma|apartamenty|studio|sklep|biuro)/i.test(client);
+    const person = isCompany ? form.contactPerson.trim() : client;
     onCreate({
       id: nextId,
       title,
       client,
-      greet: !company && /\s/.test(client) ? client.split(/\s+/)[0] : null,
+      clientType: type,
+      company: isCompany
+        ? { ...company, nip: cleanNip(company.nip), name: client }
+        : undefined,
+      contactPerson: isCompany ? person || undefined : undefined,
+      greet: /\s/.test(person) || (isCompany && person) ? person.split(/\s+/)[0] : null,
       contact: form.contact.trim(),
       layout: form.layout,
       base,
@@ -907,11 +1064,31 @@ function NewOfferDialog({
       hardware: form.hardware,
       status: "szkic",
       link: null,
-      events: [{ t: stamp(), k: "create", x: "Oferta przygotowana" }],
+      events: [{ t: stamp(), k: "create", x: isCompany ? "Oferta przygotowana dla firmy" : "Oferta przygotowana" }],
     });
   };
 
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setC = (k: keyof CompanyForm) => (v: string) => setCompany((c) => ({ ...c, [k]: v }));
+
+  const lookupMsg =
+    nipInvalid ? (
+      <p className="nip-msg err">Ten NIP ma błąd (nie zgadza się suma kontrolna).</p>
+    ) : lookup.state === "loading" ? (
+      <p className="nip-msg" role="status">
+        <span className="spin" aria-hidden />
+        Szukam w wykazie VAT i KRS…
+      </p>
+    ) : lookup.state === "error" && lookup.nip === nipDigits ? (
+      <p className="nip-msg err">{lookup.message}</p>
+    ) : lookup.state === "done" && lookup.nip === nipDigits ? (
+      <p className="nip-msg ok" role="status">
+        Uzupełnione z {lookup.sources.includes("krs") ? "wykazu VAT i KRS" : "wykazu VAT"}
+        {lookup.vatStatus ? ` · VAT: ${lookup.vatStatus.toLowerCase()}` : ""}. Możesz poprawić każde pole.
+      </p>
+    ) : (
+      <p className="nip-msg faint">Wpisz NIP, a nazwę i adres uzupełnię z rejestrów.</p>
+    );
 
   return (
     <div
@@ -921,7 +1098,7 @@ function NewOfferDialog({
       onKeyDown={(e) => e.key === "Escape" && close()}
     >
       <div className="backdrop" onClick={close} />
-      <form className="modal" role="dialog" aria-modal="true" aria-labelledby="new-title" onSubmit={submit} noValidate>
+      <form ref={formRef} className="modal" role="dialog" aria-modal="true" aria-labelledby="new-title" onSubmit={submit} noValidate>
         <div className="m-pad">
           <div className="m-top">
             <h2 id="new-title" style={{ fontSize: 15 }}>
@@ -931,15 +1108,104 @@ function NewOfferDialog({
               <CloseIcon />
             </button>
           </div>
+
+          <div className="field">
+            <span className="lab">Klient</span>
+            <Seg
+              label="Rodzaj klienta"
+              value={type}
+              onChange={switchType}
+              options={[
+                { value: "private", label: "Klient prywatny" },
+                { value: "company", label: "Firma" },
+              ]}
+            />
+          </div>
+
+          {type === "private" ? (
+            <div className="grid2 swap-in" key="private">
+              <div className="field">
+                <label htmlFor="n-client">Imię i nazwisko</label>
+                <input id="n-client" ref={firstRef} className="input" autoComplete="off" value={form.client} onChange={(e) => set("client")(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="n-contact">E-mail lub telefon</label>
+                <input id="n-contact" className="input" autoComplete="off" autoCapitalize="none" value={form.contact} onChange={(e) => set("contact")(e.target.value)} />
+              </div>
+            </div>
+          ) : (
+            <div className="swap-in" key="company">
+              <div className="field">
+                <label htmlFor="n-nip">NIP</label>
+                <div className="nip-row">
+                  <input
+                    id="n-nip"
+                    ref={nipRef}
+                    className="input mono-input"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="np. 526-025-02-74"
+                    aria-invalid={nipInvalid || undefined}
+                    value={company.nip}
+                    onChange={(e) => setC("nip")(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (isValidNip(nipDigits)) void fetchCompany(nipDigits);
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    disabled={!isValidNip(nipDigits) || lookup.state === "loading"}
+                    onClick={() => void fetchCompany(nipDigits)}
+                  >
+                    {lookup.state === "loading" ? "Szukam…" : "Pobierz dane"}
+                  </button>
+                </div>
+                {lookupMsg}
+              </div>
+              <div className="field">
+                <label htmlFor="n-cname">Nazwa firmy</label>
+                <input id="n-cname" data-autofill className="input" autoComplete="off" value={company.name} onChange={(e) => setC("name")(e.target.value)} />
+              </div>
+              <div className="grid-addr">
+                <div className="field">
+                  <label htmlFor="n-street">Ulica i numer</label>
+                  <input id="n-street" data-autofill className="input" autoComplete="off" value={company.street} onChange={(e) => setC("street")(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="n-postal">Kod</label>
+                  <input id="n-postal" data-autofill className="input" inputMode="numeric" autoComplete="off" placeholder="00-000" value={company.postalCode} onChange={(e) => setC("postalCode")(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="n-city">Miejscowość</label>
+                  <input id="n-city" data-autofill className="input" autoComplete="off" value={company.city} onChange={(e) => setC("city")(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid2">
+                <div className="field">
+                  <label htmlFor="n-regon">REGON</label>
+                  <input id="n-regon" data-autofill className="input mono-input" inputMode="numeric" autoComplete="off" value={company.regon} onChange={(e) => setC("regon")(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="n-krs">KRS</label>
+                  <input id="n-krs" data-autofill className="input mono-input" inputMode="numeric" autoComplete="off" placeholder="brak (np. JDG)" value={company.krs} onChange={(e) => setC("krs")(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="n-person">Osoba kontaktowa</label>
+                  <input id="n-person" className="input" autoComplete="off" value={form.contactPerson} onChange={(e) => set("contactPerson")(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label htmlFor="n-contact">E-mail lub telefon</label>
+                  <input id="n-contact" className="input" autoComplete="off" autoCapitalize="none" value={form.contact} onChange={(e) => set("contact")(e.target.value)} />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid2">
-            <div className="field">
-              <label htmlFor="n-client">Klient</label>
-              <input id="n-client" ref={firstRef} className="input" placeholder="Imię i nazwisko albo firma" autoComplete="off" value={form.client} onChange={(e) => set("client")(e.target.value)} />
-            </div>
-            <div className="field">
-              <label htmlFor="n-contact">E-mail lub telefon</label>
-              <input id="n-contact" className="input" autoComplete="off" autoCapitalize="none" value={form.contact} onChange={(e) => set("contact")(e.target.value)} />
-            </div>
             <div className="field">
               <label htmlFor="n-title">Nazwa oferty</label>
               <input id="n-title" className="input" placeholder="Np. Dąb naturalny, układ L" autoComplete="off" value={form.title} onChange={(e) => set("title")(e.target.value)} />
