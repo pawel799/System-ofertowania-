@@ -218,7 +218,7 @@ function KitchenModel({
 }
 
 
-function LensShift() {
+function LensShift({ enabled = true }: { enabled?: boolean }) {
   const camera = useThree((state) => state.camera);
   const width = useThree((state) => state.size.width);
   const height = useThree((state) => state.size.height);
@@ -226,11 +226,11 @@ function LensShift() {
   useLayoutEffect(() => {
     if (!(camera instanceof PerspectiveCamera)) return;
     const aspect = width / height;
-    const shift = width >= 1024 && aspect > 1 ? LENS_SHIFT : 0;
+    const shift = enabled && width >= 1024 && aspect > 1 ? LENS_SHIFT : 0;
     const viewWidth = 2 * Math.tan(MathUtils.degToRad(camera.fov / 2)) * aspect;
     camera.filmOffset = shift * camera.getFilmWidth() * viewWidth;
     camera.updateProjectionMatrix();
-  }, [camera, width, height]);
+  }, [camera, width, height, enabled]);
 
   return null;
 }
@@ -324,7 +324,15 @@ class SceneErrorBoundary extends Component<
   }
 }
 
-export default function KitchenGlbScene() {
+/**
+ * embedded = true: scena wypełnia rodzica (np. podgląd w panelu ofert)
+ * zamiast całego okna i nie przesuwa obrazu pod panel boczny.
+ */
+export default function KitchenGlbScene({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   // Gdy komputer nie wyrabia, zmniejszamy rozdzielczość i jakość AO.
   const [lowQuality, setLowQuality] = useState(false);
   // Licznik FPS ma sens tylko wtedy, gdy klatki faktycznie lecą, czyli podczas
@@ -332,7 +340,13 @@ export default function KitchenGlbScene() {
   const [orbiting, setOrbiting] = useState(false);
 
   return (
-    <div className="fixed inset-0 h-screen w-screen bg-[#0c0b0a]">
+    <div
+      className={
+        embedded
+          ? "absolute inset-0 h-full w-full bg-[#0c0b0a]"
+          : "fixed inset-0 h-screen w-screen bg-[#0c0b0a]"
+      }
+    >
       <SceneErrorBoundary>
         {/* frameloop="demand": nowa klatka tylko przy zmianie (ruch kamery,
             doczytanie modelu), a nie 60 razy na sekundę w bezruchu. */}
@@ -352,7 +366,7 @@ export default function KitchenGlbScene() {
               onFallback={() => setLowQuality(true)}
             />
           )}
-          <LensShift />
+          <LensShift enabled={!embedded} />
           <Suspense fallback={<Loader />}>
             <KitchenModel
               onOrbitStart={() => setOrbiting(true)}

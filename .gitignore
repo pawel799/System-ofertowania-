@@ -38,3 +38,7 @@ next-env.d.ts
 # duzy oryginalny model (strona uzywa kitchen-opt.glb)
 /public/models/kitchen.glb
 *.bak
+
+# Cloudflare: lokalne sekrety i dane wrangler pages dev (nie commitować)
+.dev.vars
+.wrangler/

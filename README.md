@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Cloudflare Pages (oferty w KV)
+
+Oferty z panelu zapisują się w Cloudflare (Pages Functions + Workers KV), więc
+linki dla klientów działają na każdym urządzeniu. Konfiguracja (KV `OFFERS`,
+sekret `PANEL_TOKEN`, build `npm run build` → `out`, `NODE_VERSION=22`) i
+uruchamianie lokalne: [docs/cloudflare.md](docs/cloudflare.md).

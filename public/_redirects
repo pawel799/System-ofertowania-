@@ -1,0 +1,9 @@
+# Cloudflare Pages: linki klientów /oferta/<id> pokazują jedną statyczną stronę
+# /oferta/view (rewrite 200, adres w przeglądarce się nie zmienia).
+# Reguły działają od góry i "zawsze", nawet gdy plik istnieje, dlatego
+# prawdziwe strony (demo, view i ich pliki .txt Next.js) są wyłączone wcześniej.
+/oferta/demo      /oferta/demo      200
+/oferta/demo.txt  /oferta/demo.txt  200
+/oferta/view      /oferta/view      200
+/oferta/view.txt  /oferta/view.txt  200
+/oferta/:id       /oferta/view      200

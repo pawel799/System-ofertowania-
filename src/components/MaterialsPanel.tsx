@@ -8,22 +8,9 @@ import {
 } from "./countertopStore";
 import { FRONTS, setFront, useFront } from "./frontStore";
 import { HARDWARE, setHardware, useHardware } from "./hardwareStore";
+import { formatPln, totalPrice } from "./pricing";
 
 type Option = { id: string; name: string; delta: number };
-
-const BASE_PRICE = 24_900;
-
-const NBSP = "\u00A0";
-
-// Polski zapis kwot: spacja (nierozdzielająca) co 3 cyfry, np. "24 900 zł", "1 200 zł".
-// Intl.NumberFormat("pl-PL") nie grupuje liczb 4-cyfrowych ("1200"), dlatego
-// grupujemy ręcznie – tak samo na serwerze i w przeglądarce.
-function formatPln(value: number) {
-  const digits = Math.abs(Math.round(value))
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
-  return `${value < 0 ? "\u2212" : ""}${digits}${NBSP}zł`;
-}
 
 const GROUP_LABEL = "text-[11px] uppercase tracking-[0.2em] text-stone-500";
 
@@ -88,11 +75,7 @@ export default function MaterialsPanel({
   const [requested, setRequested] = useState(false);
 
   const selectedFront = FRONTS.find((f) => f.id === front) ?? FRONTS[0];
-  const total =
-    BASE_PRICE +
-    selectedFront.delta +
-    (COUNTERTOPS.find((c) => c.id === countertop)?.delta ?? 0) +
-    (HARDWARE.find((h) => h.id === hardware)?.delta ?? 0);
+  const total = totalPrice({ front, countertop, hardware });
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
