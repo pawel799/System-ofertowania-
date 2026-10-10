@@ -68,11 +68,10 @@ nawet wtedy, gdy plik istnieje. Przy zwykłym `next dev` działa `/oferta/view?i
    Też dla Production i Preview. To samo hasło wpisuje się w panelu.
 4. **Settings → Build**: polecenie `npm run build`, katalog wyjściowy `out`,
    zmienna środowiskowa **`NODE_VERSION` = `22`**.
-5. **Repozytorium**: Cloudflare buduje teraz z kopii zrobionej przez
-   cloudflare[bot] (`pawel799/system-ofertowania`). Projekt Pages trzeba
-   podłączyć do właściwego repo **`pawel799/System-ofertowania-`**
-   (Settings → Builds → Git repository, albo nowy projekt Pages z tego repo
-   i ustawienia z punktów 1–4).
+5. **Repozytorium**: projekt `system-ofertowania` jest wdrażany ręcznie
+   (Direct Upload, `wrangler pages deploy`) i nie da się go przełączyć na Gita.
+   Automatyczny deploy z **`pawel799/System-ofertowania-`** wymaga nowego
+   projektu Pages – krok po kroku w [`deploy-z-gita.md`](deploy-z-gita.md).
 6. Po zmianie bindingów/sekretów zrób ponowny deploy (bindingi działają od
    następnego wdrożenia).
 
