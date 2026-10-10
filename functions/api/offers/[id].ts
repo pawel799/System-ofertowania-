@@ -1,7 +1,7 @@
 /*
  * /api/offers/:id  (id = numer oferty z "/" zamienionym na "_", np. KUCH-2026_12)
  *   GET    – jedna oferta
- *   PUT    – zapis zmian z panelu (łączy otwarcia zapisane w międzyczasie przez klienta)
+ *   PUT    – zapis zmian z panelu (łączy otwarcia i uwagi zapisane w międzyczasie przez klienta)
  *   DELETE – usunięcie oferty i jej linku
  * Wszystko wymaga tokenu panelu.
  */
@@ -51,13 +51,17 @@ export const onRequestPut = handle(async (ctx) => {
   const newSlug = merged.link?.slug ?? null;
 
   if (merged.link && oldSlug === newSlug && existing.link) {
-    // Panel mógł mieć starsze dane: nie gubimy otwarć zapisanych przez stronę klienta.
+    // Panel mógł mieć starsze dane: nie gubimy otwarć ani uwag zapisanych przez stronę klienta.
     merged.link = { ...merged.link, views: Math.max(merged.link.views, existing.link.views) };
     const seen = new Set(merged.events.map((e) => JSON.stringify(e)));
-    const missing = existing.events.filter((e) => e.k === "open" && !seen.has(JSON.stringify(e)));
+    const missing = existing.events.filter((e) => (e.k === "open" || e.k === "comment") && !seen.has(JSON.stringify(e)));
     if (missing.length) {
       merged.events = [...merged.events, ...missing];
       if (merged.status === "wyslany") merged.status = "otwarty";
+    }
+    if (missing.some((e) => e.k === "comment")) {
+      merged.comment = existing.comment;
+      if (merged.status === "wyslany" || merged.status === "otwarty") merged.status = "poprawki";
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import OfferView from "../OfferView";
+import ClientComments from "./ClientComments";
 import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
@@ -37,11 +38,14 @@ export default function ClientOffer() {
   const [slug, setSlug] = useState("");
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
+  // PIN, z którym oferta się otworzyła – potrzebny też przy wysyłaniu uwag.
+  const [okPin, setOkPin] = useState<string | undefined>();
   const recorded = useRef(false);
 
   const load = useCallback(async (s: string, withPin?: string) => {
     try {
       const offer = await publicApi.get(s, withPin);
+      setOkPin(withPin);
       setState({ k: "ready", offer });
       if (!recorded.current) {
         recorded.current = true;
@@ -83,6 +87,7 @@ export default function ClientOffer() {
         eyebrow={`Oferta dla: ${offer.who}`}
         base={offer.base}
         showPrice={offer.showPrice}
+        actions={offer.comments ? <ClientComments slug={slug} pin={okPin} /> : undefined}
       />
     );
   }

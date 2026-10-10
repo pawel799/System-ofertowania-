@@ -12,6 +12,7 @@ export default function OfferView({
   eyebrow,
   base,
   showPrice = true,
+  actions,
 }: {
   /** Numer oferty, np. "KUCH-2026/12". */
   code: string;
@@ -21,6 +22,8 @@ export default function OfferView({
   /** Cena bazowa zabudowy (domyślnie cennik demo). */
   base?: number;
   showPrice?: boolean;
+  /** Przyciski pod tytułem (np. uwagi klienta na stronie z linku). */
+  actions?: ReactNode;
 }) {
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#0c0b0a] text-stone-100">
@@ -52,6 +55,7 @@ export default function OfferView({
             ) : null}
             {/* Nagłówek: docelowo font Sreda – niedostępny w Google Fonts, patrz raport. */}
             <h1 className="mt-4 text-4xl leading-[1.05] text-stone-50 md:text-6xl">{title}</h1>
+            {actions ? <div className="pointer-events-auto mt-6 flex flex-wrap items-center gap-3">{actions}</div> : null}
           </section>
         </div>
 

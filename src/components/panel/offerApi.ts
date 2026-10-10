@@ -99,4 +99,10 @@ export const publicApi = {
     ),
   open: (slug: string, pin?: string) =>
     call<void>("POST", `/api/public/${encodeURIComponent(slug)}/open`, { headers: pinHeader(pin) }),
+  /** Uwagi klienta do projektu (+ materiały wybrane w podglądzie). */
+  comment: (slug: string, text: string, choice: { front: string; countertop: string; hardware: string }, pin?: string) =>
+    call<{ ok: true }>("POST", `/api/public/${encodeURIComponent(slug)}/comment`, {
+      body: { text, choice },
+      headers: pinHeader(pin),
+    }),
 };
