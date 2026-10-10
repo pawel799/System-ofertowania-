@@ -31,6 +31,9 @@ export function usePanelOffers(
   const synced = useRef(new Map<string, string>());
   // id -> JSON odrzucony przez walidację (4xx): nie ponawiamy, dopóki się nie zmieni
   const rejected = useRef(new Map<string, string>());
+  // id usuniętych ofert: KV list() bywa przez chwilę nieaktualny, więc odświeżenie
+  // nie może przywrócić (i ponownie utworzyć) właśnie skasowanej oferty.
+  const deleted = useRef(new Set<string>());
   const busy = useRef(false);
   const everLoaded = useRef(false);
   const latest = useRef(offers);
@@ -123,6 +126,7 @@ export function usePanelOffers(
             const sent = JSON.stringify(job);
             const saved = synced.current.has(job.id) ? await panelApi.update(job) : await panelApi.create(job);
             synced.current.set(job.id, JSON.stringify(saved));
+            deleted.current.delete(job.id);
             rejected.current.delete(job.id);
             // Wersja z serwera (z dołączonymi otwarciami), o ile w międzyczasie nikt nic nie zmienił.
             const swap = (cur: Offer[]) => cur.map((o) => (o.id === job.id && JSON.stringify(o) === sent ? saved : o));
@@ -133,6 +137,7 @@ export function usePanelOffers(
               if (asApiError(e).status !== 404) throw e;
             });
             synced.current.delete(gone);
+            deleted.current.add(gone);
           }
         } catch (e) {
           const err = asApiError(e);
@@ -191,7 +196,7 @@ export function usePanelOffers(
       changed = true;
       return srv;
     });
-    const added = list.filter((x) => !known.has(x.id) && !synced.current.has(x.id));
+    const added = list.filter((x) => !known.has(x.id) && !synced.current.has(x.id) && !deleted.current.has(x.id));
     for (const a of added) synced.current.set(a.id, JSON.stringify(a));
     if (changed || added.length) {
       const result = [...added, ...next];

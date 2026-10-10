@@ -45,3 +45,6 @@ next-env.d.ts
 
 # osobne repo backendu .NET (poza tym projektem)
 /kitchen-offer-api/
+
+# paczki zip w katalogu projektu (nie do repo)
+/*.zip
