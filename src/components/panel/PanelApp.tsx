@@ -312,6 +312,28 @@ export default function PanelApp() {
     toast("Link unieważniony", { desc: "Stary adres przestał działać." });
   };
 
+  // Usunięcie oferty: znika z listy, a usePanelOffers wysyła DELETE /api/offers/:id
+  // (KV kasuje ofertę i jej link). Zaznaczenie przechodzi na sąsiednią ofertę.
+  const removeOffer = () => {
+    const removed = offer;
+    const nextVisible = visible.filter((o) => o.id !== removed.id);
+    const idx = Math.max(0, visible.findIndex((o) => o.id === removed.id));
+    const rest = offers.filter((o) => o.id !== removed.id);
+    const next = nextVisible[Math.min(idx, nextVisible.length - 1)] ?? rest[0];
+    setOffers(rest);
+    if (next) {
+      setSelId(next.id);
+      setDraft(draftFor(next));
+    } else {
+      setSelId("");
+      setView("list");
+    }
+    setMsgDirty(false);
+    toast("Oferta usunięta", {
+      desc: removed.link ? `${removed.id} · link klienta przestał działać.` : removed.id,
+    });
+  };
+
   const setStatus = (s: Status) => {
     setMenu(null);
     statusBtnRef.current?.focus();
@@ -765,6 +787,18 @@ export default function PanelApp() {
                 </li>
               ))}
             </ol>
+          </section>
+
+          <section className="sec">
+            <h2>Usuń ofertę</h2>
+            <p className="lede">
+              Oferta zniknie z panelu{offer.link ? ", a link klienta przestanie działać" : ""}. Tego nie da się cofnąć.
+            </p>
+            <div className="danger-row">
+              <HoldButton holdLabel="Przytrzymaj…" ariaLabel={`Przytrzymaj, aby usunąć ofertę ${offer.id}`} onConfirm={removeOffer}>
+                Usuń ofertę
+              </HoldButton>
+            </div>
           </section>
         </main>
 

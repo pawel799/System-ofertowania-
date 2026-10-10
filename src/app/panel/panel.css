@@ -211,6 +211,7 @@
 .pnl .hold .fill { position: absolute; inset: 0; background: var(--red); color: #fff; display: inline-flex; align-items: center; justify-content: center; clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out); }
 .pnl .hold[data-holding] .fill { clip-path: inset(0 0 0 0); transition: clip-path 2s linear; }
 .pnl .hold[data-holding] { transform: scale(0.97); }
+.pnl .danger-row { margin-top: 12px; }
 
 .pnl .og { margin-top: 12px; border-radius: 10px; overflow: hidden; box-shadow: var(--sh-sm); }
 .pnl .og-img { aspect-ratio: 1.91 / 1; max-width: 100%; background: #1a1816; position: relative; display: grid; place-items: center; }
