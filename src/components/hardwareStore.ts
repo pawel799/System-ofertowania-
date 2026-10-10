@@ -1,21 +1,11 @@
 import { useSyncExternalStore } from "react";
+import { HARDWARE } from "./catalog";
 
 /*
  * Wybrane okucia – ten sam wzorzec co frontStore.ts i countertopStore.ts.
  */
 
-export type HardwareOption = {
-  id: string;
-  name: string;
-  /** Dopłata w zł (0 = w cenie). */
-  delta: number;
-};
-
-export const HARDWARE: HardwareOption[] = [
-  { id: "mosiadz", name: "Mosiądz", delta: 0 },
-  { id: "czarny-mat", name: "Czarny mat", delta: 0 },
-  { id: "push-to-open", name: "Push-to-open", delta: 0 },
-];
+export { HARDWARE, type HardwareOption } from "./catalog";
 
 export const DEFAULT_HARDWARE_ID = HARDWARE[0].id;
 

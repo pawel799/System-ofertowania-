@@ -1,22 +1,12 @@
 import { useSyncExternalStore } from "react";
+import { COUNTERTOPS } from "./catalog";
 
 /*
  * Wybrany blat – ten sam wzorzec co frontStore.ts: MaterialsPanel i scena 3D
  * są osobnymi komponentami na stronie, więc dzielą stan przez moduł.
  */
 
-export type CountertopOption = {
-  id: string;
-  name: string;
-  /** Dopłata w zł (0 = w cenie). */
-  delta: number;
-};
-
-export const COUNTERTOPS: CountertopOption[] = [
-  { id: "kwarcyt-calacatta", name: "Kwarcyt Calacatta", delta: 0 },
-  { id: "granit-absolute-black", name: "Granit Absolute Black", delta: 1_200 },
-  { id: "laminat-dab", name: "Laminat dąb", delta: -800 },
-];
+export { COUNTERTOPS, type CountertopOption } from "./catalog";
 
 export const DEFAULT_COUNTERTOP_ID = COUNTERTOPS[0].id;
 

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { FRONTS } from "./catalog";
 
 /*
  * Wybrany front kuchni – mały magazyn stanu na poziomie modułu.
@@ -6,24 +7,7 @@ import { useSyncExternalStore } from "react";
  * komponenty na stronie, więc dzielą stan przez ten moduł zamiast przez propsy.
  */
 
-export type FrontSwatch = {
-  id: string;
-  name: string;
-  /** Kolor próbki w panelu. */
-  color: string;
-  /** Dopłata w zł (0 = w cenie). */
-  delta: number;
-};
-
-// Lista frontów (przeniesiona z MaterialsPanel bez zmian, żeby scena 3D
-// i panel korzystały z tych samych identyfikatorów).
-export const FRONTS: FrontSwatch[] = [
-  { id: "dab-naturalny", name: "Dąb naturalny", color: "#b8875a", delta: 0 },
-  { id: "dab-bielony", name: "Dąb bielony", color: "#d8c7a8", delta: 0 },
-  { id: "dab-wedzony", name: "Dąb wędzony", color: "#6b4a32", delta: 0 },
-  { id: "kaszmir", name: "Kaszmir", color: "#c9bcaa", delta: 0 },
-  { id: "grafit", name: "Grafit", color: "#3a3936", delta: 0 },
-];
+export { FRONTS, type FrontSwatch } from "./catalog";
 
 export const DEFAULT_FRONT_ID = FRONTS[0].id;
 

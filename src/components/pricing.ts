@@ -1,6 +1,4 @@
-import { COUNTERTOPS } from "./countertopStore";
-import { FRONTS } from "./frontStore";
-import { HARDWARE } from "./hardwareStore";
+import { COUNTERTOPS, FRONTS, HARDWARE } from "./catalog";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)

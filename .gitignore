@@ -42,3 +42,6 @@ next-env.d.ts
 # Cloudflare: lokalne sekrety i dane wrangler pages dev (nie commitować)
 .dev.vars
 .wrangler/
+
+# osobne repo backendu .NET (poza tym projektem)
+/kitchen-offer-api/

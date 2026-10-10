@@ -8,6 +8,8 @@
  *   pinfail:<slug> -> licznik błędnych PIN-ów (wygasa po godzinie)
  */
 
+import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
+
 /* Minimalne typy runtime'u Cloudflare (bez dodatkowej paczki z typami). */
 export interface KVNamespace {
   get(key: string): Promise<string | null>;
@@ -32,11 +34,11 @@ export type Ctx = {
   params: Record<string, string | string[]>;
 };
 
-/* ---------- Katalog: musi zgadzać się z frontStore / countertopStore / hardwareStore ---------- */
+/* ---------- Katalog: ten sam moduł co strona (src/components/catalog.ts), listy nie mogą się rozjechać ---------- */
 
-export const FRONT_IDS = ["dab-naturalny", "dab-bielony", "dab-wedzony", "kaszmir", "grafit"];
-export const COUNTERTOP_IDS = ["kwarcyt-calacatta", "granit-absolute-black", "laminat-dab"];
-export const HARDWARE_IDS = ["mosiadz", "czarny-mat", "push-to-open"];
+export const FRONT_IDS = FRONTS.map((f) => f.id);
+export const COUNTERTOP_IDS = COUNTERTOPS.map((c) => c.id);
+export const HARDWARE_IDS = HARDWARE.map((h) => h.id);
 
 const STATUSES = ["szkic", "wyslany", "otwarty", "poprawki", "zaakceptowany"] as const;
 const CHANNELS = ["email", "sms", "messenger"] as const;
