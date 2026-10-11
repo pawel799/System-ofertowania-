@@ -48,3 +48,7 @@ next-env.d.ts
 
 # paczki zip w katalogu projektu (nie do repo)
 /*.zip
+
+# foldery z paczkami zmian (OPIS.txt, zmiany.diff, pliki/) – nie do repo
+/promo-layout/
+/pkt*/

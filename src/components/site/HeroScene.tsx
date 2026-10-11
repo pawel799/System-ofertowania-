@@ -47,8 +47,8 @@ function Kitchen({ still }: { still: boolean }) {
   );
 }
 
-export default function HeroScene() {
-  // Ruch wyłączony przy prefers-reduced-motion i gdy karta jest w tle.
+export default function HeroScene({ offscreen = false }: { offscreen?: boolean }) {
+  // Ruch wyłączony przy prefers-reduced-motion, gdy karta jest w tle i gdy hero jest poza ekranem.
   const [still, setStill] = useState(false);
   const [visible, setVisible] = useState(true);
   useEffect(() => {
@@ -66,7 +66,7 @@ export default function HeroScene() {
 
   return (
     <Canvas
-      frameloop={still || !visible ? "demand" : "always"}
+      frameloop={still || !visible || offscreen ? "demand" : "always"}
       dpr={1}
       gl={{ antialias: true, toneMappingExposure: 1.15 }}
       camera={{ position: CAMERA_START.toArray(), fov: 50, near: 0.05, far: 60 }}
