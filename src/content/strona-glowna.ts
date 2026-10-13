@@ -1,6 +1,6 @@
 /*
  * Wszystkie teksty i media strony głównej w jednym miejscu.
- * Treści są robocze – podmień je tutaj, układ (src/components/site/home/*) zostaje bez zmian.
+ * Treści pod sprzedaż systemu firmom – zmieniasz je tutaj, układ (src/components/site/home/*) zostaje bez zmian.
  *
  * Media (zrzuty ekranu, nagrania): wrzuć plik do public/strona/ i wpisz ścieżkę w `src`
  * (obraz: .webp/.png/.jpg) albo `video` (.mp4, odtwarzane bez dźwięku w pętli).
@@ -36,22 +36,22 @@ export const HOME = {
   steps: {
     id: "jak-to-dziala",
     eyebrow: "Jak to działa",
-    title: "Od projektu do akceptacji w trzech krokach",
-    lead: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Klient dostaje link, a nie załącznik.",
+    title: "Oferta w 3D w kilka minut, bez programów i załączników",
+    lead: "Projektant przygotowuje ofertę w panelu, a klient dostaje link, który otwiera na telefonie albo komputerze. Bez ciężkich PDF-ów i bez instalowania czegokolwiek.",
     items: [
       {
-        title: "Przygotuj ofertę w panelu",
-        text: "Wpisz klienta (prywatny albo firma po NIP-ie), wybierz model kuchni i cenę bazową. Lorem ipsum dolor sit amet.",
+        title: "Wpisz klienta i wybierz kuchnię",
+        text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Wybierasz model, cenę bazową i decydujesz, czy klient ma widzieć cenę.",
         media: { alt: "Panel: nowa oferta z danymi klienta" } as Media,
       },
       {
-        title: "Wyślij link",
-        text: "Gotowy mail z linkiem, opcjonalnie z PIN-em i datą ważności. Lorem ipsum dolor sit amet, consectetur.",
+        title: "Wyślij link jednym kliknięciem",
+        text: "System przygotuje wiadomość z linkiem do oferty. Możesz ją zabezpieczyć PIN-em i ustawić datę ważności, żeby nie krążyła po sieci.",
         media: { alt: "Mail z ofertą i linkiem dla klienta" } as Media,
       },
       {
-        title: "Klient ogląda kuchnię w 3D",
-        text: "Obraca model, zmienia fronty, blat i uchwyty, widzi cenę i zostawia uwagi. Ty widzisz, kiedy otworzył ofertę.",
+        title: "Klient ogląda, a Ty wiesz więcej",
+        text: "Klient obraca kuchnię w 3D, zmienia fronty, blat i uchwyty, i zostawia uwagi. W panelu widzisz, kiedy otworzył ofertę i co napisał.",
         media: { alt: "Strona oferty u klienta: kuchnia 3D z paskiem materiałów" } as Media,
       },
     ],
@@ -59,8 +59,8 @@ export const HOME = {
 
   demo: {
     eyebrow: "Przykładowa oferta",
-    title: "Zobacz ofertę oczami klienta",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Otwórz przykład i pozmieniaj materiały – tak samo zobaczy to Twój klient.",
+    title: "Tak wygląda oferta, którą wyślesz klientowi",
+    text: "Otwórz przykład i sprawdź, co dostaje Twój klient: kuchnię do obracania, zmianę materiałów i cenę przeliczaną na bieżąco. Każdą taką ofertę przygotujesz w panelu.",
     cta: { href: "/oferta/demo", label: "Otwórz przykładową ofertę" } satisfies Link,
     media: { alt: "Nagranie: klient zmienia fronty i blat w ofercie 3D", ratio: "16 / 9" } as Media,
   },
@@ -68,31 +68,31 @@ export const HOME = {
   features: {
     id: "funkcje",
     eyebrow: "Funkcje",
-    title: "Wszystko, czego potrzeba do wysłania oferty",
+    title: "Mniej dopytywania, szybsza decyzja klienta",
     items: [
       {
         title: "Link z PIN-em i datą ważności",
-        text: "Każda oferta ma własny adres. Możesz go zabezpieczyć PIN-em i ustawić, do kiedy działa.",
+        text: "Każda oferta ma własny adres. Zabezpieczasz ją PIN-em i decydujesz, jak długo działa.",
       },
       {
-        title: "Cena liczona na bieżąco",
-        text: "Klient zmienia materiały, cena przelicza się od razu. Jeśli wolisz, ukryj ją dla danej oferty.",
+        title: "Klient sam przelicza cenę",
+        text: "Zmienia materiały i od razu widzi, ile to kosztuje. Mniej pytań w stylu „a ile za inny blat?”. Cenę możesz też ukryć.",
       },
       {
-        title: "Uwagi od klienta",
-        text: "Klient zostawia uwagi przy ofercie, a Ty widzisz je w panelu razem z historią.",
+        title: "Uwagi zamiast łańcucha maili",
+        text: "Klient zapisuje uwagi bezpośrednio przy ofercie, a Ty masz je w panelu w jednym miejscu.",
       },
       {
-        title: "Wiesz, kiedy otworzył",
-        text: "Panel pokazuje każde otwarcie linku – na komputerze i telefonie. Lorem ipsum dolor sit.",
+        title: "Wiesz, kiedy klient otworzył ofertę",
+        text: "Panel pokazuje każde otwarcie linku, więc dzwonisz wtedy, gdy klient ma ofertę przed oczami.",
       },
       {
         title: "Dane firmy po NIP-ie",
-        text: "Wpisujesz NIP, a nazwa i adres uzupełniają się z białej listy VAT i KRS.",
+        text: "Przy klientach firmowych wpisujesz NIP, a nazwa i adres pobierają się z białej listy VAT i KRS.",
       },
       {
-        title: "Gotowy mail z ofertą",
-        text: "Wiadomość z linkiem i podsumowaniem, gotowa do wysłania. Lorem ipsum dolor sit amet.",
+        title: "Gotowa wiadomość do klienta",
+        text: "System przygotowuje maila z linkiem i krótkim podsumowaniem oferty. Wystarczy go wysłać.",
       },
     ],
   },
@@ -104,15 +104,15 @@ export const HOME = {
     items: [
       {
         title: "Studia projektowe",
-        text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Projektant wysyła ofertę tego samego dnia.",
+        text: "Projekt kończysz rano, a klient ogląda go w 3D jeszcze tego samego dnia. Wyróżniasz się na tle konkurencji, która wysyła zrzuty ekranu i PDF-y.",
       },
       {
         title: "Salony i sieci meblowe",
-        text: "Lorem ipsum dolor sit amet. Szef dodaje sprzedawców i widzi oferty całego zespołu.",
+        text: "Każdy sprzedawca wysyła oferty w tym samym, dopracowanym formacie, niezależnie od salonu. Klient od pierwszego kontaktu widzi profesjonalną firmę.",
       },
       {
         title: "Producenci mebli",
-        text: "Lorem ipsum dolor sit amet. Własne modele i katalog materiałów w ofercie dla klienta.",
+        text: "Pokazujesz swoje fronty i blaty w prawdziwej kuchni, a nie w katalogu. Modele i materiały przygotujemy pod Twoją ofertę.",
       },
     ],
   },
@@ -120,8 +120,8 @@ export const HOME = {
   pricing: {
     id: "cennik",
     eyebrow: "Cennik",
-    title: "Abonament miesięczny, bez umowy na lata",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Plany dla jednego projektanta, studia i sieci salonów.",
+    title: "Plan dopasowany do wielkości firmy",
+    text: "Od jednego projektanta po sieć salonów. Ceny netto, płatność miesięczna.",
     cta: { href: "/cennik", label: "Zobacz cennik" } satisfies Link,
   },
 
@@ -132,31 +132,35 @@ export const HOME = {
     items: [
       {
         q: "Czy klient musi coś instalować albo zakładać konto?",
-        a: "Nie. Klient otwiera link w przeglądarce na komputerze albo telefonie. Lorem ipsum dolor sit amet.",
+        a: "Nie. Klient dostaje link i otwiera ofertę w przeglądarce na telefonie albo komputerze.",
+      },
+      {
+        q: "Czy potrzebujemy specjalnego sprzętu albo programu?",
+        a: "Nie. Panel działa w przeglądarce, wystarczy zwykły komputer z dostępem do internetu.",
       },
       {
         q: "Skąd biorą się modele 3D kuchni?",
-        a: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
+        a: "Modele i materiały przygotowujemy razem z Tobą na podstawie Twojej oferty. Szczegóły ustalamy przy wdrożeniu.",
       },
       {
         q: "Czy mogę ukryć cenę przed klientem?",
-        a: "Tak, cenę włączasz albo wyłączasz osobno dla każdej oferty.",
+        a: "Tak. Cenę włączasz albo wyłączasz osobno dla każdej oferty.",
       },
       {
-        q: "Ile osób z firmy może korzystać z panelu?",
-        a: "Lorem ipsum dolor sit amet – zależy od planu. Szczegóły w cenniku.",
+        q: "Ile osób z firmy może korzystać z systemu?",
+        a: "To zależy od planu. Liczbę kont w każdym planie znajdziesz w cenniku.",
       },
       {
         q: "Co z danymi moich klientów?",
-        a: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Szczegóły w polityce prywatności.",
+        a: "Oferta jest dostępna tylko pod własnym linkiem, który możesz zabezpieczyć PIN-em i ograniczyć w czasie. Szczegóły w polityce prywatności.",
       },
     ],
   },
 
   finalCta: {
-    title: "Wyślij pierwszą ofertę w 3D jeszcze dziś",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    primary: { href: "/rejestracja", label: "Zarejestruj się" } satisfies Link,
+    title: "Daj klientom ofertę w 3D zamiast PDF-a",
+    text: "Załóż konto firmy albo umów się na prezentację. Pokażemy system na przykładzie Twojej oferty.",
+    primary: { href: "/rejestracja", label: "Załóż konto firmy" } satisfies Link,
     secondary: { href: "/kontakt", label: "Umów prezentację" } satisfies Link,
   },
 };

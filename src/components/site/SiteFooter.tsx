@@ -39,7 +39,7 @@ export default function SiteFooter() {
             <Logo />
           </Link>
           <p className="mt-5 text-sm leading-relaxed text-stone-500">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Oferty kuchni w 3D dla studiów meblowych.
+            System ofertowania kuchni w 3D dla studiów, salonów i producentów mebli.
           </p>
         </div>
 

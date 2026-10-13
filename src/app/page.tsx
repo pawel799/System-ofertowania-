@@ -12,7 +12,7 @@ import { btn } from "@/components/site/styles";
 
 export const metadata: Metadata = {
   title: BRAND_NAME,
-  description: "Oferty kuchni w 3D dla studiów meblowych: wycena, link dla klienta, akceptacja.",
+  description: "System do ofert kuchni w 3D dla studiów i salonów meblowych: panel ofert, link dla klienta z podglądem 3D, uwagi i historia otwarć.",
 };
 
 /*
