@@ -67,6 +67,11 @@ Plik: `src/content/strona-glowna.ts`
 - **Zmiana „ograniczonego ruchu”** – `LoopVideo` sprawdza `prefers-reduced-motion` tylko przy
   starcie; zmiana ustawienia w trakcie wizyty nie jest śledzona.
 
+### Stopka
+
+- **Dane firmy** – w stopce (`src/components/site/SiteFooter.tsx`) nadal jest zastępczy wpis
+  „Lorem ipsum sp. z o.o. · NIP 000-000-00-00 · ul. Lorem 1, 00-000 Warszawa”. Wpisać prawdziwe dane firmy.
+
 ### Nadal otwarte z poprzedniej listy
 
 - Kontrast `text-stone-600` w krokach „Jak to działa” (ok. 2,6:1).

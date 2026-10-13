@@ -1,43 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# System ofertowania kuchni z podglądem 3D
 
-## Getting Started
+Aplikacja dla studiów i salonów meblowych. Projektant przygotowuje ofertę kuchni w panelu
+i wysyła klientowi link. Klient ogląda kuchnię w 3D w przeglądarce, zmienia materiały,
+od razu widzi cenę i zostawia uwagi.
 
-First, run the development server:
+- **Strona:** https://system-ofertowania.pages.dev
+- **Przykładowa oferta (demo):** https://system-ofertowania.pages.dev/oferta/demo
+- **Repozytorium:** https://github.com/pawel799/System-ofertowania-
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+![Oferta u klienta: kuchnia 3D z paskiem materiałów i ceną](public/strona/krok-3-klient.webp)
+
+## Funkcje
+
+- **Panel ofert** – lista ofert ze statusami (szkic, wysłana, otwarta, poprawki, zaakceptowana),
+  wyszukiwarka, edycja, unieważnianie linku i usuwanie oferty.
+- **Linki dla klienta** – każda oferta ma własny, losowy adres, opcjonalny 4-cyfrowy PIN
+  i datę ważności; cenę można pokazać albo ukryć osobno dla każdej oferty.
+- **Konfigurator 3D** – model kuchni w WebGL z wymianą frontów, blatu i okuć;
+  cena przeliczana na żywo na podstawie wspólnego katalogu materiałów.
+- **Uwagi klienta** – klient zapisuje uwagi przy ofercie (razem z wybranymi materiałami),
+  oferta przechodzi w panelu w status „poprawki”.
+- **Rejestr otwarć** – licznik otwarć linku i historia zdarzeń oferty w panelu.
+- **Dane firmy po NIP-ie** – nazwa, adres, REGON i KRS z wykazu podatników VAT (MF) i API KRS,
+  z buforem w KV.
+- **Szablon maila z ofertą** – HTML zgodny z popularnymi klientami poczty, podgląd pod
+  [`/podglad-maila`](https://system-ofertowania.pages.dev/podglad-maila).
+- **Strona produktu** – strona główna ze sceną 3D w tle, sekcjami promocyjnymi i podstronami
+  (o nas, cennik, kontakt, dokumenty).
+
+![Panel: link dla klienta z datą ważności i gotową wiadomością](public/strona/krok-2-link.webp)
+
+## Technologie
+
+- **Next.js 14** (App Router, TypeScript) jako statyczny eksport
+- **React Three Fiber**, **drei**, **postprocessing**, **three.js** – scena 3D (model GLB, HDRI)
+- **Tailwind CSS**
+- **Cloudflare Pages** + **Pages Functions** (API) + **Workers KV** (oferty, bufor danych firm,
+  limity zapytań)
+
+## Struktura
+
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Cloudflare Pages (oferty w KV)
-
-Oferty z panelu zapisują się w Cloudflare (Pages Functions + Workers KV), więc
-linki dla klientów działają na każdym urządzeniu. Konfiguracja (KV `OFFERS`,
-sekret `PANEL_TOKEN`, build `npm run build` → `out`, `NODE_VERSION=22`) i
-uruchamianie lokalne: [docs/cloudflare.md](docs/cloudflare.md).
+src/
+  app/                 strony: /, /panel, /oferta/[slug], /oferta/demo, /podglad-maila, podstrony
+  components/          scena 3D, pasek materiałów, katalog materiałów i cennik
+  components/panel/    panel ofert, widok oferty dla klienta, uwagi
+  components/site/     strona główna, nagłówek, stopka, formularze
+  content/             teksty strony głównej
+  lib/                 szablon maila z ofertą
+functions/
+  api/offers/          oferty (panel, wymaga autoryzacji)
+  api/public/          widok oferty dla klienta, otwarcia, uwagi
+  api/firma.ts         dane firmy po NIP-ie (panel)
+  api/rejestracja/     podpowiedź nazwy firmy w rejestracji (publiczne, z limitem)
+  _lib/                wspólna logika: walidacja, KV, autoryzacja
+docs/                  notatki techniczne
+```
