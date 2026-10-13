@@ -12,6 +12,10 @@ export type Media = {
   src?: string;
   /** Nagranie .mp4, np. "/strona/oferta.mp4" (ma pierwszeństwo przed obrazem). */
   video?: string;
+  /** To samo nagranie w .webm – zapas dla przeglądarek bez H.264 (opcjonalnie). */
+  videoWebm?: string;
+  /** Kadr pokazywany przed startem nagrania (i zamiast niego przy ograniczonym ruchu). */
+  poster?: string;
   /** Opis dla czytników ekranu, a bez pliku – podpis pola. */
   alt: string;
   /** Proporcje pola, domyślnie 16 / 10. */
@@ -42,17 +46,17 @@ export const HOME = {
       {
         title: "Wpisz klienta i wybierz kuchnię",
         text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Wybierasz model, cenę bazową i decydujesz, czy klient ma widzieć cenę.",
-        media: { alt: "Panel: nowa oferta z danymi klienta" } as Media,
+        media: { src: "/strona/krok-1-nowa-oferta.webp", alt: "Panel: nowa oferta, dane firmy uzupełnione po NIP-ie" } as Media,
       },
       {
         title: "Wyślij link jednym kliknięciem",
         text: "System przygotuje wiadomość z linkiem do oferty. Możesz ją zabezpieczyć PIN-em i ustawić datę ważności, żeby nie krążyła po sieci.",
-        media: { alt: "Mail z ofertą i linkiem dla klienta" } as Media,
+        media: { src: "/strona/krok-2-link.webp", alt: "Panel: link dla klienta z datą ważności i gotową wiadomością" } as Media,
       },
       {
         title: "Klient ogląda, a Ty wiesz więcej",
         text: "Klient obraca kuchnię w 3D, zmienia fronty, blat i uchwyty, i zostawia uwagi. W panelu widzisz, kiedy otworzył ofertę i co napisał.",
-        media: { alt: "Strona oferty u klienta: kuchnia 3D z paskiem materiałów" } as Media,
+        media: { src: "/strona/krok-3-klient.webp", alt: "Strona oferty u klienta: kuchnia 3D z paskiem materiałów" } as Media,
       },
     ],
   },
@@ -62,7 +66,13 @@ export const HOME = {
     title: "Tak wygląda oferta, którą wyślesz klientowi",
     text: "Otwórz przykład i sprawdź, co dostaje Twój klient: kuchnię do obracania, zmianę materiałów i cenę przeliczaną na bieżąco. Każdą taką ofertę przygotujesz w panelu.",
     cta: { href: "/oferta/demo", label: "Otwórz przykładową ofertę" } satisfies Link,
-    media: { alt: "Nagranie: klient zmienia fronty i blat w ofercie 3D", ratio: "16 / 9" } as Media,
+    media: {
+      video: "/strona/oferta-3d.mp4",
+      videoWebm: "/strona/oferta-3d.webm",
+      poster: "/strona/oferta-3d.webp",
+      alt: "Nagranie: klient zmienia fronty, blat i uchwyty, a cena przelicza się na bieżąco",
+      ratio: "16 / 9",
+    } as Media,
   },
 
   features: {

@@ -1,4 +1,5 @@
 import type { Media } from "@/content/strona-glowna";
+import LoopVideo from "./LoopVideo";
 
 /*
  * Pole na zrzut ekranu albo nagranie. Bez pliku pokazuje ramkę ze znacznikami w rogach
@@ -11,16 +12,7 @@ export default function MediaSlot({ media, className = "" }: { media: Media; cla
   if (media.video) {
     return (
       <div className={frame} style={{ aspectRatio: ratio }}>
-        <video
-          src={media.video}
-          aria-label={media.alt}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="metadata"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+        <LoopVideo mp4={media.video} webm={media.videoWebm} poster={media.poster} label={media.alt} />
       </div>
     );
   }
