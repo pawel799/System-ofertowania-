@@ -17,6 +17,7 @@ import {
   store,
   validateOffer,
 } from "../../_lib/offers";
+import { checkRefs } from "../../_lib/assets";
 
 export const onRequestGet = handle(async (ctx) => {
   await requirePanel(ctx);
@@ -27,6 +28,7 @@ export const onRequestPost = handle(async (ctx) => {
   await requirePanel(ctx);
   const kv = store(ctx.env);
   const offer = validateOffer(await readJson(ctx.request));
+  await checkRefs(kv, offer);
   const key = offerKey(offer.id);
   if (await getOffer(kv, key)) {
     throw new HttpError(409, "exists", `Oferta ${offer.id} już istnieje. Odśwież listę.`);

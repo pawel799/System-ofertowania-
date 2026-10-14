@@ -91,6 +91,8 @@ export type Offer = {
   front: string;
   countertop: string;
   hardware: string;
+  /** Wgrany model 3D (id z /api/models); brak = kuchnia demo. */
+  modelId?: string;
   status: Status;
   link: OfferLink | null;
   comment?: string;

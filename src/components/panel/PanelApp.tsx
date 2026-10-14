@@ -15,6 +15,8 @@ import { COUNTERTOPS, setCountertop } from "../countertopStore";
 import { FRONTS, setFront } from "../frontStore";
 import { HARDWARE, setHardware } from "../hardwareStore";
 import { formatPln, totalPrice } from "../pricing";
+import { setPalettes as setPaletteStore } from "../paletteStore";
+import { findRalFront, paletteFronts, type FrontChoice, type Palette } from "../palettes";
 import {
   CHANNEL_LABEL,
   COUNTERTOP_COLOR,
@@ -38,7 +40,7 @@ import {
   type Status,
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
-import { panelAuth } from "./offerApi";
+import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
 import { PanelState, TokenDialog } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
@@ -54,6 +56,18 @@ import {
 
 // Ta sama scena co na stronie oferty, osadzona w okienku podglądu.
 const KitchenGlbScene = dynamic(() => import("../KitchenGlbScene"), {
+  ssr: false,
+  loading: () => (
+    <div
+      style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", color: "#a8a29e", fontSize: 12 }}
+    >
+      Wczytywanie sceny…
+    </div>
+  ),
+});
+
+// Wgrany model 3D (zamiast kuchni demo) w okienku podglądu.
+const CustomModelScene = dynamic(() => import("../CustomModelScene"), {
   ssr: false,
   loading: () => (
     <div
@@ -94,6 +108,10 @@ function draftFor(o: Offer): Draft {
 const nameOf = (list: { id: string; name: string }[], id: string) =>
   list.find((x) => x.id === id)?.name ?? id;
 
+/** Front z katalogu albo z pakietu RAL (nazwa i kolor próbki). */
+const frontInfo = (palettes: Palette[], id: string): FrontChoice | undefined =>
+  FRONTS.find((f) => f.id === id) ?? findRalFront(palettes, id);
+
 const CloseIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" aria-hidden>
     <path d="m4 4 8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -124,6 +142,10 @@ export default function PanelApp() {
   const [origin, setOrigin] = useState("");
   const [newOpen, setNewOpen] = useState<null | { instant: boolean }>(null);
   const [menu, setMenu] = useState<null | { instant: boolean }>(null);
+  // Z ustawień (/panel/ustawienia): wgrane modele, pakiety RAL, własna domena linków.
+  const [models, setModels] = useState<ModelMeta[]>([]);
+  const [palettes, setPalettes] = useState<Palette[]>([]);
+  const [domain, setDomain] = useState<DomainView | null>(null);
 
   const offer = offers.find((o) => o.id === selId) ?? offers[0];
   const rootRef = useRef<HTMLDivElement>(null);
@@ -142,6 +164,27 @@ export default function PanelApp() {
     setDraft(draftFor(list[0]));
   });
 
+  // Modele, pakiety i domena: tylko z API (w trybie lokalnym ich nie ma).
+  useEffect(() => {
+    if (store.mode !== "api") return;
+    let alive = true;
+    void Promise.allSettled([assetsApi.models(), assetsApi.palettes(), assetsApi.domain()]).then(([m, p, d]) => {
+      if (!alive) return;
+      if (m.status === "fulfilled") setModels(m.value);
+      if (p.status === "fulfilled") setPalettes(p.value);
+      if (d.status === "fulfilled") setDomain(d.value);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [store.mode]);
+
+  // Scena 3D i cena korzystają z tych samych pakietów RAL.
+  useEffect(() => setPaletteStore(palettes), [palettes]);
+
+  // Własna domena działa (nazwa + certyfikat): linki dla klientów idą na nią.
+  const linkOrigin = domain?.active && domain.domain ? `https://${domain.domain.hostname}` : origin;
+
   // Scena 3D pokazuje materiały zaznaczonej oferty.
   useEffect(() => {
     if (!offer) return;
@@ -152,8 +195,8 @@ export default function PanelApp() {
 
   // Wiadomość odświeża się sama, dopóki ktoś jej nie poprawił ręcznie.
   useEffect(() => {
-    if (offer && !msgDirty) setMessage(offerMessage(offer, origin));
-  }, [offer, origin, msgDirty]);
+    if (offer && !msgDirty) setMessage(offerMessage(offer, linkOrigin));
+  }, [offer, linkOrigin, msgDirty]);
 
   // Blokada przewijania pod oknem dialogowym.
   useEffect(() => {
@@ -228,6 +271,8 @@ export default function PanelApp() {
     <NewOfferDialog
       instant={newOpen.instant}
       nextId={nextOfferId(offers)}
+      models={models}
+      palettes={palettes}
       onClose={() => setNewOpen(null)}
       onCreate={(o) => {
         setOffers((list) => [o, ...list]);
@@ -254,9 +299,11 @@ export default function PanelApp() {
     );
 
   const L = offer.link;
-  const total = totalPrice(offer, offer.base);
-  const linkUrl = L ? `${origin}/oferta/${L.slug}` : "";
-  const shortUrl = L ? `${origin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
+  const total = totalPrice(offer, offer.base, palettes);
+  const linkUrl = L ? `${linkOrigin}/oferta/${L.slug}` : "";
+  const shortUrl = L ? `${linkOrigin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
+  const offerModel = offer.modelId ? models.find((m) => m.id === offer.modelId) : undefined;
+  const ralFronts = paletteFronts(palettes);
   const lastTime = (o: Offer) => o.events[o.events.length - 1]?.t ?? "";
   const frontColor = FRONTS.find((f) => f.id === offer.front)?.color ?? "#999";
   const handle = HARDWARE_COLOR[offer.hardware];
@@ -265,11 +312,22 @@ export default function PanelApp() {
     if (offer[kind] === id) return;
     const label =
       kind === "front"
-        ? `Front: ${nameOf(FRONTS, id)}`
+        ? `Front: ${frontInfo(palettes, id)?.name ?? id}`
         : kind === "countertop"
           ? `Blat: ${nameOf(COUNTERTOPS, id)}`
           : `Okucia: ${nameOf(HARDWARE, id)}`;
     update(offer.id, (o) => withEvent({ ...o, [kind]: id }, "edit", label));
+  };
+
+  const setModel = (modelId: string) => {
+    if ((offer.modelId ?? "") === modelId) return;
+    const name = modelId ? models.find((m) => m.id === modelId)?.name ?? modelId : "Kuchnia demo";
+    update(offer.id, (o) => {
+      const next = { ...o };
+      if (modelId) next.modelId = modelId;
+      else delete next.modelId;
+      return withEvent(next, "edit", `Model 3D: ${name}`);
+    });
   };
 
   const createLink = () => {
@@ -531,6 +589,13 @@ export default function PanelApp() {
             {store.sync === "saving" ? "Zapisywanie…" : store.sync === "error" ? "Błąd zapisu" : "Zapisano"}
           </span>
         )}
+        <a className="btn btn-plain" href="/panel/ustawienia" data-tip="Modele 3D, kolory RAL, własna domena">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M13 8a5 5 0 0 0-.1-1l1.4-1.1-1.5-2.6-1.7.6a5 5 0 0 0-1.7-1L9 1.2H7l-.4 1.7a5 5 0 0 0-1.7 1l-1.7-.6-1.5 2.6L3.1 7a5 5 0 0 0 0 2l-1.4 1.1 1.5 2.6 1.7-.6a5 5 0 0 0 1.7 1L7 14.8h2l.4-1.7a5 5 0 0 0 1.7-1l1.7.6 1.5-2.6L12.9 9c.1-.3.1-.7.1-1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+          </svg>
+          <span className="hide-sm">Ustawienia</span>
+        </a>
         <button
           type="button"
           className="btn btn-ink"
@@ -591,8 +656,8 @@ export default function PanelApp() {
                     <span className="row-title">{o.title}</span>
                     <span
                       className="row-swatch"
-                      title={nameOf(FRONTS, o.front)}
-                      style={{ background: FRONTS.find((f) => f.id === o.front)?.color }}
+                      title={frontInfo(palettes, o.front)?.name ?? o.front}
+                      style={{ background: frontInfo(palettes, o.front)?.color }}
                     />
                     <span className="row-sub">
                       <span className="mono">{o.id}</span> · {o.clientType === "company" ? "Firma: " : ""}
@@ -635,9 +700,15 @@ export default function PanelApp() {
           </div>
 
           <div className="vp">
-            <KitchenGlbScene embedded />
+            {offerModel ? (
+              <CustomModelScene key={offerModel.id} model={toPublicModel(offerModel)} embedded />
+            ) : (
+              <KitchenGlbScene embedded />
+            )}
             <div className="vp-bar">
-              <span className="vp-tag">Podgląd 3D · {LAYOUT_LABEL[offer.layout]}</span>
+              <span className="vp-tag">
+                Podgląd 3D · {offerModel ? offerModel.name : LAYOUT_LABEL[offer.layout]}
+              </span>
               {L ? (
                 <a className="vp-open" href={`/oferta/${L.slug}`} target="_blank" rel="noreferrer">
                   Otwórz jako klient
@@ -713,9 +784,30 @@ export default function PanelApp() {
           ) : null}
 
           <div className="mats">
+            {models.length || offer.modelId ? (
+              <div>
+                <label className="mat-label" htmlFor="o-model">
+                  Model 3D
+                </label>
+                <select
+                  id="o-model"
+                  className="input model-select"
+                  value={offer.modelId ?? ""}
+                  onChange={(e) => setModel(e.target.value)}
+                >
+                  <option value="">Kuchnia demo</option>
+                  {models.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                  {offer.modelId && !offerModel ? <option value={offer.modelId}>Model niedostępny</option> : null}
+                </select>
+              </div>
+            ) : null}
             <div>
               <div className="mat-label">
-                Fronty <span>{nameOf(FRONTS, offer.front)}</span>
+                Fronty <span>{frontInfo(palettes, offer.front)?.name ?? offer.front}</span>
               </div>
               <div className="swatches" role="radiogroup" aria-label="Fronty">
                 {FRONTS.map((f) => (
@@ -727,6 +819,21 @@ export default function PanelApp() {
                     aria-checked={offer.front === f.id}
                     aria-label={f.name}
                     data-tip={f.name}
+                    onClick={() => setMaterial("front", f.id)}
+                  >
+                    <span style={{ background: f.color }} />
+                  </button>
+                ))}
+                {ralFronts.length ? <i className="sw-sep" aria-hidden /> : null}
+                {ralFronts.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className="sw"
+                    role="radio"
+                    aria-checked={offer.front === f.id}
+                    aria-label={f.name}
+                    data-tip={`${f.name}${f.delta ? ` · +${formatPln(f.delta)}` : ""}`}
                     onClick={() => setMaterial("front", f.id)}
                   >
                     <span style={{ background: f.color }} />
@@ -956,11 +1063,15 @@ type Lookup =
 function NewOfferDialog({
   instant,
   nextId,
+  models,
+  palettes,
   onClose,
   onCreate,
 }: {
   instant: boolean;
   nextId: string;
+  models: ModelMeta[];
+  palettes: Palette[];
   onClose: () => void;
   onCreate: (o: Offer) => void;
 }) {
@@ -984,6 +1095,7 @@ function NewOfferDialog({
     front: FRONTS[0].id,
     countertop: COUNTERTOPS[0].id,
     hardware: HARDWARE[0].id,
+    modelId: "",
   });
 
   useEffect(() => {
@@ -1096,6 +1208,7 @@ function NewOfferDialog({
       front: form.front,
       countertop: form.countertop,
       hardware: form.hardware,
+      ...(form.modelId ? { modelId: form.modelId } : {}),
       status: "szkic",
       link: null,
       events: [{ t: stamp(), k: "create", x: isCompany ? "Oferta przygotowana dla firmy" : "Oferta przygotowana" }],
@@ -1258,11 +1371,24 @@ function NewOfferDialog({
               options={(Object.keys(LAYOUT_LABEL) as Layout[]).map((l) => ({ value: l, label: l === "wyspa" ? "Wyspa" : l }))}
             />
           </div>
+          {models.length ? (
+            <div className="field">
+              <label htmlFor="n-model">Model 3D</label>
+              <select id="n-model" className="input" value={form.modelId} onChange={(e) => set("modelId")(e.target.value)}>
+                <option value="">Kuchnia demo</option>
+                {models.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null}
           <div className="field">
             <span className="lab">Fronty</span>
             <div className="swatches" role="radiogroup" aria-label="Fronty">
-              {FRONTS.map((f) => (
-                <button key={f.id} type="button" className="sw" role="radio" aria-checked={form.front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => set("front")(f.id)}>
+              {[...FRONTS, ...paletteFronts(palettes)].map((f, i) => (
+                <button key={f.id} type="button" className="sw" role="radio" aria-checked={form.front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => set("front")(f.id)} data-first-ral={i === FRONTS.length ? "" : undefined}>
                   <span style={{ background: f.color }} />
                 </button>
               ))}

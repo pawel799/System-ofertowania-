@@ -7,6 +7,8 @@ import {
 } from "three";
 import { FRONTS, getFront, subscribeFront } from "./frontStore";
 import { toPhysical } from "./kitchenMaterials";
+import { getPalettes, subscribePalettes } from "./paletteStore";
+import { FINISH_LOOK, findRalFront } from "./palettes";
 
 /*
  * Podmiana materiału frontów w modelu 3D po wyborze próbki w MaterialsPanel.
@@ -106,19 +108,44 @@ export function installFrontSwap(root: Object3D, onChange: () => void) {
     variants.set(original, byId);
   }
 
+  // Kolor z pakietu RAL ("ral:…"): gładki front w kolorze RAL z połyskiem wg wykończenia.
+  // Wariant powstaje przy pierwszym wyborze; próbki z katalogu działają jak wcześniej.
+  const ralVariant = (original: Material, id: string) => {
+    const byId = variants.get(original);
+    if (!byId || !(original instanceof MeshStandardMaterial)) return undefined;
+    const cached = byId.get(id);
+    if (cached) return cached;
+    const ral = findRalFront(getPalettes(), id);
+    if (!ral) return undefined;
+    const look = FINISH_LOOK[ral.finish ?? "satyna"];
+    const m = toPhysical(original.clone());
+    m.name = `${original.name}__${id}`;
+    m.map = null;
+    m.color.set(ral.color);
+    m.roughness = look.roughness;
+    m.clearcoat = look.clearcoat;
+    m.clearcoatRoughness = look.clearcoatRoughness;
+    m.needsUpdate = true;
+    byId.set(id, m);
+    return m;
+  };
+
   const apply = () => {
     const id = getFront();
     for (const { mesh, original } of targets) {
-      mesh.material = variants.get(original)?.get(id) ?? original;
+      mesh.material = variants.get(original)?.get(id) ?? ralVariant(original, id) ?? original;
     }
     onChange();
   };
 
   apply();
   const unsubscribe = subscribeFront(apply);
+  // Pakiety RAL mogą dojść po wyborze frontu (oferta wczytuje się z API).
+  const unsubscribePalettes = subscribePalettes(apply);
 
   return () => {
     unsubscribe();
+    unsubscribePalettes();
     for (const { mesh, original } of targets) mesh.material = original;
     // Tekstury są wspólne z modelem, więc zwalniamy tylko same klony.
     variants.forEach((byId) => byId.forEach((m) => m.dispose()));

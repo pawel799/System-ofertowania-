@@ -8,6 +8,8 @@
  *     status -> "poprawki" (chyba że oferta jest już zaakceptowana).
  */
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../../../src/components/catalog";
+import { findRalFront } from "../../../../src/components/palettes";
+import { listPalettes } from "../../../_lib/assets";
 import { handle, HttpError, json, putOffer, readJson, resolvePublic, stampNow } from "../../../_lib/offers";
 
 const MAX_PER_HOUR = 10;
@@ -39,7 +41,11 @@ export const onRequestPost = handle(async (ctx) => {
   let choiceNote = "";
   if (b.choice && typeof b.choice === "object" && !Array.isArray(b.choice)) {
     const c = b.choice as Record<string, unknown>;
-    const front = nameOf(FRONTS, c.front);
+    const front =
+      nameOf(FRONTS, c.front) ??
+      (typeof c.front === "string" && c.front.startsWith("ral:")
+        ? findRalFront(await listPalettes(kv), c.front)?.name
+        : undefined);
     const countertop = nameOf(COUNTERTOPS, c.countertop);
     const hardware = nameOf(HARDWARE, c.hardware);
     const differs = c.front !== offer.front || c.countertop !== offer.countertop || c.hardware !== offer.hardware;

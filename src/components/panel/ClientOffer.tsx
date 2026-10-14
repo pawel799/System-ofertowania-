@@ -6,6 +6,7 @@ import ClientComments from "./ClientComments";
 import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
+import { setPalettes } from "../paletteStore";
 import { ApiError, publicApi, type PublicOffer } from "./offerApi";
 
 /*
@@ -73,6 +74,8 @@ export default function ClientOffer() {
 
   useEffect(() => {
     if (state.k !== "ready") return;
+    // Pakiety najpierw: front z pakietu RAL musi mieć swój kolor, zanim go wybierzemy.
+    setPalettes(state.offer.palettes ?? []);
     setFront(state.offer.front);
     setCountertop(state.offer.countertop);
     setHardware(state.offer.hardware);
@@ -88,6 +91,7 @@ export default function ClientOffer() {
         base={offer.base}
         showPrice={offer.showPrice}
         actions={offer.comments ? <ClientComments slug={slug} pin={okPin} /> : undefined}
+        model={offer.model ?? null}
       />
     );
   }

@@ -4,6 +4,8 @@
  * się raz w panelu i zostaje w localStorage tej przeglądarki (nigdy w kodzie).
  */
 import type { Offer } from "./offers";
+import type { PublicModel, ModelRole } from "../modelRoles";
+import type { Palette } from "../palettes";
 
 export const TOKEN_KEY = "studio-kuchnie:panel-token";
 
@@ -74,6 +76,76 @@ export const panelApi = {
   remove: (id: string) => call<void>("DELETE", `/api/offers/${offerKey(id)}`, { headers: auth() }),
 };
 
+/* ---------- Modele 3D, pakiety RAL, własna domena (panel) ---------- */
+
+export type ModelMeta = {
+  id: string;
+  name: string;
+  size: number;
+  version: number;
+  tags: Record<string, ModelRole>;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export const modelUrl = (m: Pick<ModelMeta, "id" | "version">) => `/api/models/${m.id}/file?v=${m.version}`;
+export const toPublicModel = (m: ModelMeta): PublicModel => ({ id: m.id, name: m.name, url: modelUrl(m), tags: m.tags });
+
+export type DomainState = {
+  hostname: string;
+  status: string;
+  sslStatus: string;
+  errors: string[];
+  createdAt: string;
+  checkedAt: string;
+};
+
+export type DomainView = { configured: boolean; target: string | null; domain: DomainState | null; active: boolean };
+
+/** Wysyłka pliku modelu (GLB) z postępem – fetch nie raportuje postępu wysyłania, więc XHR. */
+function uploadGlb(glb: Uint8Array, name: string, onProgress?: (part: number) => void): Promise<ModelMeta> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/models");
+    xhr.setRequestHeader("authorization", `Bearer ${getToken()}`);
+    xhr.setRequestHeader("content-type", "model/gltf-binary");
+    xhr.setRequestHeader("x-model-name", encodeURIComponent(name));
+    xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
+    xhr.onerror = () => reject(new ApiError(0, "network", "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie."));
+    xhr.onload = () => {
+      let data: { model?: ModelMeta; error?: string; message?: string } = {};
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        return reject(new ApiError(xhr.status, "no_api", "Serwer nie ma API modeli (np. zwykły next dev bez wrangler pages dev)."));
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && data.model) resolve(data.model);
+      else reject(new ApiError(xhr.status, data.error ?? "error", data.message ?? `Błąd serwera (${xhr.status}).`));
+    };
+    xhr.send(new Blob([new Uint8Array(glb)], { type: "model/gltf-binary" }));
+  });
+}
+
+export const assetsApi = {
+  models: () => call<{ models: ModelMeta[] }>("GET", "/api/models", { headers: auth() }).then((r) => r.models),
+  uploadModel: uploadGlb,
+  updateModel: (id: string, patch: { name?: string; tags?: Record<string, ModelRole> }) =>
+    call<{ model: ModelMeta }>("PUT", `/api/models/${id}`, { body: patch, headers: auth() }).then((r) => r.model),
+  removeModel: (id: string) => call<void>("DELETE", `/api/models/${id}`, { headers: auth() }),
+
+  palettes: () => call<{ palettes: Palette[] }>("GET", "/api/palettes", { headers: auth() }).then((r) => r.palettes),
+  createPalette: (p: Omit<Palette, "id">) =>
+    call<{ palette: Palette }>("POST", "/api/palettes", { body: p, headers: auth() }).then((r) => r.palette),
+  updatePalette: (p: Palette) =>
+    call<{ palette: Palette }>("PUT", `/api/palettes/${p.id}`, { body: p, headers: auth() }).then((r) => r.palette),
+  removePalette: (id: string) => call<void>("DELETE", `/api/palettes/${id}`, { headers: auth() }),
+
+  domain: () => call<DomainView>("GET", "/api/settings/domain", { headers: auth() }),
+  setDomain: (hostname: string) => call<DomainView>("PUT", "/api/settings/domain", { body: { hostname }, headers: auth() }),
+  refreshDomain: () => call<DomainView>("POST", "/api/settings/domain/refresh", { headers: auth() }),
+  removeDomain: () => call<void>("DELETE", "/api/settings/domain", { headers: auth() }),
+};
+
 /* ---------- Strona klienta ---------- */
 
 export type PublicOffer = {
@@ -88,6 +160,10 @@ export type PublicOffer = {
   comments: boolean;
   base?: number;
   expires: string;
+  /** Wgrany model 3D; null = kuchnia demo. */
+  model?: PublicModel | null;
+  /** Pakiety RAL studia (fronty do wyboru). */
+  palettes?: Palette[];
 };
 
 const pinHeader = (pin?: string): Record<string, string> => (pin ? { "x-offer-pin": pin } : {});

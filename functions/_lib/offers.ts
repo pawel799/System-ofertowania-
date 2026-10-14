@@ -9,6 +9,7 @@
  */
 
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
+import { RAL_FRONT_RE } from "../../src/components/palettes";
 
 /* Minimalne typy runtime'u Cloudflare (bez dodatkowej paczki z typami). */
 export interface KVNamespace {
@@ -22,10 +23,31 @@ export interface KVNamespace {
   }>;
 }
 
+/* Minimalne typy R2 (pliki modeli 3D). */
+export interface R2ObjectBody {
+  body: ReadableStream;
+  size: number;
+  httpEtag: string;
+}
+
+export interface R2Bucket {
+  put(key: string, value: ArrayBuffer | ReadableStream | string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+  get(key: string): Promise<R2ObjectBody | null>;
+  delete(keys: string | string[]): Promise<void>;
+}
+
 export interface Env {
   OFFERS?: KVNamespace;
   /** Sekret (Settings → Variables and Secrets), nigdy w kodzie. */
   PANEL_TOKEN?: string;
+  /** Bucket R2 na pliki modeli 3D (binding MODELS). */
+  MODELS?: R2Bucket;
+  /** Własna domena (Cloudflare for SaaS): token API (sekret), strefa i cel CNAME. Opcjonalne. */
+  CF_API_TOKEN?: string;
+  CF_ZONE_ID?: string;
+  CF_CNAME_TARGET?: string;
+  /** Tylko do testów: inny adres API Cloudflare. */
+  CF_API_BASE?: string;
 }
 
 export type Ctx = {
@@ -101,6 +123,8 @@ export type Offer = {
   front: string;
   countertop: string;
   hardware: string;
+  /** Wgrany model 3D (id z /api/models); brak = kuchnia demo. */
+  modelId?: string;
   status: Status;
   link: OfferLink | null;
   comment?: string;
@@ -207,6 +231,8 @@ export function randomId(length = 12) {
 }
 
 export const SLUG_RE = /^[A-Za-z0-9]{10,32}$/;
+/** Id modelu 3D i pakietu RAL (losowe, base62). */
+export const ASSET_ID_RE = /^[A-Za-z0-9]{10,32}$/;
 export const KEY_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 /** Klucz oferty w URL i KV: numer oferty bez znaków spoza [A-Za-z0-9_-]. */
@@ -296,6 +322,14 @@ export function validateOffer(input: unknown): Offer {
   const contactPerson =
     o.contactPerson === undefined || o.contactPerson === null ? undefined : str(o.contactPerson, "contactPerson", 200);
   const comment = o.comment === undefined || o.comment === null ? undefined : str(o.comment, "comment", 2000);
+  // Front z katalogu albo kolor z pakietu RAL ("ral:<pakiet>:<kod>"; istnienie pakietu sprawdza checkRefs).
+  const front =
+    typeof o.front === "string" && RAL_FRONT_RE.test(o.front) ? o.front : oneOf(o.front, FRONT_IDS, "front");
+  let modelId: string | undefined;
+  if (o.modelId !== undefined && o.modelId !== null && o.modelId !== "") {
+    modelId = str(o.modelId, "modelId", 32);
+    if (!ASSET_ID_RE.test(modelId)) throw bad("Zły identyfikator modelu 3D.");
+  }
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
@@ -307,9 +341,10 @@ export function validateOffer(input: unknown): Offer {
     contact: str(o.contact, "contact", 200),
     layout: oneOf(o.layout, LAYOUTS, "layout"),
     base: Math.round(o.base * 100) / 100,
-    front: oneOf(o.front, FRONT_IDS, "front"),
+    front,
     countertop: oneOf(o.countertop, COUNTERTOP_IDS, "countertop"),
     hardware: oneOf(o.hardware, HARDWARE_IDS, "hardware"),
+    ...(modelId ? { modelId } : {}),
     status: oneOf(o.status, STATUSES, "status"),
     link: validateLink(o.link),
     ...(comment !== undefined ? { comment } : {}),

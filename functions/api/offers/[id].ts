@@ -21,6 +21,7 @@ import {
   validateOffer,
   type Ctx,
 } from "../../_lib/offers";
+import { checkRefs } from "../../_lib/assets";
 
 function keyOf(ctx: Ctx) {
   const key = param(ctx, "id");
@@ -45,6 +46,7 @@ export const onRequestPut = handle(async (ctx) => {
   if (offerKey(incoming.id) !== key) throw new HttpError(400, "id_mismatch", "Numer oferty nie pasuje do adresu.");
   const existing = await getOffer(kv, key);
   if (!existing) throw notFound();
+  await checkRefs(kv, incoming);
 
   const merged = { ...incoming };
   const oldSlug = existing.link?.slug ?? null;

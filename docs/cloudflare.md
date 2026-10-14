@@ -4,6 +4,8 @@ Strona dalej jest statycznym eksportem Next.js (`output: "export"` → `out/`).
 Backend to **Cloudflare Pages Functions** z katalogu `functions/` (Cloudflare
 buduje je sam przy deployu), a oferty leżą w **Workers KV**.
 
+Modele 3D (R2, binding `MODELS`), pakiety kolorów RAL i własna domena linków: [modele-ral-domena.md](modele-ral-domena.md).
+
 ## Dlaczego KV, a nie D1
 
 - Jedna osoba obsługuje oferty, danych jest mało (dziesiątki–setki ofert), zapytania

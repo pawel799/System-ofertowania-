@@ -8,6 +8,8 @@ import {
 } from "./countertopStore";
 import { FRONTS, setFront, useFront } from "./frontStore";
 import { HARDWARE, setHardware, useHardware } from "./hardwareStore";
+import { usePalettes } from "./paletteStore";
+import { findRalFront, paletteFronts } from "./palettes";
 import { formatPln, totalPrice } from "./pricing";
 
 type Option = { id: string; name: string; delta: number };
@@ -82,9 +84,12 @@ export default function MaterialsPanel({
   const countertop = useCountertop();
   const hardware = useHardware();
   const [requested, setRequested] = useState(false);
+  // Kolory z pakietów RAL studia (puste, gdy studio ich nie ustawiło).
+  const palettes = usePalettes();
+  const ralFronts = paletteFronts(palettes);
 
-  const selectedFront = FRONTS.find((f) => f.id === front) ?? FRONTS[0];
-  const total = totalPrice({ front, countertop, hardware }, base);
+  const selectedFront = FRONTS.find((f) => f.id === front) ?? findRalFront(palettes, front) ?? FRONTS[0];
+  const total = totalPrice({ front, countertop, hardware }, base, palettes);
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
@@ -126,6 +131,30 @@ export default function MaterialsPanel({
                 );
               })}
             </div>
+            {ralFronts.length ? (
+              <div className="mt-2.5 flex max-w-md flex-wrap gap-2" role="radiogroup" aria-label="Kolory RAL">
+                {ralFronts.map((swatch) => {
+                  const selected = swatch.id === front;
+                  return (
+                    <button
+                      key={swatch.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      aria-label={swatch.name}
+                      title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
+                      onClick={() => setFront(swatch.id)}
+                      className={`h-7 w-7 rounded-full border transition ${
+                        selected
+                          ? "border-stone-900 ring-2 ring-stone-900/30 ring-offset-2 ring-offset-white"
+                          : "border-black/20 hover:border-black/50"
+                      }`}
+                      style={{ backgroundColor: swatch.color }}
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
           </fieldset>
 
           <OptionGroup

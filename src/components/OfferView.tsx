@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
+import CustomModelBackground from "./CustomModelBackground";
 import KitchenGlbBackground from "./KitchenGlbBackground";
 import MaterialsPanel from "./MaterialsPanel";
+import type { PublicModel } from "./modelRoles";
 
 /*
  * Strona oferty dla klienta: scena 3D w tle, nagłówek i pasek materiałów.
@@ -13,6 +15,7 @@ export default function OfferView({
   base,
   showPrice = true,
   actions,
+  model,
 }: {
   /** Numer oferty, np. "KUCH-2026/12". */
   code: string;
@@ -24,11 +27,13 @@ export default function OfferView({
   showPrice?: boolean;
   /** Przyciski pod tytułem (np. uwagi klienta na stronie z linku). */
   actions?: ReactNode;
+  /** Wgrany model 3D z panelu; brak = kuchnia demo. */
+  model?: PublicModel | null;
 }) {
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#0c0b0a] text-stone-100">
       {/* Tło: model 3D kuchni (obracanie myszą, przybliżanie kółkiem). */}
-      <KitchenGlbBackground />
+      {model ? <CustomModelBackground model={model} /> : <KitchenGlbBackground />}
 
       {/* Nakładka z ofertą. Domyślnie nie łapie myszy, żeby nie blokować obracania sceny. */}
       <div className="pointer-events-none fixed inset-0 z-10 flex flex-col">
