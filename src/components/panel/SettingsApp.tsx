@@ -77,6 +77,20 @@ export default function SettingsApp() {
           <b>Ustawienia</b>
         </div>
         <span className="grow" />
+        {ready && !auth.need ? (
+          <button
+            type="button"
+            className="btn btn-plain"
+            data-tip="Usuwa token z tej przeglądarki (np. na cudzym komputerze)"
+            onClick={() => {
+              setToken("");
+              setAuth({ need: true, error: "" });
+              toast("Wylogowano", { desc: "Token panelu usunięty z tej przeglądarki." });
+            }}
+          >
+            Wyloguj
+          </button>
+        ) : null}
         <a className="btn btn-ghost" href="/panel">
           Oferty
         </a>

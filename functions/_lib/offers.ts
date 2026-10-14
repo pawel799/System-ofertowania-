@@ -6,6 +6,8 @@
  *   offer:<klucz>  -> pełna oferta (JSON), klucz = numer oferty bez "/" (KUCH-2026_12)
  *   slug:<slug>    -> klucz oferty, żeby strona klienta znalazła ofertę po linku
  *   pinfail:<slug> -> licznik błędnych PIN-ów (wygasa po godzinie)
+ *   authfail:<ip>  -> licznik błędnych tokenów panelu (wygasa po 15 min)
+ *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
@@ -199,16 +201,31 @@ async function sha256(text: string) {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
 }
 
+/** Po tylu błędnych tokenach z jednego IP panel jest blokowany na AUTH_LOCK_SECONDS. */
+const AUTH_FAIL_LIMIT = 20;
+const AUTH_LOCK_SECONDS = 15 * 60;
+
 export async function requirePanel(ctx: Ctx) {
   const secret = ctx.env.PANEL_TOKEN;
   if (!secret) throw new HttpError(503, "no_token_configured", "Na serwerze nie ustawiono sekretu PANEL_TOKEN.");
+  // Ochrona przed zgadywaniem tokenu: licznik błędnych prób na IP (KV, wygasa po 15 min).
+  // Sprawdzany PRZED porównaniem, żeby zablokowany adres nie mógł dalej zgadywać.
+  const kv = ctx.env.OFFERS;
+  const failKey = `authfail:${ctx.request.headers.get("cf-connecting-ip") ?? "unknown"}`;
+  const fails = kv ? Number((await kv.get(failKey)) ?? 0) : 0;
+  if (fails >= AUTH_FAIL_LIMIT) {
+    throw new HttpError(429, "auth_locked", "Za dużo prób z błędnym tokenem. Spróbuj ponownie za 15 minut.");
+  }
   const header = ctx.request.headers.get("authorization") ?? "";
   const given = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
   // Porównanie skrótów w stałym czasie (bez wczesnego wyjścia).
   const [a, b] = await Promise.all([sha256(given), sha256(secret)]);
   let diff = given ? 0 : 1;
   for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
-  if (diff !== 0) throw new HttpError(401, "unauthorized", "Brak lub zły token panelu.");
+  if (diff !== 0) {
+    if (kv) await kv.put(failKey, String(fails + 1), { expirationTtl: AUTH_LOCK_SECONDS });
+    throw new HttpError(401, "unauthorized", "Brak lub zły token panelu.");
+  }
 }
 
 /* ---------- Identyfikatory ---------- */
