@@ -146,6 +146,41 @@ export const assetsApi = {
   removeDomain: () => call<void>("DELETE", "/api/settings/domain", { headers: auth() }),
 };
 
+/* ---------- Zgłoszenia z formularzy (wycena, pomiar, kontakt) ---------- */
+
+export type Zgloszenie = {
+  id: string;
+  typ: "wycena" | "pomiar" | "kontakt";
+  imie: string;
+  telefon?: string;
+  email?: string;
+  firma?: string;
+  uwagi?: string;
+  oferta?: string;
+  wybor?: string;
+  utworzono: string;
+  /** Data oznaczenia jako obsłużone; null/brak = nowe. */
+  obsluzone?: string | null;
+};
+
+export const requestsApi = {
+  list: () => call<{ items: Zgloszenie[] }>("GET", "/api/zapytania", { headers: auth() }).then((r) => r.items),
+  setDone: (id: string, obsluzone: boolean) =>
+    call<{ item: Zgloszenie }>("PATCH", `/api/zapytania/${encodeURIComponent(id)}`, { body: { obsluzone }, headers: auth() }).then(
+      (r) => r.item,
+    ),
+  remove: (id: string) => call<void>("DELETE", `/api/zapytania/${encodeURIComponent(id)}`, { headers: auth() }),
+};
+
+/* ---------- Marka firmy (nazwa i logo) ---------- */
+
+export type BrandSettings = { name: string; logo: string | null };
+
+export const brandApi = {
+  get: () => call<{ brand: BrandSettings | null }>("GET", "/api/settings/brand", { headers: auth() }).then((r) => r.brand),
+  save: (b: BrandSettings) => call<{ brand: BrandSettings }>("PUT", "/api/settings/brand", { body: b, headers: auth() }).then((r) => r.brand),
+};
+
 /* ---------- Strona klienta ---------- */
 
 export type PublicOffer = {

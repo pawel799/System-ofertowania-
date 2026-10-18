@@ -6,6 +6,43 @@
  */
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
+import { initials, useBrand } from "@/lib/brand";
+import { setToken } from "./offerApi";
+
+/** Usuwa kod dostępu z tej przeglądarki i wraca do okna logowania. */
+export function LogoutButton() {
+  return (
+    <button
+      type="button"
+      className="btn btn-plain"
+      data-tip="Usuwa kod dostępu z tej przeglądarki (np. na cudzym komputerze)"
+      onClick={() => {
+        setToken("");
+        window.location.reload();
+      }}
+    >
+      Wyloguj
+    </button>
+  );
+}
+
+/** Logo i nazwa firmy w nagłówku panelu (Ustawienia → Firma; zapas: src/content/firma.ts). */
+export function PanelBrand() {
+  const brand = useBrand();
+  return (
+    <div className="logo">
+      {brand.logo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- logo z KV jako data URL
+        <img src={brand.logo} alt="" className="logo-img" />
+      ) : (
+        <span className="logo-mark" aria-hidden>
+          {initials(brand.name)}
+        </span>
+      )}
+      {brand.name}
+    </div>
+  );
+}
 
 export function PanelState({
   mode,
@@ -34,18 +71,24 @@ export function PanelState({
         ? ["Panel wymaga logowania", "Wpisz kod dostępu, żeby zobaczyć oferty."]
         : mode === "error"
           ? ["Nie udało się wczytać ofert", error || "Spróbuj ponownie za chwilę."]
-          : ["Nie ma jeszcze ofert", "Dodaj pierwszą ofertę, a pojawi się tutaj."];
+          : ["Nie ma jeszcze ofert", "Dodaj pierwszą ofertę, a pojawi się tutaj. Własne modele 3D i kolory RAL wgrasz w Ustawieniach."];
 
   return (
     <div className="pnl" data-view="list">
       <header className="top">
-        <div className="logo">
-          <span className="logo-mark" aria-hidden>
-            SK
-          </span>
-          Studio Kuchnie
-        </div>
+<PanelBrand />
         <span className="grow" />
+        {mode === "api" || mode === "local" ? (
+          <>
+            <a className="btn btn-plain" href="/panel/zgloszenia">
+              Zgłoszenia
+            </a>
+            <a className="btn btn-plain" href="/panel/ustawienia">
+              Ustawienia
+            </a>
+            <LogoutButton />
+          </>
+        ) : null}
         {mode === "api" || mode === "local" ? (
           <button type="button" className="btn btn-ink" onClick={onNew}>
             <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -67,9 +110,14 @@ export function PanelState({
             </button>
           ) : null}
           {mode === "api" || mode === "local" ? (
-            <button type="button" className="btn btn-ink" style={{ marginTop: 16 }} onClick={onNew}>
-              Dodaj ofertę
-            </button>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
+              <button type="button" className="btn btn-ink" onClick={onNew}>
+                Dodaj ofertę
+              </button>
+              <a className="btn btn-ghost" href="/panel/ustawienia">
+                Ustawienia (modele 3D)
+              </a>
+            </div>
           ) : null}
         </div>
       </div>

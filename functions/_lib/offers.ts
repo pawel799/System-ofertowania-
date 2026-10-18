@@ -48,12 +48,17 @@ export interface Env {
   CF_API_TOKEN?: string;
   CF_ZONE_ID?: string;
   CF_CNAME_TARGET?: string;
+  /** Powiadomienia o zgłoszeniach (opcjonalne): klucz API Resend, adres(y) odbiorcy, nadawca. */
+  RESEND_API_KEY?: string;
+  NOTIFY_EMAIL?: string;
+  NOTIFY_FROM?: string;
   /** Tylko do testów: inny adres API Cloudflare. */
   CF_API_BASE?: string;
 }
 
 export type Ctx = {
   request: Request;
+  waitUntil?: (p: Promise<unknown>) => void;
   env: Env;
   params: Record<string, string | string[]>;
 };
@@ -178,11 +183,11 @@ export function handle(fn: (ctx: Ctx) => Promise<Response>) {
   };
 }
 
-export async function readJson(request: Request): Promise<unknown> {
+export async function readJson(request: Request, max = 200_000): Promise<unknown> {
   const len = Number(request.headers.get("content-length") ?? 0);
-  if (len > 200_000) throw new HttpError(413, "too_large", "Za duże dane.");
+  if (len > max) throw new HttpError(413, "too_large", "Za duże dane.");
   const text = await request.text();
-  if (text.length > 200_000) throw new HttpError(413, "too_large", "Za duże dane.");
+  if (text.length > max) throw new HttpError(413, "too_large", "Za duże dane.");
   try {
     return JSON.parse(text);
   } catch {

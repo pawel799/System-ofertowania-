@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Panel ofert · Studio Kuchnie",
+  title: "Panel ofert",
   description: "Oferty kuchni, linki dla klientów i podgląd 3D.",
   robots: { index: false, follow: false },
 };

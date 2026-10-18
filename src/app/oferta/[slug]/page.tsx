@@ -11,7 +11,7 @@ import ClientOffer from "@/components/panel/ClientOffer";
  * Przy zwykłym `next dev` (bez _redirects) działa /oferta/view?id=<identyfikator>.
  */
 export const metadata: Metadata = {
-  title: "Oferta · Studio Kuchnie",
+  title: "Oferta",
   description: "Twoja kuchnia w 3D: materiały do wyboru i wycena.",
   robots: { index: false, follow: false },
 };

@@ -10,8 +10,8 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "Studio Kuchnie",
-  description: "Projekty i oferty kuchni na wymiar.",
+  title: "System ofertowania",
+  description: "Oferty mebli na wymiar w 3D.",
 };
 
 export default function RootLayout({

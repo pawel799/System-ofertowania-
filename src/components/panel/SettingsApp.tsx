@@ -5,12 +5,12 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { RAL_CLASSIC, RAL_GROUP_LABEL, ralByCode, type RalGroup } from "../ral";
-import { ApiError, assetsApi, getToken, setToken, type DomainView, type ModelMeta } from "./offerApi";
-import { TokenDialog } from "./PanelGate";
+import { ApiError, assetsApi, brandApi, getToken, setToken, type DomainView, type ModelMeta } from "./offerApi";
+import { PanelBrand, TokenDialog } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
 /*
- * Ustawienia panelu (/panel/ustawienia): modele 3D (wgrywanie + oznaczanie elementów),
+ * Ustawienia panelu (/panel/ustawienia): firma (nazwa i logo), modele 3D (wgrywanie + oznaczanie elementów),
  * pakiety kolorów RAL i własna domena linków. Ten sam wygląd co panel ofert (panel.css).
  */
 
@@ -19,8 +19,9 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "models" | "palettes" | "domain";
+type Tab = "firma" | "models" | "palettes" | "domain";
 const TABS: { value: Tab; label: string }[] = [
+  { value: "firma", label: "Firma" },
   { value: "models", label: "Modele 3D" },
   { value: "palettes", label: "Kolory RAL" },
   { value: "domain", label: "Domena" },
@@ -32,20 +33,20 @@ const sizeText = (n: number) =>
 const dateText = (iso: string) => new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" });
 
 export default function SettingsApp() {
-  const [tab, setTab] = useState<Tab>("models");
+  const [tab, setTab] = useState<Tab>("firma");
   const [auth, setAuth] = useState<{ need: boolean; error: string }>({ need: false, error: "" });
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "palettes" || t === "domain" || t === "models") setTab(t);
+    if (t === "palettes" || t === "domain" || t === "models" || t === "firma") setTab(t);
     if (!getToken()) setAuth({ need: true, error: "" });
     setReady(true);
   }, []);
 
   const onAuthError = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) {
-      setAuth({ need: true, error: "Zły token. Wpisz go jeszcze raz." });
+      setAuth({ need: true, error: "Zły kod dostępu. Wpisz go jeszcze raz." });
       return true;
     }
     return false;
@@ -66,12 +67,7 @@ export default function SettingsApp() {
             <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </a>
-        <div className="logo">
-          <span className="logo-mark" aria-hidden>
-            SK
-          </span>
-          Studio Kuchnie
-        </div>
+        <PanelBrand />
         <div className="crumb">
           <span>/</span>
           <b>Ustawienia</b>
@@ -81,11 +77,11 @@ export default function SettingsApp() {
           <button
             type="button"
             className="btn btn-plain"
-            data-tip="Usuwa token z tej przeglądarki (np. na cudzym komputerze)"
+            data-tip="Usuwa kod dostępu z tej przeglądarki (np. na cudzym komputerze)"
             onClick={() => {
               setToken("");
               setAuth({ need: true, error: "" });
-              toast("Wylogowano", { desc: "Token panelu usunięty z tej przeglądarki." });
+              toast("Wylogowano", { desc: "Kod dostępu usunięty z tej przeglądarki." });
             }}
           >
             Wyloguj
@@ -99,7 +95,9 @@ export default function SettingsApp() {
       <main className="surface set-main">
         <Seg label="Ustawienia" value={tab} onChange={pick} options={TABS} />
         {ready && !auth.need ? (
-          tab === "models" ? (
+          tab === "firma" ? (
+            <BrandTab onAuthError={onAuthError} />
+          ) : tab === "models" ? (
             <ModelsTab onAuthError={onAuthError} />
           ) : tab === "palettes" ? (
             <PalettesTab onAuthError={onAuthError} />
@@ -694,5 +692,126 @@ function DomainTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
         </>
       ) : null}
     </section>
+  );
+}
+
+/* ---------- Firma: nazwa i logo w ofercie, w panelu i w mailu ---------- */
+
+const LOGO_MAX = 200 * 1024;
+
+/** Plik -> data URL; za duży raster zmniejszamy (max 512 px, WebP), żeby zmieścił się w 200 KB. */
+async function logoDataUrl(file: File): Promise<string> {
+  const read = (f: Blob) =>
+    new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result));
+      r.onerror = () => rej(new Error("Nie udało się odczytać pliku."));
+      r.readAsDataURL(f);
+    });
+  if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) throw new Error("Wybierz plik PNG, JPG, WebP albo SVG.");
+  if (file.size <= LOGO_MAX) return read(file);
+  if (file.type === "image/svg+xml") throw new Error("Plik SVG jest za duży (max 200 KB).");
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, 512 / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/webp", 0.85));
+  if (!blob || blob.size > LOGO_MAX) throw new Error("Logo jest za duże nawet po zmniejszeniu (max 200 KB).");
+  return read(blob);
+}
+
+function BrandTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
+  const [name, setName] = useState("");
+  const [logo, setLogo] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    brandApi
+      .get()
+      .then((b) => {
+        setName(b?.name ?? "");
+        setLogo(b?.logo ?? null);
+      })
+      .catch((e) => {
+        if (!onAuthError(e)) setErr(errText(e));
+      })
+      .finally(() => setLoaded(true));
+  }, [onAuthError]);
+
+  const save = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setErr("");
+    try {
+      const b = await brandApi.save({ name: name.trim(), logo });
+      const { setBrandCache } = await import("@/lib/brand");
+      setBrandCache(b);
+      toast("Zapisano dane firmy", { desc: "Nazwa i logo pojawią się w ofertach i w panelu." });
+    } catch (e2) {
+      if (!onAuthError(e2)) setErr(errText(e2));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!loaded) return <p className="lede">Wczytywanie…</p>;
+
+  return (
+    <form onSubmit={save} noValidate style={{ maxWidth: 520 }}>
+      <p className="lede">Nazwa i logo Twojej firmy w ofercie dla klienta, w mailu z ofertą i w nagłówku panelu.</p>
+      <div className="field">
+        <label htmlFor="brand-name">Nazwa firmy</label>
+        <input id="brand-name" className="input" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="np. Stolarnia Kowalski" />
+      </div>
+      <div className="field">
+        <span className="lab">Logo (PNG, JPG, WebP lub SVG, max 200 KB)</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          {logo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- podgląd data URL
+            <img src={logo} alt="Podgląd logo" style={{ height: 48, maxWidth: 200, objectFit: "contain", background: "#fff", borderRadius: 8, padding: 4 }} />
+          ) : (
+            <span className="faint" style={{ fontSize: 12.5 }}>Brak logo – w ofercie pokażemy samą nazwę.</span>
+          )}
+          <label className="btn btn-ghost" style={{ cursor: "pointer" }}>
+            Wybierz plik
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              style={{ display: "none" }}
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                setErr("");
+                try {
+                  setLogo(await logoDataUrl(f));
+                } catch (e2) {
+                  setErr(errText(e2));
+                }
+              }}
+            />
+          </label>
+          {logo ? (
+            <button type="button" className="btn btn-plain" onClick={() => setLogo(null)}>
+              Usuń logo
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {err ? (
+        <p className="err" role="alert">
+          {err}
+        </p>
+      ) : null}
+      <div style={{ marginTop: 16 }}>
+        <button type="submit" className="btn btn-ink" disabled={busy}>
+          {busy ? "Zapisywanie…" : "Zapisz"}
+        </button>
+      </div>
+    </form>
   );
 }

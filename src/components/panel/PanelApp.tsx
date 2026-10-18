@@ -41,7 +41,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
-import { PanelState, TokenDialog } from "./PanelGate";
+import { LogoutButton, PanelBrand, PanelState, TokenDialog } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
   CopyButton,
@@ -565,12 +565,7 @@ export default function PanelApp() {
             <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
-        <div className="logo">
-          <span className="logo-mark" aria-hidden>
-            SK
-          </span>
-          Studio Kuchnie
-        </div>
+        <PanelBrand />
         <div className="crumb">
           <span>/</span>
           <span>Oferty</span>
@@ -589,13 +584,21 @@ export default function PanelApp() {
             {store.sync === "saving" ? "Zapisywanie…" : store.sync === "error" ? "Błąd zapisu" : "Zapisano"}
           </span>
         )}
-        <a className="btn btn-plain" href="/panel/ustawienia" data-tip="Modele 3D, kolory RAL, własna domena">
+        <a className="btn btn-plain" href="/panel/zgloszenia" data-tip="Prośby o wycenę i pomiar, wiadomości z kontaktu">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M2.5 4.5h11v7a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-7Z" stroke="currentColor" strokeWidth="1.4" />
+            <path d="m2.5 4.5 5.5 4 5.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+          </svg>
+          <span className="hide-sm">Zgłoszenia</span>
+        </a>
+        <a className="btn btn-plain" href="/panel/ustawienia" data-tip="Firma i logo, modele 3D, kolory RAL, własna domena">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="currentColor" strokeWidth="1.5" />
             <path d="M13 8a5 5 0 0 0-.1-1l1.4-1.1-1.5-2.6-1.7.6a5 5 0 0 0-1.7-1L9 1.2H7l-.4 1.7a5 5 0 0 0-1.7 1l-1.7-.6-1.5 2.6L3.1 7a5 5 0 0 0 0 2l-1.4 1.1 1.5 2.6 1.7-.6a5 5 0 0 0 1.7 1L7 14.8h2l.4-1.7a5 5 0 0 0 1.7-1l1.7.6 1.5-2.6L12.9 9c.1-.3.1-.7.1-1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
           </svg>
           <span className="hide-sm">Ustawienia</span>
         </a>
+        <LogoutButton />
         <button
           type="button"
           className="btn btn-ink"

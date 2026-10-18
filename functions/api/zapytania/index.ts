@@ -5,9 +5,12 @@
  *   - wymagane imię i (telefon albo e-mail),
  *   - limit 5 zgłoszeń na godzinę z jednego IP (rate:zap:<ip>),
  *   - zapis w KV (binding OFFERS): zapytanie:<data>:<losowe id>, przechowywane 180 dni.
- * Odczyt: GET z tokenem panelu (Authorization: Bearer <PANEL_TOKEN>) – ostatnie 100 zgłoszeń.
+ *   - powiadomienie e-mail przez Resend, jeśli ustawiono RESEND_API_KEY i NOTIFY_EMAIL (patrz docs/zgloszenia.md).
+ * Odczyt: GET z kodem panelu (Authorization: Bearer <PANEL_TOKEN>) – ostatnie 200 zgłoszeń, najnowsze pierwsze.
+ * Zmiana / usuwanie: /api/zapytania/:id (PATCH { obsluzone }, DELETE).
  */
-import { handle, HttpError, json, randomId, readJson, requirePanel, store } from "../_lib/offers";
+import { notifyNewRequest } from "../../_lib/notify";
+import { handle, HttpError, json, randomId, readJson, requirePanel, store } from "../../_lib/offers";
 
 const PER_IP_HOUR = 5;
 const TTL = 180 * 24 * 3600;
@@ -52,14 +55,26 @@ export const onRequestPost = handle(async (ctx) => {
     utworzono: now,
   };
   await kv.put(`zapytanie:${now}:${randomId(8)}`, JSON.stringify(record), { expirationTtl: TTL });
+  const sending = notifyNewRequest(ctx.env, record, new URL(ctx.request.url).origin);
+  if (ctx.waitUntil) ctx.waitUntil(sending);
+  else await sending;
   return json({ ok: true }, 201);
 });
 
 export const onRequestGet = handle(async (ctx) => {
   await requirePanel(ctx);
   const kv = store(ctx.env);
-  const { keys } = await kv.list({ prefix: "zapytanie:", limit: 1000 });
-  const latest = keys.map((k) => k.name).sort().reverse().slice(0, 100);
-  const items = (await Promise.all(latest.map((k) => kv.get(k)))).filter(Boolean).map((v) => JSON.parse(v as string));
+  const names: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await kv.list({ prefix: "zapytanie:", cursor });
+    names.push(...page.keys.map((k) => k.name));
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && names.length < 5000);
+  const latest = names.sort().reverse().slice(0, 200);
+  const values = await Promise.all(latest.map((k) => kv.get(k)));
+  const items = latest
+    .map((k, i) => (values[i] ? { id: k.slice("zapytanie:".length), ...JSON.parse(values[i] as string) } : null))
+    .filter(Boolean);
   return json({ items });
 });

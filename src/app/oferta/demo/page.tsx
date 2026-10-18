@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import OfferView from "@/components/OfferView";
 
 export const metadata: Metadata = {
-  title: "Oferta KUCH-2026/12 · Studio Kuchnie",
+  title: "Oferta KUCH-2026/12",
   description: "Oferta prywatna: kuchnia w linii dębowej, układ L.",
 };
 

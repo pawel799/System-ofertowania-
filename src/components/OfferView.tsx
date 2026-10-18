@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import BrandMark from "./BrandMark";
 import CustomModelBackground from "./CustomModelBackground";
 import KitchenGlbBackground from "./KitchenGlbBackground";
 import MaterialsPanel from "./MaterialsPanel";
@@ -51,7 +52,7 @@ export default function OfferView({
         />
 
         <header className="absolute inset-x-0 top-0 flex -translate-y-[58svh] [@media(orientation:landscape)_and_(max-height:500px)]:-translate-y-[82svh] items-center justify-between gap-4 bg-[#0c0b0a]/70 px-4 py-3 text-[11px] uppercase tracking-[0.25em] text-stone-300 desk:relative desk:translate-y-0 desk:bg-transparent desk:px-10 desk:py-6">
-          <span className="text-stone-100">STUDIO / KUCHNIE</span>
+          <BrandMark />
           <span className="hidden tabular-nums text-stone-300 sm:inline">{code}</span>
           <MeasureButton className="pointer-events-auto rounded-full border border-white/25 px-4 py-2 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
         </header>

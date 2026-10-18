@@ -29,7 +29,7 @@ export type OfferEmailData = {
   validUntil?: string;
   pin?: string | null;
   showPrice?: boolean;
-  studio: { name: string; phone?: string; email?: string };
+  studio: { name: string; phone?: string; email?: string; /** Logo firmy (adres albo data URL); brak = sama nazwa. */ logo?: string | null };
 };
 
 const esc = (s: string) =>
@@ -89,7 +89,11 @@ export function renderOfferEmail(d: OfferEmailData) {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;">
         <tr>
           <td style="padding:0 4px 20px;">
-            <img src="${d.origin}/mail/logo.png" width="36" height="36" alt="${esc(d.studio.name)}" style="display:block;border:0;width:36px;height:36px;">
+            ${
+              d.studio.logo
+                ? `<img src="${esc(d.studio.logo)}" height="36" alt="${esc(d.studio.name)}" style="display:block;border:0;height:36px;width:auto;max-width:200px;">`
+                : `<p style="margin:0;font:600 15px/1.4 Helvetica,Arial,sans-serif;color:#1c1917;">${esc(d.studio.name)}</p>`
+            }
           </td>
         </tr>
         <tr>
@@ -140,7 +144,7 @@ export function renderOfferEmail(d: OfferEmailData) {
         </tr>
         <tr>
           <td style="padding:22px 8px 0;font:13px/1.6 Helvetica,Arial,sans-serif;color:#78716c;">
-            Chcesz porozmawiać o projekcie? <a href="${d.origin}${d.offerPath}#wycena" style="color:#1c1917;">Umów pomiar</a> albo odpisz na tego maila.<br>
+            Chcesz porozmawiać o projekcie? <a href="${d.origin}${d.offerPath}#pomiar" style="color:#1c1917;">Umów pomiar</a> albo odpisz na tego maila.<br>
             ${[esc(d.studio.name), d.studio.phone ? esc(d.studio.phone) : "", d.studio.email ? `<a href="mailto:${esc(d.studio.email)}" style="color:#78716c;">${esc(d.studio.email)}</a>` : ""].filter(Boolean).join(" · ")}
           </td>
         </tr>
@@ -152,8 +156,14 @@ export function renderOfferEmail(d: OfferEmailData) {
 </html>`;
 }
 
-/** Oferta demo z planu: KUCH-2026/12, Kowalski, 24 900 zł netto. */
-export function demoOfferEmail(origin: string) {
+/** Data za `days` dni po polsku, np. "1 listopada". */
+export function plDate(days: number, from = new Date()) {
+  const d = new Date(from.getTime() + days * 86_400_000);
+  return d.toLocaleDateString("pl-PL", { day: "numeric", month: "long" });
+}
+
+/** Oferta demo: KUCH-2026/12, Kowalski, 24 900 zł netto; link ważny 14 dni od dziś. */
+export function demoOfferEmail(origin: string, brand?: { name: string; logo: string | null }) {
   return renderOfferEmail({
     origin,
     code: "KUCH-2026/12",
@@ -165,7 +175,7 @@ export function demoOfferEmail(origin: string) {
     hardware: "mosiadz",
     base: 24_900,
     offerPath: "/oferta/demo",
-    validUntil: "17 października",
-    studio: { name: FIRMA.nazwaHandlowa, phone: FIRMA.telefon, email: FIRMA.email },
+    validUntil: plDate(14),
+    studio: { name: brand?.name || FIRMA.nazwaHandlowa, logo: brand?.logo ?? null, phone: FIRMA.telefon, email: FIRMA.email },
   });
 }
