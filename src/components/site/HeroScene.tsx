@@ -5,6 +5,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, useGLTF } from "@react-three/drei";
 import { Box3, Timer, Vector3 } from "three";
 import { prepareKitchenModel } from "../kitchenMaterials";
+import { installFrontSwap } from "../frontMaterials";
 
 /*
  * Tło strony głównej: ta sama kuchnia co w ofercie, kamera sama powoli kołysze się
@@ -26,6 +27,7 @@ const PERIOD = 40; // sekundy na pełne wahnięcie
 function Kitchen({ still, onReady }: { still: boolean; onReady?: () => void }) {
   const { scene } = useGLTF(MODEL_URL, true, true);
   const camera = useThree((s) => s.camera);
+  const invalidate = useThree((s) => s.invalidate);
 
   const offset = useMemo(() => {
     prepareKitchenModel(scene);
@@ -33,6 +35,11 @@ function Kitchen({ still, onReady }: { still: boolean; onReady?: () => void }) {
     const center = box.getCenter(new Vector3());
     return [-center.x, -box.min.y, -center.z] as [number, number, number];
   }, [scene]);
+
+  // Te same fronty co w ofercie (domyślnie dąb naturalny). W modelu lamele wyspy (OakWood)
+  // przenikają się z korpusem (Closet) – przy dwóch różnych materiałach widać było na wyspie
+  // poszarpane pionowe pasy. Wspólny materiał frontów ukrywa ten szew, tak jak w scenie oferty.
+  useEffect(() => installFrontSwap(scene, invalidate), [scene, invalidate]);
 
   // Własny THREE.Timer zamiast przestarzałego THREE.Clock (zegar R3F wciąż go używa wewnętrznie).
   const timer = useMemo(() => new Timer(), []);
@@ -80,7 +87,7 @@ export default function HeroScene({ offscreen = false, onReady }: { offscreen?: 
       frameloop={still || !visible || offscreen ? "demand" : "always"}
       dpr={1}
       gl={{ antialias: true, toneMappingExposure: 1.15 }}
-      camera={{ position: CAMERA_START.toArray(), fov: 50, near: 0.05, far: 60 }}
+      camera={{ position: CAMERA_START.toArray(), fov: 50, near: 0.25, far: 25 }}
     >
       <color attach="background" args={["#0c0b0a"]} />
       <directionalLight position={[3.4, 5, 3.6]} intensity={2.2} color="#fff4e6" />
