@@ -1,5 +1,7 @@
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {
   Box3,
+  BoxGeometry,
   BufferAttribute,
   BufferGeometry,
   Matrix4,
@@ -88,18 +90,29 @@ function splitHandles(root: Object3D) {
     const rest = g.clone();
     rest.setIndex(new BufferAttribute(new Uint32Array(keep), 1));
     mesh.geometry = rest;
-    const hg = g.clone();
-    hg.setIndex(new BufferAttribute(new Uint32Array(handles), 1));
+    // Oryginalne listwy mają 1–2 cm przekroju i na podglądzie prawie giną. Zamiast nich
+    // stawiamy proste pręty w tym samym miejscu i tej samej długości, ale grubsze
+    // (min. 1,6 × 2,4 cm), żeby mosiądz i czarny mat było widać z dystansu.
+    const bars: BufferGeometry[] = [];
+    handleRoots.forEach((r) => {
+      const b = boxes.get(r)!;
+      const size = b.getSize(new Vector3());
+      const c = b.getCenter(new Vector3());
+      const order = (["x", "y", "z"] as const).slice().sort((p, q) => size[p] - size[q]);
+      size[order[0]] = Math.max(size[order[0]] * 1.6, 0.016);
+      size[order[1]] = Math.max(size[order[1]] * 1.4, 0.024);
+      bars.push(new BoxGeometry(size.x, size.y, size.z).translate(c.x, c.y, c.z));
+    });
+    const hg = mergeGeometries(bars) ?? g.clone().setIndex(new BufferAttribute(new Uint32Array(handles), 1));
+    bars.forEach((x) => x.dispose());
     const material = (mesh.material as Material).clone();
     material.name = HANDLE_MATERIAL;
     const handleMesh = new Mesh(hg, material);
     handleMesh.name = "Handles";
     handleMesh.castShadow = mesh.castShadow;
     handleMesh.receiveShadow = mesh.receiveShadow;
-    handleMesh.position.copy(mesh.position);
-    handleMesh.quaternion.copy(mesh.quaternion);
-    handleMesh.scale.copy(mesh.scale);
-    mesh.parent?.add(handleMesh);
+    // Pręty są liczone w układzie korzenia modelu – tam je dokładamy.
+    root.add(handleMesh);
   }
 }
 
@@ -111,7 +124,7 @@ type HandleLook =
 
 // Klucze = id z HARDWARE (hardwareStore.ts).
 const LOOKS: Record<string, HandleLook> = {
-  mosiadz: { kind: "metal", color: "#b08d57", metalness: 1, roughness: 0.3 },
+  mosiadz: { kind: "metal", color: "#c9a04e", metalness: 1, roughness: 0.28 },
   "czarny-mat": {
     kind: "metal",
     color: "#1c1b1a",
