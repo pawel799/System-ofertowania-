@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 /*
  * Strona główna. Hero: znak na środku, w tle scena 3D kuchni pod czarną nakładką 80%,
- * pod znakiem logowanie i rejestracja. Niżej sekcje promocyjne, na końcu stopka.
+ * pod znakiem nagłówek, jedno zdanie o produkcie i dwa przyciski. Niżej sekcje promocyjne, na końcu stopka.
  * Wszystkie teksty i media: src/content/strona-glowna.ts.
  */
 export default function HomePage() {
@@ -42,14 +42,15 @@ export default function HomePage() {
           <div aria-hidden className="absolute inset-0 -z-10 bg-black/80" />
 
           <div className="flex flex-col items-center px-6 text-center">
-            <h1 className="sr-only">{BRAND_NAME}</h1>
             <Logo size="lg" />
-            <div className="mt-12 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/logowanie" className={`${btn("ghost")} min-w-40`}>
-                Zaloguj się
+            <h1 className="mt-10 max-w-3xl text-balance text-4xl leading-[1.05] text-stone-50 md:text-6xl">{HOME.hero.title}</h1>
+            <p className="mt-5 max-w-xl text-balance text-base leading-relaxed text-stone-300 md:text-lg">{HOME.hero.lead}</p>
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/oferta/demo" className={`${btn("ghost")} min-w-40`}>
+                Zobacz przykładową ofertę
               </Link>
-              <Link href="/rejestracja" className={`${btn("solid")} min-w-40`}>
-                Zarejestruj się
+              <Link href="/kontakt" className={`${btn("solid")} min-w-40`}>
+                Umów prezentację
               </Link>
             </div>
           </div>
@@ -82,17 +83,10 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <Link
-            href={demo.cta.href}
-            tabIndex={-1}
-            aria-hidden
-            className="group mt-14 block rounded-2xl focus:outline-none"
-          >
-            <MediaSlot
-              media={demo.media}
-              className="transition-[border-color] duration-150 [@media(hover:hover)_and_(pointer:fine)]:group-hover:border-white/30"
-            />
-          </Link>
+          {/* Bez otaczającego linku: w polu jest przycisk pauzy nagrania (link do demo jest wyżej). */}
+          <div className="mt-14">
+            <MediaSlot media={demo.media} />
+          </div>
         </Section>
 
         {/* Funkcje */}

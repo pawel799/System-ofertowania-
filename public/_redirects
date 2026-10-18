@@ -7,3 +7,9 @@
 /oferta/view      /oferta/view      200
 /oferta/view.txt  /oferta/view.txt  200
 /oferta/:id       /oferta/view      200
+
+# Konta firmowe (rejestracja, logowanie hasłem) jeszcze nie istnieją – jedno wejście do panelu
+# (kod dostępu) i kontakt. Stare adresy prowadzą tam zamiast do martwych stron.
+/logowanie        /panel     301
+/rejestracja      /kontakt   301
+/reset-hasla      /panel     301

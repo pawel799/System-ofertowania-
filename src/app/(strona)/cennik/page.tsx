@@ -10,17 +10,17 @@ const PLANS = [
   {
     name: "Start",
     price: "Cena ustalana indywidualnie",
-    period: "dla jednej osoby",
+    period: "dla jednej pracowni",
     text: "Dla stolarza lub projektanta, który sam przygotowuje oferty i chce pokazać klientowi kuchnię w 3D.",
-    features: ["1 użytkownik panelu", "Oferty z modelem 3D i linkiem dla klienta", "Link chroniony PIN-em i datą ważności", "Uwagi klienta i historia otwarć"],
+    features: ["Panel ofert z kodem dostępu", "Oferty z modelem 3D i linkiem dla klienta", "Link chroniony PIN-em i datą ważności", "Uwagi klienta i historia otwarć"],
     cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
   },
   {
     name: "Pracownia",
     price: "Cena ustalana indywidualnie",
-    period: "dla zespołu",
-    text: "Dla pracowni i studiów, w których oferty przygotowuje kilka osób.",
-    features: ["Kilku użytkowników panelu", "Bez limitu ofert", "Własne logo i kolory RAL w ofercie", "Dane klienta firmowego po NIP-ie"],
+    period: "z własną marką",
+    text: "Dla pracowni, które chcą wysyłać oferty pod własną nazwą i w swoich kolorach.",
+    features: ["Wszystko z planu Start", "Własna nazwa i logo w ofercie", "Własne pakiety kolorów RAL", "Dane klienta firmowego po NIP-ie"],
     cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
     featured: true,
   },
@@ -28,8 +28,8 @@ const PLANS = [
     name: "Producent",
     price: "Zapytaj o wycenę",
     period: "wdrożenie na miarę",
-    text: "Dla producentów mebli na wymiar i sieci salonów z własną kolekcją.",
-    features: ["Własne modele 3D i katalog materiałów", "Wiele salonów lub oddziałów", "Pomoc przy wdrożeniu i opiekun"],
+    text: "Dla producentów mebli na wymiar, którzy chcą pokazywać klientom własne projekty.",
+    features: ["Wszystko z planu Pracownia", "Własne modele 3D wgrywane w panelu", "Pomoc przy przygotowaniu modeli"],
     cta: { href: "/kontakt", label: "Porozmawiajmy" },
   },
 ];
@@ -38,7 +38,7 @@ export default function CennikPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow="Cennik" title="Plan dopasowany do Twojej pracowni">
-        <p>Cenę ustalamy po krótkiej rozmowie – zależy od liczby osób, które przygotowują oferty, i od tego, czy potrzebujesz własnych modeli 3D. Napisz, a przygotujemy wycenę.</p>
+        <p>Cenę ustalamy po krótkiej rozmowie – zależy od liczby ofert i od tego, czy potrzebujesz własnych modeli 3D. Napisz, a przygotujemy wycenę.</p>
       </PageIntro>
 
       <div className="mt-14 grid gap-4 md:grid-cols-3">

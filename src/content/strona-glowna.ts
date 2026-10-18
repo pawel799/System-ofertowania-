@@ -25,6 +25,12 @@ export type Media = {
 export type Link = { href: string; label: string };
 
 export const HOME = {
+  /** Nagłówek i jedno zdanie w hero: co to jest. */
+  hero: {
+    title: "Oferty mebli na wymiar w 3D",
+    lead: "Wysyłasz klientowi link do kuchni w 3D – ogląda ją w przeglądarce, zmienia materiały, widzi cenę i zostawia uwagi.",
+  },
+
   /** Przewijanie pod przyciskami w hero (prowadzi do pierwszej sekcji). */
   scrollHint: "Jak to działa",
 
@@ -118,7 +124,7 @@ export const HOME = {
       },
       {
         title: "Salony i sieci meblowe",
-        text: "Każdy sprzedawca wysyła oferty w tym samym, dopracowanym formacie, niezależnie od salonu. Klient od pierwszego kontaktu widzi profesjonalną firmę.",
+        text: "Każda oferta wychodzi w tym samym, dopracowanym formacie. Klient od pierwszego kontaktu widzi profesjonalną firmę.",
       },
       {
         title: "Producenci mebli",
@@ -157,8 +163,8 @@ export const HOME = {
         a: "Tak. Cenę włączasz albo wyłączasz osobno dla każdej oferty.",
       },
       {
-        q: "Ile osób z firmy może korzystać z systemu?",
-        a: "To zależy od planu. Liczbę kont w każdym planie znajdziesz w cenniku.",
+        q: "Jak wchodzi się do panelu?",
+        a: "Firma dostaje kod dostępu do panelu. Wpisujesz go raz w przeglądarce i od razu widzisz swoje oferty.",
       },
       {
         q: "Co z danymi moich klientów?",
@@ -169,8 +175,8 @@ export const HOME = {
 
   finalCta: {
     title: "Daj klientom ofertę w 3D zamiast PDF-a",
-    text: "Załóż konto firmy albo umów się na prezentację. Pokażemy system na przykładzie Twojej oferty.",
-    primary: { href: "/rejestracja", label: "Załóż konto firmy" } satisfies Link,
-    secondary: { href: "/kontakt", label: "Umów prezentację" } satisfies Link,
+    text: "Umów się na prezentację – pokażemy system na przykładzie Twojej oferty i Twoich mebli.",
+    primary: { href: "/kontakt", label: "Umów prezentację" } satisfies Link,
+    secondary: { href: "/oferta/demo", label: "Zobacz przykładową ofertę" } satisfies Link,
   },
 };

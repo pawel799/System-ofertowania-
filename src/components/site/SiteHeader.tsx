@@ -11,11 +11,11 @@ export default function SiteHeader() {
           <Logo />
         </Link>
         <nav className="flex items-center gap-2 text-sm">
-          <Link href="/logowanie" className={btn("ghost", "sm")}>
-            Zaloguj się
+          <Link href="/panel" className={`${btn("ghost", "sm")} hidden sm:inline-flex`}>
+            Wejdź do panelu
           </Link>
-          <Link href="/rejestracja" className={`${btn("solid", "sm")} hidden sm:inline-flex`}>
-            Zarejestruj się
+          <Link href="/kontakt" className={btn("solid", "sm")}>
+            Umów prezentację
           </Link>
         </nav>
       </div>

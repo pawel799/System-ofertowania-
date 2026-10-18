@@ -13,11 +13,18 @@ import { btn } from "../styles";
 export default function HomeHeader({ heroId }: { heroId: string }) {
   const [shown, setShown] = useState(false);
   const [active, setActive] = useState("");
+  const [menu, setMenu] = useState(false);
 
   useEffect(() => {
     const hero = document.getElementById(heroId);
     if (!hero) return;
-    const io = new IntersectionObserver(([e]) => setShown(!e.isIntersecting), { rootMargin: "-80px 0px 0px 0px" });
+    const io = new IntersectionObserver(
+      ([e]) => {
+        setShown(!e.isIntersecting);
+        if (e.isIntersecting) setMenu(false);
+      },
+      { rootMargin: "-80px 0px 0px 0px" },
+    );
     io.observe(hero);
     return () => io.disconnect();
   }, [heroId]);
@@ -60,14 +67,49 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/logowanie" className={btn("ghost", "sm")}>
-            Zaloguj się
+          <Link href="/panel" className={`${btn("ghost", "sm")} hidden sm:inline-flex`}>
+            Wejdź do panelu
           </Link>
-          <Link href="/rejestracja" className={btn("solid", "sm")}>
-            Zarejestruj się
+          <Link href="/kontakt" className={btn("solid", "sm")}>
+            Umów prezentację
           </Link>
+          {/* Telefon/tablet: sekcje w rozwijanym menu. */}
+          <button
+            type="button"
+            aria-expanded={menu}
+            aria-controls="menu-sekcji"
+            aria-label={menu ? "Zamknij menu" : "Menu sekcji"}
+            onClick={() => setMenu((m) => !m)}
+            className="-mr-2 rounded-full p-2 text-stone-300 hover:text-stone-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 lg:hidden"
+          >
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden className="h-5 w-5">
+              {menu ? (
+                <path d="M5 5l10 10M15 5L5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              ) : (
+                <path d="M3 6h14M3 10h14M3 14h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
         </div>
       </div>
+      {menu ? (
+        <nav id="menu-sekcji" aria-label="Sekcje" className="mx-auto max-w-6xl border-t border-white/10 py-2 lg:hidden">
+          <ul>
+            {HOME.nav.map((l) => (
+              <li key={l.href}>
+                <a href={l.href} onClick={() => setMenu(false)} className="block py-3 text-base text-stone-200 hover:text-stone-50">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+            <li className="sm:hidden">
+              <Link href="/panel" className="block py-3 text-base text-stone-200 hover:text-stone-50">
+                Wejdź do panelu
+              </Link>
+            </li>
+          </ul>
+        </nav>
+      ) : null}
     </header>
   );
 }

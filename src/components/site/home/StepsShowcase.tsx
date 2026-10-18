@@ -75,7 +75,7 @@ export default function StepsShowcase({ steps }: { steps: Step[] }) {
                   {s.title}
                 </span>
                 <span
-                  className={`mt-2 block text-sm leading-relaxed transition-colors duration-150 ${on ? "text-stone-400" : "text-stone-600"}`}
+                  className={`mt-2 block text-sm leading-relaxed transition-colors duration-150 ${on ? "text-stone-400" : "text-stone-400/80"}`}
                 >
                   {s.text}
                 </span>
