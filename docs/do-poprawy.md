@@ -29,7 +29,7 @@ Plik: `src/content/strona-glowna.ts`
 
 ## Dostępność
 
-- **Kontrast** – opis nieaktywnego kroku w „Jak to działa” (`text-stone-600` na tle `#0c0b0a`)
+- **[zrobione]** **Kontrast** – opis nieaktywnego kroku w „Jak to działa” (`text-stone-600` na tle `#0c0b0a`)
   ma kontrast ok. 2,6:1, poniżej 4,5:1 (WCAG AA). Plik: `src/components/site/home/StepsShowcase.tsx`.
 - **[zrobione]** **Autoodtwarzanie nagrań** – `MediaSlot` odtwarza wideo automatycznie (`autoPlay loop`) także przy
   `prefers-reduced-motion: reduce`. Przy reduced motion: bez autoplay albo z przyciskiem pauzy.
@@ -37,7 +37,7 @@ Plik: `src/content/strona-glowna.ts`
 
 ## Scena 3D w hero
 
-- **Pionowe pasy na frontach wyspy** – na zrzucie z prawdziwym GPU (D3D11) fronty wyspy w tle
+- **[zrobione]** **Pionowe pasy na frontach wyspy** – na zrzucie z prawdziwym GPU (D3D11) fronty wyspy w tle
   strony głównej mają pionowe pasy. Nie wynika to z commita da24887 (zmienia tylko pauzowanie
   renderu poza ekranem). Do sprawdzenia: `src/components/site/HeroScene.tsx` (materiały / cienie /
   z-fighting) albo model `public/models/kitchen-opt.glb`. Scena oferty (`/oferta/demo`) wygląda poprawnie.
@@ -46,31 +46,31 @@ Plik: `src/content/strona-glowna.ts`
 
 ### Teksty (`src/content/strona-glowna.ts`)
 
-- **Obietnice kont** – kont użytkowników nie ma (rejestracja to wersja demo, panel ma jeden token):
+- **[zrobione]** **Obietnice kont** – kont użytkowników nie ma (rejestracja to wersja demo, panel ma jeden token):
   - FAQ: „Ile osób z firmy może korzystać z systemu? → Liczbę kont w każdym planie znajdziesz w cenniku.”
   - końcowe wezwanie: przycisk „Załóż konto firmy”,
   - Dla kogo → Salony: „Każdy sprzedawca wysyła oferty w tym samym, dopracowanym formacie…” (sugeruje wielu użytkowników).
 - **Obietnica usługi** – „Modele i materiały przygotujemy pod Twoją ofertę” (Producenci) oraz FAQ
   „Skąd biorą się modele 3D kuchni?” (przygotowujemy razem z Tobą). Do potwierdzenia biznesowo.
-- **Wysyłka** – „Wyślij link jednym kliknięciem” (krok 2): panel kopiuje wiadomość, sam jej nie wysyła.
+- **[zrobione]** **Wysyłka** – „Wyślij link jednym kliknięciem” (krok 2): panel kopiuje wiadomość, sam jej nie wysyła.
 - **Model kuchni** – nadal „Wybierasz model” (krok 1): w panelu wybiera się układ, model jest jeden.
 
 ### Media (`public/strona/`)
 
-- **NIP na zrzucie** – `krok-1-nowa-oferta.webp` pokazuje NIP 123-456-32-18 (i KRS 0000123456).
+- **[zrobione]** **NIP na zrzucie** – `krok-1-nowa-oferta.webp` pokazuje NIP 123-456-32-18 (i KRS 0000123456).
   Dane są fikcyjne, ale NIP ma poprawną sumę kontrolną, więc może należeć do prawdziwej firmy.
   Zamazać albo podmienić na NIP z niepoprawną sumą kontrolną.
-- **Nagranie bez pauzy** – `LoopVideo` (13 s w pętli) nie ma przycisku pauzy; WCAG 2.2.2 wymaga
+- **[zrobione]** **Nagranie bez pauzy** – `LoopVideo` (13 s w pętli) nie ma przycisku pauzy; WCAG 2.2.2 wymaga
   możliwości zatrzymania ruchu dłuższego niż 5 s. Plik: `src/components/site/home/LoopVideo.tsx`.
-- **Kolejność źródeł** – `oferta-3d.webm` (754 KB) dać przed `oferta-3d.mp4` (1,2 MB).
-- **Zmiana „ograniczonego ruchu”** – `LoopVideo` sprawdza `prefers-reduced-motion` tylko przy
+- **[zrobione]** **Kolejność źródeł** – `oferta-3d.webm` (754 KB) dać przed `oferta-3d.mp4` (1,2 MB).
+- **[zrobione]** **Zmiana „ograniczonego ruchu”** – `LoopVideo` sprawdza `prefers-reduced-motion` tylko przy
   starcie; zmiana ustawienia w trakcie wizyty nie jest śledzona.
 
 ### Nadal otwarte z poprzedniej listy
 
-- Kontrast `text-stone-600` w krokach „Jak to działa” (ok. 2,6:1).
+- [zrobione] Kontrast w krokach „Jak to działa” (teraz ok. 5,3:1).
 - „Wybierasz model” (patrz wyżej).
-- Pionowe pasy na frontach wyspy w scenie hero.
+- [zrobione] Pionowe pasy na frontach wyspy w scenie hero.
 
 ## Po porządkach przed pokazem (październik 2026)
 
@@ -83,10 +83,31 @@ mignięcia „Wczytywanie ofert…”.
 Otwarte:
 
 - **Dane firmy** – uzupełnić `src/content/firma.ts` (nazwa prawna, NIP, adres, e-mail, telefon).
-- **Zgłoszenia z formularzy** – zapisują się w KV (`zapytanie:*`, 180 dni) i są dostępne przez
+- **[zrobione]** **Zgłoszenia z formularzy** – zapisują się w KV (`zapytanie:*`, 180 dni) i są dostępne przez
   `GET /api/zapytania` z kodem panelu, ale panel nie ma jeszcze widoku ani powiadomienia e-mail.
-- **Regulamin i polityka prywatności** – treść paragrafów „w przygotowaniu”.
+- **[zrobione]** **Regulamin i polityka prywatności** – treść paragrafów „w przygotowaniu”.
 - **THREE.Clock** – ostrzeżenie w konsoli pochodzi z @react-three/fiber 8 (wewnętrzny zegar);
   nasz kod używa już THREE.Timer. Zniknie po przejściu na R3F 9 (wymaga React 19).
 - **Uchwyty** – w modelu są tylko listwy (profil pod blatem), wydzielane automatycznie z materiału
   „Chrome” (`hardwareMaterials.ts`); zmiana jest widoczna, ale subtelna. Lepiej rozdzielić je w pliku modelu.
+
+## Pakiet przed pokazem inwestorskim (18.10.2026) – zrobione
+
+- Zgłoszenia: widok `/panel/zgloszenia` (obsłużone / usuń) + powiadomienie e-mail przez Resend
+  (`RESEND_API_KEY`, `NOTIFY_EMAIL`, `NOTIFY_FROM`) – instrukcja w `docs/zgloszenia.md`. Obietnica na /kontakt bez „1 dnia roboczego”.
+- Rejestracja, logowanie i reset hasła usunięte (przekierowania w `_redirects`); jedno wejście „Wejdź do panelu” (kod dostępu), CTA „Umów prezentację”. Przycisk „Wyloguj”.
+- Regulamin i polityka prywatności – projekt treści w `src/content/prawne.ts` (dane z `firma.ts`, neutralne sformułowania przy pustych polach). Klauzula RODO pod formularzem kontaktowym i formularzem oferty. **Przed publikacją do przejrzenia przez prawnika.**
+- Nazwa i logo firmy w Ustawieniach → Firma (KV `settings:brand`, logo ≤ 200 KB): strona oferty, mail i podgląd, nagłówek panelu. Fallback: `FIRMA.nazwaHandlowa`.
+- Pusty panel z linkiem do Ustawień; cennik tylko z istniejącymi funkcjami; polska strona 404.
+- Mail: „Umów pomiar” → `#pomiar`, data w podglądzie liczona na bieżąco.
+- Wiadomość do klienta osobno dla e-maila, SMS-a i Messengera; przyciski „Wyślij e-mailem” (mailto:), „Wyślij SMS-em” (sms:), „Kopiuj i otwórz Messengera”; PIN w osobnej wiadomości z własnym przyciskiem kopiowania.
+- Formularze czyszczą błąd pola przy zmianie; hero z nagłówkiem i podtytułem; menu sekcji na telefonie; pauza nagrania (z obsługą ograniczonego ruchu).
+- Hero 3D: te same fronty co w ofercie – pasy na wyspie znikły (w modelu lamele przenikają korpus); nowy `hero-poster.webp`.
+- Zrzut kroku 1: rozmyty NIP, REGON i KRS.
+- Uchwyty: w miejscu cienkich listew grubsze pręty (min. 1,6 × 2,4 cm) dla mosiądzu i czarnego matu; push-to-open bez uchwytów.
+
+### Nadal otwarte
+- Dane firmy w `src/content/firma.ts` (nazwa prawna, NIP, adres, e-mail, telefon) – od nich zależą stopka, /kontakt, regulamin i polityka.
+- Konfiguracja Resend w Cloudflare (patrz `docs/zgloszenia.md`).
+- Czarny mat na czarnym granicie jest mało widoczny – to kwestia kontrastu kolorów, nie geometrii.
+- Messenger nie ma oficjalnego linku „wyślij z treścią” bez aplikacji Facebooka – dlatego kopiujemy treść i otwieramy messenger.com.
