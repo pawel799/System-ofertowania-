@@ -19,7 +19,7 @@ export default function KontaktPage() {
       <PageIntro eyebrow="Kontakt" title="Porozmawiajmy o Twojej pracowni">
         <p>
           Chcesz zobaczyć, jak Twoje meble wyglądałyby w ofercie 3D, albo masz pytanie o wdrożenie? Napisz kilka słów –
-          odpisujemy w ciągu jednego dnia roboczego.
+          wiadomość trafi prosto do nas, odpiszemy na podany adres e-mail.
         </p>
       </PageIntro>
 

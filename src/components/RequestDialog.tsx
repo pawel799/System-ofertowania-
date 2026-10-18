@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { FIRMA } from "@/content/firma";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
 
 /*
@@ -237,6 +238,10 @@ export default function RequestDialog({ code, summary }: { code?: string; summar
                 {sendError}
               </p>
             ) : null}
+<p className="text-[11px] leading-relaxed text-stone-500">
+              Administratorem danych jest {FIRMA.nazwaPrawna || FIRMA.nazwaHandlowa}. Dane wykorzystamy tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO) i usuniemy po 180 dniach. Szczegóły i Twoje prawa:{" "}
+              <a href="/polityka-prywatnosci" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-stone-800">polityka prywatności</a>.
+            </p>
             <button
               type="submit"
               disabled={busy}

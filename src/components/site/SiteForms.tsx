@@ -1,5 +1,6 @@
 "use client";
 
+import { FIRMA } from "@/content/firma";
 import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { btn, INPUT, LABEL } from "./styles";
 import { wyslijZapytanie } from "@/lib/zapytania";
@@ -96,7 +97,7 @@ export function ContactForm() {
   if (done)
     return (
       <Done title="Dziękujemy za wiadomość">
-        <p>Odpowiemy na {f.email} w ciągu jednego dnia roboczego.</p>
+        <p>Wiadomość trafiła do nas. Odpiszemy na {f.email} – zwykle w ciągu kilku dni roboczych.</p>
       </Done>
     );
   return (
@@ -125,6 +126,10 @@ export function ContactForm() {
           {sendError}
         </p>
       ) : null}
+  <p className="text-xs leading-relaxed text-stone-500">
+        Administratorem danych jest {FIRMA.nazwaPrawna || FIRMA.nazwaHandlowa}. Dane wykorzystamy tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO) i usuniemy po 180 dniach. Szczegóły i Twoje prawa:{" "}
+        <a href="/polityka-prywatnosci" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-stone-200">polityka prywatności</a>.
+      </p>
       <button type="submit" className={btn("solid")} disabled={busy}>
         {busy ? "Wysyłanie…" : "Wyślij wiadomość"}
       </button>
