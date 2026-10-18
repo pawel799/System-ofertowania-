@@ -31,6 +31,9 @@ import {
   newSlug,
   nextOfferId,
   offerMessage,
+  offerSubject,
+  pinMessage,
+  sendHref,
   stamp,
   type Channel,
   type ClientType,
@@ -195,8 +198,8 @@ export default function PanelApp() {
 
   // Wiadomość odświeża się sama, dopóki ktoś jej nie poprawił ręcznie.
   useEffect(() => {
-    if (offer && !msgDirty) setMessage(offerMessage(offer, linkOrigin));
-  }, [offer, linkOrigin, msgDirty]);
+    if (offer && !msgDirty) setMessage(offerMessage(offer, linkOrigin, offer.link?.channel ?? draft.channel));
+  }, [offer, linkOrigin, msgDirty, draft.channel]);
 
   // Blokada przewijania pod oknem dialogowym.
   useEffect(() => {
@@ -435,6 +438,27 @@ export default function PanelApp() {
               </dd>
             </dl>
             <div className="actions">
+              {(() => {
+                const href = sendHref(offer, L.channel, message);
+                return href ? (
+                  <a className="btn btn-ink" href={href} data-tip={L.channel === "email" ? `Otwiera program pocztowy: „${offerSubject(offer)}”` : "Otwiera SMS na telefonie"}>
+                    {L.channel === "email" ? "Wyślij e-mailem" : "Wyślij SMS-em"}
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    className="btn btn-ink"
+                    onClick={() =>
+                      void copyMessage(message).then(() => {
+                        toast("Wiadomość skopiowana", { desc: "Wklej ją w rozmowie z klientem." });
+                        window.open("https://www.messenger.com/", "_blank", "noopener");
+                      }, fallbackSelect(msgRef))
+                    }
+                  >
+                    Kopiuj i otwórz Messengera
+                  </button>
+                );
+              })()}
               <button
                 type="button"
                 className="btn btn-ghost"
@@ -451,6 +475,18 @@ export default function PanelApp() {
                 Unieważnij
               </HoldButton>
             </div>
+            {L.pin ? (
+              <div className="field">
+                <span className="lab">PIN – wyślij osobno</span>
+                <div className="linkbox">
+                  <input readOnly value={pinMessage(offer)} aria-label="Wiadomość z PIN-em" />
+                  <CopyButton text={pinMessage(offer)} label="Kopiuj PIN" onFallback={() => toast("Zaznacz i skopiuj PIN ręcznie", { type: "info" })} />
+                </div>
+                <p className="faint" style={{ margin: 0, fontSize: 12 }}>
+                  Najbezpieczniej inną drogą niż link: gdy link idzie mailem, PIN wyślij SMS-em (i odwrotnie).
+                </p>
+              </div>
+            ) : null}
           </>
         ) : (
           <>

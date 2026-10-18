@@ -298,13 +298,52 @@ export function newPin() {
   return String(1000 + (buf[0] % 9000));
 }
 
-export function offerMessage(offer: Offer, origin: string) {
-  const hi = offer.greet ? `Cześć ${offer.greet}!` : "Dzień dobry!";
-  const url = offer.link
-    ? `${origin}/oferta/${offer.link.slug}`
-    : "[link pojawi się po utworzeniu]";
-  let text = `${hi} Przygotowaliśmy ofertę ${offer.id}: ${offer.title}. Obejrzyj kuchnię w 3D, zmień fronty i blat, sprawdź wycenę: ${url}`;
-  if (offer.link?.pin) text += `\nPIN do oferty: ${offer.link.pin}`;
-  text += "\nW razie pytań odpisz na tę wiadomość.";
-  return text;
+/** Temat maila z ofertą. */
+export const offerSubject = (offer: Offer) => `Oferta ${offer.id}: ${offer.title}`;
+
+/**
+ * Wiadomość z linkiem, dopasowana do kanału: SMS krótki, Messenger luźniejszy, e-mail pełniejszy.
+ * PIN NIE trafia do tej wiadomości – idzie osobno (pinMessage), najlepiej inną drogą.
+ */
+export function offerMessage(offer: Offer, origin: string, channel: Channel = offer.link?.channel ?? "email") {
+  const url = offer.link ? `${origin}/oferta/${offer.link.slug}` : "[link pojawi się po utworzeniu]";
+  const pinNote = offer.link?.pin ? " PIN do oferty wyślemy osobno." : "";
+  if (channel === "sms") {
+    return `${offer.greet ? `${offer.greet}, ` : ""}Twoja oferta kuchni ${offer.id} w 3D: ${url}${pinNote}`;
+  }
+  if (channel === "messenger") {
+    const hi = offer.greet ? `Cześć ${offer.greet}!` : "Dzień dobry!";
+    return `${hi} Mamy gotowy projekt Twojej kuchni (${offer.title}). Możesz ją obejrzeć w 3D, pozmieniać fronty i blat i od razu zobaczyć cenę:\n${url}${pinNote}\nDaj znać, co myślisz!`;
+  }
+  const hi = offer.greet ? `Dzień dobry, ${offer.greet}!` : "Dzień dobry!";
+  return [
+    hi,
+    "",
+    `Przygotowaliśmy ofertę ${offer.id}: ${offer.title}.`,
+    "Pod linkiem obejrzysz kuchnię w 3D, zmienisz fronty, blat i uchwyty oraz sprawdzisz wycenę:",
+    url,
+    ...(offer.link?.pin ? ["", "Link jest zabezpieczony PIN-em – prześlemy go w osobnej wiadomości."] : []),
+    "",
+    "W razie pytań odpisz na tego maila albo zadzwoń.",
+    "Pozdrawiamy",
+  ].join("\n");
+}
+
+/** Osobna wiadomość z samym PIN-em (wysyłana inną drogą niż link). */
+export function pinMessage(offer: Offer) {
+  return offer.link?.pin ? `PIN do oferty ${offer.id}: ${offer.link.pin}` : "";
+}
+
+/** Link do aplikacji pocztowej / SMS z gotową treścią (null = kanał bez takiego linku). */
+export function sendHref(offer: Offer, channel: Channel, text: string) {
+  const to = offer.contact.trim();
+  if (channel === "email") {
+    const addr = to.includes("@") ? to : "";
+    return `mailto:${encodeURIComponent(addr)}?subject=${encodeURIComponent(offerSubject(offer))}&body=${encodeURIComponent(text)}`;
+  }
+  if (channel === "sms") {
+    const num = /\d{6,}/.test(to.replace(/\D/g, "")) ? to.replace(/[^\d+]/g, "") : "";
+    return `sms:${num}?body=${encodeURIComponent(text)}`;
+  }
+  return null;
 }
