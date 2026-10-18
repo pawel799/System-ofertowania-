@@ -34,7 +34,6 @@ import { installFrontSwap } from "./frontMaterials";
 import { installCountertopSwap } from "./countertopMaterials";
 import { installHardwareSwap } from "./hardwareMaterials";
 
-// optymalizacja ale nadal źle kurwa działa
 const MODEL_URL = "/models/kitchen-opt.glb";
 
 const MODEL_BYTES_FALLBACK = 18_440_100;
@@ -344,7 +343,7 @@ export default function KitchenGlbScene({
       className={
         embedded
           ? "absolute inset-0 h-full w-full bg-[#0c0b0a]"
-          : "fixed inset-0 h-screen w-screen bg-[#0c0b0a]"
+          : "absolute inset-0 h-full w-full bg-[#0c0b0a]"
       }
     >
       <SceneErrorBoundary>

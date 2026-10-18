@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageIntro, { LOREM, LOREM_SHORT } from "@/components/site/PageIntro";
+import PageIntro from "@/components/site/PageIntro";
 import { btn } from "@/components/site/styles";
 
 export const metadata: Metadata = { title: "O nas · System ofertowania" };
 
 const POINTS = [
-  { title: "Oferta w 3D", text: LOREM_SHORT },
-  { title: "Link dla klienta", text: LOREM_SHORT },
-  { title: "Akceptacja online", text: LOREM_SHORT },
+  { title: "Oferta w 3D", text: "Klient widzi swoją kuchnię w trójwymiarze, a nie tylko listę pozycji i rzut z góry." },
+  { title: "Link dla klienta", text: "Oferta otwiera się w przeglądarce na telefonie i komputerze – bez załączników i instalowania programów." },
+  { title: "Uwagi i decyzja online", text: "Klient sam zmienia fronty, blat i uchwyty, widzi cenę i zostawia uwagi przy ofercie." },
 ];
 
 export default function ONasPage() {
   return (
     <div className="mx-auto max-w-6xl">
-      <PageIntro eyebrow="O nas" title="Lorem ipsum dolor sit amet">
-        <p>{LOREM}</p>
+      <PageIntro eyebrow="O nas" title="Pomagamy sprzedawać meble na wymiar">
+        <p>
+          Tworzymy system ofertowania dla stolarzy, pracowni i producentów mebli na wymiar. Zamiast wysyłać PDF z rysunkiem,
+          wysyłasz klientowi link do kuchni w 3D, którą może obejrzeć ze wszystkich stron.
+        </p>
       </PageIntro>
 
       <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
@@ -28,8 +31,14 @@ export default function ONasPage() {
       </div>
 
       <div className="mt-16 max-w-2xl space-y-5 text-base leading-relaxed text-stone-400">
-        <p>{LOREM}</p>
-        <p>{LOREM}</p>
+        <p>
+          Klient, który widzi przyszłą kuchnię, szybciej podejmuje decyzję i rzadziej wraca z pytaniami „a jak to będzie
+          wyglądać?”. Może sam porównać dąb z lakierem, kamień z laminatem i od razu zobaczyć, jak zmienia się cena.
+        </p>
+        <p>
+          Ty widzisz w panelu, czy oferta została otwarta, jakie materiały wybrał klient i jakie ma uwagi. Dzięki temu
+          wiesz, kiedy zadzwonić, i rozmawiasz o konkretach.
+        </p>
       </div>
 
       <div className="mt-12 flex flex-wrap gap-3">

@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type FormEvent, type InputHTMLAttributes, type ReactNode } from "react";
 import { cleanNip, isValidNip } from "@/components/panel/company";
 import { btn, INPUT, LABEL } from "./styles";
+import { wyslijZapytanie } from "@/lib/zapytania";
 
 /*
  * Formularze strony: logowanie, rejestracja, reset hasła, kontakt.
  * Walidacja działa, backendu jeszcze nie ma:
  * - logowanie przechodzi od razu do /panel,
- * - pozostałe pokazują potwierdzenie z dopiskiem "wersja demo".
+ * - kontakt zapisuje wiadomość przez /api/zapytania (KV),
+ * - rejestracja i reset hasła pokazują potwierdzenie z dopiskiem "wersja demo".
  * Miejsca do podpięcia API są oznaczone komentarzem TODO(backend).
  */
 
@@ -126,7 +128,6 @@ export function LoginForm() {
           Zarejestruj firmę
         </Link>
       </p>
-      <p className="text-center text-xs text-stone-600">Wersja demo: logowanie od razu otwiera panel, bez sprawdzania hasła.</p>
     </form>
   );
 }
@@ -291,8 +292,10 @@ export function ContactForm() {
   const [f, setF] = useState({ name: "", email: "", company: "", message: "" });
   const [errors, setErrors] = useState<Partial<Record<keyof typeof f, string>>>({});
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState("");
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
     const next: typeof errors = {};
     if (!f.name.trim()) next.name = "Wpisz imię i nazwisko.";
@@ -300,13 +303,17 @@ export function ContactForm() {
     if (f.message.trim().length < 10) next.message = "Napisz kilka słów, w czym możemy pomóc.";
     setErrors(next);
     if (Object.keys(next).length) return;
-    // TODO(backend): POST /api/kontakt (np. wysyłka maila)
+    setBusy(true);
+    setSendError("");
+    const err = await wyslijZapytanie({ typ: "kontakt", imie: f.name, email: f.email, firma: f.company, uwagi: f.message });
+    setBusy(false);
+    if (err) return setSendError(err);
     setDone(true);
   };
   if (done)
     return (
       <Done title="Dziękujemy za wiadomość">
-        <p>Odpowiemy na {f.email} w ciągu jednego dnia roboczego. Wersja demo: wiadomość nigdzie nie została wysłana.</p>
+        <p>Odpowiemy na {f.email} w ciągu jednego dnia roboczego.</p>
       </Done>
     );
   return (
@@ -330,8 +337,13 @@ export function ContactForm() {
         />
         {errors.message ? <p className="mt-2 text-sm text-red-300">{errors.message}</p> : null}
       </div>
-      <button type="submit" className={btn("solid")}>
-        Wyślij wiadomość
+      {sendError ? (
+        <p className="text-sm text-red-300" role="alert">
+          {sendError}
+        </p>
+      ) : null}
+      <button type="submit" className={btn("solid")} disabled={busy}>
+        {busy ? "Wysyłanie…" : "Wyślij wiadomość"}
       </button>
     </form>
   );

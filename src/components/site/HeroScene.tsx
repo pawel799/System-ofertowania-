@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, useGLTF } from "@react-three/drei";
-import { Box3, Vector3 } from "three";
+import { Box3, Timer, Vector3 } from "three";
 import { prepareKitchenModel } from "../kitchenMaterials";
 
 /*
@@ -23,7 +23,7 @@ const Y_AXIS = new Vector3(0, 1, 0);
 const SWAY = 0.24; // radiany w każdą stronę
 const PERIOD = 40; // sekundy na pełne wahnięcie
 
-function Kitchen({ still }: { still: boolean }) {
+function Kitchen({ still, onReady }: { still: boolean; onReady?: () => void }) {
   const { scene } = useGLTF(MODEL_URL, true, true);
   const camera = useThree((s) => s.camera);
 
@@ -34,10 +34,21 @@ function Kitchen({ still }: { still: boolean }) {
     return [-center.x, -box.min.y, -center.z] as [number, number, number];
   }, [scene]);
 
-  useFrame(({ clock }) => {
-    const angle = still ? 0 : Math.sin((clock.getElapsedTime() / PERIOD) * Math.PI * 2) * SWAY;
+  // Własny THREE.Timer zamiast przestarzałego THREE.Clock (zegar R3F wciąż go używa wewnętrznie).
+  const timer = useMemo(() => new Timer(), []);
+  useEffect(() => () => timer.dispose(), [timer]);
+  const announced = useRef(false);
+
+  useFrame(() => {
+    timer.update();
+    const angle = still ? 0 : Math.sin((timer.getElapsed() / PERIOD) * Math.PI * 2) * SWAY;
     camera.position.copy(CAMERA_TARGET).add(OFFSET.clone().applyAxisAngle(Y_AXIS, angle));
     camera.lookAt(CAMERA_TARGET);
+    // Pierwsza klatka z modelem gotowa – tło może przejść z kadru statycznego na scenę.
+    if (!announced.current) {
+      announced.current = true;
+      requestAnimationFrame(() => onReady?.());
+    }
   });
 
   return (
@@ -47,7 +58,7 @@ function Kitchen({ still }: { still: boolean }) {
   );
 }
 
-export default function HeroScene({ offscreen = false }: { offscreen?: boolean }) {
+export default function HeroScene({ offscreen = false, onReady }: { offscreen?: boolean; onReady?: () => void }) {
   // Ruch wyłączony przy prefers-reduced-motion, gdy karta jest w tle i gdy hero jest poza ekranem.
   const [still, setStill] = useState(false);
   const [visible, setVisible] = useState(true);
@@ -74,7 +85,7 @@ export default function HeroScene({ offscreen = false }: { offscreen?: boolean }
       <color attach="background" args={["#0c0b0a"]} />
       <directionalLight position={[3.4, 5, 3.6]} intensity={2.2} color="#fff4e6" />
       <Suspense fallback={null}>
-        <Kitchen still={still} />
+        <Kitchen still={still} onReady={onReady} />
         <Environment files={HDRI_URL} environmentIntensity={0.9} />
       </Suspense>
     </Canvas>

@@ -131,7 +131,7 @@ export const HOME = {
     id: "cennik",
     eyebrow: "Cennik",
     title: "Plan dopasowany do wielkości firmy",
-    text: "Od jednego projektanta po sieć salonów. Ceny netto, płatność miesięczna.",
+    text: "Od jednego stolarza po producenta z siecią salonów. Cenę ustalamy indywidualnie.",
     cta: { href: "/cennik", label: "Zobacz cennik" } satisfies Link,
   },
 

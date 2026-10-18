@@ -119,7 +119,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
 
 export default function CustomModelScene({ model, embedded = false }: { model: PublicModel; embedded?: boolean }) {
   return (
-    <div className={embedded ? "absolute inset-0 h-full w-full bg-[#0c0b0a]" : "fixed inset-0 h-screen w-screen bg-[#0c0b0a]"}>
+    <div className={embedded ? "absolute inset-0 h-full w-full bg-[#0c0b0a]" : "absolute inset-0 h-full w-full bg-[#0c0b0a]"}>
       <Boundary>
         <Canvas
           frameloop="demand"

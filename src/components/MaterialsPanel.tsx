@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   COUNTERTOPS,
   setCountertop,
@@ -11,6 +10,7 @@ import { HARDWARE, setHardware, useHardware } from "./hardwareStore";
 import { usePalettes } from "./paletteStore";
 import { findRalFront, paletteFronts } from "./palettes";
 import { formatPln, totalPrice } from "./pricing";
+import RequestDialog, { openRequest } from "./RequestDialog";
 
 type Option = { id: string; name: string; delta: number };
 
@@ -72,8 +72,11 @@ export default function MaterialsPanel({
   className = "",
   base,
   showPrice = true,
+  code,
 }: {
   className?: string;
+  /** Numer oferty – trafia do zgłoszenia wyceny/pomiaru. */
+  code?: string;
   /** Cena bazowa zabudowy; domyślnie cennik demo (BASE_PRICE). */
   base?: number;
   /** false = zamiast kwoty informacja, że cena będzie po pomiarze. */
@@ -83,33 +86,40 @@ export default function MaterialsPanel({
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
-  const [requested, setRequested] = useState(false);
   // Kolory z pakietów RAL studia (puste, gdy studio ich nie ustawiło).
   const palettes = usePalettes();
   const ralFronts = paletteFronts(palettes);
 
   const selectedFront = FRONTS.find((f) => f.id === front) ?? findRalFront(palettes, front) ?? FRONTS[0];
   const total = totalPrice({ front, countertop, hardware }, base, palettes);
+  const selectedCountertop = COUNTERTOPS.find((c) => c.id === countertop) ?? COUNTERTOPS[0];
+  const selectedHardware = HARDWARE.find((h) => h.id === hardware) ?? HARDWARE[0];
+  const summary = `front ${selectedFront.name}, blat ${selectedCountertop.name}, okucia ${selectedHardware.name}${
+    showPrice ? `, szacunek ${formatPln(total)} netto` : ""
+  }`;
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
     <aside
       id="wycena"
-      className={`pointer-events-auto relative max-h-[55vh] overflow-y-auto border-t border-black/10 bg-white text-stone-900 md:max-h-none md:overflow-visible ${className}`}
+      className={`pointer-events-auto relative border-t border-black/10 bg-white text-stone-900 desk:max-h-none desk:overflow-visible ${className}`}
     >
       <h2 className="sr-only">Materiały</h2>
 
-      <div className="flex flex-col gap-4 px-6 py-4 md:flex-row md:items-end md:gap-8 md:px-10 md:py-5">
+      <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-4 md:gap-x-8">
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-4 desk:gap-x-8">
           <fieldset>
             <legend className={`mb-2 flex items-baseline gap-2 ${GROUP_LABEL}`}>
               Fronty
               <span className="text-sm normal-case tracking-normal text-stone-900">
                 {selectedFront.name}
+                {showPrice && selectedFront.delta ? (
+                  <span className="ml-1.5 text-xs tabular-nums text-stone-500">+{formatPln(selectedFront.delta)}</span>
+                ) : null}
               </span>
             </legend>
-            <div className="flex gap-2.5" role="radiogroup" aria-label="Fronty">
+            <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Fronty">
               {FRONTS.map((swatch) => {
                 const selected = swatch.id === front;
                 return (
@@ -118,8 +128,8 @@ export default function MaterialsPanel({
                     type="button"
                     role="radio"
                     aria-checked={selected}
-                    aria-label={swatch.name}
-                    title={swatch.name}
+                    aria-label={`Front: ${swatch.name}${showPrice && swatch.delta ? `, dopłata ${formatPln(swatch.delta)}` : ""}`}
+                    title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
                     onClick={() => setFront(swatch.id)}
                     className={`h-9 w-9 rounded-full border transition ${
                       selected
@@ -174,8 +184,9 @@ export default function MaterialsPanel({
           />
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-5 md:ml-auto md:justify-end">
-          <div className="md:text-right">
+        {/* Telefon: cena i przycisk przyklejone do dołu ekranu. */}
+        <div className="fixed inset-x-0 bottom-0 z-20 flex shrink-0 items-center justify-between gap-4 border-t border-black/10 bg-white px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] desk:static desk:ml-auto desk:justify-end desk:border-0 desk:p-0">
+          <div className="desk:text-right">
             <p className={GROUP_LABEL}>Szacunek netto</p>
             <p
               className="text-2xl leading-tight tabular-nums text-stone-900"
@@ -183,25 +194,20 @@ export default function MaterialsPanel({
             >
               {showPrice ? formatPln(total) : "Po pomiarze"}
             </p>
-            {requested ? (
-              <p className="text-[11px] text-stone-500" role="status">
-                Wersja demo: tu podepniemy formularz wyceny.
-              </p>
-            ) : (
-              <p className="text-[11px] text-stone-500">
-                Bez AGD. Montaż w wycenie po pomiarze.
-              </p>
-            )}
+            <p className="text-[11px] text-stone-500">
+              Bez AGD. Montaż w wycenie po pomiarze.
+            </p>
           </div>
           <button
             type="button"
-            onClick={() => setRequested(true)}
+            onClick={() => openRequest("wycena")}
             className="shrink-0 rounded-full bg-stone-900 px-5 py-3 text-sm text-white transition-colors hover:bg-black focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-900/40 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
           >
             Poproś o wycenę
           </button>
         </div>
       </div>
+      <RequestDialog code={code} summary={summary} />
     </aside>
   );
 }

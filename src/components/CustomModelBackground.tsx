@@ -7,7 +7,7 @@ import type { PublicModel } from "./modelRoles";
 const CustomModelScene = dynamic(() => import("./CustomModelScene"), {
   ssr: false,
   loading: () => (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#0c0b0a] text-xs uppercase tracking-[0.25em] text-stone-400">
+    <div className="absolute inset-0 flex items-center justify-center bg-[#0c0b0a] text-xs uppercase tracking-[0.25em] text-stone-400">
       Wczytywanie sceny…
     </div>
   ),

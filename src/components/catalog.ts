@@ -14,14 +14,14 @@ export type FrontSwatch = {
   delta: number;
 };
 
-// Lista frontów (przeniesiona z MaterialsPanel bez zmian, żeby scena 3D
-// i panel korzystały z tych samych identyfikatorów).
+// Lista frontów (wspólna dla sceny 3D, panelu i maila). Dopłaty to cennik demo:
+// fronty lakierowane (Kaszmir, Grafit) i dąb wędzony są droższe od dębu naturalnego/bielonego.
 export const FRONTS: FrontSwatch[] = [
   { id: "dab-naturalny", name: "Dąb naturalny", color: "#b8875a", delta: 0 },
   { id: "dab-bielony", name: "Dąb bielony", color: "#d8c7a8", delta: 0 },
-  { id: "dab-wedzony", name: "Dąb wędzony", color: "#6b4a32", delta: 0 },
-  { id: "kaszmir", name: "Kaszmir", color: "#c9bcaa", delta: 0 },
-  { id: "grafit", name: "Grafit", color: "#3a3936", delta: 0 },
+  { id: "dab-wedzony", name: "Dąb wędzony", color: "#6b4a32", delta: 900 },
+  { id: "kaszmir", name: "Kaszmir", color: "#c9bcaa", delta: 1_400 },
+  { id: "grafit", name: "Grafit", color: "#3a3936", delta: 1_400 },
 ];
 
 export type CountertopOption = {
@@ -46,6 +46,6 @@ export type HardwareOption = {
 
 export const HARDWARE: HardwareOption[] = [
   { id: "mosiadz", name: "Mosiądz", delta: 0 },
-  { id: "czarny-mat", name: "Czarny mat", delta: 0 },
-  { id: "push-to-open", name: "Push-to-open", delta: 0 },
+  { id: "czarny-mat", name: "Czarny mat", delta: 350 },
+  { id: "push-to-open", name: "Bezuchwytowe (push-to-open)", delta: 1_600 },
 ];

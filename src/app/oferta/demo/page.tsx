@@ -12,7 +12,7 @@ export default function OfertaDemoPage() {
       code="KUCH-2026/12"
       title={
         <>
-          Linia dębowa, <span className="whitespace-nowrap">L-shape</span>
+          Linia dębowa, <span className="whitespace-nowrap">w kształcie L</span>
         </>
       }
     />

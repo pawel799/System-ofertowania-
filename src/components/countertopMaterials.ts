@@ -40,9 +40,10 @@ const LOOKS: Record<string, WorktopLook> = {
   "kwarcyt-calacatta": { kind: "original" },
   "granit-absolute-black": {
     kind: "stone",
-    tint: [0.06, 0.06, 0.065],
-    roughness: 0.2,
-    clearcoat: 0.8,
+    // Bardzo ciemny mnożnik: przy 0.06 jasny kwarcyt prześwitywał na szarobrązowo.
+    tint: [0.012, 0.012, 0.014],
+    roughness: 0.3,
+    clearcoat: 0.15,
   },
   "laminat-dab": { kind: "oak", tint: [1.15, 1, 0.82], roughness: 0.5 },
 };
@@ -102,6 +103,15 @@ export function installCountertopSwap(root: Object3D, onChange: () => void) {
         // Kamień polerowany ma mocniejszy, ostrzejszy lakier niż laminat.
         m.clearcoat = look.kind === "stone" ? look.clearcoat : 0.2;
         m.clearcoatRoughness = look.kind === "stone" ? 0.1 : 0.45;
+      }
+      // Ciemny kamień: ciepła panorama HDR w odbiciach dawała szarobrązowy odcień.
+      // Do tego tekstura metaliczności kwarcytu robiła z części blatu metal – granit to dielektryk.
+      if (look.kind === "stone") {
+        m.envMapIntensity = 0.35;
+        if (m instanceof MeshPhysicalMaterial) m.specularIntensity = 0.4;
+        m.metalness = 0;
+        m.metalnessMap = null;
+        m.roughnessMap = null;
       }
       m.needsUpdate = true;
       byId.set(option.id, m);

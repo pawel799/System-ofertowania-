@@ -25,6 +25,9 @@ export default function HomePage() {
 
   return (
     <div className="bg-[#0c0b0a] text-stone-200">
+      {/* Ciemne tło także dla html/body: inaczej przy szybkim przewijaniu (zanim przeglądarka
+          domaluje kafelki) i przy „odbiciu” na końcu strony prześwituje białe body. */}
+      <style>{`html,body{background:#0c0b0a}`}</style>
       <HomeHeader heroId="start" />
 
       <main>

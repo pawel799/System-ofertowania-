@@ -47,12 +47,18 @@ export function usePanelOffers(
 
   const needAuth = useCallback((e: ApiError) => {
     if (e.status !== 401) return false;
-    setError(getToken() ? "Ten token nie pasuje. Wpisz aktualny token panelu." : "");
+    setError(getToken() ? "Ten kod nie pasuje. Wpisz aktualny kod dostępu." : "");
     setMode("auth");
     return true;
   }, []);
 
   const load = useCallback(async () => {
+    // Bez zapisanego kodu od razu okno logowania – bez mignięcia „Wczytywanie ofert…”.
+    if (!getToken() && process.env.NODE_ENV !== "development") {
+      setError("");
+      setMode("auth");
+      return;
+    }
     setMode("loading");
     setError("");
     try {

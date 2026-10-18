@@ -1,4 +1,4 @@
-import PageIntro, { LOREM } from "./PageIntro";
+import PageIntro from "./PageIntro";
 
 /* Dokument prawny (regulamin, polityka): spis treści i paragrafy. Treść do podmiany. */
 export default function LegalDoc({
@@ -13,7 +13,7 @@ export default function LegalDoc({
   return (
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow={eyebrow} title={title}>
-        <p className="text-sm text-stone-500">Wersja robocza · ostatnia aktualizacja: lorem ipsum</p>
+        <p className="text-sm text-stone-500">Dokument w przygotowaniu – pełna treść zostanie opublikowana przed uruchomieniem płatnych planów.</p>
       </PageIntro>
 
       <div className="mt-14 grid gap-12 md:grid-cols-[220px_minmax(0,1fr)]">
@@ -36,8 +36,7 @@ export default function LegalDoc({
                 § {i + 1}. {s}
               </h2>
               <ol className="mt-4 list-decimal space-y-3 pl-5 text-[15px] leading-relaxed text-stone-400 marker:text-stone-600">
-                <li>{LOREM}</li>
-                <li>{LOREM}</li>
+                <li>Treść tego paragrafu jest w przygotowaniu.</li>
               </ol>
             </section>
           ))}

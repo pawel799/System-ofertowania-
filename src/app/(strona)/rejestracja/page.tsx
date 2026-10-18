@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Rejestracja · System ofertowania" }
 
 export default function RejestracjaPage() {
   return (
-    <AuthCard title="Załóż konto firmy" lede="Lorem ipsum dolor sit amet. Wpisz NIP, a dane firmy uzupełnimy z rejestrów.">
+    <AuthCard title="Załóż konto firmy" lede="Załóż konto i przygotuj pierwszą ofertę 3D dla klienta. Wpisz NIP, a dane firmy uzupełnimy z rejestrów.">
       <RegisterForm />
     </AuthCard>
   );

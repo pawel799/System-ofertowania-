@@ -1,3 +1,4 @@
+import { FIRMA } from "@/content/firma";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "@/components/catalog";
 import { formatPln, totalPrice } from "@/components/pricing";
 
@@ -28,7 +29,7 @@ export type OfferEmailData = {
   validUntil?: string;
   pin?: string | null;
   showPrice?: boolean;
-  studio: { name: string; phone: string; email: string };
+  studio: { name: string; phone?: string; email?: string };
 };
 
 const esc = (s: string) =>
@@ -140,7 +141,7 @@ export function renderOfferEmail(d: OfferEmailData) {
         <tr>
           <td style="padding:22px 8px 0;font:13px/1.6 Helvetica,Arial,sans-serif;color:#78716c;">
             Chcesz porozmawiać o projekcie? <a href="${d.origin}${d.offerPath}#wycena" style="color:#1c1917;">Umów pomiar</a> albo odpisz na tego maila.<br>
-            ${esc(d.studio.name)} · ${esc(d.studio.phone)} · <a href="mailto:${esc(d.studio.email)}" style="color:#78716c;">${esc(d.studio.email)}</a>
+            ${[esc(d.studio.name), d.studio.phone ? esc(d.studio.phone) : "", d.studio.email ? `<a href="mailto:${esc(d.studio.email)}" style="color:#78716c;">${esc(d.studio.email)}</a>` : ""].filter(Boolean).join(" · ")}
           </td>
         </tr>
       </table>
@@ -165,6 +166,6 @@ export function demoOfferEmail(origin: string) {
     base: 24_900,
     offerPath: "/oferta/demo",
     validUntil: "17 października",
-    studio: { name: "Studio Kuchnie", phone: "+48 000 000 000", email: "kontakt@example.com" },
+    studio: { name: FIRMA.nazwaHandlowa, phone: FIRMA.telefon, email: FIRMA.email },
   });
 }

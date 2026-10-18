@@ -20,11 +20,18 @@ export function PanelState({
   onNew: () => void;
   children?: ReactNode;
 }) {
+  // „Wczytywanie…” dopiero po chwili – szybkie wczytanie (albo okno logowania) bez mignięcia napisu.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (mode !== "loading") return setSlow(false);
+    const t = setTimeout(() => setSlow(true), 700);
+    return () => clearTimeout(t);
+  }, [mode]);
   const [title, desc] =
     mode === "loading"
       ? ["Wczytywanie ofert…", "Chwilka, pobieramy oferty z serwera."]
       : mode === "auth"
-        ? ["Panel wymaga tokenu", "Wpisz token panelu, żeby zobaczyć oferty."]
+        ? ["Panel wymaga logowania", "Wpisz kod dostępu, żeby zobaczyć oferty."]
         : mode === "error"
           ? ["Nie udało się wczytać ofert", error || "Spróbuj ponownie za chwilę."]
           : ["Nie ma jeszcze ofert", "Dodaj pierwszą ofertę, a pojawi się tutaj."];
@@ -48,7 +55,7 @@ export function PanelState({
           </button>
         ) : null}
       </header>
-      <div style={{ display: "grid", placeItems: "center", minHeight: "60vh", padding: 24 }}>
+      <div style={{ display: "grid", placeItems: "center", minHeight: "60vh", padding: 24, visibility: mode === "loading" && !slow ? "hidden" : undefined }}>
         <div className="surface" role="status" aria-live="polite" style={{ padding: "28px 32px", maxWidth: 440, textAlign: "center" }}>
           <h2 style={{ fontSize: 15, marginBottom: 6 }}>{title}</h2>
           <p className="faint" style={{ margin: 0 }}>
@@ -86,7 +93,7 @@ export function TokenDialog({ error, onSubmit }: { error: string; onSubmit: (tok
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!value.trim()) {
-      setLocal("Wpisz token.");
+      setLocal("Wpisz kod dostępu.");
       return;
     }
     onSubmit(value);
@@ -99,11 +106,11 @@ export function TokenDialog({ error, onSubmit }: { error: string; onSubmit: (tok
         <div className="m-pad">
           <div className="m-top">
             <h2 id="token-title" style={{ fontSize: 15 }}>
-              Token panelu
+              Logowanie do panelu
             </h2>
           </div>
           <div className="field">
-            <label htmlFor="t-token">Token (PANEL_TOKEN z ustawień Cloudflare)</label>
+            <label htmlFor="t-token">Kod dostępu</label>
             <input
               id="t-token"
               ref={ref}
@@ -118,7 +125,7 @@ export function TokenDialog({ error, onSubmit }: { error: string; onSubmit: (tok
             />
           </div>
           <p className="faint" style={{ margin: 0, fontSize: 12 }}>
-            Wpisujesz go raz: zostaje zapamiętany w tej przeglądarce.
+            Wpisujesz go raz – zostaje zapamiętany w tej przeglądarce.
           </p>
           {local || error ? <p className="err">{local || error}</p> : null}
         </div>

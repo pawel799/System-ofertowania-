@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import { liniaRejestrowa } from "@/content/firma";
 
 /* Stopka strony: czarna, logo po lewej, linki po prawej, prawa autorskie na dole. */
 
@@ -31,6 +32,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 
 export default function SiteFooter() {
   const year = new Date().getFullYear();
+  // Dane firmy z src/content/firma.ts – puste pola się nie wyświetlają.
+  const rejestr = liniaRejestrowa();
   return (
     <footer className="border-t border-white/10 bg-black px-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))] pt-14 text-stone-300 md:px-10">
       <div className="mx-auto flex max-w-6xl flex-col gap-12 md:flex-row md:justify-between">
@@ -66,7 +69,7 @@ export default function SiteFooter() {
 
       <div className="mx-auto mt-14 flex max-w-6xl flex-col gap-3 border-t border-white/10 pt-6 text-xs text-stone-500 sm:flex-row sm:justify-between">
         <p>© {year} System ofertowania. Wszelkie prawa zastrzeżone.</p>
-        <p>Lorem ipsum sp. z o.o. · NIP 000-000-00-00 · ul. Lorem 1, 00-000 Warszawa</p>
+        {rejestr ? <p>{rejestr}</p> : null}
       </div>
     </footer>
   );

@@ -5,31 +5,31 @@ import { btn } from "@/components/site/styles";
 
 export const metadata: Metadata = { title: "Cennik · System ofertowania" };
 
-// Ceny i limity do uzupełnienia – układ jest gotowy.
+// Plany bez cen katalogowych: wycena zależy od liczby osób i zakresu wdrożenia.
 const PLANS = [
   {
     name: "Start",
-    price: "— zł",
-    period: "netto / mies.",
-    text: "Lorem ipsum dla jednego projektanta.",
-    features: ["Lorem ipsum: 1 użytkownik", "Dolor sit: 20 ofert miesięcznie", "Link dla klienta z PIN-em"],
-    cta: { href: "/rejestracja", label: "Załóż konto" },
+    price: "Cena ustalana indywidualnie",
+    period: "dla jednej osoby",
+    text: "Dla stolarza lub projektanta, który sam przygotowuje oferty i chce pokazać klientowi kuchnię w 3D.",
+    features: ["1 użytkownik panelu", "Oferty z modelem 3D i linkiem dla klienta", "Link chroniony PIN-em i datą ważności", "Uwagi klienta i historia otwarć"],
+    cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
   },
   {
-    name: "Studio",
-    price: "— zł",
-    period: "netto / mies.",
-    text: "Lorem ipsum dla studia z kilkoma osobami.",
-    features: ["Lorem ipsum: 5 użytkowników", "Bez limitu ofert", "Własne logo na stronie oferty", "Dane firm po NIP-ie"],
-    cta: { href: "/rejestracja", label: "Załóż konto" },
+    name: "Pracownia",
+    price: "Cena ustalana indywidualnie",
+    period: "dla zespołu",
+    text: "Dla pracowni i studiów, w których oferty przygotowuje kilka osób.",
+    features: ["Kilku użytkowników panelu", "Bez limitu ofert", "Własne logo i kolory RAL w ofercie", "Dane klienta firmowego po NIP-ie"],
+    cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
     featured: true,
   },
   {
-    name: "Sieć salonów",
-    price: "Wycena",
-    period: "indywidualna",
-    text: "Lorem ipsum dla sieci i producentów.",
-    features: ["Lorem ipsum: wiele salonów", "Własne modele 3D i katalog", "Integracje i opiekun konta"],
+    name: "Producent",
+    price: "Zapytaj o wycenę",
+    period: "wdrożenie na miarę",
+    text: "Dla producentów mebli na wymiar i sieci salonów z własną kolekcją.",
+    features: ["Własne modele 3D i katalog materiałów", "Wiele salonów lub oddziałów", "Pomoc przy wdrożeniu i opiekun"],
     cta: { href: "/kontakt", label: "Porozmawiajmy" },
   },
 ];
@@ -37,8 +37,8 @@ const PLANS = [
 export default function CennikPage() {
   return (
     <div className="mx-auto max-w-6xl">
-      <PageIntro eyebrow="Cennik" title="Lorem ipsum dla każdego studia">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ceny netto, płatność miesięczna.</p>
+      <PageIntro eyebrow="Cennik" title="Plan dopasowany do Twojej pracowni">
+        <p>Cenę ustalamy po krótkiej rozmowie – zależy od liczby osób, które przygotowują oferty, i od tego, czy potrzebujesz własnych modeli 3D. Napisz, a przygotujemy wycenę.</p>
       </PageIntro>
 
       <div className="mt-14 grid gap-4 md:grid-cols-3">
@@ -56,7 +56,7 @@ export default function CennikPage() {
               ) : null}
             </div>
             <p className="mt-2 text-sm text-stone-400">{plan.text}</p>
-            <p className="mt-8 text-4xl tabular-nums text-stone-50">{plan.price}</p>
+            <p className="mt-8 text-2xl text-stone-50">{plan.price}</p>
             <p className="mt-1 text-xs text-stone-500">{plan.period}</p>
             <ul className="mt-8 flex-1 space-y-3 text-sm text-stone-300">
               {plan.features.map((f) => (

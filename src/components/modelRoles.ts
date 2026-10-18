@@ -51,7 +51,7 @@ const FRONT_ROUGHNESS: Record<string, number> = {
 
 const COUNTERTOP_LOOK: Record<string, Look> = {
   "kwarcyt-calacatta": { original: true, roughness: 0.4 },
-  "granit-absolute-black": { color: "#141416", roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.1, dropMap: true },
+  "granit-absolute-black": { color: "#09090a", roughness: 0.2, clearcoat: 0.8, clearcoatRoughness: 0.1, dropMap: true },
   "laminat-dab": { color: "#b8875a", roughness: 0.5, clearcoat: 0.2, clearcoatRoughness: 0.45, dropMap: true },
 };
 

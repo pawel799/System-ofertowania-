@@ -52,7 +52,6 @@ Plik: `src/content/strona-glowna.ts`
   - Dla kogo → Salony: „Każdy sprzedawca wysyła oferty w tym samym, dopracowanym formacie…” (sugeruje wielu użytkowników).
 - **Obietnica usługi** – „Modele i materiały przygotujemy pod Twoją ofertę” (Producenci) oraz FAQ
   „Skąd biorą się modele 3D kuchni?” (przygotowujemy razem z Tobą). Do potwierdzenia biznesowo.
-- **Cennik** – „Ceny netto, płatność miesięczna” (sekcja Cennik): sprawdzić zgodność z `/cennik`.
 - **Wysyłka** – „Wyślij link jednym kliknięciem” (krok 2): panel kopiuje wiadomość, sam jej nie wysyła.
 - **Model kuchni** – nadal „Wybierasz model” (krok 1): w panelu wybiera się układ, model jest jeden.
 
@@ -67,13 +66,27 @@ Plik: `src/content/strona-glowna.ts`
 - **Zmiana „ograniczonego ruchu”** – `LoopVideo` sprawdza `prefers-reduced-motion` tylko przy
   starcie; zmiana ustawienia w trakcie wizyty nie jest śledzona.
 
-### Stopka
-
-- **Dane firmy** – w stopce (`src/components/site/SiteFooter.tsx`) nadal jest zastępczy wpis
-  „Lorem ipsum sp. z o.o. · NIP 000-000-00-00 · ul. Lorem 1, 00-000 Warszawa”. Wpisać prawdziwe dane firmy.
-
 ### Nadal otwarte z poprzedniej listy
 
 - Kontrast `text-stone-600` w krokach „Jak to działa” (ok. 2,6:1).
 - „Wybierasz model” (patrz wyżej).
 - Pionowe pasy na frontach wyspy w scenie hero.
+
+## Po porządkach przed pokazem (październik 2026)
+
+Zrobione: stopka/kontakt/cennik/logowanie/o nas bez lorem ipsum i zmyślonych danych (dane firmy w
+`src/content/firma.ts`, puste pola się nie wyświetlają), formularz wyceny i pomiaru na stronie oferty
+(`/api/zapytania`, KV), dopłaty za fronty i okucia, uchwyty w modelu, ciemniejszy granit, widok oferty
+na telefonie, tło hero z kadrem zastępczym, ciemne tło body (białe prześwity przy przewijaniu), panel bez
+mignięcia „Wczytywanie ofert…”.
+
+Otwarte:
+
+- **Dane firmy** – uzupełnić `src/content/firma.ts` (nazwa prawna, NIP, adres, e-mail, telefon).
+- **Zgłoszenia z formularzy** – zapisują się w KV (`zapytanie:*`, 180 dni) i są dostępne przez
+  `GET /api/zapytania` z kodem panelu, ale panel nie ma jeszcze widoku ani powiadomienia e-mail.
+- **Regulamin i polityka prywatności** – treść paragrafów „w przygotowaniu”.
+- **THREE.Clock** – ostrzeżenie w konsoli pochodzi z @react-three/fiber 8 (wewnętrzny zegar);
+  nasz kod używa już THREE.Timer. Zniknie po przejściu na R3F 9 (wymaga React 19).
+- **Uchwyty** – w modelu są tylko listwy (profil pod blatem), wydzielane automatycznie z materiału
+  „Chrome” (`hardwareMaterials.ts`); zmiana jest widoczna, ale subtelna. Lepiej rozdzielić je w pliku modelu.
