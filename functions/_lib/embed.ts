@@ -23,6 +23,8 @@ export type EmbedSettings = {
   /** Cena bazowa zabudowy (zł netto) – od niej liczy się szacunek przy zmianie materiałów. */
   base: number;
   showPrice: boolean;
+  /** Konfigurator szafki na wymiar (moduł parametryczny) z ceną z cennika firmy. */
+  moduly: boolean;
   front: string;
   countertop: string;
   hardware: string;
@@ -35,6 +37,7 @@ export const DEFAULT_EMBED: EmbedSettings = {
   modelId: null,
   base: 24_900,
   showPrice: true,
+  moduly: true,
   front: "dab-naturalny",
   countertop: "kwarcyt-calacatta",
   hardware: "mosiadz",
@@ -69,6 +72,7 @@ export async function validateEmbed(kv: KVNamespace, v: unknown): Promise<EmbedS
     modelId,
     base: Math.round(b.base),
     showPrice: b.showPrice !== false,
+    moduly: b.moduly !== false,
     front,
     countertop,
     hardware,

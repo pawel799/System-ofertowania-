@@ -1,5 +1,6 @@
 "use client";
 
+import ModulyDialog from "../modul/ModulyDialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import OfferView from "../OfferView";
 import ClientComments from "./ClientComments";
@@ -105,7 +106,14 @@ export default function ClientOffer() {
         eyebrow={`Oferta dla: ${offer.who}`}
         base={offer.base}
         showPrice={offer.showPrice}
-        actions={offer.comments ? <ClientComments slug={slug} pin={okPin} /> : undefined}
+        actions={
+          offer.comments || offer.moduly?.length ? (
+            <>
+              {offer.comments ? <ClientComments slug={slug} pin={okPin} /> : null}
+              {offer.moduly?.length ? <ModulyDialog mode="oferta" moduly={offer.moduly} /> : null}
+            </>
+          ) : undefined
+        }
         model={offer.model ?? null}
       />
     );

@@ -3,12 +3,13 @@
  * Body: { firma, nip, imie, email, haslo, plan?, zgoda: true }
  *   - jedna firma na NIP i jedno konto na e-mail,
  *   - okres próbny TRIAL_DAYS dni na wybranym planie,
+ *   - Turnstile (gdy ustawiony TURNSTILE_SECRET_KEY),
  *   - limit 5 rejestracji na godzinę z jednego IP.
  * Odpowiedź: { user, firm } + ciasteczko sesji (od razu zalogowany).
  */
 import { cleanNip, formatNip, isValidNip } from "../../../src/components/panel/company";
 import { isPlanId, TRIAL_DAYS, type PlanId } from "../../../src/lib/plans";
-import { bumpLimit, checkPasswordRules, clientIp, createSession, hashPassword, iterationsFor } from "../../_lib/auth";
+import { bumpLimit, checkPasswordRules, clientIp, createSession, hashPassword, iterationsFor, requireTurnstile } from "../../_lib/auth";
 import { BRAND_KEY } from "../../_lib/brand";
 import { handle, HttpError, json, randomId, readJson, store } from "../../_lib/offers";
 import {
@@ -48,6 +49,7 @@ export const onRequestPost = handle(async (ctx) => {
   const plan: PlanId = isPlanId(b.plan) ? b.plan : "pracownia";
 
   await bumpLimit(kv, `rate:reg:${clientIp(ctx)}`, 5, 3600, "Za dużo rejestracji z tego adresu. Spróbuj za godzinę.");
+  await requireTurnstile(ctx, b.turnstile);
   if (await getUser(kv, email)) {
     throw new HttpError(409, "email_taken", "Konto z tym adresem e-mail już istnieje. Zaloguj się albo zmień hasło.");
   }

@@ -38,6 +38,10 @@ export function billingProvider(env: Env): BillingProvider | null {
 
 /** Zdarzenie „opłacono”: firma, plan, okres i data, do kiedy plan jest opłacony. */
 export type PaidEvent = {
+  /** Unikalny identyfikator zdarzenia (idempotencja – drugie dostarczenie jest ignorowane). */
+  eventId: string;
+  /** Czas wystawienia zdarzenia (ISO). Starsze niż 5 minut – odrzucone (ochrona przed powtórką). */
+  createdAt: string;
   firmId: string;
   plan: PlanId;
   period: BillingPeriod;

@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import type { PanelMode } from "./usePanelOffers";
 import { initials, useBrand } from "@/lib/brand";
 import { ApiError, authApi } from "./offerApi";
+import { TURNSTILE_SITE_KEY, useTurnstile } from "../Turnstile";
 import { useMe } from "./AccountTabs";
 
 /** Okres próbny / koniec opłaconego okresu w nagłówku panelu (link do Ustawienia → Plan). */
@@ -164,6 +165,7 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
   const [code, setCode] = useState("");
   const [local, setLocal] = useState("");
   const [busy, setBusy] = useState(false);
+  const [captcha, token, resetCaptcha] = useTurnstile("light");
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -176,13 +178,15 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
     e.preventDefault();
     if (mode === "account" && (!email.trim() || !password)) return setLocal("Wpisz e-mail i hasło.");
     if (mode === "code" && !code.trim()) return setLocal("Wpisz kod dostępu.");
+    if (mode === "account" && TURNSTILE_SITE_KEY && !token) return setLocal("Potwierdź, że nie jesteś robotem.");
     setBusy(true);
     setLocal("");
     try {
-      if (mode === "account") await authApi.login(email.trim(), password);
+      if (mode === "account") await authApi.login(email.trim(), password, token);
       else await authApi.loginWithCode(code);
       onLoggedIn();
     } catch (err) {
+      if (mode === "account") resetCaptcha();
       setLocal(err instanceof ApiError && err.status === 401 && mode === "code" ? "Ten kod nie pasuje." : err instanceof Error ? err.message : "Nie udało się zalogować.");
     } finally {
       setBusy(false);
@@ -252,6 +256,7 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
               />
             </div>
           )}
+          {captcha ? <div style={{ display: mode === "account" ? "block" : "none", marginTop: 10 }}>{captcha}</div> : null}
           {local || error ? <p className="err">{local || error}</p> : null}
         </div>
         <div className="m-foot">

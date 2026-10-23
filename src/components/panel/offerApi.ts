@@ -1,3 +1,4 @@
+import type { ModulCennik, ModulItem } from "@/lib/modul";
 /*
  * Klient API ofert (Cloudflare Pages Functions pod /api).
  * Logowanie do panelu:
@@ -232,6 +233,8 @@ export type PublicOffer = {
   expires: string;
   /** Wgrany model 3D; null = kuchnia demo. */
   model?: PublicModel | null;
+  /** Moduły na wymiar; cena tylko przy widocznej cenie. */
+  moduly?: (ModulItem & { cena?: number })[];
   /** Pakiety RAL studia (fronty do wyboru). */
   palettes?: Palette[];
   /** Nazwa i logo firmy, która wysłała ofertę. */
@@ -273,8 +276,8 @@ export type UserInfo = { email: string; name: string; role: "owner" | "member"; 
 export type Me = { role: Role; user: UserInfo | null; firm: FirmInfo | null };
 
 export const authApi = {
-  login: async (email: string, haslo: string) => {
-    const r = await call<{ user: UserInfo; firm: FirmInfo }>("POST", "/api/auth/login", { body: { email, haslo } });
+  login: async (email: string, haslo: string, turnstile = "") => {
+    const r = await call<{ user: UserInfo; firm: FirmInfo }>("POST", "/api/auth/login", { body: { email, haslo, turnstile } });
     setToken("");
     setSessionFlag(true);
     return r;
@@ -289,7 +292,7 @@ export const authApi = {
       throw e;
     }
   },
-  register: async (data: { firma: string; nip: string; imie: string; email: string; haslo: string; plan?: string; zgoda: boolean }) => {
+  register: async (data: { firma: string; nip: string; imie: string; email: string; haslo: string; plan?: string; zgoda: boolean; turnstile?: string }) => {
     const r = await call<{ user: UserInfo; firm: FirmInfo }>("POST", "/api/auth/register", { body: data });
     setToken("");
     setSessionFlag(true);
@@ -352,12 +355,19 @@ export type EmbedSettings = {
   modelId: string | null;
   base: number;
   showPrice: boolean;
+  moduly: boolean;
   front: string;
   countertop: string;
   hardware: string;
 };
 
 export type EmbedView = { embed: EmbedSettings; allowed: boolean; firmId: string };
+
+export const cennikApi = {
+  get: () => call<{ cennik: ModulCennik }>("GET", "/api/settings/cennik", { headers: panelAuth() }).then((r) => r.cennik),
+  save: (c: ModulCennik) =>
+    call<{ cennik: ModulCennik }>("PUT", "/api/settings/cennik", { body: c, headers: panelAuth() }).then((r) => r.cennik),
+};
 
 export const embedApi = {
   get: () => call<EmbedView>("GET", "/api/settings/embed", { headers: panelAuth() }),
@@ -372,6 +382,8 @@ export type PublicEmbed = {
   countertop: string;
   hardware: string;
   model: PublicModel | null;
+  moduly?: boolean;
+  cennik?: ModulCennik;
   palettes: Palette[];
   brand: BrandSettings | null;
 };

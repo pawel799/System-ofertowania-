@@ -1,5 +1,6 @@
 "use client";
 
+import { ModulySection } from "./ModulySection";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -920,6 +921,8 @@ export default function PanelApp() {
           ) : null}
 
           {!wide ? <div className="side-inline">{linkPanel}</div> : null}
+
+          <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
 
           <section className="sec">
             <h2>Aktywność</h2>

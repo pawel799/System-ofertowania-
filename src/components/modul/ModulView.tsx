@@ -1,24 +1,44 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import Szafka from "./Szafka";
+import { MODUL_LIMITS, modulCena, type ModulCennik } from "@/lib/modul";
+import { formatPln } from "../pricing";
 
 type Param = { key: "szerokosc" | "wysokosc" | "glebokosc"; label: string; min: number; max: number };
 const PARAMS: Param[] = [
-  { key: "szerokosc", label: "Szerokość", min: 20, max: 120 },
-  { key: "wysokosc", label: "Wysokość", min: 30, max: 220 },
-  { key: "glebokosc", label: "Głębokość", min: 20, max: 70 },
+  { key: "szerokosc", label: "Szerokość", ...MODUL_LIMITS.w },
+  { key: "wysokosc", label: "Wysokość", ...MODUL_LIMITS.h },
+  { key: "glebokosc", label: "Głębokość", ...MODUL_LIMITS.d },
 ];
 
-export default function ModulView() {
-  const [v, setV] = useState({ szerokosc: 60, wysokosc: 72, glebokosc: 56 });
+export type ModulViewProps = {
+  /** Wymiary startowe [cm]. */
+  initial?: { w: number; h: number; d: number };
+  /** Cennik firmy – cena liczona na bieżąco z wymiarów. */
+  cennik?: ModulCennik | null;
+  /** Stała cena (np. policzona przez serwer dla modułu z oferty). */
+  price?: number;
+  /** Tylko podgląd (wymiary z oferty, bez suwaków). */
+  readOnly?: boolean;
+  /** W okienku/ramce zamiast na cały ekran. */
+  embedded?: boolean;
+  title?: string;
+  /** Dodatkowa treść pod ceną (np. przycisk „Poproś o wycenę”). */
+  footer?: (dims: { w: number; h: number; d: number }) => ReactNode;
+};
+
+export default function ModulView({ initial, cennik, price, readOnly, embedded, title, footer }: ModulViewProps = {}) {
+  const [v, setV] = useState({ szerokosc: initial?.w ?? 60, wysokosc: initial?.h ?? 72, glebokosc: initial?.d ?? 56 });
+  const dims = { w: v.szerokosc, h: v.wysokosc, d: v.glebokosc };
+  const cena = cennik ? modulCena(dims, cennik) : price;
   const set = (k: Param["key"], n: number, p: Param) =>
     setV((s) => ({ ...s, [k]: Number.isFinite(n) ? Math.min(p.max, Math.max(p.min, n)) : s[k] }));
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-stone-100 text-stone-900 md:flex-row">
+    <div className={`flex ${embedded ? "h-full" : "h-[100dvh]"} flex-col bg-stone-100 text-stone-900 md:flex-row`}>
       <div className="relative min-h-0 flex-1">
         <Canvas shadows dpr={[1, 2]} camera={{ position: [1.1, 0.9, 1.5], fov: 40 }}>
           <color attach="background" args={["#efece7"]} />
@@ -38,10 +58,15 @@ export default function ModulView() {
       </div>
       <aside className="shrink-0 space-y-4 border-t border-stone-300 bg-white p-4 md:w-80 md:border-l md:border-t-0">
         <div>
-          <h1 className="text-lg font-semibold">Moduł parametryczny</h1>
+          <h1 className="text-lg font-semibold">{title ?? "Moduł parametryczny"}</h1>
           <p className="text-sm text-stone-600">Szafka dolna z płyty 18 mm. Obracaj widok palcem lub myszą.</p>
         </div>
-        {PARAMS.map((p) => (
+        {readOnly ? (
+          <p className="text-sm">
+            {v.szerokosc} × {v.wysokosc} × {v.glebokosc} cm <span className="text-stone-500">(szer. × wys. × gł.)</span>
+          </p>
+        ) : null}
+        {readOnly ? null : PARAMS.map((p) => (
           <label key={p.key} className="block">
             <span className="flex items-center justify-between text-sm font-medium">
               {p.label}
@@ -68,6 +93,13 @@ export default function ModulView() {
             />
           </label>
         ))}
+        {cena !== undefined ? (
+          <p className="flex items-baseline justify-between border-t border-stone-200 pt-3">
+            <span className="text-sm text-stone-600">Cena modułu netto</span>
+            <span className="text-xl font-semibold" data-testid="modul-cena">{formatPln(cena)}</span>
+          </p>
+        ) : null}
+        {footer ? footer(dims) : null}
       </aside>
     </div>
   );

@@ -16,8 +16,11 @@ let current: RequestType | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-export function openRequest(typ: RequestType) {
+/** Dodatek do „Twój wybór” (np. wymiary szafki z konfiguratora modułu). */
+let extra = "";
+export function openRequest(typ: RequestType, note = "") {
   current = typ;
+  extra = note;
   emit();
 }
 function closeRequest() {
@@ -72,8 +75,9 @@ export function MeasureButton({ className = "" }: { className?: string }) {
   );
 }
 
-export default function RequestDialog({ code, summary }: { code?: string; summary: string }) {
+export default function RequestDialog({ code, summary: base }: { code?: string; summary: string }) {
   const typ = useRequest();
+  const summary = typ && extra ? `${base}; ${extra}`.slice(0, 300) : base;
   const dialog = useRef<HTMLDialogElement>(null);
   const first = useRef<HTMLInputElement>(null);
   const uid = useId();

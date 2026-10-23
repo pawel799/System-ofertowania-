@@ -1,3 +1,4 @@
+import { safeEqual } from "./auth";
 /*
  * Strona klienta (/oferta/<link>): szukanie oferty po linku w przestrzeni właściwej firmy.
  * Link (slug) jest wspólny dla wszystkich firm – jego wartość mówi, do której firmy należy oferta.
@@ -40,7 +41,7 @@ export async function resolvePublic(ctx: Ctx): Promise<{ kv: ScopedKV; key: stri
     if (fails >= 10) throw new HttpError(429, "pin_locked", "Za dużo prób PIN-u. Spróbuj za godzinę.", { brand });
     const given = ctx.request.headers.get("x-offer-pin") ?? "";
     if (!given) throw new HttpError(401, "pin_required", "Ta oferta jest chroniona PIN-em.", { brand });
-    if (given !== offer.link.pin) {
+    if (!safeEqual(given, offer.link.pin)) {
       await root.put(failKey, String(fails + 1), { expirationTtl: 3600 });
       throw new HttpError(401, "pin_wrong", "Nieprawidłowy PIN.", { brand });
     }

@@ -10,6 +10,8 @@
  *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
+import type { ModulItem } from "../../src/lib/modul";
+import { validateModuly } from "./modul";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
 import { RAL_FRONT_RE } from "../../src/components/palettes";
 
@@ -59,6 +61,8 @@ export interface Env {
   /** Płatności online (docs/platnosci.md): operator i sekret podpisu webhooka. Bez nich – faktury ręcznie. */
   BILLING_PROVIDER?: string;
   BILLING_WEBHOOK_SECRET?: string;
+  /** Cloudflare Turnstile (sekret) – weryfikacja anty-bot przy rejestracji i logowaniu. Bez niego – wyłączona. */
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 export type Ctx = {
@@ -137,6 +141,8 @@ export type Offer = {
   hardware: string;
   /** Wgrany model 3D (id z /api/models); brak = kuchnia demo. */
   modelId?: string;
+  /** Moduły parametryczne (szafki na wymiar); cenę liczy serwer z cennika firmy. */
+  moduly?: ModulItem[];
   status: Status;
   link: OfferLink | null;
   comment?: string;
@@ -368,6 +374,7 @@ export function validateOffer(input: unknown): Offer {
     modelId = str(o.modelId, "modelId", 32);
     if (!ASSET_ID_RE.test(modelId)) throw bad("Zły identyfikator modelu 3D.");
   }
+  const moduly = validateModuly(o.moduly);
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
@@ -383,6 +390,7 @@ export function validateOffer(input: unknown): Offer {
     countertop: oneOf(o.countertop, COUNTERTOP_IDS, "countertop"),
     hardware: oneOf(o.hardware, HARDWARE_IDS, "hardware"),
     ...(modelId ? { modelId } : {}),
+    ...(moduly && moduly.length ? { moduly } : {}),
     status: oneOf(o.status, STATUSES, "status"),
     link: validateLink(o.link),
     ...(comment !== undefined ? { comment } : {}),

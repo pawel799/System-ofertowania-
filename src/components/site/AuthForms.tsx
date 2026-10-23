@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import { cleanNip, isValidNip } from "@/components/panel/company";
 import { authApi } from "@/components/panel/offerApi";
 import { isPlanId, PLAN_NAMES, TRIAL_DAYS, type PlanId } from "@/lib/plans";
+import { TURNSTILE_SITE_KEY, useTurnstile } from "@/components/Turnstile";
 import { Done, Field } from "./SiteForms";
 import { btn } from "./styles";
 
@@ -41,6 +42,7 @@ export function LoginForm() {
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [sendError, setSendError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [captcha, token, resetCaptcha] = useTurnstile();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -49,13 +51,15 @@ export function LoginForm() {
     if (!password) next.password = "Wpisz hasło.";
     setErrors(next);
     if (Object.keys(next).length) return;
+    if (TURNSTILE_SITE_KEY && !token) return setSendError("Potwierdź, że nie jesteś robotem.");
     setBusy(true);
     setSendError("");
     try {
-      await authApi.login(email.trim(), password);
+      await authApi.login(email.trim(), password, token);
       window.location.href = "/panel";
     } catch (err) {
       setSendError(errText(err));
+      resetCaptcha();
       setBusy(false);
     }
   };
@@ -77,6 +81,7 @@ export function LoginForm() {
           </Link>
         }
       />
+      {captcha}
       <FormError text={sendError} />
       <button type="submit" className={`${btn("solid")} w-full`} disabled={busy}>
         {busy ? "Logowanie…" : "Zaloguj się"}
@@ -101,6 +106,7 @@ export function RegisterForm() {
   const [sendError, setSendError] = useState("");
   const [busy, setBusy] = useState(false);
   const fetched = useRef("");
+  const [captcha, token, resetCaptcha] = useTurnstile();
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => {
     setF((s) => ({ ...s, [k]: v }));
@@ -147,13 +153,15 @@ export function RegisterForm() {
     if (!f.terms) next.terms = "Zaakceptuj regulamin, żeby założyć konto.";
     setErrors(next);
     if (Object.keys(next).length) return;
+    if (TURNSTILE_SITE_KEY && !token) return setSendError("Potwierdź, że nie jesteś robotem.");
     setBusy(true);
     setSendError("");
     try {
-      await authApi.register({ firma: f.company.trim(), nip, imie: f.name.trim(), email: f.email.trim(), haslo: f.password, plan, zgoda: true });
+      await authApi.register({ firma: f.company.trim(), nip, imie: f.name.trim(), email: f.email.trim(), haslo: f.password, plan, zgoda: true, turnstile: token });
       window.location.href = "/panel/ustawienia?tab=firma&nowe=1";
     } catch (err) {
       setSendError(errText(err));
+      resetCaptcha();
       setBusy(false);
     }
   };
@@ -210,6 +218,7 @@ export function RegisterForm() {
         </label>
         {errors.terms ? <p className="mt-2 text-sm text-red-300">{errors.terms}</p> : null}
       </div>
+      {captcha}
       <FormError text={sendError} />
       <button type="submit" className={`${btn("solid")} w-full`} disabled={busy}>
         {busy ? "Zakładanie konta…" : "Załóż konto firmy"}

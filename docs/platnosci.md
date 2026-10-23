@@ -34,12 +34,17 @@ ale nie da się dodać oferty, utworzyć nowego linku, wgrać modelu ani dodać 
 - **`POST /api/billing/webhook`** – potwierdzenie płatności w ogólnym, podpisanym formacie:
 
   ```json
-  { "firmId": "…", "plan": "pracownia", "period": "month", "paidUntil": "2026-12-01T00:00:00Z",
+  { "eventId": "evt_…", "createdAt": "2026-11-01T10:00:00Z",
+    "firmId": "…", "plan": "pracownia", "period": "month", "paidUntil": "2026-12-01T00:00:00Z",
     "provider": "stripe", "customerId": "cus_…", "subscriptionId": "sub_…" }
   ```
 
   nagłówek `X-Billing-Signature` = hex(HMAC-SHA256(`BILLING_WEBHOOK_SECRET`, surowa treść)).
   Skutek: plan, status „active”, „opłacone do”, dane operatora. Bez sekretu endpoint zwraca 404.
+  Zabezpieczenia: `createdAt` najwyżej ±5 min od teraz (powtórka starego zdarzenia odrzucona),
+  `eventId` zapamiętany na 30 dni (drugie dostarczenie → `{ duplicate: true }` bez zmian),
+  `paidUntil` nigdy się nie cofa i nie może być dalej niż 400 dni. Plan i kwota pochodzą wyłącznie
+  z podpisanego zdarzenia operatora – nigdy z przeglądarki klienta.
 
 ## Jak podpiąć operatora (Stripe, Przelewy24, PayU)
 

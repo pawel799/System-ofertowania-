@@ -7,6 +7,8 @@
  */
 import { useEffect, useState } from "react";
 import OfferView from "./OfferView";
+import ModulyDialog from "./modul/ModulyDialog";
+import { openRequest } from "./RequestDialog";
 import { setCountertop } from "./countertopStore";
 import { setFront } from "./frontStore";
 import { setHardware } from "./hardwareStore";
@@ -41,7 +43,32 @@ export default function EmbedOffer() {
 
   if (state.k === "ready") {
     const { embed } = state;
-    return <OfferView code="" title={embed.title} base={embed.base} showPrice={embed.showPrice} model={embed.model} />;
+    return (
+      <OfferView
+        code=""
+        title={embed.title}
+        base={embed.base}
+        showPrice={embed.showPrice}
+        model={embed.model}
+        actions={
+          embed.moduly ? (
+            <ModulyDialog
+              mode="konfigurator"
+              cennik={embed.cennik}
+              footer={(d) => (
+                <button
+                  type="button"
+                  className="w-full rounded-full bg-stone-900 px-4 py-2.5 text-sm text-white"
+                  onClick={() => openRequest("wycena", `szafka ${d.w}×${d.h}×${d.d} cm`)}
+                >
+                  Poproś o wycenę tej szafki
+                </button>
+              )}
+            />
+          ) : undefined
+        }
+      />
+    );
   }
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0c0b0a] px-6 text-center text-stone-400">

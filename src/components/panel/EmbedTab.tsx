@@ -93,6 +93,10 @@ export function EmbedTab({ onAuthError }: { onAuthError: (e: unknown) => boolean
               Pokaż cenę
               <input id="e-price" type="checkbox" className="switch" checked={draft.showPrice} onChange={(e) => set("showPrice", e.target.checked)} />
             </label>
+            <label className="tg" htmlFor="e-moduly" data-tip="Klient ustawia wymiary szafki, cena z Ustawienia → Cennik modułów">
+              Szafka na wymiar
+              <input id="e-moduly" type="checkbox" className="switch" checked={draft.moduly !== false} onChange={(e) => set("moduly", e.target.checked)} />
+            </label>
           </div>
           <div className="field">
             <label htmlFor="e-title">Tytuł nad kuchnią</label>

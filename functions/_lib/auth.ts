@@ -166,3 +166,46 @@ export async function bumpLimit(kv: KVNamespace, key: string, limit: number, ttl
 }
 
 export const clientIp = (ctx: Ctx) => ctx.request.headers.get("cf-connecting-ip") ?? "unknown";
+
+/** Porównanie napisów w stałym czasie (PIN-y, podpisy). */
+export function safeEqual(a: string, b: string) {
+  const x = enc.encode(a);
+  const y = enc.encode(b);
+  let diff = x.length ^ y.length;
+  for (let i = 0; i < Math.max(x.length, y.length); i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0);
+  return diff === 0;
+}
+
+/** Hash-wydmuszka: logowanie na nieistniejące konto liczy PBKDF2 tak samo długo (brak wycieku przez czas). */
+let dummy: Promise<string> | null = null;
+export async function verifyDummy(password: string, env: Env) {
+  dummy ??= hashPassword("wydmuszka-" + randomId(8), iterationsFor(env));
+  await verifyPassword(password, await dummy);
+  return false;
+}
+
+/**
+ * Cloudflare Turnstile (anty-bot) dla rejestracji i logowania.
+ * Włączony, gdy ustawiony sekret TURNSTILE_SECRET_KEY; token z widżetu w polu `turnstile`.
+ * Weryfikacja wyłącznie po stronie serwera (siteverify), z IP klienta.
+ */
+export async function requireTurnstile(ctx: Ctx, token: unknown) {
+  const secret = ctx.env.TURNSTILE_SECRET_KEY;
+  if (!secret) return;
+  if (typeof token !== "string" || !token || token.length > 2048) {
+    throw new HttpError(400, "captcha", "Potwierdź, że nie jesteś robotem.");
+  }
+  const body = new FormData();
+  body.append("secret", secret);
+  body.append("response", token);
+  const ip = ctx.request.headers.get("cf-connecting-ip");
+  if (ip) body.append("remoteip", ip);
+  let ok = false;
+  try {
+    const r = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body });
+    ok = r.ok && ((await r.json()) as { success?: boolean }).success === true;
+  } catch {
+    throw new HttpError(503, "captcha_unavailable", "Nie udało się sprawdzić zabezpieczenia. Spróbuj za chwilę.");
+  }
+  if (!ok) throw new HttpError(400, "captcha", "Weryfikacja anty-bot nie powiodła się. Odśwież i spróbuj ponownie.");
+}

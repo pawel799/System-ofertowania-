@@ -1,3 +1,4 @@
+import type { ModulItem } from "@/lib/modul";
 import type { CompanyData } from "./company";
 
 /*
@@ -93,6 +94,8 @@ export type Offer = {
   hardware: string;
   /** Wgrany model 3D (id z /api/models); brak = kuchnia demo. */
   modelId?: string;
+  /** Moduły na wymiar (szafki parametryczne); cenę liczy serwer z cennika firmy. */
+  moduly?: ModulItem[];
   status: Status;
   link: OfferLink | null;
   comment?: string;
