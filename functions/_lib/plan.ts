@@ -47,10 +47,11 @@ export function assertLimit({ plan }: FirmPlan, kind: CountedLimit, current: num
   throw new HttpError(403, "plan_limit", `${LIMIT_TEXT[kind](max)} Większy limit: Ustawienia → Plan.`, { limit: kind, max });
 }
 
-type Feature = keyof Pick<PlanLimits, "palettes" | "domain">;
+type Feature = keyof Pick<PlanLimits, "palettes" | "domain" | "embed">;
 const FEATURE_TEXT: Record<Feature, string> = {
   palettes: "Własne pakiety kolorów RAL są w planie Pracownia i wyższym.",
   domain: "Własna domena linków jest w planie Producent.",
+  embed: "Kuchnia 3D na Twojej stronie (kod osadzenia) jest w planie Pracownia i wyższym.",
 };
 
 export function assertFeature({ plan }: FirmPlan, feature: Feature) {

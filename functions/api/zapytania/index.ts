@@ -3,7 +3,8 @@
  * oraz wiadomość ze strony /kontakt.
  * Body: { typ: "wycena" | "pomiar" | "kontakt", imie, telefon?, email?, uwagi?, oferta?, wybor?, link? }
  *   - link = identyfikator linku oferty: zgłoszenie trafia do firmy, która wysłała tę ofertę;
- *     bez linku (np. /kontakt, oferta demo) – do właściciela systemu (firma "main"),
+ *   - f = id firmy z widżetu kuchni 3D na jej stronie (/osadz?f=…): do tej firmy, gdy widżet działa;
+ *     bez linku i firmy (np. /kontakt, oferta demo) – do właściciela systemu (firma "main"),
  *   - wymagane imię i (telefon albo e-mail),
  *   - limit 5 zgłoszeń na godzinę z jednego IP (rate:zap:<ip>),
  *   - zapis w KV (binding OFFERS): zapytanie:<data>:<losowe id>, przechowywane 180 dni.
@@ -13,11 +14,18 @@
  */
 import { panel } from "../../_lib/auth";
 import { notifyNewRequest } from "../../_lib/notify";
-import { handle, HttpError, json, randomId, readJson, SLUG_RE, store, type KVNamespace } from "../../_lib/offers";
-import { firmUsers, getFirm, MAIN_FIRM, parseSlugValue, scoped } from "../../_lib/tenant";
+import { resolveEmbed } from "../../_lib/embed";
+import { handle, HttpError, json, randomId, readJson, SLUG_RE, store, type Env, type KVNamespace } from "../../_lib/offers";
+import { FIRM_ID_RE, firmUsers, getFirm, MAIN_FIRM, parseSlugValue, scoped } from "../../_lib/tenant";
 
-/** Firma, do której trafia zgłoszenie (po linku oferty), i adresy do powiadomienia. */
-async function targetFirm(root: KVNamespace, link: unknown): Promise<{ firmId: string; to?: string[] }> {
+/** Firma, do której trafia zgłoszenie (po linku oferty albo z widżetu na stronie firmy), i adresy do powiadomienia. */
+async function targetFirm(env: Env, root: KVNamespace, link: unknown, f: unknown): Promise<{ firmId: string; to?: string[]; source?: string }> {
+  if (typeof f === "string" && f && (f === MAIN_FIRM || FIRM_ID_RE.test(f))) {
+    await resolveEmbed(env, f); // 404, gdy widżet wyłączony albo plan go nie obejmuje
+    if (f === MAIN_FIRM) return { firmId: f, source: "osadzenie" };
+    const owners = (await firmUsers(root, f)).filter((u) => u.role === "owner").map((u) => u.email);
+    return { firmId: f, to: owners, source: "osadzenie" };
+  }
   if (typeof link !== "string" || !SLUG_RE.test(link)) return { firmId: MAIN_FIRM };
   const raw = await root.get(`slug:${link}`);
   if (!raw) return { firmId: MAIN_FIRM };
@@ -59,6 +67,7 @@ export const onRequestPost = handle(async (ctx) => {
   if (n >= PER_IP_HOUR) throw new HttpError(429, "limit", "Wysłano już kilka zgłoszeń. Spróbuj ponownie za godzinę.");
   await kv.put(rateKey, String(n + 1), { expirationTtl: 3600 });
 
+  const target = await targetFirm(ctx.env, kv, b.link, b.f);
   const now = new Date().toISOString();
   const record = {
     typ,
@@ -69,9 +78,9 @@ export const onRequestPost = handle(async (ctx) => {
     oferta: str(b.oferta, 60),
     wybor: str(b.wybor, 300),
     firma: str(b.firma, 200),
+    ...(target.source ? { zrodlo: target.source } : {}),
     utworzono: now,
   };
-  const target = await targetFirm(kv, b.link);
   await scoped(kv, target.firmId).put(`zapytanie:${now}:${randomId(8)}`, JSON.stringify(record), { expirationTtl: TTL });
   const sending = notifyNewRequest(ctx.env, record, new URL(ctx.request.url).origin, target.to);
   if (ctx.waitUntil) ctx.waitUntil(sending);

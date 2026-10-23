@@ -12,11 +12,16 @@ export type Zapytanie = {
 
 /*
  * Do której firmy trafia zgłoszenie: strona oferty z linku ustawia identyfikator linku
- * (serwer znajduje po nim firmę). Bez niego – do właściciela systemu (kontakt, oferta demo).
+ * (serwer znajduje po nim firmę), widżet na stronie firmy – id firmy.
+ * Bez nich – do właściciela systemu (kontakt, oferta demo).
  */
-let target: { link?: string } = {};
+let target: { link?: string; f?: string } = {};
 export function setRequestLink(link: string) {
   target = link ? { link } : {};
+}
+/** Widżet kuchni 3D na stronie firmy: zgłoszenie trafia do tej firmy. */
+export function setRequestFirm(firmId: string) {
+  target = firmId ? { f: firmId } : {};
 }
 
 /** null = zapisane; tekst = komunikat błędu dla użytkownika. */

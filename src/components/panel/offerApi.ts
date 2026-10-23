@@ -194,6 +194,8 @@ export type Zgloszenie = {
   utworzono: string;
   /** Data oznaczenia jako obsłużone; null/brak = nowe. */
   obsluzone?: string | null;
+  /** "osadzenie" = z widżetu kuchni 3D na stronie firmy. */
+  zrodlo?: string;
 };
 
 export const requestsApi = {
@@ -340,4 +342,40 @@ export const billingApi = {
     call<{ firm: FirmInfo }>("POST", "/api/billing/request", { body: { plan, period }, headers: panelAuth() }).then((r) => r.firm),
   checkout: (plan: PlanId, period: "month" | "year") =>
     call<{ url: string }>("POST", "/api/billing/checkout", { body: { plan, period }, headers: panelAuth() }).then((r) => r.url),
+};
+
+/* ---------- Kuchnia 3D na stronie firmy (kod osadzenia) ---------- */
+
+export type EmbedSettings = {
+  enabled: boolean;
+  title: string;
+  modelId: string | null;
+  base: number;
+  showPrice: boolean;
+  front: string;
+  countertop: string;
+  hardware: string;
+};
+
+export type EmbedView = { embed: EmbedSettings; allowed: boolean; firmId: string };
+
+export const embedApi = {
+  get: () => call<EmbedView>("GET", "/api/settings/embed", { headers: panelAuth() }),
+  save: (e: EmbedSettings) => call<EmbedView>("PUT", "/api/settings/embed", { body: e, headers: panelAuth() }),
+};
+
+export type PublicEmbed = {
+  title: string;
+  showPrice: boolean;
+  base?: number;
+  front: string;
+  countertop: string;
+  hardware: string;
+  model: PublicModel | null;
+  palettes: Palette[];
+  brand: BrandSettings | null;
+};
+
+export const publicEmbedApi = {
+  get: (firmId: string) => call<{ embed: PublicEmbed }>("GET", `/api/osadz/${encodeURIComponent(firmId)}`).then((r) => r.embed),
 };

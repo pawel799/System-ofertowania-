@@ -3,11 +3,11 @@
 Ceny i limity planów są w jednym miejscu: `src/lib/plans.ts`. Z tego pliku korzysta strona `/cennik`,
 zakładka **Ustawienia → Plan** i API, które pilnuje limitów – zmiana ceny albo limitu w jednym miejscu.
 
-| Plan | Cena netto | Konta | Oferty w toku | Modele 3D | Pakiety RAL | Własna domena |
-|---|---|---|---|---|---|---|
-| Start | 149 zł / mies. albo 1 490 zł / rok | 1 | 20 | 20 | – | – |
-| Pracownia | 349 zł / mies. albo 3 490 zł / rok | 5 | bez limitu | 200 | tak | – |
-| Producent | od 899 zł / mies. + wdrożenie od 2 000 zł | bez limitu | bez limitu | bez limitu | tak | tak |
+| Plan | Cena netto | Konta | Oferty w toku | Modele 3D | Pakiety RAL | Kuchnia na stronie | Własna domena |
+|---|---|---|---|---|---|---|---|
+| Start | 149 zł / mies. albo 1 490 zł / rok | 1 | 20 | 20 | – | – | – |
+| Pracownia | 349 zł / mies. albo 3 490 zł / rok | 5 | bez limitu | 200 | tak | tak | – |
+| Producent | od 899 zł / mies. + wdrożenie od 2 000 zł | bez limitu | bez limitu | bez limitu | tak | tak | tak |
 
 „Oferta w toku” = oferta bez statusu „Zaakceptowana” i bez wygasłego linku. Firma „main” (właściciel
 systemu, kod `PANEL_TOKEN`) nie ma limitów.

@@ -23,6 +23,8 @@ export type PlanLimits = {
   palettes: boolean;
   /** Własna domena linków (oferty.twojafirma.pl). */
   domain: boolean;
+  /** Kod osadzenia kuchni 3D na stronie firmy. */
+  embed: boolean;
 };
 
 export type PlanInfo = {
@@ -50,7 +52,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     audience: "Dla stolarza lub projektanta, który sam przygotowuje oferty.",
     monthly: 149,
     yearly: 1490,
-    limits: { users: 1, activeOffers: 20, models: 20, palettes: false, domain: false },
+    limits: { users: 1, activeOffers: 20, models: 20, palettes: false, domain: false, embed: false },
     features: [
       "1 konto",
       "Do 20 ofert w toku",
@@ -66,12 +68,13 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     audience: "Dla pracowni, w których oferty przygotowuje kilka osób.",
     monthly: 349,
     yearly: 3490,
-    limits: { users: 5, activeOffers: null, models: 200, palettes: true, domain: false },
+    limits: { users: 5, activeOffers: null, models: 200, palettes: true, domain: false, embed: true },
     features: [
       "Do 5 kont w zespole",
       "Bez limitu ofert",
       "Do 200 własnych modeli 3D",
       "Własne pakiety kolorów RAL",
+      "Kuchnia 3D na Twojej stronie (kod osadzenia)",
       "Dane klienta firmowego po NIP-ie",
       "Wszystko z planu Start",
     ],
@@ -84,7 +87,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     yearly: null,
     from: true,
     setup: "wdrożenie od 2 000 zł",
-    limits: { users: null, activeOffers: null, models: null, palettes: true, domain: true },
+    limits: { users: null, activeOffers: null, models: null, palettes: true, domain: true, embed: true },
     features: [
       "Bez limitu kont, ofert i modeli",
       "Własna domena linków dla klientów",

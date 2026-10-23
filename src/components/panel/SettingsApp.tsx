@@ -6,6 +6,7 @@ import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { RAL_CLASSIC, RAL_GROUP_LABEL, ralByCode, type RalGroup } from "../ral";
 import { AccountTab, AdminFirmsTab, TeamTab, useMe } from "./AccountTabs";
+import { EmbedTab } from "./EmbedTab";
 import { PlanTab } from "./PlanTab";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
 import { LoginDialog, PanelBrand } from "./PanelGate";
@@ -22,14 +23,15 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "models" | "palettes" | "domain" | "konto" | "zespol" | "plan" | "firmy";
+type Tab = "firma" | "models" | "palettes" | "domain" | "osadzanie" | "konto" | "zespol" | "plan" | "firmy";
 const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
   { value: "models", label: "Modele 3D" },
   { value: "palettes", label: "Kolory RAL" },
   { value: "domain", label: "Domena" },
+  { value: "osadzanie", label: "Na stronie" },
 ];
-const ALL_TABS: Tab[] = ["firma", "models", "palettes", "domain", "konto", "zespol", "plan", "firmy"];
+const ALL_TABS: Tab[] = ["firma", "models", "palettes", "domain", "osadzanie", "konto", "zespol", "plan", "firmy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -120,6 +122,8 @@ export default function SettingsApp() {
             <AccountTab me={me} onAuthError={onAuthError} />
           ) : tab === "zespol" ? (
             <TeamTab me={me} onAuthError={onAuthError} />
+          ) : tab === "osadzanie" ? (
+            <EmbedTab onAuthError={onAuthError} />
           ) : tab === "plan" ? (
             <PlanTab me={me} onAuthError={onAuthError} />
           ) : tab === "firmy" ? (

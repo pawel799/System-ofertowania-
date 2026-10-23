@@ -133,6 +133,7 @@ export default function RequestsApp() {
                   {z.telefon ? <a href={`tel:${z.telefon.replace(/[^\d+]/g, "")}`}>{z.telefon}</a> : null}
                   {z.email ? <a href={`mailto:${z.email}`}>{z.email}</a> : null}
                   {z.oferta ? <span className="faint">Oferta {z.oferta}</span> : null}
+                  {z.zrodlo === "osadzenie" ? <span className="faint">Z kuchni 3D na Twojej stronie</span> : null}
                 </div>
                 {z.uwagi ? <p className="zg-notes">{z.uwagi}</p> : null}
                 {z.wybor ? <p className="faint zg-choice">Wybór klienta: {z.wybor}</p> : null}
