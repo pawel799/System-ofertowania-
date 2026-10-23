@@ -8,6 +8,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, KEY_RE, offerKey, param, putOffer, readJson, validateOffer, type Ctx } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
+import { assertCanWrite, firmPlan } from "../../_lib/plan";
 
 function keyOf(ctx: Ctx) {
   const key = param(ctx, "id");
@@ -25,7 +26,7 @@ export const onRequestGet = handle(async (ctx) => {
 });
 
 export const onRequestPut = handle(async (ctx) => {
-  const { kv } = await panel(ctx);
+  const { session, kv } = await panel(ctx);
   const key = keyOf(ctx);
   const incoming = validateOffer(await readJson(ctx.request));
   if (offerKey(incoming.id) !== key) throw new HttpError(400, "id_mismatch", "Numer oferty nie pasuje do adresu.");
@@ -52,7 +53,10 @@ export const onRequestPut = handle(async (ctx) => {
     }
   }
 
-  if (newSlug && newSlug !== oldSlug) await claimSlug(kv, newSlug, key);
+  if (newSlug && newSlug !== oldSlug) {
+    assertCanWrite(await firmPlan(ctx.env, session)); // nowy link dla klienta – tylko z aktywnym planem
+    await claimSlug(kv, newSlug, key);
+  }
   if (oldSlug && oldSlug !== newSlug && (await kv.get(`slug:${oldSlug}`)) === key) {
     await kv.delete(`slug:${oldSlug}`); // link cofnięty albo wymieniony: stary przestaje działać
   }

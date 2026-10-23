@@ -8,6 +8,7 @@
 import type { Offer } from "./offers";
 import type { PublicModel, ModelRole } from "../modelRoles";
 import type { Palette } from "../palettes";
+import type { PlanId, PlanInfo } from "@/lib/plans";
 
 export const TOKEN_KEY = "studio-kuchnie:panel-token";
 const SESSION_KEY = "studio-kuchnie:panel-sesja";
@@ -259,10 +260,11 @@ export type FirmInfo = {
   id: string;
   name: string;
   nip: string;
-  plan: string;
+  plan: PlanId;
   status: "trial" | "active" | "suspended";
   trialEnds: string | null;
   paidUntil: string | null;
+  planRequest?: { plan: PlanId; period: "month" | "year"; at: string; by: string } | null;
   createdAt: string;
 };
 export type UserInfo = { email: string; name: string; role: "owner" | "member"; createdAt: string; lastLogin: string | null };
@@ -316,4 +318,26 @@ export const adminApi = {
   firms: () => call<{ firms: AdminFirm[] }>("GET", "/api/admin/firms", { headers: panelAuth() }).then((r) => r.firms),
   updateFirm: (id: string, patch: Partial<Pick<FirmInfo, "plan" | "status" | "trialEnds" | "paidUntil">>) =>
     call<{ firm: FirmInfo }>("PUT", `/api/admin/firms/${encodeURIComponent(id)}`, { body: patch, headers: panelAuth() }).then((r) => r.firm),
+};
+
+/* ---------- Plan i płatności ---------- */
+
+export type BillingView = {
+  firm: FirmInfo | null;
+  plan: PlanInfo | null;
+  plans: Record<PlanId, PlanInfo>;
+  expired?: boolean;
+  /** Dni do końca okresu próbnego albo opłaconego okresu (ujemne = po terminie). */
+  daysLeft?: number | null;
+  usage?: { users: number; activeOffers: number; offers: number; models: number };
+  /** Działają płatności online (operator skonfigurowany). */
+  online?: boolean;
+};
+
+export const billingApi = {
+  get: () => call<BillingView>("GET", "/api/billing", { headers: panelAuth() }),
+  request: (plan: PlanId, period: "month" | "year") =>
+    call<{ firm: FirmInfo }>("POST", "/api/billing/request", { body: { plan, period }, headers: panelAuth() }).then((r) => r.firm),
+  checkout: (plan: PlanId, period: "month" | "year") =>
+    call<{ url: string }>("POST", "/api/billing/checkout", { body: { plan, period }, headers: panelAuth() }).then((r) => r.url),
 };

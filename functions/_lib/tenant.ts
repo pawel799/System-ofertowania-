@@ -45,6 +45,8 @@ export type Firm = {
   /** Opłacone do (ISO), uzupełniane ręcznie albo przez operatora płatności. */
   paidUntil?: string | null;
   billing?: FirmBilling | null;
+  /** Prośba o zmianę planu z panelu (do obsłużenia ręcznie albo przez płatność online). */
+  planRequest?: { plan: PlanId; period: "month" | "year"; at: string; by: string } | null;
   createdAt: string;
   updatedAt?: string;
 };
@@ -181,6 +183,7 @@ export const firmView = (f: Firm) => ({
   status: f.status,
   trialEnds: f.trialEnds ?? null,
   paidUntil: f.paidUntil ?? null,
+  planRequest: f.planRequest ?? null,
   createdAt: f.createdAt,
 });
 

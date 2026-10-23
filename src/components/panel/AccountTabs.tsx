@@ -286,6 +286,11 @@ export function AdminFirmsTab({ onAuthError }: Props) {
                 NIP {f.nip} · {f.users.join(", ")} · od {dateText(f.createdAt)}
                 {f.status === "trial" ? ` · próba do ${dateText(f.trialEnds)}` : f.paidUntil ? ` · opłacone do ${dateText(f.paidUntil)}` : ""}
               </span>
+              {f.planRequest ? (
+                <span className="badge badge-wait" style={{ alignSelf: "flex-start" }}>
+                  Prosi o plan {PLAN_NAMES[f.planRequest.plan]} ({f.planRequest.period === "year" ? "rocznie" : "miesięcznie"}) · {dateText(f.planRequest.at)}
+                </span>
+              ) : null}
             </div>
             <div className="set-row-actions">
               <select className="input" aria-label={`Plan: ${f.name}`} value={f.plan} onChange={(e) => void update(f, { plan: e.target.value as PlanId })}>

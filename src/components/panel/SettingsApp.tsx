@@ -6,6 +6,7 @@ import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { RAL_CLASSIC, RAL_GROUP_LABEL, ralByCode, type RalGroup } from "../ral";
 import { AccountTab, AdminFirmsTab, TeamTab, useMe } from "./AccountTabs";
+import { PlanTab } from "./PlanTab";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
 import { LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
@@ -21,14 +22,14 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "models" | "palettes" | "domain" | "konto" | "zespol" | "firmy";
+type Tab = "firma" | "models" | "palettes" | "domain" | "konto" | "zespol" | "plan" | "firmy";
 const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
   { value: "models", label: "Modele 3D" },
   { value: "palettes", label: "Kolory RAL" },
   { value: "domain", label: "Domena" },
 ];
-const ALL_TABS: Tab[] = ["firma", "models", "palettes", "domain", "konto", "zespol", "firmy"];
+const ALL_TABS: Tab[] = ["firma", "models", "palettes", "domain", "konto", "zespol", "plan", "firmy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -60,7 +61,8 @@ export default function SettingsApp() {
   // Konto (hasło) i Zespół – dla kont firm; Firmy – tylko administrator systemu (kod dostępu).
   const tabs = useMemo(() => {
     const list = [...BASE_TABS];
-    if (me?.role === "owner" || me?.role === "member") list.push({ value: "konto", label: "Konto" }, { value: "zespol", label: "Zespół" });
+    if (me?.role === "owner" || me?.role === "member")
+      list.push({ value: "konto", label: "Konto" }, { value: "zespol", label: "Zespół" }, { value: "plan", label: "Plan" });
     if (me?.role === "admin") list.push({ value: "firmy", label: "Firmy" });
     return list;
   }, [me]);
@@ -118,6 +120,8 @@ export default function SettingsApp() {
             <AccountTab me={me} onAuthError={onAuthError} />
           ) : tab === "zespol" ? (
             <TeamTab me={me} onAuthError={onAuthError} />
+          ) : tab === "plan" ? (
+            <PlanTab me={me} onAuthError={onAuthError} />
           ) : tab === "firmy" ? (
             <AdminFirmsTab onAuthError={onAuthError} />
           ) : (

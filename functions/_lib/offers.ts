@@ -56,6 +56,9 @@ export interface Env {
   CF_API_BASE?: string;
   /** Liczba iteracji PBKDF2 dla nowych haseł (domyślnie 100 000 – maksimum w Workers). */
   PASSWORD_ITERATIONS?: string;
+  /** Płatności online (docs/platnosci.md): operator i sekret podpisu webhooka. Bez nich – faktury ręcznie. */
+  BILLING_PROVIDER?: string;
+  BILLING_WEBHOOK_SECRET?: string;
 }
 
 export type Ctx = {

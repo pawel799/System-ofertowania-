@@ -7,6 +7,7 @@
 import { bucket, cleanName, isGlb, listModels, MAX_MODEL_BYTES, putModel, type ModelMeta } from "../../_lib/assets";
 import { handle, HttpError, json, randomId } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
+import { assertCanWrite, assertLimit, firmPlan } from "../../_lib/plan";
 
 export const onRequestGet = handle(async (ctx) => {
   const { kv } = await panel(ctx);
@@ -14,7 +15,10 @@ export const onRequestGet = handle(async (ctx) => {
 });
 
 export const onRequestPost = handle(async (ctx) => {
-  const { kv } = await panel(ctx);
+  const { session, kv } = await panel(ctx);
+  const fp = await firmPlan(ctx.env, session);
+  assertCanWrite(fp);
+  if (fp.plan?.limits.models != null) assertLimit(fp, "models", (await listModels(kv)).length);
   const r2 = bucket(ctx.env);
   const tooBig = new HttpError(413, "too_large", `Plik jest za duży (max ${MAX_MODEL_BYTES / 1024 / 1024} MB po optymalizacji).`);
   const declared = Number(ctx.request.headers.get("content-length") ?? 0);

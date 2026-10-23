@@ -35,6 +35,10 @@ export const onRequestPut = handle(async (ctx) => {
   }
   if (b.trialEnds !== undefined) next.trialEnds = date(b.trialEnds, "trialEnds");
   if (b.paidUntil !== undefined) next.paidUntil = date(b.paidUntil, "paidUntil");
+  // Prośba o plan obsłużona: ustawiono ten plan albo nową datę opłacenia.
+  if (next.planRequest && ((b.plan !== undefined && next.plan === next.planRequest.plan) || (b.paidUntil && next.paidUntil))) {
+    next.planRequest = null;
+  }
   await putFirm(kv, next);
   return json({ firm: firmView(next) });
 });

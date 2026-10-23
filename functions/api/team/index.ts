@@ -7,6 +7,7 @@
 import { checkPasswordRules, hashPassword, iterationsFor, panel, requireOwner } from "../../_lib/auth";
 import { handle, HttpError, json, randomId, readJson, store } from "../../_lib/offers";
 import { EMAIL_RE, firmEmails, firmUsers, getUser, MAIN_FIRM, normEmail, putUser, setFirmEmails, userView, type User } from "../../_lib/tenant";
+import { assertCanWrite, assertLimit, firmPlan } from "../../_lib/plan";
 
 export const onRequestGet = handle(async (ctx) => {
   const { session } = await panel(ctx);
@@ -26,6 +27,9 @@ export const onRequestPost = handle(async (ctx) => {
   if (name.length < 2) throw new HttpError(400, "invalid", "Wpisz imię i nazwisko.");
   const password = checkPasswordRules(b?.haslo);
   if (await getUser(kv, email)) throw new HttpError(409, "email_taken", "Konto z tym adresem e-mail już istnieje.");
+  const fp = await firmPlan(ctx.env, session);
+  assertCanWrite(fp);
+  assertLimit(fp, "users", (await firmEmails(kv, session.firmId)).length);
   const user: User = {
     id: randomId(12),
     email,

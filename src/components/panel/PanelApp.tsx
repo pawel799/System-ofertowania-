@@ -44,7 +44,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
-import { LoginDialog, LogoutButton, PanelBrand, PanelState } from "./PanelGate";
+import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
   CopyButton,
@@ -611,6 +611,7 @@ export default function PanelApp() {
           </span>
         </div>
         <span className="grow" />
+        {store.mode === "api" ? <PlanNotice /> : null}
         {store.mode === "local" ? (
           <span className="sample" data-tip="Brak API (zwykły next dev): oferty zapisują się tylko w tej przeglądarce">
             Dane demo

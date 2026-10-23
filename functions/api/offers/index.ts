@@ -6,6 +6,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, listOffers, offerKey, putOffer, readJson, validateOffer } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
+import { assertCanWrite, assertLimit, firmPlan, isActiveOffer } from "../../_lib/plan";
 
 export const onRequestGet = handle(async (ctx) => {
   const { kv } = await panel(ctx);
@@ -13,8 +14,13 @@ export const onRequestGet = handle(async (ctx) => {
 });
 
 export const onRequestPost = handle(async (ctx) => {
-  const { kv } = await panel(ctx);
+  const { session, kv } = await panel(ctx);
+  const fp = await firmPlan(ctx.env, session);
+  assertCanWrite(fp);
   const offer = validateOffer(await readJson(ctx.request));
+  if (fp.plan?.limits.activeOffers != null) {
+    assertLimit(fp, "activeOffers", (await listOffers(kv)).filter((o) => isActiveOffer(o)).length);
+  }
   await checkRefs(kv, offer);
   const key = offerKey(offer.id);
   if (await getOffer(kv, key)) {

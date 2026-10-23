@@ -137,7 +137,7 @@ export const HOME = {
     id: "cennik",
     eyebrow: "Cennik",
     title: "Plan dopasowany do wielkości firmy",
-    text: "Od jednego stolarza po producenta z siecią salonów. Cenę ustalamy indywidualnie.",
+    text: "Od 149 zł netto miesięcznie za jedną stolarnię. Pierwsze 30 dni za darmo, bez podawania karty.",
     cta: { href: "/cennik", label: "Zobacz cennik" } satisfies Link,
   },
 

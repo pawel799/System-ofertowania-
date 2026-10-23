@@ -8,6 +8,31 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "rea
 import type { PanelMode } from "./usePanelOffers";
 import { initials, useBrand } from "@/lib/brand";
 import { ApiError, authApi } from "./offerApi";
+import { useMe } from "./AccountTabs";
+
+/** Okres próbny / koniec opłaconego okresu w nagłówku panelu (link do Ustawienia → Plan). */
+export function PlanNotice() {
+  const [me] = useMe(true);
+  const f = me?.firm;
+  if (!f) return null;
+  const until = f.status === "trial" ? f.trialEnds : f.paidUntil;
+  if (!until) return null;
+  const days = Math.ceil((Date.parse(until) - Date.now()) / 86400_000);
+  if (f.status !== "trial" && days > 7) return null;
+  const text =
+    days < 0
+      ? f.status === "trial"
+        ? "Okres próbny minął"
+        : "Plan wygasł"
+      : f.status === "trial"
+        ? `Okres próbny: ${days} ${days === 1 ? "dzień" : "dni"}`
+        : `Plan kończy się za ${days} ${days === 1 ? "dzień" : "dni"}`;
+  return (
+    <a className="sample" href="/panel/ustawienia?tab=plan" style={days < 0 ? { color: "var(--red)" } : undefined} data-tip="Plan i płatności">
+      {text}
+    </a>
+  );
+}
 
 /** Kończy sesję (albo usuwa kod administratora z tej przeglądarki) i wraca do okna logowania. */
 export function LogoutButton() {
@@ -78,6 +103,7 @@ export function PanelState({
       <header className="top">
 <PanelBrand />
         <span className="grow" />
+        {mode === "api" ? <PlanNotice /> : null}
         {mode === "api" || mode === "local" ? (
           <>
             <a className="btn btn-plain" href="/panel/zgloszenia">
