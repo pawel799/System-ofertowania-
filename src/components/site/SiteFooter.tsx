@@ -11,6 +11,7 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
       { href: "/cennik", label: "Cennik" },
       { href: "/oferta/demo", label: "Przykładowa oferta" },
       { href: "/panel", label: "Panel firmy" },
+      { href: "/rejestracja", label: "Załóż konto firmy" },
     ],
   },
   {

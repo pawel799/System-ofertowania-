@@ -6,10 +6,10 @@
  *             Zmiany wysyłane po krótkiej pauzie (debounce), odświeżanie przy powrocie
  *             do karty i co 30 s, żeby było widać otwarcia linków przez klientów.
  *  - "local": tylko przy `next dev` bez API: dawny zapis w localStorage + przykładowe oferty.
- *  - "auth":  serwer chce tokenu panelu (PANEL_TOKEN).
+ *  - "auth":  trzeba się zalogować (konto firmy albo kod administratora).
  */
 import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
-import { ApiError, getToken, panelApi, setToken } from "./offerApi";
+import { ApiError, forgetLogin, hasLogin, panelApi } from "./offerApi";
 import { SAMPLE_OFFERS, STORAGE_KEY, loadOffers, saveOffers, type Offer } from "./offers";
 import { toast } from "./ui";
 
@@ -47,14 +47,15 @@ export function usePanelOffers(
 
   const needAuth = useCallback((e: ApiError) => {
     if (e.status !== 401) return false;
-    setError(getToken() ? "Ten kod nie pasuje. Wpisz aktualny kod dostępu." : "");
+    setError(hasLogin() ? "Sesja wygasła. Zaloguj się ponownie." : "");
+    forgetLogin();
     setMode("auth");
     return true;
   }, []);
 
   const load = useCallback(async () => {
     // Bez zapisanego kodu od razu okno logowania – bez mignięcia „Wczytywanie ofert…”.
-    if (!getToken() && process.env.NODE_ENV !== "development") {
+    if (!hasLogin() && process.env.NODE_ENV !== "development") {
       setError("");
       setMode("auth");
       return;
@@ -226,10 +227,9 @@ export function usePanelOffers(
     };
   }, [mode, refresh]);
 
-  /* --- Token panelu --- */
-  const submitToken = useCallback(
-    (token: string) => {
-      setToken(token.trim());
+  /* --- Po zalogowaniu (okno logowania) --- */
+  const afterLogin = useCallback(
+    () => {
       if (everLoaded.current) {
         // Sesja wygasła w trakcie pracy: nie nadpisujemy lokalnych zmian, tylko wznawiamy zapis.
         setError("");
@@ -242,5 +242,5 @@ export function usePanelOffers(
     [load],
   );
 
-  return { mode, sync, error, retry: load, submitToken };
+  return { mode, sync, error, retry: load, afterLogin };
 }

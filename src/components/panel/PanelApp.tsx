@@ -44,7 +44,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
-import { LogoutButton, PanelBrand, PanelState, TokenDialog } from "./PanelGate";
+import { LoginDialog, LogoutButton, PanelBrand, PanelState } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
   CopyButton,
@@ -290,7 +290,7 @@ export default function PanelApp() {
       }}
     />
   ) : null;
-  const tokenDialog = store.mode === "auth" ? <TokenDialog error={store.error} onSubmit={store.submitToken} /> : null;
+  const tokenDialog = store.mode === "auth" ? <LoginDialog error={store.error} onLoggedIn={store.afterLogin} /> : null;
 
   if (!offer)
     return (

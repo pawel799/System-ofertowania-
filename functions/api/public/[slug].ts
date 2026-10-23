@@ -4,7 +4,8 @@
  * Oferta z PIN-em wymaga nagłówka X-Offer-Pin.
  */
 import { getModel, listPalettes, publicModel, publicPalettes } from "../../_lib/assets";
-import { handle, json, publicView, resolvePublic } from "../../_lib/offers";
+import { handle, json, publicView } from "../../_lib/offers";
+import { publicBrand, resolvePublic } from "../../_lib/public";
 
 export const onRequestGet = handle(async (ctx) => {
   const { kv, offer } = await resolvePublic(ctx);
@@ -16,6 +17,8 @@ export const onRequestGet = handle(async (ctx) => {
       model: model ? publicModel(model) : null,
       // Pakiety RAL do wyboru frontu (przy ukrytej cenie bez dopłat).
       palettes: publicPalettes(await listPalettes(kv), !!offer.link?.showPrice),
+      // Nazwa i logo firmy, która wysłała ofertę.
+      brand: await publicBrand(kv),
     },
   });
 });

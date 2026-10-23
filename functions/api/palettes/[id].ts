@@ -5,13 +5,13 @@
  */
 import { getPalette, offersUsing, paletteId, validatePalette } from "../../_lib/assets";
 import { parseRalFront } from "../../../src/components/palettes";
-import { handle, HttpError, json, param, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, param, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 const notFound = () => new HttpError(404, "not_found", "Nie ma takiego pakietu.");
 
 export const onRequestPut = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const id = paletteId(param(ctx, "id"));
   const existing = await getPalette(kv, id);
   if (!existing) throw notFound();
@@ -32,8 +32,7 @@ export const onRequestPut = handle(async (ctx) => {
 });
 
 export const onRequestDelete = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const id = paletteId(param(ctx, "id"));
   if (!(await getPalette(kv, id))) throw notFound();
   const used = await offersUsing(kv, (o) => parseRalFront(o.front)?.paletteId === id);

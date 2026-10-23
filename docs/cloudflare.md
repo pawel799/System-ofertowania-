@@ -38,8 +38,9 @@ Modele 3D (R2, binding `MODELS`), pakiety kolorów RAL i własna domena linków:
 | `POST /api/public/:link/open` | klient | zapis otwarcia (licznik, historia, status „Otwarta”) |
 | `GET /api/firma?nip=…` | panel (token) | dane firmy po NIP: biała lista VAT (MF) + KRS; wynik 24 h w KV pod `firma:<nip>` |
 
-Panel wysyła nagłówek `Authorization: Bearer <PANEL_TOKEN>`. Token wpisuje się
-raz w panelu, zostaje w localStorage tej przeglądarki. W kodzie nie ma żadnego sekretu.
+Panel: konta firm logują się e-mailem i hasłem (sesja w ciasteczku `so_sesja`), administrator
+systemu – kodem `PANEL_TOKEN` (nagłówek `Authorization: Bearer <PANEL_TOKEN>`). Szczegóły kont
+firm, kluczy KV i endpointów: [`konta-firm.md`](konta-firm.md). W kodzie nie ma żadnego sekretu.
 Oferta z PIN-em wymaga nagłówka `X-Offer-Pin` (strona klienta pyta o PIN).
 
 Alternatywa dla tokenu: **Cloudflare Access** (Zero Trust) na ścieżki `/panel*`
@@ -77,9 +78,8 @@ nawet wtedy, gdy plik istnieje. Przy zwykłym `next dev` działa `/oferta/view?i
 6. Po zmianie bindingów/sekretów zrób ponowny deploy (bindingi działają od
    następnego wdrożenia).
 
-Bez bindingu `OFFERS` API zwraca 503 „Brak bindingu KV”, bez `PANEL_TOKEN`
-panel dostaje 503 „Na serwerze nie ustawiono sekretu PANEL_TOKEN” (celowo:
-bez sekretu nic nie jest otwarte).
+Bez bindingu `OFFERS` API zwraca 503 „Brak bindingu KV”. Bez `PANEL_TOKEN` wejście kodem
+administratora jest wyłączone (401) – konta firm działają dalej.
 
 `wrangler.toml` celowo nie ma w repo: bindingi są w panelu Cloudflare, więc nie
 trzeba wpisywać do repo identyfikatorów namespace’ów.

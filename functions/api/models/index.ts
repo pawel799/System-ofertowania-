@@ -5,16 +5,16 @@
  *          nagłówek X-Model-Name = nazwa (zakodowana encodeURIComponent).
  */
 import { bucket, cleanName, isGlb, listModels, MAX_MODEL_BYTES, putModel, type ModelMeta } from "../../_lib/assets";
-import { handle, HttpError, json, randomId, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, randomId } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  return json({ models: await listModels(store(ctx.env)) });
+  const { kv } = await panel(ctx);
+  return json({ models: await listModels(kv) });
 });
 
 export const onRequestPost = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const r2 = bucket(ctx.env);
   const tooBig = new HttpError(413, "too_large", `Plik jest za duży (max ${MAX_MODEL_BYTES / 1024 / 1024} MB po optymalizacji).`);
   const declared = Number(ctx.request.headers.get("content-length") ?? 0);
@@ -38,5 +38,7 @@ export const onRequestPost = handle(async (ctx) => {
   const now = new Date().toISOString();
   const meta: ModelMeta = { id, name, size: buf.byteLength, version: 1, file, tags: {}, createdAt: now, updatedAt: now };
   await putModel(kv, meta);
+  // Plik modelu jest publiczny (strona klienta) – zapamiętujemy, do której firmy należy.
+  await kv.root.put(`modelowner:${id}`, kv.firmId);
   return json({ model: meta }, 201, { location: `/api/models/${id}` });
 });

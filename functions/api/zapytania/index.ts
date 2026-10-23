@@ -1,16 +1,33 @@
 /*
  * POST /api/zapytania – publiczny formularz: prośba o wycenę lub pomiar (strona oferty)
  * oraz wiadomość ze strony /kontakt.
- * Body: { typ: "wycena" | "pomiar" | "kontakt", imie, telefon?, email?, uwagi?, oferta?, wybor? }
+ * Body: { typ: "wycena" | "pomiar" | "kontakt", imie, telefon?, email?, uwagi?, oferta?, wybor?, link? }
+ *   - link = identyfikator linku oferty: zgłoszenie trafia do firmy, która wysłała tę ofertę;
+ *     bez linku (np. /kontakt, oferta demo) – do właściciela systemu (firma "main"),
  *   - wymagane imię i (telefon albo e-mail),
  *   - limit 5 zgłoszeń na godzinę z jednego IP (rate:zap:<ip>),
  *   - zapis w KV (binding OFFERS): zapytanie:<data>:<losowe id>, przechowywane 180 dni.
  *   - powiadomienie e-mail przez Resend, jeśli ustawiono RESEND_API_KEY i NOTIFY_EMAIL (patrz docs/zgloszenia.md).
- * Odczyt: GET z kodem panelu (Authorization: Bearer <PANEL_TOKEN>) – ostatnie 200 zgłoszeń, najnowsze pierwsze.
+ * Odczyt: GET z panelu (zalogowana firma widzi tylko swoje) – ostatnie 200 zgłoszeń, najnowsze pierwsze.
  * Zmiana / usuwanie: /api/zapytania/:id (PATCH { obsluzone }, DELETE).
  */
+import { panel } from "../../_lib/auth";
 import { notifyNewRequest } from "../../_lib/notify";
-import { handle, HttpError, json, randomId, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, randomId, readJson, SLUG_RE, store, type KVNamespace } from "../../_lib/offers";
+import { firmUsers, getFirm, MAIN_FIRM, parseSlugValue, scoped } from "../../_lib/tenant";
+
+/** Firma, do której trafia zgłoszenie (po linku oferty), i adresy do powiadomienia. */
+async function targetFirm(root: KVNamespace, link: unknown): Promise<{ firmId: string; to?: string[] }> {
+  if (typeof link !== "string" || !SLUG_RE.test(link)) return { firmId: MAIN_FIRM };
+  const raw = await root.get(`slug:${link}`);
+  if (!raw) return { firmId: MAIN_FIRM };
+  const { firmId } = parseSlugValue(raw);
+  if (firmId === MAIN_FIRM) return { firmId };
+  const firm = await getFirm(root, firmId);
+  if (!firm || firm.status === "suspended") throw new HttpError(404, "not_found", "Ta oferta nie jest już dostępna.");
+  const owners = (await firmUsers(root, firmId)).filter((u) => u.role === "owner").map((u) => u.email);
+  return { firmId, to: owners };
+}
 
 const PER_IP_HOUR = 5;
 const TTL = 180 * 24 * 3600;
@@ -54,16 +71,16 @@ export const onRequestPost = handle(async (ctx) => {
     firma: str(b.firma, 200),
     utworzono: now,
   };
-  await kv.put(`zapytanie:${now}:${randomId(8)}`, JSON.stringify(record), { expirationTtl: TTL });
-  const sending = notifyNewRequest(ctx.env, record, new URL(ctx.request.url).origin);
+  const target = await targetFirm(kv, b.link);
+  await scoped(kv, target.firmId).put(`zapytanie:${now}:${randomId(8)}`, JSON.stringify(record), { expirationTtl: TTL });
+  const sending = notifyNewRequest(ctx.env, record, new URL(ctx.request.url).origin, target.to);
   if (ctx.waitUntil) ctx.waitUntil(sending);
   else await sending;
   return json({ ok: true }, 201);
 });
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const names: string[] = [];
   let cursor: string | undefined;
   do {

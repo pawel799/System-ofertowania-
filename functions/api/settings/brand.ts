@@ -4,16 +4,16 @@
  *   PUT – { name: string, logo: string | null } – logo jako data URL (PNG/JPG/WebP/SVG, max 200 KB)
  */
 import { BRAND_KEY, getBrand, LOGO_MAX_BYTES, LOGO_RE } from "../../_lib/brand";
-import { handle, HttpError, json, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  return json({ brand: await getBrand(store(ctx.env)) });
+  const { kv } = await panel(ctx);
+  return json({ brand: await getBrand(kv) });
 });
 
 export const onRequestPut = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const body = (await readJson(ctx.request, 300_000)) as { name?: unknown; logo?: unknown } | null;
   const name = typeof body?.name === "string" ? body.name.trim().slice(0, 80) : "";
   let logo: string | null = null;

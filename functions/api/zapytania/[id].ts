@@ -4,7 +4,8 @@
  *   DELETE – usunięcie zgłoszenia
  * id = klucz KV bez prefiksu "zapytanie:" (data ISO + losowy sufiks).
  */
-import { handle, HttpError, json, param, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, param, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 const ID_RE = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z:[A-Za-z0-9]{4,16}$/;
 const TTL = 180 * 24 * 3600;
@@ -16,8 +17,7 @@ function keyOf(ctx: Parameters<typeof param>[0]) {
 }
 
 export const onRequestPatch = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const { id, key } = keyOf(ctx);
   const raw = await kv.get(key);
   if (!raw) throw new HttpError(404, "not_found", "Nie ma takiego zgłoszenia (mogło wygasnąć po 180 dniach).");
@@ -33,8 +33,8 @@ export const onRequestPatch = handle(async (ctx) => {
 });
 
 export const onRequestDelete = handle(async (ctx) => {
-  await requirePanel(ctx);
+  const { kv } = await panel(ctx);
   const { key } = keyOf(ctx);
-  await store(ctx.env).delete(key);
+  await kv.delete(key);
   return new Response(null, { status: 204 });
 });

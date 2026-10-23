@@ -5,17 +5,17 @@
  *   DELETE – usunięcie domeny (linki wracają na adres systemu)
  */
 import { cleanHostname, createDomain, deleteDomain, domainView, getDomain, requireCf } from "../../_lib/domain";
-import { handle, HttpError, json, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  return json(domainView(ctx.env, await getDomain(store(ctx.env))));
+  const { kv } = await panel(ctx);
+  return json(domainView(ctx.env, await getDomain(kv)));
 });
 
 export const onRequestPut = handle(async (ctx) => {
-  await requirePanel(ctx);
+  const { kv } = await panel(ctx);
   requireCf(ctx.env);
-  const kv = store(ctx.env);
   const body = (await readJson(ctx.request)) as { hostname?: unknown } | null;
   const hostname = cleanHostname(body?.hostname, ctx.env);
   const existing = await getDomain(kv);
@@ -27,9 +27,8 @@ export const onRequestPut = handle(async (ctx) => {
 });
 
 export const onRequestDelete = handle(async (ctx) => {
-  await requirePanel(ctx);
+  const { kv } = await panel(ctx);
   requireCf(ctx.env);
-  const kv = store(ctx.env);
   const existing = await getDomain(kv);
   if (existing) await deleteDomain(ctx.env, kv, existing);
   return new Response(null, { status: 204 });

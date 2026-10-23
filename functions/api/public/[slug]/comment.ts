@@ -10,7 +10,8 @@
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../../../src/components/catalog";
 import { findRalFront } from "../../../../src/components/palettes";
 import { listPalettes } from "../../../_lib/assets";
-import { handle, HttpError, json, putOffer, readJson, resolvePublic, stampNow } from "../../../_lib/offers";
+import { handle, HttpError, json, putOffer, readJson, stampNow } from "../../../_lib/offers";
+import { resolvePublic } from "../../../_lib/public";
 
 const MAX_PER_HOUR = 10;
 

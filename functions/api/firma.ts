@@ -17,7 +17,8 @@
  */
 import { cleanNip, isValidNip, type CompanyLookup } from "../../src/components/panel/company";
 import { cachedLookup } from "../_lib/firma";
-import { HttpError, requirePanel, type Ctx } from "../_lib/offers";
+import { HttpError, type Ctx } from "../_lib/offers";
+import { panel } from "../_lib/auth";
 
 function reply(body: CompanyLookup, status: number) {
   return new Response(JSON.stringify(body), {
@@ -28,7 +29,7 @@ function reply(body: CompanyLookup, status: number) {
 
 export async function onRequestGet(ctx: Ctx) {
   try {
-    await requirePanel(ctx);
+    await panel(ctx);
   } catch (e) {
     if (e instanceof HttpError) return reply({ ok: false, error: e.message }, e.status);
     throw e;

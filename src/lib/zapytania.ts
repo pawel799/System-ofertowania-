@@ -10,13 +10,22 @@ export type Zapytanie = {
   firma?: string;
 };
 
+/*
+ * Do której firmy trafia zgłoszenie: strona oferty z linku ustawia identyfikator linku
+ * (serwer znajduje po nim firmę). Bez niego – do właściciela systemu (kontakt, oferta demo).
+ */
+let target: { link?: string } = {};
+export function setRequestLink(link: string) {
+  target = link ? { link } : {};
+}
+
 /** null = zapisane; tekst = komunikat błędu dla użytkownika. */
 export async function wyslijZapytanie(z: Zapytanie): Promise<string | null> {
   try {
     const res = await fetch("/api/zapytania", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(z),
+      body: JSON.stringify({ ...z, ...target }),
     });
     if (res.ok) return null;
     const data = (await res.json().catch(() => null)) as { message?: string } | null;

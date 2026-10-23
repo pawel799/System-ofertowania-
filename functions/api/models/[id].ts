@@ -5,20 +5,20 @@
  *   DELETE – usunięcie modelu i pliku; 409, gdy używa go jakaś oferta
  */
 import { bucket, cleanName, getModel, modelId, offersUsing, putModel, validateTags } from "../../_lib/assets";
-import { handle, HttpError, json, param, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, HttpError, json, param, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
 
 const notFound = () => new HttpError(404, "not_found", "Nie ma takiego modelu.");
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const m = await getModel(store(ctx.env), modelId(param(ctx, "id")));
+  const { kv } = await panel(ctx);
+  const m = await getModel(kv, modelId(param(ctx, "id")));
   if (!m) throw notFound();
   return json({ model: m });
 });
 
 export const onRequestPut = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const m = await getModel(kv, modelId(param(ctx, "id")));
   if (!m) throw notFound();
   const body = await readJson(ctx.request);
@@ -35,8 +35,7 @@ export const onRequestPut = handle(async (ctx) => {
 });
 
 export const onRequestDelete = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { kv } = await panel(ctx);
   const m = await getModel(kv, modelId(param(ctx, "id")));
   if (!m) throw notFound();
   const used = await offersUsing(kv, (o) => o.modelId === m.id);
@@ -45,5 +44,6 @@ export const onRequestDelete = handle(async (ctx) => {
   }
   await bucket(ctx.env).delete(m.file);
   await kv.delete(`model:${m.id}`);
+  await kv.root.delete(`modelowner:${m.id}`);
   return new Response(null, { status: 204 });
 });
