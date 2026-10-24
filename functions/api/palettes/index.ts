@@ -4,16 +4,20 @@
  *   POST – nowy pakiet: { name, finish, colors: ["9010", …], delta }
  */
 import { listPalettes, validatePalette } from "../../_lib/assets";
-import { handle, json, randomId, readJson, requirePanel, store } from "../../_lib/offers";
+import { handle, json, randomId, readJson } from "../../_lib/offers";
+import { panel } from "../../_lib/auth";
+import { assertCanWrite, assertFeature, firmPlan } from "../../_lib/plan";
 
 export const onRequestGet = handle(async (ctx) => {
-  await requirePanel(ctx);
-  return json({ palettes: await listPalettes(store(ctx.env)) });
+  const { kv } = await panel(ctx);
+  return json({ palettes: await listPalettes(kv) });
 });
 
 export const onRequestPost = handle(async (ctx) => {
-  await requirePanel(ctx);
-  const kv = store(ctx.env);
+  const { session, kv } = await panel(ctx);
+  const fp = await firmPlan(ctx.env, session);
+  assertFeature(fp, "palettes");
+  assertCanWrite(fp);
   const id = randomId(12);
   const now = new Date().toISOString();
   const palette = { ...validatePalette(await readJson(ctx.request), id), createdAt: now, updatedAt: now };

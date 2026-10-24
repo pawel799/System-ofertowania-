@@ -12,7 +12,7 @@ import { wyslijZapytanie } from "@/lib/zapytania";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function Field({
+export function Field({
   id,
   label,
   error,
@@ -54,7 +54,7 @@ function Field({
   );
 }
 
-function Done({ title, children }: { title: string; children: ReactNode }) {
+export function Done({ title, children }: { title: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => ref.current?.focus(), []);
   return (
@@ -64,8 +64,6 @@ function Done({ title, children }: { title: string; children: ReactNode }) {
     </div>
   );
 }
-
-/* ---------- Logowanie ---------- */
 
 /* ---------- Kontakt ---------- */
 

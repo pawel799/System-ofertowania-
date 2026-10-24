@@ -1,5 +1,6 @@
 "use client";
 
+import { ModulySection } from "./ModulySection";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -44,7 +45,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
-import { LogoutButton, PanelBrand, PanelState, TokenDialog } from "./PanelGate";
+import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
   CopyButton,
@@ -290,7 +291,7 @@ export default function PanelApp() {
       }}
     />
   ) : null;
-  const tokenDialog = store.mode === "auth" ? <TokenDialog error={store.error} onSubmit={store.submitToken} /> : null;
+  const tokenDialog = store.mode === "auth" ? <LoginDialog error={store.error} onLoggedIn={store.afterLogin} /> : null;
 
   if (!offer)
     return (
@@ -611,6 +612,7 @@ export default function PanelApp() {
           </span>
         </div>
         <span className="grow" />
+        {store.mode === "api" ? <PlanNotice /> : null}
         {store.mode === "local" ? (
           <span className="sample" data-tip="Brak API (zwykły next dev): oferty zapisują się tylko w tej przeglądarce">
             Dane demo
@@ -919,6 +921,8 @@ export default function PanelApp() {
           ) : null}
 
           {!wide ? <div className="side-inline">{linkPanel}</div> : null}
+
+          <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
 
           <section className="sec">
             <h2>Aktywność</h2>

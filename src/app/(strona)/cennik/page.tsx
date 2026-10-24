@@ -2,43 +2,41 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import PageIntro from "@/components/site/PageIntro";
 import { btn } from "@/components/site/styles";
+import { formatZl, MODEL_SERVICE, PLAN_IDS, PLANS as PLAN_INFO, TRIAL_DAYS } from "@/lib/plans";
 
 export const metadata: Metadata = { title: "Cennik · System ofertowania" };
 
-// Plany bez cen katalogowych: wycena zależy od liczby osób i zakresu wdrożenia.
-const PLANS = [
-  {
-    name: "Start",
-    price: "Cena ustalana indywidualnie",
-    period: "dla jednej pracowni",
-    text: "Dla stolarza lub projektanta, który sam przygotowuje oferty i chce pokazać klientowi kuchnię w 3D.",
-    features: ["Panel ofert z kodem dostępu", "Oferty z modelem 3D i linkiem dla klienta", "Link chroniony PIN-em i datą ważności", "Uwagi klienta i historia otwarć"],
-    cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
-  },
-  {
-    name: "Pracownia",
-    price: "Cena ustalana indywidualnie",
-    period: "z własną marką",
-    text: "Dla pracowni, które chcą wysyłać oferty pod własną nazwą i w swoich kolorach.",
-    features: ["Wszystko z planu Start", "Własna nazwa i logo w ofercie", "Własne pakiety kolorów RAL", "Dane klienta firmowego po NIP-ie"],
-    cta: { href: "/kontakt", label: "Zapytaj o wycenę" },
-    featured: true,
-  },
-  {
-    name: "Producent",
-    price: "Zapytaj o wycenę",
-    period: "wdrożenie na miarę",
-    text: "Dla producentów mebli na wymiar, którzy chcą pokazywać klientom własne projekty.",
-    features: ["Wszystko z planu Pracownia", "Własne modele 3D wgrywane w panelu", "Pomoc przy przygotowaniu modeli"],
-    cta: { href: "/kontakt", label: "Porozmawiajmy" },
-  },
-];
+// Ceny i limity w src/lib/plans.ts – te same, których pilnuje API.
+const PLANS = PLAN_IDS.map((id) => {
+  const p = PLAN_INFO[id];
+  return {
+    name: p.name,
+    price: `${p.from ? "od " : ""}${formatZl(p.monthly)}`,
+    period: [
+      "netto miesięcznie",
+      p.yearly !== null ? `albo ${formatZl(p.yearly)} rocznie (2 miesiące gratis)` : null,
+      p.setup ?? null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    text: p.audience,
+    features: p.features,
+    cta:
+      id === "producent"
+        ? { href: "/kontakt", label: "Porozmawiajmy" }
+        : { href: `/rejestracja?plan=${id}`, label: `Wypróbuj ${TRIAL_DAYS} dni za darmo` },
+    featured: id === "pracownia",
+  };
+});
 
 export default function CennikPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow="Cennik" title="Plan dopasowany do Twojej pracowni">
-        <p>Cenę ustalamy po krótkiej rozmowie – zależy od liczby ofert i od tego, czy potrzebujesz własnych modeli 3D. Napisz, a przygotujemy wycenę.</p>
+        <p>
+          Pierwsze {TRIAL_DAYS} dni za darmo, bez podawania karty. Potem płacisz miesięcznie albo rocznie, bez umowy na lata. Ceny netto
+          (+23% VAT).
+        </p>
       </PageIntro>
 
       <div className="mt-14 grid gap-4 md:grid-cols-3">
@@ -77,6 +75,7 @@ export default function CennikPage() {
           </section>
         ))}
       </div>
+      <p className="mt-8 text-sm text-stone-500">{MODEL_SERVICE}</p>
     </div>
   );
 }

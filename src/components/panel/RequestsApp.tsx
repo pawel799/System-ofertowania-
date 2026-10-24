@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiError, getToken, requestsApi, setToken, type Zgloszenie } from "./offerApi";
-import { LogoutButton, PanelBrand, TokenDialog } from "./PanelGate";
+import { ApiError, forgetLogin, hasLogin, requestsApi, type Zgloszenie } from "./offerApi";
+import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
 /*
@@ -29,12 +29,15 @@ export default function RequestsApp() {
   const [filter, setFilter] = useState<Filter>("nowe");
 
   const load = useCallback(async () => {
-    if (!getToken()) return setAuth({ need: true, error: "" });
+    if (!hasLogin()) return setAuth({ need: true, error: "" });
     setError("");
     try {
       setItems(await requestsApi.list());
     } catch (e) {
-      if (e instanceof ApiError && e.status === 401) return setAuth({ need: true, error: "Zły kod dostępu. Wpisz go jeszcze raz." });
+      if (e instanceof ApiError && e.status === 401) {
+        forgetLogin();
+        return setAuth({ need: true, error: "Sesja wygasła. Zaloguj się ponownie." });
+      }
       setError(errText(e));
     }
   }, []);
@@ -130,6 +133,7 @@ export default function RequestsApp() {
                   {z.telefon ? <a href={`tel:${z.telefon.replace(/[^\d+]/g, "")}`}>{z.telefon}</a> : null}
                   {z.email ? <a href={`mailto:${z.email}`}>{z.email}</a> : null}
                   {z.oferta ? <span className="faint">Oferta {z.oferta}</span> : null}
+                  {z.zrodlo === "osadzenie" ? <span className="faint">Z kuchni 3D na Twojej stronie</span> : null}
                 </div>
                 {z.uwagi ? <p className="zg-notes">{z.uwagi}</p> : null}
                 {z.wybor ? <p className="faint zg-choice">Wybór klienta: {z.wybor}</p> : null}
@@ -148,10 +152,9 @@ export default function RequestsApp() {
       </main>
 
       {auth.need ? (
-        <TokenDialog
+        <LoginDialog
           error={auth.error}
-          onSubmit={(t) => {
-            setToken(t.trim());
+          onLoggedIn={() => {
             setAuth({ need: false, error: "" });
             void load();
           }}

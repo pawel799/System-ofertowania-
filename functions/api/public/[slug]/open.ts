@@ -4,7 +4,8 @@
  * Jedno IP liczy się raz na 30 minut (odświeżanie strony ani zapętlone wywołania
  * nie zaśmiecają historii i nie zużywają zapisów do KV).
  */
-import { handle, putOffer, resolvePublic, stampNow } from "../../../_lib/offers";
+import { handle, putOffer, stampNow } from "../../../_lib/offers";
+import { resolvePublic } from "../../../_lib/public";
 
 export const onRequestPost = handle(async (ctx) => {
   const { kv, offer } = await resolvePublic(ctx);

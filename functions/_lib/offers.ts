@@ -10,6 +10,8 @@
  *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
+import type { ModulItem } from "../../src/lib/modul";
+import { validateModuly } from "./modul";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
 import { RAL_FRONT_RE } from "../../src/components/palettes";
 
@@ -54,6 +56,13 @@ export interface Env {
   NOTIFY_FROM?: string;
   /** Tylko do testów: inny adres API Cloudflare. */
   CF_API_BASE?: string;
+  /** Liczba iteracji PBKDF2 dla nowych haseł (domyślnie 100 000 – maksimum w Workers). */
+  PASSWORD_ITERATIONS?: string;
+  /** Płatności online (docs/platnosci.md): operator i sekret podpisu webhooka. Bez nich – faktury ręcznie. */
+  BILLING_PROVIDER?: string;
+  BILLING_WEBHOOK_SECRET?: string;
+  /** Cloudflare Turnstile (sekret) – weryfikacja anty-bot przy rejestracji i logowaniu. Bez niego – wyłączona. */
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 export type Ctx = {
@@ -132,6 +141,8 @@ export type Offer = {
   hardware: string;
   /** Wgrany model 3D (id z /api/models); brak = kuchnia demo. */
   modelId?: string;
+  /** Moduły parametryczne (szafki na wymiar); cenę liczy serwer z cennika firmy. */
+  moduly?: ModulItem[];
   status: Status;
   link: OfferLink | null;
   comment?: string;
@@ -165,6 +176,8 @@ export class HttpError extends Error {
     public status: number,
     public code: string,
     message: string,
+    /** Dodatkowe pola w odpowiedzi JSON (np. marka firmy na ekranie PIN-u). */
+    public extra?: Record<string, unknown>,
   ) {
     super(message);
   }
@@ -176,7 +189,7 @@ export function handle(fn: (ctx: Ctx) => Promise<Response>) {
     try {
       return await fn(ctx);
     } catch (e) {
-      if (e instanceof HttpError) return fail(e.status, e.code, e.message);
+      if (e instanceof HttpError) return json({ error: e.code, message: e.message, ...e.extra }, e.status);
       console.error(e);
       return fail(500, "server_error", "Błąd serwera.");
     }
@@ -200,7 +213,10 @@ export const param = (ctx: Ctx, name: string) => {
   return Array.isArray(v) ? v.join("/") : (v ?? "");
 };
 
-/* ---------- Autoryzacja panelu: nagłówek Authorization: Bearer <PANEL_TOKEN> ---------- */
+/* ---------- Kod dostępu administratora: nagłówek Authorization: Bearer <PANEL_TOKEN> ----------
+ * Zwykłe konta firm logują się e-mailem i hasłem (functions/_lib/auth.ts, requirePanel).
+ * Kod PANEL_TOKEN zostaje jako wejście administratora systemu (firma "main", zarządzanie firmami).
+ */
 
 async function sha256(text: string) {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)));
@@ -210,9 +226,16 @@ async function sha256(text: string) {
 const AUTH_FAIL_LIMIT = 20;
 const AUTH_LOCK_SECONDS = 15 * 60;
 
-export async function requirePanel(ctx: Ctx) {
+/** Token z nagłówka Authorization (pusty = brak). */
+export function bearerToken(request: Request) {
+  const header = request.headers.get("authorization") ?? "";
+  return header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+}
+
+/** Sprawdza kod administratora. Rzuca 401/429; brak sekretu na serwerze = kod wyłączony. */
+export async function verifyPanelToken(ctx: Ctx) {
   const secret = ctx.env.PANEL_TOKEN;
-  if (!secret) throw new HttpError(503, "no_token_configured", "Na serwerze nie ustawiono sekretu PANEL_TOKEN.");
+  if (!secret) throw new HttpError(401, "unauthorized", "Kod dostępu administratora jest wyłączony. Zaloguj się e-mailem i hasłem.");
   // Ochrona przed zgadywaniem tokenu: licznik błędnych prób na IP (KV, wygasa po 15 min).
   // Sprawdzany PRZED porównaniem, żeby zablokowany adres nie mógł dalej zgadywać.
   const kv = ctx.env.OFFERS;
@@ -221,8 +244,7 @@ export async function requirePanel(ctx: Ctx) {
   if (fails >= AUTH_FAIL_LIMIT) {
     throw new HttpError(429, "auth_locked", "Za dużo prób z błędnym tokenem. Spróbuj ponownie za 15 minut.");
   }
-  const header = ctx.request.headers.get("authorization") ?? "";
-  const given = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const given = bearerToken(ctx.request);
   // Porównanie skrótów w stałym czasie (bez wczesnego wyjścia).
   const [a, b] = await Promise.all([sha256(given), sha256(secret)]);
   let diff = given ? 0 : 1;
@@ -352,6 +374,7 @@ export function validateOffer(input: unknown): Offer {
     modelId = str(o.modelId, "modelId", 32);
     if (!ASSET_ID_RE.test(modelId)) throw bad("Zły identyfikator modelu 3D.");
   }
+  const moduly = validateModuly(o.moduly);
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
@@ -367,6 +390,7 @@ export function validateOffer(input: unknown): Offer {
     countertop: oneOf(o.countertop, COUNTERTOP_IDS, "countertop"),
     hardware: oneOf(o.hardware, HARDWARE_IDS, "hardware"),
     ...(modelId ? { modelId } : {}),
+    ...(moduly && moduly.length ? { moduly } : {}),
     status: oneOf(o.status, STATUSES, "status"),
     link: validateLink(o.link),
     ...(comment !== undefined ? { comment } : {}),
@@ -441,31 +465,4 @@ export function publicView(o: Offer) {
     ...(link.showPrice ? { base: o.base } : {}),
     expires: link.expires,
   };
-}
-
-/** Szuka aktywnego linku i sprawdza ważność oraz PIN. Rzuca HttpError z polskim komunikatem. */
-export async function resolvePublic(ctx: Ctx): Promise<{ kv: KVNamespace; key: string; offer: Offer }> {
-  const kv = store(ctx.env);
-  const slug = param(ctx, "slug");
-  const notFound = new HttpError(404, "not_found", "Nie znaleźliśmy tej oferty.");
-  if (!SLUG_RE.test(slug)) throw notFound;
-  const key = await kv.get(`slug:${slug}`);
-  if (!key) throw notFound;
-  const offer = await getOffer(kv, key);
-  if (!offer || !offer.link || offer.link.slug !== slug) throw notFound;
-  if (offer.link.expiresAt && Date.parse(offer.link.expiresAt) < Date.now()) {
-    throw new HttpError(410, "expired", "Link do tej oferty wygasł.");
-  }
-  if (offer.link.pin) {
-    const failKey = `pinfail:${slug}`;
-    const fails = Number((await kv.get(failKey)) ?? 0);
-    if (fails >= 10) throw new HttpError(429, "pin_locked", "Za dużo prób PIN-u. Spróbuj za godzinę.");
-    const given = ctx.request.headers.get("x-offer-pin") ?? "";
-    if (!given) throw new HttpError(401, "pin_required", "Ta oferta jest chroniona PIN-em.");
-    if (given !== offer.link.pin) {
-      await kv.put(failKey, String(fails + 1), { expirationTtl: 3600 });
-      throw new HttpError(401, "pin_wrong", "Nieprawidłowy PIN.");
-    }
-  }
-  return { kv, key, offer };
 }

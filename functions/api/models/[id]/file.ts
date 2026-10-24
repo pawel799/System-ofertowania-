@@ -5,9 +5,14 @@
  */
 import { bucket, getModel, modelId } from "../../../_lib/assets";
 import { handle, HttpError, param, store } from "../../../_lib/offers";
+import { MAIN_FIRM, scoped } from "../../../_lib/tenant";
 
 export const onRequestGet = handle(async (ctx) => {
-  const m = await getModel(store(ctx.env), modelId(param(ctx, "id")));
+  const id = modelId(param(ctx, "id"));
+  const root = store(ctx.env);
+  // Modele firm z kontami leżą w ich przestrzeni KV; brak wpisu = firma "main".
+  const firmId = (await root.get(`modelowner:${id}`)) ?? MAIN_FIRM;
+  const m = await getModel(scoped(root, firmId), id);
   if (!m) throw new HttpError(404, "not_found", "Nie ma takiego modelu.");
   const obj = await bucket(ctx.env).get(m.file);
   if (!obj) throw new HttpError(404, "not_found", "Brak pliku modelu.");

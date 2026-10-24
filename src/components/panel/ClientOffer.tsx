@@ -1,5 +1,6 @@
 "use client";
 
+import ModulyDialog from "../modul/ModulyDialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import OfferView from "../OfferView";
 import ClientComments from "./ClientComments";
@@ -7,7 +8,10 @@ import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes } from "../paletteStore";
-import { ApiError, publicApi, type PublicOffer } from "./offerApi";
+import { ApiError, publicApi, type BrandSettings, type PublicOffer } from "./offerApi";
+import { setBrandCache, useBrand } from "@/lib/brand";
+import { FIRMA } from "@/content/firma";
+import { setRequestLink } from "@/lib/zapytania";
 
 /*
  * Strona, którą klient dostaje z panelu: /oferta/<link>.
@@ -42,10 +46,19 @@ export default function ClientOffer() {
   // PIN, z którym oferta się otworzyła – potrzebny też przy wysyłaniu uwag.
   const [okPin, setOkPin] = useState<string | undefined>();
   const recorded = useRef(false);
+  // Marka firmy, która wysłała ofertę (z odpowiedzi API) – także na ekranie PIN-u i wygasłego linku.
+  const [brandKnown, setBrandKnown] = useState(false);
+  const brand = useBrand();
+  const applyBrand = useCallback((b: BrandSettings | null | undefined) => {
+    if (b === undefined) return;
+    setBrandCache(b ?? { name: FIRMA.nazwaHandlowa, logo: null });
+    setBrandKnown(true);
+  }, []);
 
   const load = useCallback(async (s: string, withPin?: string) => {
     try {
       const offer = await publicApi.get(s, withPin);
+      applyBrand(offer.brand);
       setOkPin(withPin);
       setState({ k: "ready", offer });
       if (!recorded.current) {
@@ -54,6 +67,7 @@ export default function ClientOffer() {
       }
     } catch (e) {
       const err = e instanceof ApiError ? e : null;
+      applyBrand(err?.data?.brand as BrandSettings | null | undefined);
       if (err?.code === "pin_required") setState({ k: "pin" });
       else if (err?.code === "pin_wrong") {
         setState({ k: "pin" });
@@ -63,11 +77,13 @@ export default function ClientOffer() {
       else if (err?.status === 429) setState({ k: "locked" });
       else setState({ k: "failed" });
     }
-  }, []);
+  }, [applyBrand]);
 
   useEffect(() => {
     const s = slugFromLocation();
     setSlug(s);
+    // Prośba o wycenę / pomiar z tej strony trafia do firmy, która wysłała ofertę.
+    setRequestLink(s);
     if (!/^[A-Za-z0-9]{6,32}$/.test(s)) setState({ k: "missing" });
     else void load(s);
   }, [load]);
@@ -90,7 +106,14 @@ export default function ClientOffer() {
         eyebrow={`Oferta dla: ${offer.who}`}
         base={offer.base}
         showPrice={offer.showPrice}
-        actions={offer.comments ? <ClientComments slug={slug} pin={okPin} /> : undefined}
+        actions={
+          offer.comments || offer.moduly?.length ? (
+            <>
+              {offer.comments ? <ClientComments slug={slug} pin={okPin} /> : null}
+              {offer.moduly?.length ? <ModulyDialog mode="oferta" moduly={offer.moduly} /> : null}
+            </>
+          ) : undefined
+        }
         model={offer.model ?? null}
       />
     );
@@ -99,7 +122,14 @@ export default function ClientOffer() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0c0b0a] px-6 text-stone-100">
       <div className="w-full max-w-sm text-center">
-        <p className="text-[11px] uppercase tracking-[0.25em] text-stone-400">Studio / Kuchnie</p>
+        {brandKnown ? (
+          brand.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element -- logo z KV jako data URL
+            <img src={brand.logo} alt={brand.name} className="mx-auto h-8 w-auto max-w-[180px] object-contain" />
+          ) : (
+            <p className="text-[11px] uppercase tracking-[0.25em] text-stone-400">{brand.name}</p>
+          )
+        ) : null}
 
         {state.k === "loading" ? (
           <p className="mt-6 text-sm text-stone-400">Wczytywanie oferty…</p>
@@ -109,7 +139,7 @@ export default function ClientOffer() {
           <>
             <h1 className="mt-6 text-3xl leading-tight text-stone-50">Nie znaleźliśmy tej oferty</h1>
             <p className="mt-3 text-sm leading-relaxed text-stone-400">
-              Link mógł wygasnąć albo zostać unieważniony. Napisz do nas, a wyślemy nowy.
+              Link mógł wygasnąć albo zostać unieważniony. Poproś firmę, od której masz link, o nowy.
             </p>
           </>
         ) : null}

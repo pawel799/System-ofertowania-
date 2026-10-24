@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
-import { FIRMA } from "@/content/firma";
+import { useBrand } from "@/lib/brand";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
 
 /*
@@ -16,8 +16,11 @@ let current: RequestType | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
-export function openRequest(typ: RequestType) {
+/** Dodatek do „Twój wybór” (np. wymiary szafki z konfiguratora modułu). */
+let extra = "";
+export function openRequest(typ: RequestType, note = "") {
   current = typ;
+  extra = note;
   emit();
 }
 function closeRequest() {
@@ -72,8 +75,10 @@ export function MeasureButton({ className = "" }: { className?: string }) {
   );
 }
 
-export default function RequestDialog({ code, summary }: { code?: string; summary: string }) {
+export default function RequestDialog({ code, summary: base }: { code?: string; summary: string }) {
   const typ = useRequest();
+  const brand = useBrand();
+  const summary = typ && extra ? `${base}; ${extra}`.slice(0, 300) : base;
   const dialog = useRef<HTMLDialogElement>(null);
   const first = useRef<HTMLInputElement>(null);
   const uid = useId();
@@ -239,7 +244,7 @@ export default function RequestDialog({ code, summary }: { code?: string; summar
               </p>
             ) : null}
 <p className="text-[11px] leading-relaxed text-stone-500">
-              Administratorem danych jest {FIRMA.nazwaPrawna || FIRMA.nazwaHandlowa}. Dane wykorzystamy tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO) i usuniemy po 180 dniach. Szczegóły i Twoje prawa:{" "}
+              Administratorem danych jest {brand.name}. Dane wykorzystamy tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO) i usuniemy po 180 dniach. Szczegóły i Twoje prawa:{" "}
               <a href="/polityka-prywatnosci" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-stone-800">polityka prywatności</a>.
             </p>
             <button

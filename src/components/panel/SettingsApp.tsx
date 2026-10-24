@@ -5,13 +5,18 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { RAL_CLASSIC, RAL_GROUP_LABEL, ralByCode, type RalGroup } from "../ral";
-import { ApiError, assetsApi, brandApi, getToken, setToken, type DomainView, type ModelMeta } from "./offerApi";
-import { PanelBrand, TokenDialog } from "./PanelGate";
+import { AccountTab, AdminFirmsTab, TeamTab, useMe } from "./AccountTabs";
+import { EmbedTab } from "./EmbedTab";
+import { CennikTab } from "./CennikTab";
+import { PlanTab } from "./PlanTab";
+import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
+import { LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
 /*
  * Ustawienia panelu (/panel/ustawienia): firma (nazwa i logo), modele 3D (wgrywanie + oznaczanie elementów),
- * pakiety kolorów RAL i własna domena linków. Ten sam wygląd co panel ofert (panel.css).
+ * pakiety kolorów RAL, własna domena linków, konto (hasło), zespół (konta pracowników)
+ * i – dla administratora systemu – lista firm. Ten sam wygląd co panel ofert (panel.css).
  */
 
 const ModelTagger = dynamic(() => import("./ModelTagger"), {
@@ -19,13 +24,16 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "models" | "palettes" | "domain";
-const TABS: { value: Tab; label: string }[] = [
+type Tab = "firma" | "cennik" | "models" | "palettes" | "domain" | "osadzanie" | "konto" | "zespol" | "plan" | "firmy";
+const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
+  { value: "cennik", label: "Cennik modułów" },
   { value: "models", label: "Modele 3D" },
   { value: "palettes", label: "Kolory RAL" },
   { value: "domain", label: "Domena" },
+  { value: "osadzanie", label: "Na stronie" },
 ];
+const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "domain", "osadzanie", "konto", "zespol", "plan", "firmy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -36,21 +44,32 @@ export default function SettingsApp() {
   const [tab, setTab] = useState<Tab>("firma");
   const [auth, setAuth] = useState<{ need: boolean; error: string }>({ need: false, error: "" });
   const [ready, setReady] = useState(false);
+  const [me, reloadMe] = useMe(ready && !auth.need);
 
   useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
-    if (t === "palettes" || t === "domain" || t === "models" || t === "firma") setTab(t);
-    if (!getToken()) setAuth({ need: true, error: "" });
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t && ALL_TABS.includes(t)) setTab(t);
+    if (!hasLogin()) setAuth({ need: true, error: "" });
     setReady(true);
   }, []);
 
   const onAuthError = useCallback((e: unknown) => {
     if (e instanceof ApiError && e.status === 401) {
-      setAuth({ need: true, error: "Zły kod dostępu. Wpisz go jeszcze raz." });
+      forgetLogin();
+      setAuth({ need: true, error: "Sesja wygasła. Zaloguj się ponownie." });
       return true;
     }
     return false;
   }, []);
+
+  // Konto (hasło) i Zespół – dla kont firm; Firmy – tylko administrator systemu (kod dostępu).
+  const tabs = useMemo(() => {
+    const list = [...BASE_TABS];
+    if (me?.role === "owner" || me?.role === "member")
+      list.push({ value: "konto", label: "Konto" }, { value: "zespol", label: "Zespół" }, { value: "plan", label: "Plan" });
+    if (me?.role === "admin") list.push({ value: "firmy", label: "Firmy" });
+    return list;
+  }, [me]);
 
   const pick = (t: Tab) => {
     setTab(t);
@@ -77,11 +96,11 @@ export default function SettingsApp() {
           <button
             type="button"
             className="btn btn-plain"
-            data-tip="Usuwa kod dostępu z tej przeglądarki (np. na cudzym komputerze)"
-            onClick={() => {
-              setToken("");
+            data-tip="Kończy logowanie w tej przeglądarce (np. na cudzym komputerze)"
+            onClick={async () => {
+              await authApi.logout();
               setAuth({ need: true, error: "" });
-              toast("Wylogowano", { desc: "Kod dostępu usunięty z tej przeglądarki." });
+              toast("Wylogowano", { desc: "Logowanie w tej przeglądarce zakończone." });
             }}
           >
             Wyloguj
@@ -93,14 +112,26 @@ export default function SettingsApp() {
       </header>
 
       <main className="surface set-main">
-        <Seg label="Ustawienia" value={tab} onChange={pick} options={TABS} />
+        <Seg label="Ustawienia" value={tab} onChange={pick} options={tabs} />
         {ready && !auth.need ? (
           tab === "firma" ? (
             <BrandTab onAuthError={onAuthError} />
+          ) : tab === "cennik" ? (
+            <CennikTab canEdit={me?.role !== "member"} onAuthError={onAuthError} />
           ) : tab === "models" ? (
             <ModelsTab onAuthError={onAuthError} />
           ) : tab === "palettes" ? (
             <PalettesTab onAuthError={onAuthError} />
+          ) : tab === "konto" ? (
+            <AccountTab me={me} onAuthError={onAuthError} />
+          ) : tab === "zespol" ? (
+            <TeamTab me={me} onAuthError={onAuthError} />
+          ) : tab === "osadzanie" ? (
+            <EmbedTab onAuthError={onAuthError} />
+          ) : tab === "plan" ? (
+            <PlanTab me={me} onAuthError={onAuthError} />
+          ) : tab === "firmy" ? (
+            <AdminFirmsTab onAuthError={onAuthError} />
           ) : (
             <DomainTab onAuthError={onAuthError} />
           )
@@ -108,11 +139,11 @@ export default function SettingsApp() {
       </main>
 
       {auth.need ? (
-        <TokenDialog
+        <LoginDialog
           error={auth.error}
-          onSubmit={(t) => {
-            setToken(t.trim());
+          onLoggedIn={() => {
             setAuth({ need: false, error: "" });
+            reloadMe();
           }}
         />
       ) : null}
