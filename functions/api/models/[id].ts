@@ -38,7 +38,7 @@ export const onRequestDelete = handle(async (ctx) => {
   const { kv } = await panel(ctx);
   const m = await getModel(kv, modelId(param(ctx, "id")));
   if (!m) throw notFound();
-  const used = await offersUsing(kv, (o) => o.modelId === m.id);
+  const used = await offersUsing(kv, (o) => o.modelId === m.id || !!o.kuchnia?.elementy.some((e) => e.modelId === m.id));
   if (used.length) {
     throw new HttpError(409, "in_use", `Model jest użyty w ofertach: ${used.join(", ")}. Zmień w nich model albo je usuń.`);
   }

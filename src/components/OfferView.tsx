@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 import BrandMark from "./BrandMark";
 import CustomModelBackground from "./CustomModelBackground";
 import KitchenGlbBackground from "./KitchenGlbBackground";
+import KuchniaTlo from "./kuchnia/KuchniaTlo";
 import MaterialsPanel from "./MaterialsPanel";
 import { MeasureButton } from "./RequestDialog";
 import { DragHint, RotateHint } from "./ViewerHints";
+import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "./modelRoles";
 
 /*
@@ -19,6 +21,8 @@ export default function OfferView({
   showPrice = true,
   actions,
   model,
+  kuchnia,
+  modele,
 }: {
   /** Numer oferty, np. "KUCH-2026/12". */
   code: string;
@@ -32,6 +36,10 @@ export default function OfferView({
   actions?: ReactNode;
   /** Wgrany model 3D z panelu; brak = kuchnia demo. */
   model?: PublicModel | null;
+  /** Kuchnia złożona w kreatorze. Ma pierwszeństwo przed jednym modelem. */
+  kuchnia?: PlanKuchni | null;
+  /** Modele firmowe użyte jako elementy kreatora. */
+  modele?: PublicModel[] | null;
 }) {
   return (
     // Telefon (pion): scena 3D ~58svh na górze, pod nią tytuł i konfigurator w zwykłym przewijaniu,
@@ -39,7 +47,13 @@ export default function OfferView({
     <main className="relative min-h-[100svh] w-full bg-[#0c0b0a] pb-24 text-stone-100 desk:h-screen desk:overflow-hidden desk:pb-0">
       {/* Scena 3D (obracanie palcem/myszą, przybliżanie). */}
       <div className="relative h-[58svh] w-full [@media(orientation:landscape)_and_(max-height:500px)]:h-[82svh] desk:fixed desk:inset-0 desk:h-auto">
-        {model ? <CustomModelBackground model={model} /> : <KitchenGlbBackground />}
+        {kuchnia?.elementy.length ? (
+          <KuchniaTlo plan={kuchnia} modele={modele ?? []} />
+        ) : model ? (
+          <CustomModelBackground model={model} />
+        ) : (
+          <KitchenGlbBackground />
+        )}
         <DragHint />
         <RotateHint />
       </div>

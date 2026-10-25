@@ -8,6 +8,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, KEY_RE, offerKey, param, putOffer, readJson, validateOffer, type Ctx } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
+import { zCenaKuchni } from "../../_lib/kuchnia";
 import { assertCanWrite, firmPlan } from "../../_lib/plan";
 
 function keyOf(ctx: Ctx) {
@@ -28,7 +29,7 @@ export const onRequestGet = handle(async (ctx) => {
 export const onRequestPut = handle(async (ctx) => {
   const { session, kv } = await panel(ctx);
   const key = keyOf(ctx);
-  const incoming = validateOffer(await readJson(ctx.request));
+  const incoming = await zCenaKuchni(kv, validateOffer(await readJson(ctx.request)));
   if (offerKey(incoming.id) !== key) throw new HttpError(400, "id_mismatch", "Numer oferty nie pasuje do adresu.");
   const existing = await getOffer(kv, key);
   if (!existing) throw notFound();

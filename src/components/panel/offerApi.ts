@@ -1,3 +1,4 @@
+import type { PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik, ModulItem } from "@/lib/modul";
 /*
  * Klient API ofert (Cloudflare Pages Functions pod /api).
@@ -235,6 +236,10 @@ export type PublicOffer = {
   model?: PublicModel | null;
   /** Moduły na wymiar; cena tylko przy widocznej cenie. */
   moduly?: (ModulItem & { cena?: number })[];
+  /** Układ z kreatora. Brak = dotychczasowa kuchnia demo albo jeden model. */
+  kuchnia?: PlanKuchni;
+  /** Modele wstawione w kreatorze (nie cały katalog firmy). */
+  modele?: PublicModel[];
   /** Pakiety RAL studia (fronty do wyboru). */
   palettes?: Palette[];
   /** Nazwa i logo firmy, która wysłała ofertę. */
