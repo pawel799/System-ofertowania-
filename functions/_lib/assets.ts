@@ -160,6 +160,16 @@ export async function checkRefs(kv: KVNamespace, offer: Offer) {
   if (offer.modelId && !(await getModel(kv, offer.modelId))) {
     throw bad("Wybrany model 3D nie istnieje (mógł zostać usunięty).");
   }
+  if (offer.kuchnia) {
+    const seen = new Set<string>();
+    for (const e of offer.kuchnia.elementy) {
+      if (!e.modelId || seen.has(e.modelId)) continue;
+      seen.add(e.modelId);
+      if (!(await getModel(kv, e.modelId))) {
+        throw bad("Model 3D użyty w kreatorze kuchni nie istnieje (mógł zostać usunięty).");
+      }
+    }
+  }
 }
 
 /** Oferty, które używają modelu albo pakietu (blokada usuwania). */

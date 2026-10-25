@@ -390,3 +390,56 @@
 .pnl .zg-notes { margin: 0; font-size: 13.5px; white-space: pre-wrap; }
 .pnl .zg-choice { margin: 0; font-size: 12.5px; }
 .pnl .zg-actions { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+
+/* Kreator kuchni (/panel/kreator) i lista pozycji w ofercie */
+.pnl.kreator { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+.pnl .kr-wait { padding: 8px 4px; }
+.pnl .kr-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px minmax(0, 1fr) 320px; gap: 12px; }
+.pnl .kr-col { background: var(--panel); border-radius: 12px; box-shadow: var(--sh-sm); min-width: 0; min-height: 0; overflow: auto; }
+.pnl .kr-pad { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-pad h2, .pnl .kr-card h3, .pnl .kr-group h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.pnl .kr-group { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.pnl .kr-item { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; text-align: left; padding: 7px 8px; border-radius: 8px; background: var(--g2); color: inherit; }
+.pnl .kr-item b { font-weight: 550; font-size: 13px; }
+.pnl .kr-item:active { transform: scale(0.99); }
+@media (hover: hover) and (pointer: fine) { .pnl .kr-item:hover { background: var(--g3); } }
+.pnl .kr-stage { display: grid; grid-template-rows: minmax(220px, 0.9fr) minmax(240px, 1.1fr); overflow: hidden; }
+.pnl .kr-plan { position: relative; min-height: 0; display: flex; flex-direction: column; background: color-mix(in srgb, var(--g2) 82%, #c4b49a); border-bottom: 1px solid var(--g3); }
+.pnl .kr-view3d { position: relative; min-height: 0; }
+.pnl .kr-svg { width: 100%; height: 100%; flex: 1; min-height: 0; touch-action: none; }
+.pnl .kr-piece { fill: #e4d3b8; stroke: var(--text); stroke-width: 0.6; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; }
+.pnl .kr-piece:active { cursor: grabbing; }
+.pnl .kr-piece[data-zone="gorna"] { fill: color-mix(in srgb, #e4d3b8 35%, transparent); stroke-dasharray: 2 1.4; }
+.pnl .kr-piece[data-zone="wysoka"] { fill: #c4b49a; }
+.pnl .kr-piece[data-selected] { stroke: var(--accent); stroke-width: 1.4; }
+.pnl .kr-piece[data-bad] { fill: #e7a3a0; }
+.pnl .kr-front { stroke: var(--ink); stroke-width: 1.6; pointer-events: none; }
+.pnl .kr-label, .pnl .kr-dim { fill: var(--text); font-size: 8px; pointer-events: none; -webkit-user-select: none; user-select: none; }
+.pnl .kr-dim { font-size: 9px; fill: var(--text-2); }
+.pnl .kr-wall { stroke: var(--text); stroke-width: 2.4; }
+.pnl .kr-grid { stroke: var(--text-3); stroke-width: 0.25; opacity: 0.45; }
+.pnl .kr-room { fill: none; stroke: var(--accent); stroke-dasharray: 4 3; stroke-width: 0.7; }
+.pnl .kr-legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0; padding: 6px 10px; font-size: 12px; color: var(--text-2); }
+.pnl .kr-legend i { width: 14px; height: 10px; border: 1px solid var(--text); background: #e4d3b8; display: inline-block; }
+.pnl .kr-legend i[data-zone="gorna"] { background: transparent; border-style: dashed; }
+.pnl .kr-legend i[data-zone="wysoka"] { background: #c4b49a; }
+.pnl .kr-legend i[data-zone="front"] { width: 14px; height: 0; border: 0; border-top: 2px solid var(--ink); background: transparent; }
+.pnl .kr-dims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pnl .kr-dims label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.pnl .kr-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pnl .kr-card { margin-top: 8px; padding: 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-card label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.pnl .kr-sum { position: sticky; bottom: 0; background: var(--panel); padding-top: 8px; }
+.pnl .kr-sum p { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 8px; }
+.pnl .kr-warn { margin: 0; color: var(--amber); font-size: 12.5px; }
+.pnl .kr-tabs { display: flex; gap: 6px; padding: 8px; }
+.pnl .kr-lines { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.pnl .kr-lines li { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; }
+.pnl .kr-lines b { flex: 1; }
+.pnl .kr-lines span:last-child { min-width: 88px; text-align: right; }
+@media (max-width: 980px) {
+  .pnl.kreator { height: auto; overflow: visible; }
+  .pnl .kr-body { grid-template-columns: 1fr; }
+  .pnl .kr-stage { height: 72dvh; grid-template-rows: auto minmax(0, 1fr); }
+  .pnl .kr-catalog { max-height: 280px; }
+}

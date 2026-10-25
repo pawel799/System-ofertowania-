@@ -1,6 +1,11 @@
 "use client";
 
 import { ModulySection } from "./ModulySection";
+import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
+import { useCennik } from "./useCennik";
+import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
+import { bazaKuchni, UKLAD_KUCHNI_LABEL } from "@/lib/kuchnia";
+import { modulCena } from "@/lib/modul";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -44,7 +49,7 @@ import {
   type Status,
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
-import { assetsApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
+import { assetsApi, offerKey, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
@@ -157,6 +162,11 @@ export default function PanelApp() {
   const linkRef = useRef<HTMLInputElement>(null);
   const msgRef = useRef<HTMLTextAreaElement>(null);
   const statusBtnRef = useRef<HTMLButtonElement>(null);
+  const ujecie = useRef<KuchniaUjecie | null>(null);
+  const ustawUjecie = useCallback((u: KuchniaUjecie | null) => {
+    ujecie.current = u;
+  }, []);
+  const { cennik, gotowy: cennikGotowy } = useCennik();
   // Panel linku: osobna kolumna na szerokim ekranie, pod modelem na węższym.
   const wide = useMediaQuery("(min-width: 1280px)");
 
@@ -303,7 +313,8 @@ export default function PanelApp() {
     );
 
   const L = offer.link;
-  const total = totalPrice(offer, offer.base, palettes);
+  const bazaWidok = offer.kuchnia?.elementy.length && cennikGotowy ? bazaKuchni(offer.kuchnia, cennik) : offer.base;
+  const total = totalPrice(offer, bazaWidok, palettes);
   const linkUrl = L ? `${linkOrigin}/oferta/${L.slug}` : "";
   const shortUrl = L ? `${linkOrigin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
   const offerModel = offer.modelId ? models.find((m) => m.id === offer.modelId) : undefined;
@@ -591,6 +602,31 @@ export default function PanelApp() {
           </div>
         </div>
       </section>
+
+      {offer.kuchnia ? (
+        <section className="side">
+          <h2>Oferta PDF</h2>
+          <p className="lede">
+            Osobno od linku 3D. Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój. Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
+          </p>
+          <OfertaPdfPrzyciski
+            id={offer.id}
+            title={offer.title}
+            client={offer.client}
+            contact={offer.contact}
+            plan={offer.kuchnia}
+            front={offer.front}
+            countertop={offer.countertop}
+            hardware={offer.hardware}
+            palettes={palettes}
+            linkUrl={linkUrl}
+            ujecie={ujecie}
+          />
+          <p className="lede">
+            <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj układ w kreatorze</a>
+          </p>
+        </section>
+      ) : null}
     </>
   );
 
@@ -628,6 +664,13 @@ export default function PanelApp() {
             <path d="m2.5 4.5 5.5 4 5.5-4" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
           </svg>
           <span className="hide-sm">Zgłoszenia</span>
+        </a>
+        <a className="btn btn-ghost" href="/panel/kreator" data-tip="Złóż kuchnię z modułów albo modeli firmy">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M2.5 13.5 8 3l5.5 10.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+            <path d="M6.2 9.5h3.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </svg>
+          <span className="hide-sm">Kreator</span>
         </a>
         <a className="btn btn-plain" href="/panel/ustawienia" data-tip="Firma i logo, modele 3D, kolory RAL, własna domena">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -702,7 +745,8 @@ export default function PanelApp() {
                     />
                     <span className="row-sub">
                       <span className="mono">{o.id}</span> · {o.clientType === "company" ? "Firma: " : ""}
-                      {o.client} · {lastTime(o)}
+                      {o.client}
+                      {o.kuchnia ? " · kreator" : ""} · {lastTime(o)}
                     </span>
                   </button>
                 </li>
@@ -741,14 +785,26 @@ export default function PanelApp() {
           </div>
 
           <div className="vp">
-            {offerModel ? (
+            {offer.kuchnia?.elementy.length ? (
+              <KuchniaTlo
+                plan={offer.kuchnia}
+                modele={models.filter((m) => offer.kuchnia?.elementy.some((e) => e.modelId === m.id)).map(toPublicModel)}
+                zdjecie
+                onUjecie={ustawUjecie}
+              />
+            ) : offerModel ? (
               <CustomModelScene key={offerModel.id} model={toPublicModel(offerModel)} embedded />
             ) : (
               <KitchenGlbScene embedded />
             )}
             <div className="vp-bar">
               <span className="vp-tag">
-                Podgląd 3D · {offerModel ? offerModel.name : LAYOUT_LABEL[offer.layout]}
+                Podgląd 3D ·{" "}
+                {offer.kuchnia
+                  ? `kreator · ${UKLAD_KUCHNI_LABEL[offer.kuchnia.uklad]}`
+                  : offerModel
+                    ? offerModel.name
+                    : LAYOUT_LABEL[offer.layout]}
               </span>
               {L ? (
                 <a className="vp-open" href={`/oferta/${L.slug}`} target="_blank" rel="noreferrer">
@@ -785,7 +841,7 @@ export default function PanelApp() {
             </div>
             <div>
               <dt>Zabudowa bazowo</dt>
-              <dd>{formatPln(offer.base)}</dd>
+              <dd>{formatPln(bazaWidok)}</dd>
             </div>
             <div>
               <dt>Kontakt</dt>
@@ -825,7 +881,7 @@ export default function PanelApp() {
           ) : null}
 
           <div className="mats">
-            {models.length || offer.modelId ? (
+            {offer.kuchnia ? null : models.length || offer.modelId ? (
               <div>
                 <label className="mat-label" htmlFor="o-model">
                   Model 3D
@@ -922,7 +978,28 @@ export default function PanelApp() {
 
           {!wide ? <div className="side-inline">{linkPanel}</div> : null}
 
-          <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
+          {offer.kuchnia ? (
+            <section className="sec">
+              <h2>Pozycje z kreatora</h2>
+              <p className="lede">
+                Cena szafek jest liczona na serwerze z cennika modułów. Tu nie da się jej wpisać ręcznie.{" "}
+                <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj w kreatorze</a>.
+              </p>
+              <ul className="kr-lines">
+                {offer.kuchnia.elementy.map((e) => (
+                  <li key={e.id}>
+                    <b>{e.nazwa}</b>
+                    <span className="mono">
+                      {e.w}×{e.h}×{e.d} cm
+                    </span>
+                    <span>{cennikGotowy ? formatPln(modulCena(e, cennik)) : "…"}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
+          )}
 
           <section className="sec">
             <h2>Aktywność</h2>
@@ -1413,6 +1490,9 @@ function NewOfferDialog({
               onChange={(v) => set("layout")(v)}
               options={(Object.keys(LAYOUT_LABEL) as Layout[]).map((l) => ({ value: l, label: l === "wyspa" ? "Wyspa" : l }))}
             />
+            <p className="lede">
+              Zabudowę z gotowych szafek, bez modelu z PRO100, złożysz w <a href="/panel/kreator">kreatorze kuchni</a>.
+            </p>
           </div>
           {models.length ? (
             <div className="field">

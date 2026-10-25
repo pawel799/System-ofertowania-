@@ -110,11 +110,15 @@ export default function ClientOffer() {
           offer.comments || offer.moduly?.length ? (
             <>
               {offer.comments ? <ClientComments slug={slug} pin={okPin} /> : null}
-              {offer.moduly?.length ? <ModulyDialog mode="oferta" moduly={offer.moduly} /> : null}
+              {offer.moduly?.length ? (
+                <ModulyDialog mode="oferta" moduly={offer.moduly} etykieta={offer.kuchnia ? `Pozycje kuchni (${offer.moduly.length})` : undefined} />
+              ) : null}
             </>
           ) : undefined
         }
         model={offer.model ?? null}
+        kuchnia={offer.kuchnia}
+        modele={offer.modele}
       />
     );
   }

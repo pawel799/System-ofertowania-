@@ -1,3 +1,4 @@
+import type { PlanKuchni } from "@/lib/kuchnia";
 import type { ModulItem } from "@/lib/modul";
 import type { CompanyData } from "./company";
 
@@ -96,6 +97,8 @@ export type Offer = {
   modelId?: string;
   /** Moduły na wymiar (szafki parametryczne); cenę liczy serwer z cennika firmy. */
   moduly?: ModulItem[];
+  /** Układ z kreatora. Przy zapisie serwer nadpisuje base i moduly ceną z cennika. */
+  kuchnia?: PlanKuchni;
   status: Status;
   link: OfferLink | null;
   comment?: string;

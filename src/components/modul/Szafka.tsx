@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useTexture } from "@react-three/drei";
 import * as THREE from "three";
 
@@ -21,6 +21,12 @@ export type SzafkaProps = {
   /** głębokość korpusu [cm] */
   glebokosc?: number;
   position?: [number, number, number];
+  /** Gładki kolor frontu (próbka albo RAL). Brak = usłojenie drewna, jak na stronie modułu. */
+  kolorFrontu?: string;
+  /** Chropowatość frontu, gdy podany jest kolor. */
+  chropowatosc?: number;
+  /** false = bez uchwytu (push-to-open). */
+  pokazUchwyt?: boolean;
 };
 
 /**
@@ -89,12 +95,26 @@ export function useDrewno() {
  * dwie listwy górne (przednia i tylna), plecy HDF, front z szczeliną.
  * Początek układu: środek podstawy, front w kierunku +Z.
  */
-export default function Szafka({ szerokosc = 60, wysokosc = 72, glebokosc = 56, position = [0, 0, 0] }: SzafkaProps) {
+export default function Szafka({
+  szerokosc = 60,
+  wysokosc = 72,
+  glebokosc = 56,
+  position = [0, 0, 0],
+  kolorFrontu,
+  chropowatosc = 0.55,
+  pokazUchwyt = true,
+}: SzafkaProps) {
   const W = szerokosc / 100;
   const H = wysokosc / 100;
   const D = glebokosc / 100;
   const t = PLYTA;
   const m = useDrewno();
+  const frontKolor = useMemo(() => {
+    if (!kolorFrontu) return null;
+    return new THREE.MeshStandardMaterial({ color: kolorFrontu, roughness: chropowatosc, metalness: 0.02 });
+  }, [kolorFrontu, chropowatosc]);
+  useEffect(() => () => frontKolor?.dispose(), [frontKolor]);
+  const frontMaterial = frontKolor ?? m.front;
   const inner = W - 2 * t;
   const listwa = 0.1;
   const dKorp = D - PLECY;
@@ -116,15 +136,17 @@ export default function Szafka({ szerokosc = 60, wysokosc = 72, glebokosc = 56, 
       <Panel material={m.plecy} size={[W, H, PLECY]} position={[0, H / 2, -D / 2 + PLECY / 2]} />
       {/* front */}
       <Panel
-        material={m.front}
+        material={frontMaterial}
         size={[W - 2 * SZCZELINA, H - 2 * SZCZELINA, t]}
         position={[0, H / 2, D / 2 + t / 2 + 0.001]}
       />
       {/* uchwyt */}
-      <mesh position={[W / 2 - 0.05, H - 0.08, D / 2 + t + 0.012]} castShadow>
-        <boxGeometry args={[0.012, 0.12, 0.012]} />
-        <meshStandardMaterial color="#2b2b2b" metalness={0.8} roughness={0.35} />
-      </mesh>
+      {pokazUchwyt ? (
+        <mesh position={[W / 2 - 0.05, H - 0.08, D / 2 + t + 0.012]} castShadow>
+          <boxGeometry args={[0.012, 0.12, 0.012]} />
+          <meshStandardMaterial color="#2b2b2b" metalness={0.8} roughness={0.35} />
+        </mesh>
+      ) : null}
     </group>
   );
 }

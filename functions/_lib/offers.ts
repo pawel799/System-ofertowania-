@@ -10,6 +10,8 @@
  *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
+import type { PlanKuchni } from "../../src/lib/kuchnia";
+import { parseKuchnia } from "../../src/lib/kuchnia";
 import type { ModulItem } from "../../src/lib/modul";
 import { validateModuly } from "./modul";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
@@ -143,6 +145,11 @@ export type Offer = {
   modelId?: string;
   /** Moduły parametryczne (szafki na wymiar); cenę liczy serwer z cennika firmy. */
   moduly?: ModulItem[];
+  /**
+   * Układ z kreatora kuchni (rzut + elementy). Cena i lista modułów są wtedy
+   * wyliczane na serwerze z tego planu, a nie z pól base/moduly przysyłanych przez panel.
+   */
+  kuchnia?: PlanKuchni;
   status: Status;
   link: OfferLink | null;
   comment?: string;
@@ -375,6 +382,14 @@ export function validateOffer(input: unknown): Offer {
     if (!ASSET_ID_RE.test(modelId)) throw bad("Zły identyfikator modelu 3D.");
   }
   const moduly = validateModuly(o.moduly);
+  let kuchnia: PlanKuchni | undefined;
+  if (o.kuchnia !== undefined && o.kuchnia !== null) {
+    try {
+      kuchnia = parseKuchnia(o.kuchnia);
+    } catch (e) {
+      throw bad(e instanceof Error ? e.message : "Zły plan kuchni.");
+    }
+  }
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
@@ -391,6 +406,7 @@ export function validateOffer(input: unknown): Offer {
     hardware: oneOf(o.hardware, HARDWARE_IDS, "hardware"),
     ...(modelId ? { modelId } : {}),
     ...(moduly && moduly.length ? { moduly } : {}),
+    ...(kuchnia ? { kuchnia } : {}),
     status: oneOf(o.status, STATUSES, "status"),
     link: validateLink(o.link),
     ...(comment !== undefined ? { comment } : {}),
@@ -464,5 +480,6 @@ export function publicView(o: Offer) {
     comments: link.comments,
     ...(link.showPrice ? { base: o.base } : {}),
     expires: link.expires,
+    ...(o.kuchnia ? { kuchnia: o.kuchnia } : {}),
   };
 }

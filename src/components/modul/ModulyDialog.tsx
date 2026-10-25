@@ -14,7 +14,7 @@ import { formatPln } from "../pricing";
 const ModulView = dynamic(() => import("./ModulView"), { ssr: false, loading: () => <p className="p-6 text-sm text-stone-500">Wczytywanie…</p> });
 
 type Props =
-  | { mode: "oferta"; moduly: (ModulItem & { cena?: number })[] }
+  | { mode: "oferta"; moduly: (ModulItem & { cena?: number })[]; etykieta?: string }
   | { mode: "konfigurator"; cennik?: ModulCennik; footer?: (dims: { w: number; h: number; d: number }) => ReactNode };
 
 export default function ModulyDialog(props: Props) {
@@ -28,7 +28,7 @@ export default function ModulyDialog(props: Props) {
   }, [open]);
 
   if (props.mode === "oferta" && !props.moduly.length) return null;
-  const label = props.mode === "oferta" ? `Szafki na wymiar (${props.moduly.length})` : "Szafka na wymiar";
+  const label = props.mode === "oferta" ? props.etykieta ?? `Szafki na wymiar (${props.moduly.length})` : "Szafka na wymiar";
   const suma = props.mode === "oferta" && props.moduly.every((m) => m.cena !== undefined) ? props.moduly.reduce((s, m) => s + (m.cena ?? 0), 0) : undefined;
 
   return (
