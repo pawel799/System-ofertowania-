@@ -26,6 +26,7 @@ export default function KuchniaTlo({
   onWybierz?: (id: string) => void;
   zdjecie?: boolean;
   onUjecie?: (u: KuchniaUjecie | null) => void;
+  wymiary?: boolean;
   className?: string;
 }) {
   return (

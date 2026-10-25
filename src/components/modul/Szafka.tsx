@@ -27,6 +27,10 @@ export type SzafkaProps = {
   chropowatosc?: number;
   /** false = bez uchwytu (push-to-open). */
   pokazUchwyt?: boolean;
+  /** Więcej niż 1 = front podzielony na szuflady. */
+  szuflady?: number;
+  /** Korpus bez frontu (zlew, piekarnik — front dokłada bryła AGD). */
+  bezFrontu?: boolean;
 };
 
 /**
@@ -103,6 +107,8 @@ export default function Szafka({
   kolorFrontu,
   chropowatosc = 0.55,
   pokazUchwyt = true,
+  szuflady = 1,
+  bezFrontu = false,
 }: SzafkaProps) {
   const W = szerokosc / 100;
   const H = wysokosc / 100;
@@ -135,15 +141,26 @@ export default function Szafka({
       {/* plecy */}
       <Panel material={m.plecy} size={[W, H, PLECY]} position={[0, H / 2, -D / 2 + PLECY / 2]} />
       {/* front */}
-      <Panel
-        material={frontMaterial}
-        size={[W - 2 * SZCZELINA, H - 2 * SZCZELINA, t]}
-        position={[0, H / 2, D / 2 + t / 2 + 0.001]}
-      />
+      {bezFrontu
+        ? null
+        : Array.from({ length: Math.max(1, Math.min(4, Math.round(szuflady))) }, (_, i) => {
+            const n = Math.max(1, Math.min(4, Math.round(szuflady)));
+            const szczelina = n > 1 ? 0.004 : 0;
+            const fh = (H - 2 * SZCZELINA - szczelina * (n - 1)) / n;
+            const y = SZCZELINA + fh / 2 + i * (fh + szczelina);
+            return (
+              <Panel
+                key={i}
+                material={frontMaterial}
+                size={[W - 2 * SZCZELINA, Math.max(0.02, fh), t]}
+                position={[0, y, D / 2 + t / 2 + 0.001]}
+              />
+            );
+          })}
       {/* uchwyt */}
-      {pokazUchwyt ? (
+      {pokazUchwyt && !bezFrontu ? (
         <mesh position={[W / 2 - 0.05, H - 0.08, D / 2 + t + 0.012]} castShadow>
-          <boxGeometry args={[0.012, 0.12, 0.012]} />
+          <boxGeometry args={[0.012, Math.min(0.12, H * 0.35), 0.012]} />
           <meshStandardMaterial color="#2b2b2b" metalness={0.8} roughness={0.35} />
         </mesh>
       ) : null}

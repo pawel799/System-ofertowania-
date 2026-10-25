@@ -5,7 +5,7 @@
  */
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../catalog";
 import { findRalFront, type Palette } from "../palettes";
-import { bazaKuchni, pozycjeKuchni, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
+import { bazaKuchni, pozycjeKuchni, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { modulCena, type ModulCennik } from "@/lib/modul";
 
 export type PdfDane = {
@@ -63,7 +63,7 @@ export function danePdf(args: {
   const okucia = HARDWARE.find((h) => h.id === args.hardware);
   const pozycje = pozycjeKuchni(args.plan).map((m, i) => ({
     nazwa: m.nazwa,
-    strefa: STREFA_LABEL[args.plan.elementy[i].strefa],
+    strefa: `${STREFA_LABEL[args.plan.elementy[i].strefa]}${rodzajElementu(args.plan.elementy[i]) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(args.plan.elementy[i])]}`}`,
     w: m.w,
     h: m.h,
     d: m.d,

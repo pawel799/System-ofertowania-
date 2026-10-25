@@ -14,13 +14,17 @@ To nie jest rozkrój płyt. Nie ma nestingu ani listy formatek.
 
 1. Wybierz układ: **ciąg prosty** albo **kształt L**. Wymiary ścian są w centymetrach. Pomieszczenie jest opcjonalne (sam obrys, nie przycina szafek).
 2. Z katalogu dodajesz:
-   - **moduły parametryczne** (szafka dolna, górna, słupek — ta sama bryła co na `/oferta/modul`),
-   - **modele 3D firmy** wgrane w Ustawienia → Modele 3D. Bryła jest skalowana do podanych wymiarów. Gdy firma nie ma własnych plików, zostają presety szafek.
-3. Na rzucie przeciągasz szafkę (albo strzałkami, co 5 cm) i obracasz o 90°. Gruba kreska to front. Szafka górna może stać nad dolną. Słupek nie może nachodzić na żadną inną szafkę.
-4. Kolor frontów: próbki z katalogu albo pakiet RAL firmy, jeśli jest w ustawieniach. Jeden kolor na całą kuchnię, tak jak w dotychczasowej ofercie.
-5. **Zapisz ofertę.** Serwer (nie przeglądarka) wpisuje cenę: `base` i lista modułów biorą się z wymiarów i cennika firmy (Ustawienia → Cennik modułów). Wzór jest ten sam co przy szafkach na wymiar. Dopłaty za front, blat i okucia dolicza strona klienta tak jak dotychczas.
+   - **moduły parametryczne** (szafka dolna, górna, słupek, szuflady, narożna — ta sama bryła co na `/oferta/modul`),
+   - **półki ścienne** (pojedyncza i podwójna) w pasie szafek górnych, dosunięte górą do sąsiednich szafek,
+   - **AGD**: zmywarka, piekarnik (słupek i pod blatem), płyta indukcyjna i gazowa, lodówka wolnostojąca i zabudowa, mikrofalówka, okap kominowy i podszafkowy, zlewozmywak, bateria oraz szafka pod zlew. Gdy nie ma własnego GLB, kreator rysuje bryłę parametryczną o właściwym obrysie,
+   - **modele 3D firmy** wgrane w Ustawienia → Modele 3D. Bryła jest skalowana do podanych wymiarów.
+3. Na rzucie przeciągasz element (albo strzałkami, co 5 cm; krawędź przyciąga się do ściany i sąsiada). Obrót o 90°. Gruba kreska to front. Szafka górna może stać nad dolną. Płyta, zlew i bateria leżą na blacie i nie zasłaniają szafki dolnej. Półka dzieli miejsce z szafkami górnymi. Słupek nie może nachodzić na żaden inny element.
+4. **Wymiary** (włączone domyślnie) rysują linie jak w rysunku meblowym: długość ścian, pomieszczenie, długość ciągu oraz — po zaznaczeniu — szerokość, głębokość i wysokość. To samo widać w podglądzie 3D. Przycisk „Wymiary” chowa nakładkę; zrzut do PDF bierze aktualny widok.
+5. Zaznaczenie otwiera **właściwości**: nazwa, szerokość, wysokość i głębokość w widełkach tego rodzaju (np. zmywarka 45–60 cm, półka płytsza niż szafka). Zmiana szerokości trzyma krawędź od strony narożnika i przesuwa dalsze elementy rzędu, więc styk zostaje. „Dociągnij rząd” zsuwa przerwę do 25 cm. Cena pozycji liczy się z nowych wymiarów tym samym wzorem co szafka.
+6. Kolor frontów: próbki z katalogu albo pakiet RAL firmy, jeśli jest w ustawieniach. Jeden kolor na całą kuchnię, tak jak w dotychczasowej ofercie.
+7. **Zapisz ofertę.** Serwer (nie przeglądarka) wpisuje cenę: `base` i lista modułów biorą się z wymiarów i cennika firmy (Ustawienia → Cennik modułów). Wzór jest ten sam co przy szafkach na wymiar — także dla AGD i półek. Dopłaty za front, blat i okucia dolicza strona klienta tak jak dotychczas.
 
-„Wstaw przykład” kładzie typowy ciąg albo L, żeby nie zaczynać od pustego rzutu.
+„Wstaw przykład” kładzie typowy ciąg albo L — ze zmywarką, płytą, okapem i półką ścienną — żeby nie zaczynać od pustego rzutu.
 
 ## Dwie wysyłki
 
@@ -33,7 +37,7 @@ PDF jest ofertą handlową: marka firmy, klient, układ, pozycje, wymiary, ceny 
 
 ## Dane
 
-Na ofercie w KV dochodzi pole `kuchnia`: układ (`ciag` albo `L`), długości ścian, opcjonalne pomieszczenie i elementy (id, nazwa, źródło `modul` albo `model`, wymiary, pozycja, obrót). Ceny w tym polu nie ma.
+Na ofercie w KV dochodzi pole `kuchnia`: układ (`ciag` albo `L`), długości ścian, opcjonalne pomieszczenie i elementy (id, nazwa, źródło `modul` albo `model`, `rodzaj`, strefa, wymiary, pozycja, obrót). Strefy: `dolna`, `gorna`, `wysoka`, `blat`, `polka`. Starsze oferty bez `rodzaj` są szafką. Ceny w tym polu nie ma.
 
 Przy każdym zapisie z panelem funkcja `zCenaKuchni` nadpisuje `base` i `moduly`. Publiczny `GET /api/public/:slug` liczy kwotę jeszcze raz z aktualnego cennika, więc zmiana cennika w ustawieniach widać u klienta bez ponownego zapisu oferty. Przy ukrytej cenie kwot nie ma, geometria zostaje.
 

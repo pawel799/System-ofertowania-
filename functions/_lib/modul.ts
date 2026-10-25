@@ -2,7 +2,7 @@
  * Cennik modułów firmy (KV w przestrzeni firmy: settings:cennik-modulow) i walidacja modułów w ofercie.
  * Ceny modułów liczy zawsze serwer (src/lib/modul.ts) – z wymiarów i cennika firmy.
  */
-import { DEFAULT_CENNIK, MAX_MODULY, MODUL_LIMITS, modulCena, type ModulCennik, type ModulItem } from "../../src/lib/modul";
+import { DEFAULT_CENNIK, LINIA_LIMITS, MAX_MODULY, modulCena, type ModulCennik, type ModulItem } from "../../src/lib/modul";
 import { HttpError, type KVNamespace } from "./offers";
 
 export const CENNIK_KEY = "settings:cennik-modulow";
@@ -25,8 +25,8 @@ export function validateCennik(v: unknown): ModulCennik {
   return { baza: money(b.baza, "baza"), plytaM2: money(b.plytaM2, "płyta za m²"), frontM2: money(b.frontM2, "front za m²"), mb: money(b.mb, "metr bieżący") };
 }
 
-const dim = (v: unknown, k: keyof typeof MODUL_LIMITS, i: number) => {
-  const { min, max } = MODUL_LIMITS[k];
+const dim = (v: unknown, k: keyof typeof LINIA_LIMITS, i: number) => {
+  const { min, max } = LINIA_LIMITS[k];
   if (typeof v !== "number" || !Number.isFinite(v) || v < min || v > max) throw bad(`Moduł ${i + 1}: wymiar ${k} poza zakresem ${min}–${max} cm.`);
   return Math.round(v);
 };

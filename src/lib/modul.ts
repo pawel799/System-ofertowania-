@@ -32,10 +32,22 @@ export type ModulCennik = {
 
 export const DEFAULT_CENNIK: ModulCennik = { baza: 250, plytaM2: 120, frontM2: 380, mb: 0 };
 
+/** Szafka z płyty — suwak na stronie modułu i formularz „szafki na wymiar”. */
 export const MODUL_LIMITS = {
   w: { min: 20, max: 120 },
   h: { min: 30, max: 220 },
   d: { min: 20, max: 70 },
+} as const;
+
+/**
+ * Absolutny zakres pozycji z kreatora (szafka, AGD, półka).
+ * Cieńsze od szafki są płyta, bateria i półka ścienna; narożna bywa głębsza niż 70 cm.
+ * Formularz samych szafek nadal używa MODUL_LIMITS.
+ */
+export const LINIA_LIMITS = {
+  w: { min: 4, max: 120 },
+  h: { min: 4, max: 240 },
+  d: { min: 4, max: 120 },
 } as const;
 
 export const MAX_MODULY = 30;

@@ -10,27 +10,24 @@ import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { paletteFronts, type Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
-import {
-  MAX_MODULY,
-  MODUL_LIMITS,
-  modulCena,
-} from "@/lib/modul";
+import { MAX_MODULY, modulCena } from "@/lib/modul";
 import {
   bazaKuchni,
+  dociagnijRzad,
   dodajElement,
+  GRUPY_PRESETOW,
   opiszKolizje,
   parseKuchnia,
   PRESETY,
   pustyPlan,
-  STREFA_LABEL,
   UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
   wystajePozaSciany,
+  zmienWymiar,
   type ElementKuchni,
   type Obrot,
   type PlanKuchni,
   type Sciana,
-  type Strefa,
   type UkladKuchni,
 } from "@/lib/kuchnia";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
@@ -38,6 +35,7 @@ import RzutKuchni from "../kuchnia/RzutKuchni";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
 import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
 import { Seg, Toaster, Tooltips, toast } from "./ui";
+import { KreatorWlasciwosci, PoleCm } from "./KreatorWlasciwosci";
 import { useCennik } from "./useCennik";
 import {
   ApiError,
@@ -64,12 +62,6 @@ import {
   type Offer,
   type OfferEvent,
 } from "./offers";
-
-const GRUPY: { strefa: Strefa; label: string }[] = [
-  { strefa: "dolna", label: "Szafki dolne" },
-  { strefa: "gorna", label: "Szafki górne" },
-  { strefa: "wysoka", label: "Słupki" },
-];
 
 function useWaski() {
   const [waski, setWaski] = useState(false);
@@ -104,6 +96,8 @@ export default function KreatorApp() {
   const [origin, setOrigin] = useState("");
   const [zapisuje, setZapisuje] = useState(false);
   const [zakladka, setZakladka] = useState<"rzut" | "3d">("rzut");
+  const [wymiary, setWymiary] = useState(true);
+  const [szukaj, setSzukaj] = useState("");
   const waski = useWaski();
   const { cennik, blad: cennikBlad } = useCennik();
   const ujecie = useRef<KuchniaUjecie | null>(null);
@@ -201,6 +195,29 @@ export default function KreatorApp() {
     const next = dodajElement(plan, bazowy, sciana);
     setPlan(next);
     setZaznaczony(next.elementy[next.elementy.length - 1]?.id ?? null);
+  };
+
+  const ustawWymiar = (id: string, key: "w" | "h" | "d", value: number) => {
+    const next = zmienWymiar(plan, id, key, value);
+    if (!next) {
+      toast("Nie da się tak zmienić wymiaru", { type: "err", desc: "Sąsiad wszedłby na inny element. Odsuń go albo skróć wymiar." });
+      return false;
+    }
+    setPlan(next);
+    return true;
+  };
+
+  const dociagnij = (id: string) => {
+    const next = dociagnijRzad(plan, id);
+    if (!next) {
+      toast("Nie zsunięto rzędu", { type: "err", desc: "Po zsunięciu elementy nachodzą na siebie." });
+      return;
+    }
+    if (next === plan) {
+      toast("Rząd już jest dosunięty");
+      return;
+    }
+    setPlan(next);
   };
 
   const aktualizujElement = (id: string, fn: (e: ElementKuchni) => ElementKuchni) => {
@@ -404,7 +421,7 @@ export default function KreatorApp() {
           <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
             <div className="kr-pad">
               <h2>Katalog</h2>
-              <p className="lede">Klik dodaje szafkę na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}.</p>
+              <p className="lede">Klik dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}.</p>
               <Seg
                 label="Ściana"
                 value={plan.uklad === "L" ? sciana : "A"}
@@ -418,20 +435,34 @@ export default function KreatorApp() {
                     : [{ value: "A", label: "Ściana A" }]
                 }
               />
-              {GRUPY.map((g) => (
-                <div key={g.strefa} className="kr-group">
-                  <h3>{g.label}</h3>
-                  {PRESETY.filter((p) => p.strefa === g.strefa).map((p) => (
-                    <button key={p.id} type="button" className="kr-item" onClick={() => dodaj({ ...p, zrodlo: "modul" })}>
-                      <b>{p.nazwa}</b>
-                      <span className="mono">
-                        {p.w}×{p.h}×{p.d}
-                        {cennik ? ` · ${formatPln(modulCena(p, cennik))}` : ""}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ))}
+              <label className="kr-search">
+                Szukaj
+                <input
+                  className="input"
+                  value={szukaj}
+                  placeholder="np. zmywarka, półka"
+                  onChange={(e) => setSzukaj(e.target.value)}
+                  aria-label="Szukaj w katalogu"
+                />
+              </label>
+              {GRUPY_PRESETOW.map((g) => {
+                const lista = PRESETY.filter((p) => p.grupa === g.id && p.nazwa.toLowerCase().includes(szukaj.trim().toLowerCase()));
+                if (!lista.length) return null;
+                return (
+                  <div key={g.id} className="kr-group">
+                    <h3>{g.label}</h3>
+                    {lista.map((p) => (
+                      <button key={p.id} type="button" className="kr-item" onClick={() => dodaj({ ...p, zrodlo: "modul" })}>
+                        <b>{p.nazwa}</b>
+                        <span className="mono">
+                          {p.w}×{p.h}×{p.d}
+                          {cennik ? ` · ${formatPln(modulCena(p, cennik))}` : ""}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
               <div className="kr-group">
                 <h3>Modele firmy</h3>
                 {models.length ? (
@@ -482,12 +513,17 @@ export default function KreatorApp() {
                 <RzutKuchni
                   plan={plan}
                   zaznaczony={zaznaczony}
+                  wymiary={wymiary}
                   onWybierz={setZaznaczony}
                   onPrzesun={(id, x, z) => zmien((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) }))}
-                  onKolizja={() => toast("Szafki nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
+                  onKolizja={() => toast("Elementy nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
                 />
                 <p className="kr-legend">
-                  <i data-zone="dolna" /> dolna <i data-zone="gorna" /> górna <i data-zone="wysoka" /> słupek <i data-zone="front" /> front
+                  <i data-zone="dolna" /> dolna <i data-zone="gorna" /> górna <i data-zone="wysoka" /> słupek <i data-zone="polka" /> półka{" "}
+                  <i data-zone="blat" /> blat <i data-zone="front" /> front
+                  <button type="button" className="btn btn-ghost kr-dim-toggle" aria-pressed={wymiary} onClick={() => setWymiary((v) => !v)}>
+                    {wymiary ? "Wymiary włączone" : "Pokaż wymiary"}
+                  </button>
                 </p>
               </div>
             )}
@@ -499,6 +535,7 @@ export default function KreatorApp() {
                   zaznaczony={zaznaczony}
                   onWybierz={setZaznaczony}
                   zdjecie
+                  wymiary={wymiary}
                   onUjecie={ustawUjecie}
                 />
               </div>
@@ -507,6 +544,40 @@ export default function KreatorApp() {
 
           <aside className="kr-col kr-side" aria-label="Dane oferty i cena">
             <div className="kr-pad">
+              <KreatorWlasciwosci
+                plan={plan}
+                element={element}
+                cena={element ? modulCena(element, cennik) : null}
+                onNazwa={(nazwa) => {
+                  if (!element) return;
+                  setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
+                }}
+                onWymiar={(key, value) => (element ? ustawWymiar(element.id, key, value) : false)}
+                onObrot={() => {
+                  if (element) aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }));
+                }}
+                onUsun={() => {
+                  if (!element) return;
+                  setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
+                  setZaznaczony(null);
+                }}
+                onKopiuj={() => {
+                  if (!element) return;
+                  dodaj({
+                    nazwa: element.nazwa,
+                    strefa: element.strefa,
+                    rodzaj: element.rodzaj,
+                    w: element.w,
+                    h: element.h,
+                    d: element.d,
+                    zrodlo: element.zrodlo,
+                    modelId: element.modelId,
+                  });
+                }}
+                onDociagnij={() => {
+                  if (element) dociagnij(element.id);
+                }}
+              />
               <h2>Oferta</h2>
               <div className="field">
                 <label htmlFor="k-client">Klient</label>
@@ -533,15 +604,9 @@ export default function KreatorApp() {
                 />
               </div>
               <div className="kr-dims">
-                <label>
-                  Ściana A (cm)
-                  <input className="input" inputMode="numeric" min={80} max={1200} value={plan.scianaA} onChange={(e) => setPlan((p) => ({ ...p, scianaA: Number(e.target.value) || p.scianaA }))} />
-                </label>
+                <PoleCm id="k-sciana-a" label="Ściana A" value={plan.scianaA} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaA: n }))} />
                 {plan.uklad === "L" ? (
-                  <label>
-                    Ściana B (cm)
-                    <input className="input" inputMode="numeric" min={80} max={1200} value={plan.scianaB} onChange={(e) => setPlan((p) => ({ ...p, scianaB: Number(e.target.value) || p.scianaB }))} />
-                  </label>
+                  <PoleCm id="k-sciana-b" label="Ściana B" value={plan.scianaB} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaB: n }))} />
                 ) : null}
               </div>
               <label className="kr-check">
@@ -588,70 +653,7 @@ export default function KreatorApp() {
               <button type="button" className="btn btn-ghost" onClick={przyklad}>
                 Wstaw przykład
               </button>
-              {wystajePozaSciany(plan) ? <p className="kr-warn">Część szafek wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
-
-              {element ? (
-                <div className="kr-card">
-                  <h3>Zaznaczona szafka</h3>
-                  <label>
-                    Nazwa
-                    <input
-                    className="input"
-                    value={element.nazwa}
-                    maxLength={80}
-                    onChange={(e) => {
-                      const nazwa = e.target.value.slice(0, 80);
-                      setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
-                    }}
-                  />
-                  </label>
-                  <div className="kr-dims">
-                    {(["w", "h", "d"] as const).map((k) => (
-                      <label key={k}>
-                        {k === "w" ? "Szer." : k === "h" ? "Wys." : "Gł."}
-                        <input
-                          className="input"
-                          inputMode="numeric"
-                          min={MODUL_LIMITS[k].min}
-                          max={MODUL_LIMITS[k].max}
-                          value={element[k]}
-                          onChange={(e) => {
-                            const n = Math.round(Number(e.target.value));
-                            if (!Number.isFinite(n)) return;
-                            const v = Math.min(MODUL_LIMITS[k].max, Math.max(MODUL_LIMITS[k].min, n));
-                            aktualizujElement(element.id, (el) => ({ ...el, [k]: v }));
-                          }}
-                        />
-                      </label>
-                    ))}
-                  </div>
-                  <div className="actions">
-                    <button
-                      type="button"
-                      className="btn btn-ghost"
-                      onClick={() => aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }))}
-                    >
-                      Obróć 90°
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-plain"
-                      onClick={() => {
-                        setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
-                        setZaznaczony(null);
-                      }}
-                    >
-                      Usuń
-                    </button>
-                  </div>
-                  <p className="lede">
-                    {STREFA_LABEL[element.strefa]}
-                    {element.zrodlo === "model" ? " · model 3D" : " · moduł"} · {formatPln(modulCena(element, cennik))}
-                  </p>
-                </div>
-              ) : (
-                <p className="lede">Kliknij szafkę na rzucie, żeby zmienić wymiary albo ją obrócić. Strzałki przesuwają o 5 cm.</p>
-              )}
+              {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
 
               <div className="field">
                 <span className="lab">Fronty</span>
@@ -674,7 +676,7 @@ export default function KreatorApp() {
 
               <div className="kr-sum">
                 <p>
-                  Szafki netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
+                  Pozycje netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
                 </p>
                 <p>
                   Z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
