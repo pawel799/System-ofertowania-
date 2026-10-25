@@ -4,13 +4,15 @@ import { Component, Suspense, useEffect, useLayoutEffect, useMemo, type ReactNod
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, PerspectiveCamera, Vector3 } from "three";
-import Szafka from "../modul/Szafka";
 import { rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
 import { useCountertop } from "../countertopStore";
 import { useFront } from "../frontStore";
 import { useHardware } from "../hardwareStore";
 import { usePalettes } from "../paletteStore";
+import AgdBryla from "./AgdBryla";
+import { yElementu } from "./uklad3d";
+import Wymiary3D from "./Wymiary3D";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
 
@@ -20,9 +22,6 @@ const BLAT: Record<string, string> = {
   "laminat-dab": "#b48a5e",
 };
 
-/** Dół szafek górnych nad blatem [m]. */
-const Y_GORNA = 1.45;
-
 type Props = {
   plan: PlanKuchni;
   modele?: PublicModel[];
@@ -31,6 +30,8 @@ type Props = {
   /** Bufor rysowania zostaje, żeby dało się zrobić zrzut do PDF. */
   zdjecie?: boolean;
   onUjecie?: (u: KuchniaUjecie | null) => void;
+  /** Linie wymiarowe — tylko w kreatorze. */
+  wymiary?: boolean;
 };
 
 function zakres(plan: PlanKuchni) {
@@ -49,7 +50,7 @@ function zakres(plan: PlanKuchni) {
     x1 = Math.max(x1, r.x1 / 100);
     z0 = Math.min(z0, r.z0 / 100);
     z1 = Math.max(z1, r.z1 / 100);
-    y1 = Math.max(y1, (e.strefa === "gorna" ? 145 + e.h : e.h) / 100);
+    y1 = Math.max(y1, yElementu(e, plan) + e.h / 100);
   }
   return { x0, x1, z0, z1, y1 };
 }
@@ -140,35 +141,9 @@ class BladModelu extends Component<{ children: ReactNode; fallback: ReactNode },
   }
 }
 
-function SzafkaElementu({
-  el,
-  kolor,
-  chropowatosc,
-  blat,
-  uchwyt,
-}: {
-  el: ElementKuchni;
-  kolor: string;
-  chropowatosc: number;
-  blat: string;
-  uchwyt: boolean;
-}) {
-  const H = el.h / 100;
-  return (
-    <>
-      <Szafka szerokosc={el.w} wysokosc={el.h} glebokosc={el.d} kolorFrontu={kolor} chropowatosc={chropowatosc} pokazUchwyt={uchwyt} />
-      {el.strefa === "dolna" ? (
-        <mesh position={[0, H + 0.016, 0.01]} castShadow receiveShadow>
-          <boxGeometry args={[el.w / 100, 0.028, el.d / 100 + 0.02]} />
-          <meshStandardMaterial color={blat} roughness={0.45} />
-        </mesh>
-      ) : null}
-    </>
-  );
-}
-
 function ElementWidok({
   el,
+  plan,
   model,
   zaznaczony,
   kolor,
@@ -178,6 +153,7 @@ function ElementWidok({
   onWybierz,
 }: {
   el: ElementKuchni;
+  plan: PlanKuchni;
   model?: PublicModel;
   zaznaczony: boolean;
   kolor: string;
@@ -186,8 +162,8 @@ function ElementWidok({
   uchwyt: boolean;
   onWybierz?: (id: string) => void;
 }) {
-  const y = el.strefa === "gorna" ? Y_GORNA : 0;
-  const szafka = <SzafkaElementu el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} />;
+  const y = yElementu(el, plan);
+  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} />;
   return (
     <group
       position={[el.x / 100, y, el.z / 100]}
@@ -216,7 +192,7 @@ function ElementWidok({
   );
 }
 
-function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie }: Props) {
+function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary }: Props) {
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
@@ -260,6 +236,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie }
           <ElementWidok
             key={el.id}
             el={el}
+            plan={plan}
             model={el.modelId ? katalog.get(el.modelId) : undefined}
             zaznaczony={zaznaczony === el.id}
             kolor={kolor}
@@ -270,6 +247,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie }
           />
         ))}
       </Suspense>
+      {wymiary ? <Wymiary3D plan={plan} zaznaczony={zaznaczony} /> : null}
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={12} blur={2.4} far={2} />
       <Kamera plan={plan} />
       <Ujecie aktywne={!!zdjecie} onUjecie={onUjecie} />
