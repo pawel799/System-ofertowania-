@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   dlugoscRzedu,
-  limityRodzaju,
+  limityElementu,
   RODZAJ_LABEL,
   rodzajElementu,
   STREFA_LABEL,
@@ -95,7 +95,7 @@ export function KreatorWlasciwosci({
       </div>
     );
   }
-  const lim = limityRodzaju(rodzajElementu(element), element.strefa);
+  const lim = limityElementu(element);
   const rzad = dlugoscRzedu(plan, element.id);
   return (
     <div className="kr-card kr-selected">

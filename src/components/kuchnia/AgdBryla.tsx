@@ -325,6 +325,14 @@ function zSzufladami(rodzaj: RodzajElementu, h: number) {
 export default function AgdBryla(props: Props) {
   const { el, kolor, chropowatosc, blat, uchwyt } = props;
   const rodzaj = rodzajElementu(el);
+  if (rodzaj === "blat") {
+    return (
+      <mesh position={[0, el.h / 200, 0]} castShadow receiveShadow>
+        <boxGeometry args={[el.w / 100, Math.max(0.012, el.h / 100), el.d / 100]} />
+        <meshStandardMaterial color={blat} roughness={0.45} />
+      </mesh>
+    );
+  }
   if (rodzaj === "polka") return <Polka el={el} />;
   if (rodzaj === "plyta-indukcja" || rodzaj === "plyta-gaz") return <Plyta el={el} gaz={rodzaj === "plyta-gaz"} />;
   if (rodzaj === "bateria") return <Bateria el={el} />;

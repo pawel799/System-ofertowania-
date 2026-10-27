@@ -20,7 +20,8 @@ export function yElementu(el: ElementKuchni, plan: PlanKuchni) {
   if (el.strefa === "gorna") return Y_GORNA;
   if (el.strefa === "blat") {
     const poziom = poziomBlatu(plan, el);
-    if ((el.rodzaj ?? "szafka") === "zlewozmywak") return Math.max(0, poziom - el.h / 100 + 0.012);
+    // Miska (do 30 cm) wpada w blat. Wyższy zlew z baterią stoi na blacie, żeby kran został nad nim.
+    if ((el.rodzaj ?? "szafka") === "zlewozmywak" && el.h <= 30) return Math.max(0, poziom - el.h / 100 + 0.012);
     return poziom;
   }
   if (el.strefa === "polka") {

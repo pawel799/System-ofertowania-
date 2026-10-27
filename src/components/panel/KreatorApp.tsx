@@ -10,7 +10,8 @@ import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { paletteFronts, type Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
-import { MAX_MODULY, modulCena } from "@/lib/modul";
+import { GRUPY_BIBLIOTEKI, podzielModele } from "@/lib/bibliotekaModeli";
+import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
 import {
   bazaKuchni,
   cenaElementu,
@@ -21,6 +22,7 @@ import {
   parseKuchnia,
   PRESETY,
   pustyPlan,
+  type NowyElement,
   UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
   wystajePozaSciany,
@@ -465,37 +467,7 @@ export default function KreatorApp() {
                   </div>
                 );
               })}
-              <div className="kr-group">
-                <h3>Modele firmy</h3>
-                {models.length ? (
-                  models.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className="kr-item"
-                      onClick={() =>
-                        dodaj({
-                          nazwa: m.name.slice(0, 80) || "Model",
-                          strefa: "dolna",
-                          w: 60,
-                          h: 72,
-                          d: 56,
-                          zrodlo: "model",
-                          modelId: m.id,
-                        })
-                      }
-                    >
-                      <b>{m.name}</b>
-                      <span className="mono">GLB · 60×72×56, skalowane</span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="lede">
-                    Brak wgranych modeli. Szafki powyżej wystarczą do oferty. Własne GLB dodasz w{" "}
-                    <a href="/panel/ustawienia?tab=models">Ustawieniach → Modele 3D</a>.
-                  </p>
-                )}
-              </div>
+              <BibliotekaModeli models={models} fraza={szukaj.trim().toLowerCase()} cennik={cennik} onDodaj={dodaj} />
             </div>
           </aside>
 
@@ -757,6 +729,108 @@ export default function KreatorApp() {
       <Tooltips />
       <Toaster />
     </div>
+  );
+}
+
+function BibliotekaModeli({
+  models,
+  fraza,
+  cennik,
+  onDodaj,
+}: {
+  models: ModelMeta[];
+  fraza: string;
+  cennik: ModulCennik | null;
+  onDodaj: (el: NowyElement) => void;
+}) {
+  const { moduly, wlasne, kuchnie } = podzielModele(models);
+  const pasuje = (nazwa: string) => nazwa.toLowerCase().includes(fraza);
+  const wlasneWidoczne = wlasne.filter((m) => pasuje(m.name));
+  return (
+    <>
+      {GRUPY_BIBLIOTEKI.map((g) => {
+        const lista = moduly.filter((x) => x.wpis.grupa === g.id && x.wpis.strefa && x.wpis.rodzaj && pasuje(x.wpis.nazwa));
+        if (!lista.length) return null;
+        return (
+          <div key={g.id} className="kr-group">
+            <h3>{g.label}</h3>
+            {lista.map(({ model, wpis }) => {
+              const strefa = wpis.strefa;
+              const rodzaj = wpis.rodzaj;
+              if (!strefa || !rodzaj) return null;
+              const poza = !wycenianyElement({ rodzaj });
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  className="kr-item"
+                  onClick={() =>
+                    onDodaj({
+                      nazwa: wpis.nazwa,
+                      strefa,
+                      rodzaj,
+                      w: wpis.w,
+                      h: wpis.h,
+                      d: wpis.d,
+                      zrodlo: "model",
+                      modelId: model.id,
+                    })
+                  }
+                >
+                  <b>{wpis.nazwa}</b>
+                  <span className="mono">
+                    {wpis.w}×{wpis.h}×{wpis.d} cm
+                    {cennik ? ` · ${poza ? "AGD, poza ceną" : formatPln(modulCena(wpis, cennik))}` : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
+      {wlasneWidoczne.length || !fraza ? (
+      <div className="kr-group">
+        <h3>Modele firmy</h3>
+        {wlasneWidoczne.length ? (
+          wlasneWidoczne.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kr-item"
+              onClick={() =>
+                onDodaj({
+                  nazwa: m.name.slice(0, 80) || "Model",
+                  strefa: "dolna",
+                  w: 60,
+                  h: 72,
+                  d: 56,
+                  zrodlo: "model",
+                  modelId: m.id,
+                })
+              }
+            >
+              <b>{m.name}</b>
+              <span className="mono">GLB · 60×72×56, skalowane</span>
+            </button>
+          ))
+        ) : !fraza ? (
+          <p className="lede">
+            {moduly.length
+              ? "Własne GLB, spoza biblioteki 50 modeli, pojawią się tutaj."
+              : "Biblioteka 46 modułów pojawi się po wgraniu (seed/modele-kuchnia-50). Własny GLB dodasz w "}
+            {moduly.length ? null : <a href="/panel/ustawienia?tab=models">Ustawieniach → Modele 3D</a>}
+            {moduly.length ? null : "."}
+          </p>
+        ) : null}
+        {!fraza && kuchnie.length ? (
+          <p className="lede">
+            Gotowe kuchnie ({kuchnie.map((k) => k.wpis.nazwa.replace(" (komplet)", "")).join(", ")}) wybierzesz jako model całej oferty, nie jako
+            szafkę.
+          </p>
+        ) : null}
+      </div>
+      ) : null}
+    </>
   );
 }
 
