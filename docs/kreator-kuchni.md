@@ -60,6 +60,8 @@ Wgranie do firmy `main` (bez prefiksu kluczy). Skrypt jest idempotentny: drugi r
 
 ```
 # lokalnie, gdy działa wrangler pages dev (bindingi OFFERS i MODELS)
+# i katalog .wrangler/state już istnieje. Wrangler odrzuca bucket „MODELS”
+# (wielkie litery), więc --local zapisuje wprost do magazynu miniflare.
 node seed/modele-kuchnia-50/seed.mjs --local
 
 # produkcja: R2 kuchnia-modele, KV kuchnia-oferty, projekt system-ofertowania

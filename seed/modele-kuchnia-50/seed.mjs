@@ -7,11 +7,12 @@
  * Sprawdzenie plików (bez sieci, bez Cloudflare):
  *   node seed/modele-kuchnia-50/seed.mjs --check
  *
- * Lokalnie, pod `npx wrangler pages dev out --kv OFFERS --r2 MODELS`
- * (najpierw uruchom pages dev, żeby powstał katalog .wrangler/state):
+ * Lokalnie, gdy działa `npx wrangler pages dev out --kv OFFERS --r2 MODELS`
+ * (katalog .wrangler/state musi już istnieć — wejdź raz na stronę albo wgraj cokolwiek):
  *   node seed/modele-kuchnia-50/seed.mjs --local
- * Lokalny bucket to nazwa bindingu MODELS, nie produkcyjna nazwa kuchnia-modele.
- * Lokalny namespace KV to OFFERS (binding z `--kv OFFERS`).
+ * `wrangler r2 object put` nie przyjmuje nazwy bindingu MODELS (wielkie litery nie są
+ * legalną nazwą bucketa). --local zapisuje więc wprost do magazynu miniflare,
+ * którego używa pages dev: KV OFFERS i R2 MODELS w .wrangler/state.
  *
  * Produkcja (projekt Pages system-ofertowania) — dopiero po review, nie z tego PR:
  *   SEED_CONFIRM=kuchnia-modele node seed/modele-kuchnia-50/seed.mjs --remote
@@ -24,11 +25,12 @@
  *
  * Zmienne: R2_BUCKET, KV_NAMESPACE_ID, PERSIST_TO (domyślnie .wrangler/state), WRANGLER (domyślnie npx -y wrangler@4).
  */
-import { createHash } from "node:crypto";
+import { createHash, randomBytes, randomFillSync } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -109,21 +111,18 @@ if (remote && process.env.SEED_CONFIRM !== "kuchnia-modele") {
   fail("Produkcja wymaga SEED_CONFIRM=kuchnia-modele. Bez tego skrypt nic nie zapisuje.");
 }
 
-const bucket = process.env.R2_BUCKET || (remote ? "kuchnia-modele" : "MODELS");
-const namespaceId = process.env.KV_NAMESPACE_ID || (remote ? "28b882fa9c3d416fac025765aabcba52" : "OFFERS");
+const bucket = process.env.R2_BUCKET || "kuchnia-modele";
+const namespaceId = process.env.KV_NAMESPACE_ID || "28b882fa9c3d416fac025765aabcba52";
 const persistTo = path.resolve(repo, process.env.PERSIST_TO || ".wrangler/state");
 const wranglerBin = process.env.WRANGLER || "npx";
 const wranglerArgs = process.env.WRANGLER ? [] : ["-y", "wrangler@4"];
 
-function wrangler(argv, { input } = {}) {
-  const flags = remote ? ["--remote"] : ["--local", "--persist-to", persistTo];
-  const r = spawnSync(wranglerBin, [...wranglerArgs, ...argv, ...flags], {
+function wrangler(argv) {
+  return spawnSync(wranglerBin, [...wranglerArgs, ...argv, "--remote"], {
     cwd: repo,
     encoding: "utf8",
-    input,
     maxBuffer: 8 * 1024 * 1024,
   });
-  return r;
 }
 
 function must(r, co) {
@@ -133,49 +132,160 @@ function must(r, co) {
   }
 }
 
-const tmp = mkdtempSync(path.join(tmpdir(), "seed-modele-"));
+function sqlFile(dir) {
+  if (!existsSync(dir)) return null;
+  const files = readdirSync(dir).filter((f) => f.endsWith(".sqlite") && f !== "metadata.sqlite");
+  if (files.length !== 1) return null;
+  return path.join(dir, files[0]);
+}
+
+function openLocal() {
+  const kvSql = sqlFile(path.join(persistTo, "v3/kv/miniflare-KVNamespaceObject"));
+  const r2Sql = sqlFile(path.join(persistTo, "v3/r2/miniflare-R2BucketObject"));
+  if (!kvSql || !r2Sql) {
+    fail(
+      "Brak lokalnego KV/R2 w " +
+        persistTo +
+        ". Uruchom najpierw `npx wrangler pages dev out --kv OFFERS --r2 MODELS` i wejdź raz na stronę (albo wgraj model), żeby miniflare założył magazyn.",
+    );
+  }
+  const kv = new DatabaseSync(kvSql);
+  const r2 = new DatabaseSync(r2Sql);
+  kv.exec("PRAGMA busy_timeout = 5000");
+  r2.exec("PRAGMA busy_timeout = 5000");
+  const kvBlobs = path.join(persistTo, "v3/kv/OFFERS/blobs");
+  const r2Blobs = path.join(persistTo, "v3/r2/MODELS/blobs");
+  mkdirSync(kvBlobs, { recursive: true });
+  mkdirSync(r2Blobs, { recursive: true });
+  return { kv, r2, kvBlobs, r2Blobs };
+}
+
+function blobId() {
+  const buf = Buffer.alloc(40);
+  randomFillSync(buf, 0, 32);
+  buf.writeBigInt64BE(BigInt(Date.now()), 32);
+  return buf.toString("hex");
+}
+
+function readLocalKv(store, key) {
+  const row = store.kv.prepare("SELECT blob_id FROM _mf_entries WHERE key = ?").get(key);
+  if (!row) return null;
+  try {
+    return readFileSync(path.join(store.kvBlobs, row.blob_id), "utf8");
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalKv(store, key, value) {
+  const prev = store.kv.prepare("SELECT blob_id FROM _mf_entries WHERE key = ?").get(key);
+  const id = blobId();
+  writeFileSync(path.join(store.kvBlobs, id), value);
+  store.kv.prepare("INSERT OR REPLACE INTO _mf_entries (key, blob_id, expiration, metadata) VALUES (?, ?, NULL, NULL)").run(key, id);
+  if (prev && prev.blob_id !== id) {
+    try {
+      unlinkSync(path.join(store.kvBlobs, prev.blob_id));
+    } catch {
+      /* stary blob mógł już zniknąć */
+    }
+  }
+}
+
+function writeLocalR2(store, key, buf) {
+  const prev = store.r2.prepare("SELECT blob_id FROM _mf_objects WHERE key = ?").get(key);
+  const id = blobId();
+  writeFileSync(path.join(store.r2Blobs, id), buf);
+  store.r2
+    .prepare(
+      "INSERT OR REPLACE INTO _mf_objects (key, blob_id, version, size, etag, uploaded, checksums, http_metadata, custom_metadata) VALUES (?, ?, ?, ?, ?, ?, '{}', ?, '{}')",
+    )
+    .run(key, id, randomBytes(16).toString("hex"), buf.length, createHash("md5").update(buf).digest("hex"), Date.now(), JSON.stringify({ contentType: "model/gltf-binary" }));
+  if (prev && prev.blob_id !== id) {
+    try {
+      unlinkSync(path.join(store.r2Blobs, prev.blob_id));
+    } catch {
+      /* j.w. */
+    }
+  }
+}
+
+function deleteLocalR2(store, key) {
+  const prev = store.r2.prepare("SELECT blob_id FROM _mf_objects WHERE key = ?").get(key);
+  if (!prev) return;
+  store.r2.prepare("DELETE FROM _mf_objects WHERE key = ?").run(key);
+  try {
+    unlinkSync(path.join(store.r2Blobs, prev.blob_id));
+  } catch {
+    /* plik mógł już zniknąć */
+  }
+}
+
+const tmp = remote ? path.join(tmpdir(), "seed-modele-" + Date.now()) : null;
+if (tmp) mkdirSync(tmp, { recursive: true });
+const localStore = local ? openLocal() : null;
 let zapisane = 0;
 let bezZmian = 0;
+
+function kvGet(key) {
+  if (localStore) {
+    const raw = readLocalKv(localStore, key);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return raw;
+    }
+  }
+  const get = wrangler(["kv", "key", "get", key, "--namespace-id", namespaceId]);
+  if (get.status !== 0 || !get.stdout.trim() || get.stdout.trim() === "Value not found") return null;
+  try {
+    return JSON.parse(get.stdout.trim());
+  } catch {
+    return get.stdout.trim();
+  }
+}
+
+function kvPut(key, value) {
+  if (localStore) {
+    writeLocalKv(localStore, key, value);
+    return;
+  }
+  const metaPath = path.join(tmp, key.replace(/[^A-Za-z0-9]+/g, "_") + ".txt");
+  writeFileSync(metaPath, value);
+  const put = wrangler(["kv", "key", "put", key, "--path", metaPath, "--namespace-id", namespaceId]);
+  must(put, `KV ${key}`);
+}
 
 try {
   for (const p of pozycje) {
     const id = p.w.id;
-    const get = wrangler(["kv", "key", "get", `model:${id}`, "--namespace-id", namespaceId]);
-    let existing = null;
-    if (get.status === 0 && get.stdout.trim()) {
-      try {
-        existing = JSON.parse(get.stdout.trim());
-      } catch {
-        existing = null;
-      }
-    }
-    const tagsSame = existing && sameTags(existing.tags, p.tags);
-    const plikTenSam =
-      existing && existing.size === p.buf.length && existing.seedSha256 === p.sha && typeof existing.version === "number";
-    const version = plikTenSam ? existing.version : typeof existing?.version === "number" ? existing.version + 1 : 1;
+    const existing = kvGet(`model:${id}`);
+    const metaObj = existing && typeof existing === "object" ? existing : null;
+    const tagsSame = metaObj && sameTags(metaObj.tags, p.tags);
+    const plikTenSam = metaObj && metaObj.size === p.buf.length && metaObj.seedSha256 === p.sha && typeof metaObj.version === "number";
+    const version = plikTenSam ? metaObj.version : typeof metaObj?.version === "number" ? metaObj.version + 1 : 1;
     const file = `models/${id}/${version}.glb`;
-    const same = plikTenSam && existing.name === p.w.nazwa && tagsSame && existing.file === file;
-    if (same) {
-      const owner = wrangler(["kv", "key", "get", `modelowner:${id}`, "--namespace-id", namespaceId]);
-      if (owner.status !== 0 || owner.stdout.trim() !== "main") {
-        const putOwner = wrangler(["kv", "key", "put", `modelowner:${id}`, "main", "--namespace-id", namespaceId]);
-        must(putOwner, `modelowner ${id}`);
-      }
+    const same = plikTenSam && metaObj.name === p.w.nazwa && tagsSame && metaObj.file === file;
+    const owner = kvGet(`modelowner:${id}`);
+    if (same && owner === "main") {
       bezZmian++;
       console.log(`=   ${id}  ${p.w.nazwa}`);
       continue;
     }
-    const putFile = wrangler([
-      "r2",
-      "object",
-      "put",
-      `${bucket}/${file}`,
-      "--file",
-      path.join(root, p.w.plik),
-      "--content-type",
-      "model/gltf-binary",
-    ]);
-    must(putFile, `R2 ${id}`);
+    if (localStore) writeLocalR2(localStore, file, p.buf);
+    else {
+      const putFile = wrangler([
+        "r2",
+        "object",
+        "put",
+        `${bucket}/${file}`,
+        "--file",
+        path.join(root, p.w.plik),
+        "--content-type",
+        "model/gltf-binary",
+      ]);
+      must(putFile, `R2 ${id}`);
+    }
     const now = new Date().toISOString();
     const meta = {
       id,
@@ -185,24 +295,28 @@ try {
       file,
       tags: p.tags,
       seedSha256: p.sha,
-      createdAt: existing?.createdAt || now,
+      createdAt: metaObj?.createdAt || now,
       updatedAt: now,
     };
-    const metaPath = path.join(tmp, `${id}.json`);
-    writeFileSync(metaPath, JSON.stringify(meta));
-    const putMeta = wrangler(["kv", "key", "put", `model:${id}`, "--path", metaPath, "--namespace-id", namespaceId]);
-    must(putMeta, `KV model:${id}`);
-    const putOwner = wrangler(["kv", "key", "put", `modelowner:${id}`, "main", "--namespace-id", namespaceId]);
-    must(putOwner, `modelowner ${id}`);
-    if (existing?.file && existing.file !== file) {
-      const del = wrangler(["r2", "object", "delete", `${bucket}/${existing.file}`]);
-      if (del.status !== 0) console.error(`(ostrzeżenie) nie usunąłem starego pliku ${existing.file}`);
+    kvPut(`model:${id}`, JSON.stringify(meta));
+    kvPut(`modelowner:${id}`, "main");
+    if (metaObj?.file && metaObj.file !== file) {
+      if (localStore) deleteLocalR2(localStore, metaObj.file);
+      else {
+        const del = wrangler(["r2", "object", "delete", `${bucket}/${metaObj.file}`]);
+        if (del.status !== 0) console.error(`(ostrzeżenie) nie usunąłem starego pliku ${metaObj.file}`);
+      }
     }
     zapisane++;
     console.log(`+   ${id}  v${version}  ${p.w.nazwa}`);
   }
 } finally {
-  rmSync(tmp, { recursive: true, force: true });
+  if (tmp) rmSync(tmp, { recursive: true, force: true });
+  localStore?.kv.close();
+  localStore?.r2.close();
 }
 
-console.log(`Gotowe. Zapisane: ${zapisane}, bez zmian: ${bezZmian}. Bucket ${bucket}, namespace ${namespaceId}, firma main.`);
+console.log(
+  `Gotowe. Zapisane: ${zapisane}, bez zmian: ${bezZmian}. ` +
+    (local ? `Lokalny magazyn ${persistTo} (KV OFFERS, R2 MODELS), firma main.` : `Bucket ${bucket}, namespace ${namespaceId}, firma main.`),
+);
