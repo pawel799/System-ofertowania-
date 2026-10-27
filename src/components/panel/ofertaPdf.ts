@@ -3,6 +3,7 @@
  * Bez serwerowego renderu 3D: opcjonalnie jeden zrzut sceny z przeglądarki.
  * To nie jest lista formatek ani rozkrój.
  */
+import qrcode from "qrcode-generator";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../catalog";
 import { findRalFront, type Palette } from "../palettes";
 import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
@@ -27,6 +28,10 @@ export type PdfDane = {
   dopOkucia: number;
   razem: number;
   link3d: string | null;
+  /** Do kiedy działa link 3D (np. „10 listopada 2026”); null = bez daty. */
+  link3dWazny: string | null;
+  /** Link z PIN-em – PIN idzie do klienta osobno, nie ma go w PDF. */
+  link3dPin: boolean;
   data: string;
   zdjecie: string | null;
   cennikUwaga: string | null;
@@ -57,6 +62,8 @@ export function danePdf(args: {
   cennik: ModulCennik;
   cennikUwaga: string | null;
   link3d: string | null;
+  link3dWazny?: string | null;
+  link3dPin?: boolean;
   zdjecie: string | null;
 }): PdfDane {
   const frontSw = FRONTS.find((f) => f.id === args.front) ?? findRalFront(args.palettes, args.front);
@@ -92,6 +99,8 @@ export function danePdf(args: {
     dopOkucia,
     razem: sumaPozycji + dopFront + dopBlat + dopOkucia,
     link3d: args.link3d,
+    link3dWazny: args.link3d ? (args.link3dWazny ?? null) : null,
+    link3dPin: !!args.link3d && !!args.link3dPin,
     data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
     zdjecie: args.zdjecie && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(args.zdjecie) ? args.zdjecie : null,
     cennikUwaga: args.cennikUwaga,
@@ -120,8 +129,18 @@ export function pdfHtml(d: PdfDane) {
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
   const zdjecie = d.zdjecie ? `<img class="shot" alt="Podgląd zabudowy" src="${d.zdjecie}" />` : "";
   const link = d.link3d
-    ? `<p class="link">Osobny podgląd 3D (interaktywny, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
+    ? `<p class="link">Kuchnia w 3D (interaktywna, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
     : `<p class="link">Podgląd 3D wysyłany jest osobno, linkiem z panelu.</p>`;
+  const qr = d.link3d
+    ? `<section class="qr">
+  ${qrSvg(d.link3d)}
+  <div>
+    <p class="eyebrow">Kuchnia w 3D</p>
+    <p><b>Zeskanuj kod telefonem</b> – otworzysz tę kuchnię w 3D, obrócisz ją i zmienisz fronty, blat i uchwyty.</p>
+    <p class="muted">${esc(d.link3d.replace(/^https?:\/\//, ""))}${d.link3dWazny ? ` · ważny do ${esc(d.link3dWazny)}` : ""}${d.link3dPin ? " · PIN otrzymasz osobno" : ""}</p>
+  </div>
+</section>`
+    : "";
   return `<!DOCTYPE html>
 <html lang="pl">
 <head>
@@ -146,6 +165,10 @@ export function pdfHtml(d: PdfDane) {
   .shot { display: block; width: 100%; max-height: 280px; object-fit: contain; margin: 12px 0; background: #141311; }
   .note { margin-top: 16px; color: #44403c; font-size: 12px; }
   .link { word-break: break-all; }
+  .qr { display: flex; gap: 14px; align-items: center; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e7e5e4; border-radius: 8px; break-inside: avoid; }
+  .qr svg { width: 30mm; height: 30mm; flex: none; }
+  .qr p { margin: 2px 0; }
+  .qr .muted { word-break: break-all; font-size: 11.5px; }
   footer { margin-top: 18px; font-size: 11px; color: #78716c; }
 </style>
 </head>
@@ -164,6 +187,7 @@ export function pdfHtml(d: PdfDane) {
   <p><b>Układ:</b> ${esc(uklad)}. ${esc(sciany)}.${esc(pokoj)}</p>
   <p><b>Fronty:</b> ${esc(d.frontNazwa)} · <b>Blat:</b> ${esc(d.blatNazwa)} · <b>Okucia:</b> ${esc(d.okuciaNazwa)}</p>
 </section>
+${qr}
 ${zdjecie}
 <table>
   <thead><tr><th>Pozycja</th><th class="num">Wymiary (szer. × wys. × gł.)</th><th class="num">Netto</th></tr></thead>
@@ -210,7 +234,9 @@ export function pdfTekst(d: PdfDane) {
     `Razem netto: ${plnSp(d.razem)}`,
     "",
     "Plik PDF (układ do druku) zapiszesz przyciskiem „Pobierz PDF” w panelu: w oknie drukowania wybierz „Zapisz jako PDF” i dołącz go do tej wiadomości.",
-    "Podgląd interaktywny 3D wysyłamy osobno.",
+    ...(d.link3d
+      ? [`Kuchnię w 3D otworzysz z kodu QR w pliku PDF albo tutaj: ${d.link3d}${d.link3dWazny ? ` (link ważny do ${d.link3dWazny})` : ""}.`]
+      : ["Podgląd interaktywny 3D wysyłamy osobno."]),
     "",
     "Kwoty netto, bez urządzeń AGD. To oferta handlowa, bez rozkroju płyt.",
     "Pozdrawiamy",
@@ -218,11 +244,36 @@ export function pdfTekst(d: PdfDane) {
   ].join("\n");
 }
 
-export function otworzPdf(html: string) {
-  const w = window.open("", "_blank");
-  if (!w) return false;
+/**
+ * Kod QR jako SVG (wektor – ostry na wydruku). Poziom korekcji M, margines 4 moduły (norma).
+ * Generowany w przeglądarce, bez zewnętrznej usługi: link klienta nie wychodzi poza system.
+ */
+export function qrSvg(text: string) {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  const m = 4;
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
+  const size = n + 2 * m;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" role="img" aria-label="Kod QR do kuchni w 3D"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+}
+
+/** Okno PDF otwierane od razu po kliknięciu (inaczej przeglądarka je zablokuje); treść dochodzi po utworzeniu linku. */
+export function oknoPdf() {
+  return window.open("", "_blank");
+}
+
+export function wpiszPdf(w: Window, html: string) {
+  if (w.closed) return false;
   w.document.open();
   w.document.write(html);
   w.document.close();
   return true;
+}
+
+export function otworzPdf(html: string) {
+  const w = oknoPdf();
+  return w ? wpiszPdf(w, html) : false;
 }

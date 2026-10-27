@@ -32,7 +32,8 @@ To nie jest rozkrój płyt. Nie ma nestingu ani listy formatek.
 - **Podgląd 3D** — „Utwórz link 3D”, potem „Wyślij podgląd 3D”. To dotychczasowy mail albo SMS z adresem `/oferta/…`. Ważność, PIN i ukrycie ceny doprecyzujesz w panelu oferty.
 - **Oferta PDF** — osobne przyciski „Pobierz PDF” i „Wyślij ofertę PDF”.
   - Pobranie otwiera okno drukowania przeglądarki. Trzeba wybrać **Zapisz jako PDF**. Nie ma renderu 3D na serwerze. Jeśli scena zdążyła się narysować, na pierwszej stronie jest jeden zrzut.
-  - Mail PDF ma pozycje, wymiary i kwoty netto. Nie zastępuje maila z linkiem 3D — oba wychodzą osobno. Plik PDF dołącza się ręcznie (poczta nie przyjmie go z samego `mailto`).
+  - **Kod QR do kuchni w 3D** jest na pierwszej stronie PDF (pod danymi klienta), razem z adresem i datą ważności linku. Pobranie PDF z kreatora najpierw zapisuje ofertę (kod pokazuje tę samą kuchnię co plik), potem bierze obecny link, a gdy go nie ma albo wygasł — tworzy nowy na 14 dni. W panelu oferty nowy link dostaje ustawienia z sekcji „Link dla klienta” (ważność, PIN, cena). Link z PIN-em: PIN-u nie ma w PDF, klient dostaje go osobno. Bez klienta i nazwy oferta się nie zapisze — wtedy PDF wychodzi bez kodu. Kod rysuje biblioteka `qrcode-generator` w przeglądarce (SVG, bez zewnętrznej usługi).
+  - Mail PDF ma pozycje, wymiary i kwoty netto (i link 3D, jeśli jest). Nie zastępuje maila z linkiem 3D — oba wychodzą osobno. Plik PDF dołącza się ręcznie (poczta nie przyjmie go z samego `mailto`).
 
 PDF jest ofertą handlową: marka firmy, klient, układ, pozycje, wymiary, ceny netto, dopłaty materiałowe. Na dole jest wprost napisane, że to nie jest rozkrój.
 
