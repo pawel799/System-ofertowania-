@@ -37,7 +37,7 @@ import {
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import RzutKuchni from "../kuchnia/RzutKuchni";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
-import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
+import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { Seg, Toaster, Tooltips, toast } from "./ui";
 import { KreatorWlasciwosci, PoleCm } from "./KreatorWlasciwosci";
 import { useCennik } from "./useCennik";
@@ -345,15 +345,8 @@ export default function KreatorApp() {
     }
   };
 
-  const utworzLink = async () => {
-    const saved = offer?.link ? offer : await zapisz();
-    if (!saved) return;
-    if (saved.link) return;
-    if (!saved.contact.trim()) {
-      toast("Brakuje kontaktu", { type: "err", desc: "Wpisz e-mail albo telefon, żeby wysłać podgląd 3D." });
-      return;
-    }
-    const channel: Channel = saved.contact.includes("@") ? "email" : "sms";
+  /** Nowy link 3D na 14 dni (PIN i ważność zmienisz w panelu oferty). */
+  const zNowymLinkiem = (saved: Offer, opis: string): Offer => {
     const link = {
       slug: newSlug(),
       days: 14,
@@ -362,18 +355,28 @@ export default function KreatorApp() {
       pin: null,
       comments: true,
       showPrice: true,
-      channel,
+      channel: (saved.contact.includes("@") || !saved.contact.trim() ? "email" : "sms") as Channel,
       views: 0 as const,
     };
-    const next: Offer = {
+    return {
       ...saved,
       link,
       status: saved.status === "zaakceptowany" ? saved.status : "wyslany",
-      events: [...saved.events, { t: stamp(), k: "send", x: "Link 3D z kreatora · 14 dni" }],
+      events: [...saved.events, { t: stamp(), k: "send", x: opis }],
     };
+  };
+
+  const utworzLink = async () => {
+    const saved = offer?.link ? offer : await zapisz();
+    if (!saved) return;
+    if (saved.link) return;
+    if (!saved.contact.trim()) {
+      toast("Brakuje kontaktu", { type: "err", desc: "Wpisz e-mail albo telefon, żeby wysłać podgląd 3D." });
+      return;
+    }
     setZapisuje(true);
     try {
-      const out = await wyslijNaSerwer(next, false);
+      const out = await wyslijNaSerwer(zNowymLinkiem(saved, "Link 3D z kreatora · 14 dni"), false);
       setOffer(out);
       toast("Link 3D gotowy", { desc: "Wyślij go osobno od PDF. PIN i ważność zmienisz w panelu oferty." });
     } catch (e) {
@@ -381,6 +384,27 @@ export default function KreatorApp() {
     } finally {
       setZapisuje(false);
     }
+  };
+
+  /**
+   * Do PDF: najpierw zapis (kod QR ma pokazać tę samą kuchnię co plik), potem link –
+   * obecny, jeśli działa, albo nowy, gdy go nie ma lub wygasł. Bez zapisu (brak klienta, nazwy) PDF wychodzi bez kodu.
+   */
+  const zapewnijLink = async (): Promise<LinkDoPdf | null> => {
+    const saved = await zapisz();
+    if (!saved) return null;
+    let out = saved;
+    if (!saved.link || linkWygasl(saved.link.expiresAt)) {
+      setZapisuje(true);
+      try {
+        out = await wyslijNaSerwer(zNowymLinkiem(saved, saved.link ? "Nowy link 3D do kodu QR w PDF (poprzedni wygasł) · 14 dni" : "Link 3D do kodu QR w PDF · 14 dni"), false);
+        setOffer(out);
+      } finally {
+        setZapisuje(false);
+      }
+    }
+    if (!out.link) return null;
+    return { id: out.id, url: `${linkOrigin}/oferta/${out.link.slug}`, wazny: waznyDo(out.link.expiresAt), pin: !!out.link.pin };
   };
 
   const wyslij3d = () => {
@@ -683,7 +707,7 @@ export default function KreatorApp() {
 
               <section className="kr-card">
                 <h3>Oferta PDF</h3>
-                <p className="lede">Handlowa: pozycje, wymiary i ceny. Osobno od linku 3D. W oknie drukowania wybierz „Zapisz jako PDF”.</p>
+                <p className="lede">Handlowa: pozycje, wymiary i ceny, z kodem QR do kuchni w 3D. Pobranie zapisuje ofertę i w razie potrzeby tworzy link. W oknie drukowania wybierz „Zapisz jako PDF”.</p>
                 <OfertaPdfPrzyciski
                   id={offer?.id ?? "SZKIC"}
                   title={title}
@@ -695,6 +719,7 @@ export default function KreatorApp() {
                   hardware={hardware}
                   palettes={palettes}
                   linkUrl={linkUrl}
+                  zapewnijLink={zapewnijLink}
                   ujecie={ujecie}
                 />
               </section>

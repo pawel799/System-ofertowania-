@@ -1,7 +1,7 @@
 "use client";
 
 import { ModulySection } from "./ModulySection";
-import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
+import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import { bazaKuchni, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
@@ -50,7 +50,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { pokazWyborModelu } from "@/lib/bibliotekaModeli";
-import { assetsApi, offerKey, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
+import { assetsApi, offerKey, panelApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
 import WyborModeluOferty from "./WyborModeluOferty";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
@@ -374,6 +374,35 @@ export default function PanelApp() {
     toast("Link gotowy", { desc: "Skopiuj wiadomość i wyślij ją klientowi." });
   };
 
+  /**
+   * Link do kodu QR w PDF: obecny, jeśli działa; gdy go nie ma albo wygasł – nowy z ustawień obok
+   * (ważność, PIN, cena), zapisany na serwerze przed złożeniem PDF, żeby kod od razu działał.
+   */
+  const zapewnijLink = async (): Promise<LinkDoPdf | null> => {
+    if (L && !linkWygasl(L.expiresAt)) return { id: offer.id, url: linkUrl, wazny: waznyDo(L.expiresAt), pin: !!L.pin };
+    const link = {
+      slug: newSlug(),
+      days: draft.days,
+      expires: dayPlus(draft.days),
+      expiresAt: daysFromNowIso(draft.days),
+      pin: draft.pin ? newPin() : null,
+      comments: draft.comments,
+      showPrice: draft.price,
+      channel: draft.channel,
+      views: 0,
+    };
+    const next = withEvent(
+      { ...offer, link, status: offer.status === "zaakceptowany" ? offer.status : "wyslany" },
+      "send",
+      `${L ? "Nowy link 3D do kodu QR w PDF (poprzedni wygasł)" : "Link 3D do kodu QR w PDF"} · ${draft.days === 1 ? "24 h" : `${draft.days} dni`}${link.pin ? " · PIN" : ""}`,
+    );
+    const saved = await panelApi.update(next);
+    update(offer.id, () => saved);
+    setMsgDirty(false);
+    toast("Link 3D utworzony do kodu QR", { desc: link.pin ? "Link ma PIN – wyślij go klientowi osobno." : `Ważny ${draft.days === 1 ? "24 h" : `${draft.days} dni`}.` });
+    return { id: saved.id, url: `${linkOrigin}/oferta/${link.slug}`, wazny: waznyDo(link.expiresAt), pin: !!link.pin };
+  };
+
   const revoke = () => {
     update(offer.id, (o) =>
       withEvent(
@@ -609,7 +638,7 @@ export default function PanelApp() {
         <section className="side">
           <h2>Oferta PDF</h2>
           <p className="lede">
-            Osobno od linku 3D. Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój. Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
+            Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój — z kodem QR do kuchni w 3D. Gdy oferta nie ma działającego linku, utworzy się przy pobraniu (ustawienia z „Link dla klienta”). Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
           </p>
           <OfertaPdfPrzyciski
             id={offer.id}
@@ -622,6 +651,7 @@ export default function PanelApp() {
             hardware={offer.hardware}
             palettes={palettes}
             linkUrl={linkUrl}
+            zapewnijLink={zapewnijLink}
             ujecie={ujecie}
           />
           <p className="lede">
