@@ -67,6 +67,7 @@ export function KreatorWlasciwosci({
   plan,
   element,
   cena,
+  agd = false,
   onNazwa,
   onWymiar,
   onObrot,
@@ -77,6 +78,8 @@ export function KreatorWlasciwosci({
   plan: PlanKuchni;
   element: ElementKuchni | null;
   cena: number | null;
+  /** Urządzenie AGD – nie wchodzi do ceny zabudowy. */
+  agd?: boolean;
   onNazwa: (nazwa: string) => void;
   onWymiar: (key: "w" | "h" | "d", value: number) => boolean | void;
   onObrot: () => void;
@@ -112,9 +115,9 @@ export function KreatorWlasciwosci({
         <PoleCm id="k-d" label="Głębokość" value={element.d} min={lim.d.min} max={lim.d.max} onCommit={(n) => onWymiar("d", n)} />
       </div>
       <p className="lede">
-        {element.w} × {element.d} × {element.h} cm
+        {element.w} × {element.h} × {element.d} cm <span className="faint">(szer. × wys. × gł.)</span>
         {rzad != null ? ` · rząd ${rzad} cm` : ""}
-        {cena != null ? ` · ${formatPln(cena)}` : ""}
+        {agd ? " · AGD, poza ceną" : cena != null ? ` · ${formatPln(cena)} netto` : ""}
       </p>
       <div className="actions">
         <button type="button" className="btn btn-ghost" onClick={onObrot}>

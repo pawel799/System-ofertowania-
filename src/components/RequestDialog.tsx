@@ -43,7 +43,7 @@ const COPY: Record<RequestType, { title: string; lede: string; submit: string; d
     title: "Poproś o wycenę",
     lede: "Zostaw kontakt – przygotujemy dokładną wycenę dla wybranych materiałów.",
     submit: "Wyślij prośbę o wycenę",
-    done: "Dziękujemy! Prośba o wycenę dotarła. Skontaktujemy się w ciągu jednego dnia roboczego.",
+    done: "Dziękujemy! Prośba o wycenę dotarła. Odezwiemy się, gdy tylko ją przygotujemy.",
   },
   pomiar: {
     title: "Umów pomiar",

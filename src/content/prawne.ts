@@ -87,7 +87,7 @@ export const REGULAMIN: LegalSection[] = [
       "Serwis – strona internetowa wraz ze stronami ofert i panelem.",
       "Klient – osoba, która otrzymała link do oferty lub korzysta z formularzy serwisu.",
       "Oferta – strona z projektem kuchni, wyceną i możliwością zmiany wybranych materiałów, udostępniana Klientowi pod indywidualnym linkiem.",
-      "Panel – część serwisu dla Usługodawcy, dostępna po podaniu kodu dostępu.",
+      "Panel – część serwisu dla Usługodawcy, dostępna po zalogowaniu na konto firmy.",
     ],
   },
   {

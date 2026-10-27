@@ -9,7 +9,7 @@
  *   obrót 0: front w +z, plecy przy ścianie A (z = 0),
  *   obrót 90: front w +x, plecy przy ścianie B (x = 0).
  */
-import { LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, sumaModulow, type ModulCennik, type ModulItem } from "./modul";
+import { LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, sumaModulow, type ModulCennik, type ModulItem } from "./modul";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -252,6 +252,28 @@ export function ograniczWymiar(el: Pick<ElementKuchni, "rodzaj" | "strefa" | "w"
 
 export function rodzajElementu(el: { rodzaj?: RodzajElementu }): RodzajElementu {
   return el.rodzaj ?? "szafka";
+}
+
+/** Krótka nazwa na rzucie (pełne słowo); gdy się nie mieści – skrotElementu. Pusta = szafka (pokazujemy szerokość). */
+export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
+  const NAZWY: Partial<Record<RodzajElementu, string>> = {
+    szuflady: "szuflady",
+    narozna: "narożna",
+    zlew: "pod zlew",
+    zlewozmywak: "zlew",
+    bateria: "bateria",
+    zmywarka: "zmywarka",
+    "plyta-indukcja": "indukcja",
+    "plyta-gaz": "płyta gaz.",
+    piekarnik: "piekarnik",
+    mikrofalowka: "mikrofala",
+    okap: "okap",
+    "okap-podszafkowy": "okap",
+    lodowka: "lodówka",
+    "lodowka-zabudowa": "lodówka",
+    polka: "półka",
+  };
+  return NAZWY[rodzajElementu(el)] ?? "";
 }
 
 export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
@@ -666,12 +688,35 @@ export function wstawPrzyklad(uklad: UkladKuchni): PlanKuchni {
   return doloz(plan, presetPoId("plyta-indukcja-60"), podPlyte.x, podPlyte.z, podPlyte.rot);
 }
 
-/** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. */
-export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
-  return plan.elementy.map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
+/**
+ * Urządzenia, które nie wchodzą do ceny zabudowy (strona klienta: „Bez AGD”).
+ * Zabudowy AGD – słupek z piekarnikiem, piekarnik pod blatem, zmywarka do zabudowy, zabudowa lodówki,
+ * szafka pod zlew – są meblem (korpus, front), więc liczą się jak szafka.
+ */
+export const URZADZENIA_POZA_WYCENA: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>([
+  "zlewozmywak",
+  "bateria",
+  "plyta-indukcja",
+  "plyta-gaz",
+  "mikrofalowka",
+  "okap",
+  "okap-podszafkowy",
+  "lodowka",
+]);
+
+export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
+
+/** Cena netto elementu z cennika modułów; null = urządzenie AGD poza wyceną. */
+export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number }, cennik: ModulCennik): number | null {
+  return wycenianyElement(el) ? modulCena(el, cennik) : null;
 }
 
-/** Suma netto szafek. Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
+/** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
+export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
+}
+
+/** Suma netto zabudowy (bez AGD). Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
   return Math.max(1, sumaModulow(pozycjeKuchni(plan), cennik));

@@ -13,6 +13,7 @@ import { formatPln, totalPrice } from "../pricing";
 import { MAX_MODULY, modulCena } from "@/lib/modul";
 import {
   bazaKuchni,
+  cenaElementu,
   dociagnijRzad,
   dodajElement,
   GRUPY_PRESETOW,
@@ -23,6 +24,7 @@ import {
   UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
   wystajePozaSciany,
+  wycenianyElement,
   zmienWymiar,
   type ElementKuchni,
   type Obrot,
@@ -421,7 +423,7 @@ export default function KreatorApp() {
           <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
             <div className="kr-pad">
               <h2>Katalog</h2>
-              <p className="lede">Klik dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}.</p>
+              <p className="lede">Kliknięcie dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}. Wymiary: szer. × wys. × gł.</p>
               <Seg
                 label="Ściana"
                 value={plan.uklad === "L" ? sciana : "A"}
@@ -455,8 +457,8 @@ export default function KreatorApp() {
                       <button key={p.id} type="button" className="kr-item" onClick={() => dodaj({ ...p, zrodlo: "modul" })}>
                         <b>{p.nazwa}</b>
                         <span className="mono">
-                          {p.w}×{p.h}×{p.d}
-                          {cennik ? ` · ${formatPln(modulCena(p, cennik))}` : ""}
+                          {p.w}×{p.h}×{p.d} cm
+                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennik)) : "AGD, poza ceną"}` : ""}
                         </span>
                       </button>
                     ))}
@@ -510,6 +512,7 @@ export default function KreatorApp() {
             ) : null}
             {(!waski || zakladka === "rzut") && (
               <div className="kr-plan">
+                <div className="kr-scroll">
                 <RzutKuchni
                   plan={plan}
                   zaznaczony={zaznaczony}
@@ -518,11 +521,28 @@ export default function KreatorApp() {
                   onPrzesun={(id, x, z) => zmien((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) }))}
                   onKolizja={() => toast("Elementy nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
                 />
+                </div>
                 <p className="kr-legend">
-                  <i data-zone="dolna" /> dolna <i data-zone="gorna" /> górna <i data-zone="wysoka" /> słupek <i data-zone="polka" /> półka{" "}
-                  <i data-zone="blat" /> blat <i data-zone="front" /> front
+                  <span>
+                    <i data-zone="dolna" /> szafka dolna
+                  </span>
+                  <span>
+                    <i data-zone="gorna" /> szafka górna
+                  </span>
+                  <span>
+                    <i data-zone="wysoka" /> słupek
+                  </span>
+                  <span>
+                    <i data-zone="polka" /> półka
+                  </span>
+                  <span>
+                    <i data-zone="blat" /> na blacie
+                  </span>
+                  <span>
+                    <i data-zone="front" /> strona frontu
+                  </span>
                   <button type="button" className="btn btn-ghost kr-dim-toggle" aria-pressed={wymiary} onClick={() => setWymiary((v) => !v)}>
-                    {wymiary ? "Wymiary włączone" : "Pokaż wymiary"}
+                    {wymiary ? "Ukryj wymiary" : "Pokaż wymiary"}
                   </button>
                 </p>
               </div>
@@ -547,7 +567,8 @@ export default function KreatorApp() {
               <KreatorWlasciwosci
                 plan={plan}
                 element={element}
-                cena={element ? modulCena(element, cennik) : null}
+                cena={element ? cenaElementu(element, cennik) : null}
+                agd={element ? !wycenianyElement(element) : false}
                 onNazwa={(nazwa) => {
                   if (!element) return;
                   setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
@@ -667,24 +688,24 @@ export default function KreatorApp() {
               </div>
               <div className="field">
                 <span className="lab">Blat</span>
-                <Seg label="Blat" value={countertop} onChange={setCountertopId} options={COUNTERTOPS.map((c) => ({ value: c.id, label: c.name }))} />
+                <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={COUNTERTOPS} />
               </div>
               <div className="field">
                 <span className="lab">Okucia</span>
-                <Seg label="Okucia" value={hardware} onChange={setHardwareId} options={HARDWARE.map((h) => ({ value: h.id, label: h.name }))} />
+                <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={HARDWARE} />
               </div>
 
               <div className="kr-sum">
                 <p>
-                  Pozycje netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
+                  Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
                 </p>
                 <p>
-                  Z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
+                  Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
                 </p>
                 <p className="lede">
                   {cennikBlad
-                    ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Zapis na serwerze i tak policzy cenę sam."
-                    : "Cenę pozycji liczy serwer z cennika modułów. Tu jest ten sam wzór, żeby było widać sumę przed zapisem."}
+                    ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika."
+                    : "Szafki z Twojego cennika modułów (Ustawienia → Cennik modułów). Urządzenia AGD nie są wliczane."}
                 </p>
               </div>
 
@@ -735,6 +756,30 @@ export default function KreatorApp() {
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
       <Tooltips />
       <Toaster />
+    </div>
+  );
+}
+
+/** Blat i okucia: wszystkie opcje widoczne naraz (zawijane), z dopłatą jak na stronie klienta. */
+function Wybor({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (id: string) => void;
+  options: readonly { id: string; name: string; delta: number }[];
+}) {
+  return (
+    <div className="kr-choice" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} type="button" role="radio" className="btn btn-ghost" aria-checked={value === o.id} onClick={() => onChange(o.id)}>
+          {o.name}
+          {o.delta ? <i>{`${o.delta > 0 ? "+" : ""}${formatPln(o.delta)}`}</i> : null}
+        </button>
+      ))}
     </div>
   );
 }

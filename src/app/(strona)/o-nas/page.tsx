@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "O nas · System ofertowania" };
 const POINTS = [
   { title: "Oferta w 3D", text: "Klient widzi swoją kuchnię w trójwymiarze, a nie tylko listę pozycji i rzut z góry." },
   { title: "Link dla klienta", text: "Oferta otwiera się w przeglądarce na telefonie i komputerze – bez załączników i instalowania programów." },
-  { title: "Uwagi i decyzja online", text: "Klient sam zmienia fronty, blat i uchwyty, widzi cenę i zostawia uwagi przy ofercie." },
+  { title: "Uwagi i zgłoszenia online", text: "Klient sam zmienia fronty, blat i uchwyty, widzi cenę, zostawia uwagi i prosi o wycenę albo pomiar." },
 ];
 
 export default function ONasPage() {

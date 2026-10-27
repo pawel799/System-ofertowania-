@@ -40,6 +40,8 @@ export type PlanInfo = {
   from?: boolean;
   /** Jednorazowa opłata, np. wdrożenie. */
   setup?: string;
+  /** Plan z ceną „od”: jak ustalamy kwotę (cennik, strona główna). */
+  quote?: string;
   limits: PlanLimits;
   /** Punkty na cenniku – tylko to, co system naprawdę robi. */
   features: string[];
@@ -57,8 +59,10 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       "1 konto",
       "Do 20 ofert w toku",
       "Do 20 własnych modeli 3D",
-      "Link z PIN-em i datą ważności",
+      "Kreator kuchni z gotowych szafek i AGD",
+      "Link 3D z PIN-em i datą ważności, oferta PDF",
       "Uwagi klienta, historia otwarć i zgłoszenia",
+      "Dane klienta firmowego po NIP-ie",
       "Nazwa i logo stolarni w ofercie",
     ],
   },
@@ -75,7 +79,6 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       "Do 200 własnych modeli 3D",
       "Własne pakiety kolorów RAL",
       "Kuchnia 3D na Twojej stronie (kod osadzenia)",
-      "Dane klienta firmowego po NIP-ie",
       "Wszystko z planu Start",
     ],
   },
@@ -87,6 +90,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     yearly: null,
     from: true,
     setup: "wdrożenie od 2 000 zł",
+    quote: "dokładną kwotę podajemy po rozmowie",
     limits: { users: null, activeOffers: null, models: null, palettes: true, domain: true, embed: true },
     features: [
       "Bez limitu kont, ofert i modeli",
@@ -103,8 +107,12 @@ export const PLAN_NAMES: Record<PlanId, string> = {
   producent: PLANS.producent.name,
 };
 
-/** Usługa poza abonamentem (cennik). */
-export const MODEL_SERVICE = "Przygotowanie modelu przez nas: 150–400 zł za model.";
+/** Usługa poza abonamentem (cennik, FAQ). */
+export const MODEL_SERVICE_PRICE = "150–400 zł netto za model";
+export const MODEL_SERVICE = `Przygotowanie modelu 3D przez nas: ${MODEL_SERVICE_PRICE}.`;
+
+/** Co obejmuje cena, którą widzi klient (strona oferty, mail, FAQ). */
+export const CENA_ZAKRES = "Bez AGD i montażu – montaż wyceniamy po pomiarze.";
 
 /** 1490 -> "1 490 zł" (twarda spacja; toLocaleString w pl nie grupuje liczb czterocyfrowych). */
 export const formatZl = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0")}\u00a0zł`;

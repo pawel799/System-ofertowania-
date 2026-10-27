@@ -10,6 +10,7 @@ import { HARDWARE, setHardware, useHardware } from "./hardwareStore";
 import { usePalettes } from "./paletteStore";
 import { findRalFront, paletteFronts } from "./palettes";
 import { formatPln, totalPrice } from "./pricing";
+import { CENA_ZAKRES } from "@/lib/plans";
 import RequestDialog, { openRequest } from "./RequestDialog";
 
 type Option = { id: string; name: string; delta: number };
@@ -195,7 +196,7 @@ export default function MaterialsPanel({
               {showPrice ? formatPln(total) : "Po pomiarze"}
             </p>
             <p className="text-[11px] text-stone-500">
-              Bez AGD. Montaż w wycenie po pomiarze.
+              {CENA_ZAKRES}
             </p>
           </div>
           <button

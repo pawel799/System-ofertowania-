@@ -7,6 +7,8 @@
  * Puste `src`/`video` = szare pole z opisem, co ma się tam znaleźć.
  */
 
+import { CENA_ZAKRES, formatZl, MODEL_SERVICE_PRICE, PLANS, TRIAL_DAYS } from "@/lib/plans";
+
 export type Media = {
   /** Obraz, np. "/strona/panel.webp". */
   src?: string;
@@ -51,7 +53,7 @@ export const HOME = {
     items: [
       {
         title: "Wpisz klienta i wybierz kuchnię",
-        text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Wybierasz model, cenę bazową i decydujesz, czy klient ma widzieć cenę.",
+        text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Kuchnię składasz w kreatorze z gotowych szafek albo wybierasz własny model 3D. Cena liczy się z Twojego cennika, a Ty decydujesz, czy klient ma ją widzieć.",
         media: { src: "/strona/krok-1-nowa-oferta.webp", alt: "Panel: nowa oferta, dane firmy uzupełnione po NIP-ie" } as Media,
       },
       {
@@ -103,12 +105,12 @@ export const HOME = {
         text: "Panel pokazuje każde otwarcie linku, więc dzwonisz wtedy, gdy klient ma ofertę przed oczami.",
       },
       {
-        title: "Dane firmy po NIP-ie",
-        text: "Przy klientach firmowych wpisujesz NIP, a nazwa i adres pobierają się z białej listy VAT i KRS.",
+        title: "Kreator kuchni i oferta PDF",
+        text: "Składasz zabudowę z gotowych szafek i AGD, a cena liczy się z Twojego cennika. Klient dostaje link 3D i osobno ofertę PDF z pozycjami.",
       },
       {
-        title: "Gotowa wiadomość do klienta",
-        text: "System przygotowuje maila z linkiem i krótkim podsumowaniem oferty. Wystarczy go wysłać.",
+        title: "Kuchnia 3D na Twojej stronie",
+        text: "Wklejasz kod na swoją stronę: klient obraca kuchnię, zmienia materiały i prosi o wycenę. W planach Pracownia i Producent.",
       },
     ],
   },
@@ -137,7 +139,7 @@ export const HOME = {
     id: "cennik",
     eyebrow: "Cennik",
     title: "Plan dopasowany do wielkości firmy",
-    text: "Od 149 zł netto miesięcznie za jedną stolarnię. Pierwsze 30 dni za darmo, bez podawania karty.",
+    text: `Od ${formatZl(PLANS.start.monthly)} netto miesięcznie za jedną stolarnię. Pierwsze ${TRIAL_DAYS} dni za darmo, bez podawania karty.`,
     cta: { href: "/cennik", label: "Zobacz cennik" } satisfies Link,
   },
 
@@ -156,15 +158,19 @@ export const HOME = {
       },
       {
         q: "Skąd biorą się modele 3D kuchni?",
-        a: "Modele i materiały przygotowujemy razem z Tobą na podstawie Twojej oferty. Szczegóły ustalamy przy wdrożeniu.",
+        a: `Kuchnię składasz w kreatorze z gotowych szafek i AGD, więc własne modele nie są potrzebne. Możesz też wgrać własny model 3D (GLB). Jeśli wolisz, przygotujemy go za Ciebie: ${MODEL_SERVICE_PRICE}. W planie Producent pomagamy przy modelach w ramach wdrożenia.`,
       },
       {
         q: "Czy mogę ukryć cenę przed klientem?",
-        a: "Tak. Cenę włączasz albo wyłączasz osobno dla każdej oferty.",
+        a: "Tak. Cenę włączasz albo wyłączasz osobno dla każdej oferty. Bez ceny klient widzi „Po pomiarze” i może poprosić o wycenę.",
+      },
+      {
+        q: "Co obejmuje cena, którą widzi klient?",
+        a: `Szafki z Twojego cennika i dopłaty za wybrane materiały, netto. ${CENA_ZAKRES}`,
       },
       {
         q: "Jak wchodzi się do panelu?",
-        a: "Firma dostaje kod dostępu do panelu. Wpisujesz go raz w przeglądarce i od razu widzisz swoje oferty.",
+        a: "Zakładasz konto firmy na stronie (e-mail i hasło) i logujesz się w przeglądarce. Właściciel konta dodaje pracowników w Ustawieniach → Zespół.",
       },
       {
         q: "Co z danymi moich klientów?",
@@ -175,8 +181,8 @@ export const HOME = {
 
   finalCta: {
     title: "Daj klientom ofertę w 3D zamiast PDF-a",
-    text: "Umów się na prezentację – pokażemy system na przykładzie Twojej oferty i Twoich mebli.",
-    primary: { href: "/kontakt", label: "Umów prezentację" } satisfies Link,
-    secondary: { href: "/oferta/demo", label: "Zobacz przykładową ofertę" } satisfies Link,
+    text: `Załóż konto i sprawdź system przez ${TRIAL_DAYS} dni za darmo albo umów prezentację – pokażemy go na przykładzie Twojej oferty i Twoich mebli.`,
+    primary: { href: "/rejestracja", label: `Wypróbuj ${TRIAL_DAYS} dni za darmo` } satisfies Link,
+    secondary: { href: "/kontakt", label: "Umów prezentację" } satisfies Link,
   },
 };

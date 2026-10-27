@@ -5,8 +5,8 @@
  */
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../catalog";
 import { findRalFront, type Palette } from "../palettes";
-import { bazaKuchni, pozycjeKuchni, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
-import { modulCena, type ModulCennik } from "@/lib/modul";
+import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
+import type { ModulCennik } from "@/lib/modul";
 
 export type PdfDane = {
   id: string;
@@ -19,7 +19,8 @@ export type PdfDane = {
   frontNazwa: string;
   blatNazwa: string;
   okuciaNazwa: string;
-  pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number }[];
+  /** cena null = urządzenie AGD, nie wchodzi do sumy. */
+  pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number | null }[];
   sumaPozycji: number;
   dopFront: number;
   dopBlat: number;
@@ -61,13 +62,13 @@ export function danePdf(args: {
   const frontSw = FRONTS.find((f) => f.id === args.front) ?? findRalFront(args.palettes, args.front);
   const blat = COUNTERTOPS.find((c) => c.id === args.countertop);
   const okucia = HARDWARE.find((h) => h.id === args.hardware);
-  const pozycje = pozycjeKuchni(args.plan).map((m, i) => ({
-    nazwa: m.nazwa,
-    strefa: `${STREFA_LABEL[args.plan.elementy[i].strefa]}${rodzajElementu(args.plan.elementy[i]) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(args.plan.elementy[i])]}`}`,
-    w: m.w,
-    h: m.h,
-    d: m.d,
-    cena: modulCena(m, args.cennik),
+  const pozycje = args.plan.elementy.map((e) => ({
+    nazwa: e.nazwa,
+    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}`,
+    w: e.w,
+    h: e.h,
+    d: e.d,
+    cena: cenaElementu(e, args.cennik),
   }));
   const sumaPozycji = bazaKuchni(args.plan, args.cennik);
   const dopFront = frontSw?.delta ?? 0;
@@ -113,7 +114,7 @@ export function pdfHtml(d: PdfDane) {
   const wiersze = d.pozycje
     .map(
       (p, i) =>
-        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${esc(pln(p.cena))}</td></tr>`,
+        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${p.cena === null ? '<span class="muted">AGD, poza ceną</span>' : esc(pln(p.cena))}</td></tr>`,
     )
     .join("");
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
@@ -175,7 +176,7 @@ ${zdjecie}
     <tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>
   </tbody>
 </table>
-<p class="note">Kwoty netto, bez podatku VAT. Cena szafek wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów. Dopłaty za front, blat i okucia są takie jak na stronie podglądu 3D.</p>
+<p class="note">Kwoty netto, bez podatku VAT. Cena szafek wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów. Urządzenia AGD (płyty, okapy, zlewozmywak, bateria, lodówka i mikrofalówka) nie są wliczone. Dopłaty za front, blat i okucia są takie jak na stronie podglądu 3D.</p>
 ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
 ${link}
 <footer>
@@ -189,7 +190,7 @@ ${link}
 /** Treść maila z ofertą PDF — osobna od maila z linkiem 3D. */
 export function pdfTekst(d: PdfDane) {
   const linie = d.pozycje.map(
-    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${pln(p.cena).replace("\u00a0", " ")}`,
+    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${p.cena === null ? "AGD, poza ceną" : pln(p.cena).replaceAll("\u00a0", " ")}`,
   );
   const plnSp = (n: number) => pln(n).replaceAll("\u00a0", " ");
   return [
@@ -211,7 +212,7 @@ export function pdfTekst(d: PdfDane) {
     "Plik PDF (układ do druku) zapiszesz przyciskiem „Pobierz PDF” w panelu: w oknie drukowania wybierz „Zapisz jako PDF” i dołącz go do tej wiadomości.",
     "Podgląd interaktywny 3D wysyłamy osobno.",
     "",
-    "Kwoty netto. To oferta handlowa, bez rozkroju płyt.",
+    "Kwoty netto, bez urządzeń AGD. To oferta handlowa, bez rozkroju płyt.",
     "Pozdrawiamy",
     d.firma,
   ].join("\n");

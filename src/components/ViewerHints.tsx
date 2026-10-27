@@ -23,7 +23,7 @@ export function DragHint() {
   return (
     <div
       aria-hidden
-      className={`pointer-events-none absolute left-1/2 top-[22%] z-[5] -translate-x-1/2 rounded-full bg-black/55 px-4 py-2 text-xs text-stone-100 transition-opacity duration-300 md:top-1/2 ${
+      className={`pointer-events-none absolute left-1/2 top-[22%] z-[5] -translate-x-1/2 rounded-full bg-black/55 px-4 py-2 text-xs text-stone-100 transition-opacity duration-300 md:top-[60%] ${
         show ? "opacity-100" : "opacity-0"
       }`}
     >

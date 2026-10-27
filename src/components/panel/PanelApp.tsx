@@ -4,7 +4,7 @@ import { ModulySection } from "./ModulySection";
 import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, UKLAD_KUCHNI_LABEL } from "@/lib/kuchnia";
+import { bazaKuchni, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
 import { modulCena } from "@/lib/modul";
 import dynamic from "next/dynamic";
 import {
@@ -992,7 +992,7 @@ export default function PanelApp() {
                     <span className="mono">
                       {e.w}×{e.h}×{e.d} cm
                     </span>
-                    <span>{cennikGotowy ? formatPln(modulCena(e, cennik)) : "…"}</span>
+                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(modulCena(e, cennik)) : "AGD, poza ceną"}</span>
                   </li>
                 ))}
               </ul>
