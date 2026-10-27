@@ -10,9 +10,11 @@ import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { paletteFronts, type Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
-import { MAX_MODULY, modulCena } from "@/lib/modul";
+import { GRUPY_BIBLIOTEKI, podzielModele } from "@/lib/bibliotekaModeli";
+import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
 import {
   bazaKuchni,
+  cenaElementu,
   dociagnijRzad,
   dodajElement,
   GRUPY_PRESETOW,
@@ -20,9 +22,11 @@ import {
   parseKuchnia,
   PRESETY,
   pustyPlan,
+  type NowyElement,
   UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
   wystajePozaSciany,
+  wycenianyElement,
   zmienWymiar,
   type ElementKuchni,
   type Obrot,
@@ -421,7 +425,7 @@ export default function KreatorApp() {
           <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
             <div className="kr-pad">
               <h2>Katalog</h2>
-              <p className="lede">Klik dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}.</p>
+              <p className="lede">Kliknięcie dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}. Wymiary: szer. × wys. × gł.</p>
               <Seg
                 label="Ściana"
                 value={plan.uklad === "L" ? sciana : "A"}
@@ -455,45 +459,15 @@ export default function KreatorApp() {
                       <button key={p.id} type="button" className="kr-item" onClick={() => dodaj({ ...p, zrodlo: "modul" })}>
                         <b>{p.nazwa}</b>
                         <span className="mono">
-                          {p.w}×{p.h}×{p.d}
-                          {cennik ? ` · ${formatPln(modulCena(p, cennik))}` : ""}
+                          {p.w}×{p.h}×{p.d} cm
+                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennik)) : "AGD, poza ceną"}` : ""}
                         </span>
                       </button>
                     ))}
                   </div>
                 );
               })}
-              <div className="kr-group">
-                <h3>Modele firmy</h3>
-                {models.length ? (
-                  models.map((m) => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      className="kr-item"
-                      onClick={() =>
-                        dodaj({
-                          nazwa: m.name.slice(0, 80) || "Model",
-                          strefa: "dolna",
-                          w: 60,
-                          h: 72,
-                          d: 56,
-                          zrodlo: "model",
-                          modelId: m.id,
-                        })
-                      }
-                    >
-                      <b>{m.name}</b>
-                      <span className="mono">GLB · 60×72×56, skalowane</span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="lede">
-                    Brak wgranych modeli. Szafki powyżej wystarczą do oferty. Własne GLB dodasz w{" "}
-                    <a href="/panel/ustawienia?tab=models">Ustawieniach → Modele 3D</a>.
-                  </p>
-                )}
-              </div>
+              <BibliotekaModeli models={models} fraza={szukaj.trim().toLowerCase()} cennik={cennik} onDodaj={dodaj} />
             </div>
           </aside>
 
@@ -510,6 +484,7 @@ export default function KreatorApp() {
             ) : null}
             {(!waski || zakladka === "rzut") && (
               <div className="kr-plan">
+                <div className="kr-scroll">
                 <RzutKuchni
                   plan={plan}
                   zaznaczony={zaznaczony}
@@ -518,11 +493,28 @@ export default function KreatorApp() {
                   onPrzesun={(id, x, z) => zmien((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) }))}
                   onKolizja={() => toast("Elementy nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
                 />
+                </div>
                 <p className="kr-legend">
-                  <i data-zone="dolna" /> dolna <i data-zone="gorna" /> górna <i data-zone="wysoka" /> słupek <i data-zone="polka" /> półka{" "}
-                  <i data-zone="blat" /> blat <i data-zone="front" /> front
+                  <span>
+                    <i data-zone="dolna" /> szafka dolna
+                  </span>
+                  <span>
+                    <i data-zone="gorna" /> szafka górna
+                  </span>
+                  <span>
+                    <i data-zone="wysoka" /> słupek
+                  </span>
+                  <span>
+                    <i data-zone="polka" /> półka
+                  </span>
+                  <span>
+                    <i data-zone="blat" /> na blacie
+                  </span>
+                  <span>
+                    <i data-zone="front" /> strona frontu
+                  </span>
                   <button type="button" className="btn btn-ghost kr-dim-toggle" aria-pressed={wymiary} onClick={() => setWymiary((v) => !v)}>
-                    {wymiary ? "Wymiary włączone" : "Pokaż wymiary"}
+                    {wymiary ? "Ukryj wymiary" : "Pokaż wymiary"}
                   </button>
                 </p>
               </div>
@@ -547,7 +539,8 @@ export default function KreatorApp() {
               <KreatorWlasciwosci
                 plan={plan}
                 element={element}
-                cena={element ? modulCena(element, cennik) : null}
+                cena={element ? cenaElementu(element, cennik) : null}
+                agd={element ? !wycenianyElement(element) : false}
                 onNazwa={(nazwa) => {
                   if (!element) return;
                   setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
@@ -667,24 +660,24 @@ export default function KreatorApp() {
               </div>
               <div className="field">
                 <span className="lab">Blat</span>
-                <Seg label="Blat" value={countertop} onChange={setCountertopId} options={COUNTERTOPS.map((c) => ({ value: c.id, label: c.name }))} />
+                <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={COUNTERTOPS} />
               </div>
               <div className="field">
                 <span className="lab">Okucia</span>
-                <Seg label="Okucia" value={hardware} onChange={setHardwareId} options={HARDWARE.map((h) => ({ value: h.id, label: h.name }))} />
+                <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={HARDWARE} />
               </div>
 
               <div className="kr-sum">
                 <p>
-                  Pozycje netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
+                  Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
                 </p>
                 <p>
-                  Z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
+                  Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
                 </p>
                 <p className="lede">
                   {cennikBlad
-                    ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Zapis na serwerze i tak policzy cenę sam."
-                    : "Cenę pozycji liczy serwer z cennika modułów. Tu jest ten sam wzór, żeby było widać sumę przed zapisem."}
+                    ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika."
+                    : "Szafki z Twojego cennika modułów (Ustawienia → Cennik modułów). Urządzenia AGD nie są wliczane."}
                 </p>
               </div>
 
@@ -735,6 +728,132 @@ export default function KreatorApp() {
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
       <Tooltips />
       <Toaster />
+    </div>
+  );
+}
+
+function BibliotekaModeli({
+  models,
+  fraza,
+  cennik,
+  onDodaj,
+}: {
+  models: ModelMeta[];
+  fraza: string;
+  cennik: ModulCennik | null;
+  onDodaj: (el: NowyElement) => void;
+}) {
+  const { moduly, wlasne, kuchnie } = podzielModele(models);
+  const pasuje = (nazwa: string) => nazwa.toLowerCase().includes(fraza);
+  const wlasneWidoczne = wlasne.filter((m) => pasuje(m.name));
+  return (
+    <>
+      {GRUPY_BIBLIOTEKI.map((g) => {
+        const lista = moduly.filter((x) => x.wpis.grupa === g.id && x.wpis.strefa && x.wpis.rodzaj && pasuje(x.wpis.nazwa));
+        if (!lista.length) return null;
+        return (
+          <div key={g.id} className="kr-group">
+            <h3>{g.label}</h3>
+            {lista.map(({ model, wpis }) => {
+              const strefa = wpis.strefa;
+              const rodzaj = wpis.rodzaj;
+              if (!strefa || !rodzaj) return null;
+              const poza = !wycenianyElement({ rodzaj });
+              return (
+                <button
+                  key={model.id}
+                  type="button"
+                  className="kr-item"
+                  onClick={() =>
+                    onDodaj({
+                      nazwa: wpis.nazwa,
+                      strefa,
+                      rodzaj,
+                      w: wpis.w,
+                      h: wpis.h,
+                      d: wpis.d,
+                      zrodlo: "model",
+                      modelId: model.id,
+                    })
+                  }
+                >
+                  <b>{wpis.nazwa}</b>
+                  <span className="mono">
+                    {wpis.w}×{wpis.h}×{wpis.d} cm
+                    {cennik ? ` · ${poza ? "AGD, poza ceną" : formatPln(modulCena(wpis, cennik))}` : ""}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
+      {wlasneWidoczne.length || !fraza ? (
+      <div className="kr-group">
+        <h3>Modele firmy</h3>
+        {wlasneWidoczne.length ? (
+          wlasneWidoczne.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              className="kr-item"
+              onClick={() =>
+                onDodaj({
+                  nazwa: m.name.slice(0, 80) || "Model",
+                  strefa: "dolna",
+                  w: 60,
+                  h: 72,
+                  d: 56,
+                  zrodlo: "model",
+                  modelId: m.id,
+                })
+              }
+            >
+              <b>{m.name}</b>
+              <span className="mono">GLB · 60×72×56, skalowane</span>
+            </button>
+          ))
+        ) : !fraza ? (
+          <p className="lede">
+            {moduly.length
+              ? "Własne GLB, spoza biblioteki 50 modeli, pojawią się tutaj."
+              : "Biblioteka 46 modułów pojawi się po wgraniu (seed/modele-kuchnia-50). Własny GLB dodasz w "}
+            {moduly.length ? null : <a href="/panel/ustawienia?tab=models">Ustawieniach → Modele 3D</a>}
+            {moduly.length ? null : "."}
+          </p>
+        ) : null}
+        {!fraza && kuchnie.length ? (
+          <p className="lede">
+            Gotowe kuchnie ({kuchnie.map((k) => k.wpis.nazwa.replace(" (komplet)", "")).join(", ")}) wybierzesz jako model całej oferty, nie jako
+            szafkę.
+          </p>
+        ) : null}
+      </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Blat i okucia: wszystkie opcje widoczne naraz (zawijane), z dopłatą jak na stronie klienta. */
+function Wybor({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (id: string) => void;
+  options: readonly { id: string; name: string; delta: number }[];
+}) {
+  return (
+    <div className="kr-choice" role="radiogroup" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} type="button" role="radio" className="btn btn-ghost" aria-checked={value === o.id} onClick={() => onChange(o.id)}>
+          {o.name}
+          {o.delta ? <i>{`${o.delta > 0 ? "+" : ""}${formatPln(o.delta)}`}</i> : null}
+        </button>
+      ))}
     </div>
   );
 }

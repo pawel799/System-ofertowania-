@@ -4,7 +4,7 @@ import { ModulySection } from "./ModulySection";
 import { OfertaPdfPrzyciski } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, UKLAD_KUCHNI_LABEL } from "@/lib/kuchnia";
+import { bazaKuchni, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
 import { modulCena } from "@/lib/modul";
 import dynamic from "next/dynamic";
 import {
@@ -49,7 +49,9 @@ import {
   type Status,
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
+import { pokazWyborModelu } from "@/lib/bibliotekaModeli";
 import { assetsApi, offerKey, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
+import WyborModeluOferty from "./WyborModeluOferty";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import {
@@ -881,25 +883,19 @@ export default function PanelApp() {
           ) : null}
 
           <div className="mats">
-            {offer.kuchnia ? null : models.length || offer.modelId ? (
+            {offer.kuchnia ? null : pokazWyborModelu(models, offer.modelId ?? "") ? (
               <div>
                 <label className="mat-label" htmlFor="o-model">
                   Model 3D
                 </label>
-                <select
+                <WyborModeluOferty
                   id="o-model"
                   className="input model-select"
+                  models={models}
                   value={offer.modelId ?? ""}
-                  onChange={(e) => setModel(e.target.value)}
-                >
-                  <option value="">Kuchnia demo</option>
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                  {offer.modelId && !offerModel ? <option value={offer.modelId}>Model niedostępny</option> : null}
-                </select>
+                  onChange={setModel}
+                />
+                <p className="lede">Gotowe kuchnie zastępują kuchnię demo. Szafki z biblioteki wstawisz w kreatorze.</p>
               </div>
             ) : null}
             <div>
@@ -992,7 +988,7 @@ export default function PanelApp() {
                     <span className="mono">
                       {e.w}×{e.h}×{e.d} cm
                     </span>
-                    <span>{cennikGotowy ? formatPln(modulCena(e, cennik)) : "…"}</span>
+                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(modulCena(e, cennik)) : "AGD, poza ceną"}</span>
                   </li>
                 ))}
               </ul>
@@ -1494,17 +1490,11 @@ function NewOfferDialog({
               Zabudowę z gotowych szafek, bez modelu z PRO100, złożysz w <a href="/panel/kreator">kreatorze kuchni</a>.
             </p>
           </div>
-          {models.length ? (
+          {pokazWyborModelu(models, form.modelId) ? (
             <div className="field">
               <label htmlFor="n-model">Model 3D</label>
-              <select id="n-model" className="input" value={form.modelId} onChange={(e) => set("modelId")(e.target.value)}>
-                <option value="">Kuchnia demo</option>
-                {models.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+              <WyborModeluOferty id="n-model" models={models} value={form.modelId} onChange={set("modelId")} />
+              <p className="lede">Gotowe kuchnie (prosta, L, z wyspą, aneks) albo własny GLB. Moduły szafek są w kreatorze.</p>
             </div>
           ) : null}
           <div className="field">

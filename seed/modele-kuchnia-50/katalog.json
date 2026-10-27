@@ -1,0 +1,881 @@
+{
+  "wersja": 1,
+  "jednostki": "metry w pliku, cm w katalogu",
+  "modele": [
+    {
+      "nr": 1,
+      "id": "szafka_dolna_30",
+      "plik": "modele/01_szafka_dolna_30.glb",
+      "nazwa": "Szafka dolna 30 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 30.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 2,
+      "id": "szafka_dolna_40",
+      "plik": "modele/02_szafka_dolna_40.glb",
+      "nazwa": "Szafka dolna 40 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 40.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 3,
+      "id": "szafka_dolna_45",
+      "plik": "modele/03_szafka_dolna_45.glb",
+      "nazwa": "Szafka dolna 45 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 45.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 4,
+      "id": "szafka_dolna_60",
+      "plik": "modele/04_szafka_dolna_60.glb",
+      "nazwa": "Szafka dolna 60 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 5,
+      "id": "szafka_dolna_80",
+      "plik": "modele/05_szafka_dolna_80.glb",
+      "nazwa": "Szafka dolna 80 cm, 2 drzwi",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 26.5,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 308,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 6,
+      "id": "szafka_dolna_90",
+      "plik": "modele/06_szafka_dolna_90.glb",
+      "nazwa": "Szafka dolna 90 cm, 2 drzwi",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 26.5,
+      "szerokosc_cm": 90.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 308,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 7,
+      "id": "szafka_szuflady_40",
+      "plik": "modele/07_szafka_szuflady_40.glb",
+      "nazwa": "Szafka 40 cm, 3 szuflady",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 34.3,
+      "szerokosc_cm": 40.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 408,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 8,
+      "id": "szafka_szuflady_60",
+      "plik": "modele/08_szafka_szuflady_60.glb",
+      "nazwa": "Szafka 60 cm, 3 szuflady",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 34.3,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 408,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 9,
+      "id": "szafka_szuflady_80",
+      "plik": "modele/09_szafka_szuflady_80.glb",
+      "nazwa": "Szafka 80 cm, 2 szuflady",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 25.7,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 10,
+      "id": "szafka_zlewowa_80",
+      "plik": "modele/10_szafka_zlewowa_80.glb",
+      "nazwa": "Szafka zlewowa 80 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 26.5,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 308,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 11,
+      "id": "szafka_cargo_20",
+      "plik": "modele/11_szafka_cargo_20.glb",
+      "nazwa": "Cargo 20 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 17.1,
+      "szerokosc_cm": 20.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 184,
+      "tags": {
+        "Front_szuflada": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 12,
+      "id": "szafka_narozna_90",
+      "plik": "modele/12_szafka_narozna_90.glb",
+      "nazwa": "Szafka narożna 90×90 cm",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 25.7,
+      "szerokosc_cm": 90.0,
+      "glebokosc_cm": 90.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 300,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 13,
+      "id": "szafka_piekarnik_60",
+      "plik": "modele/13_szafka_piekarnik_60.glb",
+      "nazwa": "Szafka pod piekarnik 60 cm (z piekarnikiem)",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 40.0,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 62.4,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 496,
+      "tags": {
+        "Front_szuflada": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 14,
+      "id": "zmywarka_zabudowa_60",
+      "plik": "modele/14_zmywarka_zabudowa_60.glb",
+      "nazwa": "Zmywarka w zabudowie 60 cm (z frontem)",
+      "kategoria": "Szafki dolne",
+      "rozmiar_kb": 13.7,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 81.7,
+      "trojkaty": 136,
+      "tags": {
+        "Front_zmywarka": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 15,
+      "id": "szafka_gorna_30",
+      "plik": "modele/15_szafka_gorna_30.glb",
+      "nazwa": "Szafka górna 30 cm",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 16.2,
+      "szerokosc_cm": 30.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 184,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 16,
+      "id": "szafka_gorna_40",
+      "plik": "modele/16_szafka_gorna_40.glb",
+      "nazwa": "Szafka górna 40 cm",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 16.2,
+      "szerokosc_cm": 40.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 184,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 17,
+      "id": "szafka_gorna_60",
+      "plik": "modele/17_szafka_gorna_60.glb",
+      "nazwa": "Szafka górna 60 cm",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 16.2,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 184,
+      "tags": {
+        "Front_drzwi": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 18,
+      "id": "szafka_gorna_80",
+      "plik": "modele/18_szafka_gorna_80.glb",
+      "nazwa": "Szafka górna 80 cm, 2 drzwi",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 24.8,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 19,
+      "id": "szafka_gorna_klapa_60",
+      "plik": "modele/19_szafka_gorna_klapa_60.glb",
+      "nazwa": "Szafka górna 60 cm z klapą",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 16.2,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 184,
+      "tags": {
+        "Front_klapa": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 20,
+      "id": "witryna_80",
+      "plik": "modele/20_witryna_80.glb",
+      "nazwa": "Witryna 80 cm (szkło)",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 28.0,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 328,
+      "tags": {
+        "Front_witryna_1": "front",
+        "Front_witryna_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 21,
+      "id": "szafka_gorna_narozna_60",
+      "plik": "modele/21_szafka_gorna_narozna_60.glb",
+      "nazwa": "Szafka górna narożna 60×60 cm",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 23.2,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 72.0,
+      "trojkaty": 276,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 22,
+      "id": "szafka_nad_okap_60",
+      "plik": "modele/22_szafka_nad_okap_60.glb",
+      "nazwa": "Szafka nad okap 60 cm (36 cm)",
+      "kategoria": "Szafki górne",
+      "rozmiar_kb": 15.4,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 38.0,
+      "wysokosc_cm": 36.0,
+      "trojkaty": 172,
+      "tags": {
+        "Front_klapa": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 23,
+      "id": "slupek_piekarnik_mikrofala_60",
+      "plik": "modele/23_slupek_piekarnik_mikrofala_60.glb",
+      "nazwa": "Słupek 60 cm: piekarnik + mikrofala",
+      "kategoria": "Słupki",
+      "rozmiar_kb": 65.1,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 62.4,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 816,
+      "tags": {
+        "Front_drzwi_4": "front",
+        "Front_szuflada_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 24,
+      "id": "slupek_lodowka_60",
+      "plik": "modele/24_slupek_lodowka_60.glb",
+      "nazwa": "Słupek 60 cm pod lodówkę w zabudowie",
+      "kategoria": "Słupki",
+      "rozmiar_kb": 27.7,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 320,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 25,
+      "id": "slupek_cargo_30",
+      "plik": "modele/25_slupek_cargo_30.glb",
+      "nazwa": "Słupek cargo 30 cm",
+      "kategoria": "Słupki",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 30.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 26,
+      "id": "slupek_spizarnia_60",
+      "plik": "modele/26_slupek_spizarnia_60.glb",
+      "nazwa": "Słupek spiżarnia 60 cm",
+      "kategoria": "Słupki",
+      "rozmiar_kb": 27.7,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 61.0,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 320,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 27,
+      "id": "blat_60",
+      "plik": "modele/27_blat_60.glb",
+      "nazwa": "Blat 60 cm",
+      "kategoria": "Blaty",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 44,
+      "tags": {
+        "Blat": "blat"
+      }
+    },
+    {
+      "nr": 28,
+      "id": "blat_120",
+      "plik": "modele/28_blat_120.glb",
+      "nazwa": "Blat 120 cm",
+      "kategoria": "Blaty",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 120.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 44,
+      "tags": {
+        "Blat": "blat"
+      }
+    },
+    {
+      "nr": 29,
+      "id": "blat_180",
+      "plik": "modele/29_blat_180.glb",
+      "nazwa": "Blat 180 cm",
+      "kategoria": "Blaty",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 180.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 44,
+      "tags": {
+        "Blat": "blat"
+      }
+    },
+    {
+      "nr": 30,
+      "id": "blat_240",
+      "plik": "modele/30_blat_240.glb",
+      "nazwa": "Blat 240 cm",
+      "kategoria": "Blaty",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 240.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 44,
+      "tags": {
+        "Blat": "blat"
+      }
+    },
+    {
+      "nr": 31,
+      "id": "blat_wyspa_200",
+      "plik": "modele/31_blat_wyspa_200.glb",
+      "nazwa": "Blat wyspy 200×100 cm",
+      "kategoria": "Blaty",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 100.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 44,
+      "tags": {
+        "Blat": "blat"
+      }
+    },
+    {
+      "nr": 32,
+      "id": "lodowka_wolnostojaca",
+      "plik": "modele/32_lodowka_wolnostojaca.glb",
+      "nazwa": "Lodówka wolnostojąca 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 24.3,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 69.0,
+      "wysokosc_cm": 185.0,
+      "trojkaty": 280,
+      "tags": {}
+    },
+    {
+      "nr": 33,
+      "id": "piekarnik_60",
+      "plik": "modele/33_piekarnik_60.glb",
+      "nazwa": "Piekarnik 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 23.6,
+      "szerokosc_cm": 59.5,
+      "glebokosc_cm": 60.4,
+      "wysokosc_cm": 59.5,
+      "trojkaty": 312,
+      "tags": {}
+    },
+    {
+      "nr": 34,
+      "id": "mikrofala_zabudowa",
+      "plik": "modele/34_mikrofala_zabudowa.glb",
+      "nazwa": "Mikrofala do zabudowy",
+      "kategoria": "AGD",
+      "rozmiar_kb": 14.9,
+      "szerokosc_cm": 59.5,
+      "glebokosc_cm": 44.0,
+      "wysokosc_cm": 38.0,
+      "trojkaty": 172,
+      "tags": {}
+    },
+    {
+      "nr": 35,
+      "id": "plyta_indukcyjna_60",
+      "plik": "modele/35_plyta_indukcyjna_60.glb",
+      "nazwa": "Płyta indukcyjna 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 26.9,
+      "szerokosc_cm": 59.0,
+      "glebokosc_cm": 52.0,
+      "wysokosc_cm": 0.7,
+      "trojkaty": 520,
+      "tags": {}
+    },
+    {
+      "nr": 36,
+      "id": "plyta_gazowa_60",
+      "plik": "modele/36_plyta_gazowa_60.glb",
+      "nazwa": "Płyta gazowa 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 54.7,
+      "szerokosc_cm": 59.0,
+      "glebokosc_cm": 51.0,
+      "wysokosc_cm": 3.8,
+      "trojkaty": 972,
+      "tags": {}
+    },
+    {
+      "nr": 37,
+      "id": "okap_kominowy_60",
+      "plik": "modele/37_okap_kominowy_60.glb",
+      "nazwa": "Okap kominowy 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 10.4,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 50.2,
+      "wysokosc_cm": 67.2,
+      "trojkaty": 104,
+      "tags": {}
+    },
+    {
+      "nr": 38,
+      "id": "okap_wyspowy_90",
+      "plik": "modele/38_okap_wyspowy_90.glb",
+      "nazwa": "Okap wyspowy 90 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 7.0,
+      "szerokosc_cm": 90.0,
+      "glebokosc_cm": 60.0,
+      "wysokosc_cm": 80.2,
+      "trojkaty": 68,
+      "tags": {}
+    },
+    {
+      "nr": 39,
+      "id": "okap_podszafkowy_60",
+      "plik": "modele/39_okap_podszafkowy_60.glb",
+      "nazwa": "Okap podszafkowy 60 cm",
+      "kategoria": "AGD",
+      "rozmiar_kb": 7.9,
+      "szerokosc_cm": 59.8,
+      "glebokosc_cm": 30.0,
+      "wysokosc_cm": 17.2,
+      "trojkaty": 68,
+      "tags": {}
+    },
+    {
+      "nr": 40,
+      "id": "zlew_z_bateria",
+      "plik": "modele/40_zlew_z_bateria.glb",
+      "nazwa": "Zlew 1-komorowy z ociekaczem i baterią",
+      "kategoria": "AGD",
+      "rozmiar_kb": 30.3,
+      "szerokosc_cm": 78.0,
+      "glebokosc_cm": 50.1,
+      "wysokosc_cm": 50.9,
+      "trojkaty": 476,
+      "tags": {}
+    },
+    {
+      "nr": 41,
+      "id": "stol_120",
+      "plik": "modele/41_stol_120.glb",
+      "nazwa": "Stół 120×80 cm",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 8.7,
+      "szerokosc_cm": 120.0,
+      "glebokosc_cm": 80.0,
+      "wysokosc_cm": 75.0,
+      "trojkaty": 92,
+      "tags": {}
+    },
+    {
+      "nr": 42,
+      "id": "krzeslo",
+      "plik": "modele/42_krzeslo.glb",
+      "nazwa": "Krzesło",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 19.9,
+      "szerokosc_cm": 44.0,
+      "glebokosc_cm": 42.0,
+      "wysokosc_cm": 89.0,
+      "trojkaty": 304,
+      "tags": {}
+    },
+    {
+      "nr": 43,
+      "id": "hoker",
+      "plik": "modele/43_hoker.glb",
+      "nazwa": "Hoker barowy",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 16.2,
+      "szerokosc_cm": 34.0,
+      "glebokosc_cm": 34.0,
+      "wysokosc_cm": 67.5,
+      "trojkaty": 284,
+      "tags": {}
+    },
+    {
+      "nr": 44,
+      "id": "polka_scienna_80",
+      "plik": "modele/44_polka_scienna_80.glb",
+      "nazwa": "Półka ścienna 80 cm",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 8.7,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 25.0,
+      "wysokosc_cm": 17.5,
+      "trojkaty": 92,
+      "tags": {}
+    },
+    {
+      "nr": 45,
+      "id": "lampa_wiszaca",
+      "plik": "modele/45_lampa_wiszaca.glb",
+      "nazwa": "Lampa wisząca",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 18.6,
+      "szerokosc_cm": 34.0,
+      "glebokosc_cm": 34.0,
+      "wysokosc_cm": 107.0,
+      "trojkaty": 372,
+      "tags": {}
+    },
+    {
+      "nr": 46,
+      "id": "panel_boczny",
+      "plik": "modele/46_panel_boczny.glb",
+      "nazwa": "Panel boczny (blenda) 58×82 cm",
+      "kategoria": "Meble i dodatki",
+      "rozmiar_kb": 4.4,
+      "szerokosc_cm": 1.8,
+      "glebokosc_cm": 58.0,
+      "wysokosc_cm": 82.0,
+      "trojkaty": 44,
+      "tags": {
+        "Front_panel_boczny": "front"
+      }
+    },
+    {
+      "nr": 47,
+      "id": "kuchnia_prosta_360",
+      "plik": "modele/47_kuchnia_prosta_360.glb",
+      "nazwa": "Kuchnia prosta 360 cm (komplet)",
+      "kategoria": "Kuchnie",
+      "rozmiar_kb": 272.1,
+      "szerokosc_cm": 301.8,
+      "glebokosc_cm": 62.5,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 3660,
+      "tags": {
+        "E01_slupek_lodowka_Front_drzwi_1": "front",
+        "E01_slupek_lodowka_Front_drzwi_2": "front",
+        "E01_slupek_lodowka_Uchwyty": "uchwyt",
+        "E02_szafka_zlewowa_80_Front_drzwi_1": "front",
+        "E02_szafka_zlewowa_80_Front_drzwi_2": "front",
+        "E02_szafka_zlewowa_80_Uchwyty": "uchwyt",
+        "E03_zmywarka_60_Front_zmywarka": "front",
+        "E03_zmywarka_60_Uchwyty": "uchwyt",
+        "E04_szafka_piekarnik_60_Front_szuflada": "front",
+        "E04_szafka_piekarnik_60_Uchwyty": "uchwyt",
+        "E05_szafka_szuflady_40_Front_szuflada_1": "front",
+        "E05_szafka_szuflady_40_Front_szuflada_2": "front",
+        "E05_szafka_szuflady_40_Front_szuflada_3": "front",
+        "E05_szafka_szuflady_40_Uchwyty": "uchwyt",
+        "E06_panel_boczny_Front_panel_boczny": "front",
+        "E07_blat_240_Blat": "blat",
+        "E10_gorna_80_Front_drzwi_1": "front",
+        "E10_gorna_80_Front_drzwi_2": "front",
+        "E10_gorna_80_Uchwyty": "uchwyt",
+        "E11_gorna_60_Front_drzwi": "front",
+        "E11_gorna_60_Uchwyty": "uchwyt",
+        "E12_gorna_nad_okap_60_Front_klapa": "front",
+        "E12_gorna_nad_okap_60_Uchwyty": "uchwyt",
+        "E14_gorna_40_Front_drzwi": "front",
+        "E14_gorna_40_Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 48,
+      "id": "kuchnia_L",
+      "plik": "modele/48_kuchnia_L.glb",
+      "nazwa": "Kuchnia w L (komplet)",
+      "kategoria": "Kuchnie",
+      "rozmiar_kb": 303.0,
+      "szerokosc_cm": 270.0,
+      "glebokosc_cm": 276.8,
+      "wysokosc_cm": 217.8,
+      "trojkaty": 4044,
+      "tags": {
+        "E01_szafka_narozna_90_Front_drzwi_1": "front",
+        "E01_szafka_narozna_90_Front_drzwi_2": "front",
+        "E01_szafka_narozna_90_Uchwyty": "uchwyt",
+        "E02_szafka_piekarnik_60_Front_szuflada": "front",
+        "E02_szafka_piekarnik_60_Uchwyty": "uchwyt",
+        "E03_szafka_szuflady_60_Front_szuflada_1": "front",
+        "E03_szafka_szuflady_60_Front_szuflada_2": "front",
+        "E03_szafka_szuflady_60_Front_szuflada_3": "front",
+        "E03_szafka_szuflady_60_Uchwyty": "uchwyt",
+        "E04_slupek_lodowka_Front_drzwi_1": "front",
+        "E04_slupek_lodowka_Front_drzwi_2": "front",
+        "E04_slupek_lodowka_Uchwyty": "uchwyt",
+        "E05_szafka_zlewowa_80_Front_drzwi_1": "front",
+        "E05_szafka_zlewowa_80_Front_drzwi_2": "front",
+        "E05_szafka_zlewowa_80_Uchwyty": "uchwyt",
+        "E06_zmywarka_60_Front_zmywarka": "front",
+        "E06_zmywarka_60_Uchwyty": "uchwyt",
+        "E07_szafka_45_Front_drzwi": "front",
+        "E07_szafka_45_Uchwyty": "uchwyt",
+        "E08_panel_boczny_Front_panel_boczny": "front",
+        "E09_blat_tyl_Blat": "blat",
+        "E10_blat_bok_Blat": "blat",
+        "E14_gorna_narozna_60_Front_drzwi_1": "front",
+        "E14_gorna_narozna_60_Front_drzwi_2": "front",
+        "E14_gorna_narozna_60_Uchwyty": "uchwyt",
+        "E15_gorna_30_Front_drzwi": "front",
+        "E15_gorna_30_Uchwyty": "uchwyt",
+        "E16_gorna_60_Front_drzwi": "front",
+        "E16_gorna_60_Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 49,
+      "id": "kuchnia_z_wyspa",
+      "plik": "modele/49_kuchnia_z_wyspa.glb",
+      "nazwa": "Kuchnia z wyspą (komplet)",
+      "kategoria": "Kuchnie",
+      "rozmiar_kb": 425.7,
+      "szerokosc_cm": 381.8,
+      "glebokosc_cm": 300.1,
+      "wysokosc_cm": 235.8,
+      "trojkaty": 5820,
+      "tags": {
+        "E01_slupek_piekarnik_Front_drzwi_4": "front",
+        "E01_slupek_piekarnik_Front_szuflada_1": "front",
+        "E01_slupek_piekarnik_Uchwyty": "uchwyt",
+        "E02_slupek_spizarnia_Front_drzwi_1": "front",
+        "E02_slupek_spizarnia_Front_drzwi_2": "front",
+        "E02_slupek_spizarnia_Uchwyty": "uchwyt",
+        "E03_slupek_lodowka_Front_drzwi_1": "front",
+        "E03_slupek_lodowka_Front_drzwi_2": "front",
+        "E03_slupek_lodowka_Uchwyty": "uchwyt",
+        "E04_szafka_zlewowa_80_Front_drzwi_1": "front",
+        "E04_szafka_zlewowa_80_Front_drzwi_2": "front",
+        "E04_szafka_zlewowa_80_Uchwyty": "uchwyt",
+        "E05_zmywarka_60_Front_zmywarka": "front",
+        "E05_zmywarka_60_Uchwyty": "uchwyt",
+        "E06_szafka_60_Front_drzwi": "front",
+        "E06_szafka_60_Uchwyty": "uchwyt",
+        "E07_panel_boczny_Front_panel_boczny": "front",
+        "E08_blat_Blat": "blat",
+        "E10_witryna_80_Front_witryna_1": "front",
+        "E10_witryna_80_Front_witryna_2": "front",
+        "E10_witryna_80_Uchwyty": "uchwyt",
+        "E11_gorna_60_Front_drzwi": "front",
+        "E11_gorna_60_Uchwyty": "uchwyt",
+        "E12_gorna_klapa_60_Front_klapa": "front",
+        "E12_gorna_klapa_60_Uchwyty": "uchwyt",
+        "E13_wyspa_szuflady_60_Front_szuflada_1": "front",
+        "E13_wyspa_szuflady_60_Front_szuflada_2": "front",
+        "E13_wyspa_szuflady_60_Front_szuflada_3": "front",
+        "E13_wyspa_szuflady_60_Uchwyty": "uchwyt",
+        "E14_wyspa_szuflady_60_Front_szuflada_1": "front",
+        "E14_wyspa_szuflady_60_Front_szuflada_2": "front",
+        "E14_wyspa_szuflady_60_Front_szuflada_3": "front",
+        "E14_wyspa_szuflady_60_Uchwyty": "uchwyt",
+        "E15_wyspa_szuflady_60_Front_szuflada_1": "front",
+        "E15_wyspa_szuflady_60_Front_szuflada_2": "front",
+        "E15_wyspa_szuflady_60_Front_szuflada_3": "front",
+        "E15_wyspa_szuflady_60_Uchwyty": "uchwyt",
+        "E16_blat_wyspa_Blat": "blat",
+        "Front_wyspa_bok_L": "front",
+        "Front_wyspa_bok_P": "front",
+        "Front_wyspa_tyl": "front"
+      }
+    },
+    {
+      "nr": 50,
+      "id": "aneks_240",
+      "plik": "modele/50_aneks_240.glb",
+      "nazwa": "Aneks kuchenny 240 cm (komplet)",
+      "kategoria": "Kuchnie",
+      "rozmiar_kb": 254.1,
+      "szerokosc_cm": 240.0,
+      "glebokosc_cm": 62.5,
+      "wysokosc_cm": 217.0,
+      "trojkaty": 3448,
+      "tags": {
+        "E01_szafka_szuflady_40_Front_szuflada_1": "front",
+        "E01_szafka_szuflady_40_Front_szuflada_2": "front",
+        "E01_szafka_szuflady_40_Front_szuflada_3": "front",
+        "E01_szafka_szuflady_40_Uchwyty": "uchwyt",
+        "E02_szafka_zlewowa_80_Front_drzwi_1": "front",
+        "E02_szafka_zlewowa_80_Front_drzwi_2": "front",
+        "E02_szafka_zlewowa_80_Uchwyty": "uchwyt",
+        "E03_szafka_piekarnik_60_Front_szuflada": "front",
+        "E03_szafka_piekarnik_60_Uchwyty": "uchwyt",
+        "E04_szafka_60_Front_drzwi": "front",
+        "E04_szafka_60_Uchwyty": "uchwyt",
+        "E05_blat_240_Blat": "blat",
+        "E08_gorna_40_Front_drzwi": "front",
+        "E08_gorna_40_Uchwyty": "uchwyt",
+        "E09_gorna_80_Front_drzwi_1": "front",
+        "E09_gorna_80_Front_drzwi_2": "front",
+        "E09_gorna_80_Uchwyty": "uchwyt",
+        "E10_gorna_nad_okap_60_Front_klapa": "front",
+        "E10_gorna_nad_okap_60_Uchwyty": "uchwyt",
+        "E12_gorna_klapa_60_Front_klapa": "front",
+        "E12_gorna_klapa_60_Uchwyty": "uchwyt"
+      }
+    }
+  ]
+}

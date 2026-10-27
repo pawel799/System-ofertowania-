@@ -16,6 +16,7 @@ const PLANS = PLAN_IDS.map((id) => {
       "netto miesięcznie",
       p.yearly !== null ? `albo ${formatZl(p.yearly)} rocznie (2 miesiące gratis)` : null,
       p.setup ?? null,
+      p.quote ?? null,
     ]
       .filter(Boolean)
       .join(" · "),
@@ -34,8 +35,8 @@ export default function CennikPage() {
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow="Cennik" title="Plan dopasowany do Twojej pracowni">
         <p>
-          Pierwsze {TRIAL_DAYS} dni za darmo, bez podawania karty. Potem płacisz miesięcznie albo rocznie, bez umowy na lata. Ceny netto
-          (+23% VAT).
+          Pierwsze {TRIAL_DAYS} dni za darmo, bez podawania karty. Potem płacisz miesięcznie albo rocznie na fakturę, bez umowy na lata.
+          Ceny netto (+23% VAT).
         </p>
       </PageIntro>
 

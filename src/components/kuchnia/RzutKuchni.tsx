@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   konfliktElementow,
   nachodzi,
   przyciagnij,
   rect,
+  nazwaNaRzucie,
   skrotElementu,
   STREFA_LABEL,
   zasiegNaScianie,
@@ -32,7 +33,8 @@ function widok(plan: PlanKuchni, wymiary: boolean) {
   let x0 = -margines;
   let z0 = wymiary ? -52 : -36;
   let x1 = plan.scianaA + margines;
-  let z1 = (plan.uklad === "L" ? plan.scianaB : 140) + margines;
+  // Ciąg: tylko pas szafek (60 cm) + miejsce na wymiary, bez pustego „pokoju” pod spodem.
+  let z1 = (plan.uklad === "L" ? plan.scianaB : 70) + margines;
   if (plan.pomieszczenie) {
     x1 = Math.max(x1, plan.pomieszczenie.szer + (wymiary ? 48 : 24));
     z1 = Math.max(z1, plan.pomieszczenie.dlug + (wymiary ? 48 : 24));
@@ -101,8 +103,8 @@ function Wymiar({
   const ty = (dx / len) * tick;
   const mx = (ax + bx) / 2;
   const my = (ay + by) / 2;
-  const tw = Math.max(16, tekst.length * 3.45);
-  const th = 7.4;
+  const tw = Math.max(18, tekst.length * 4.1 + 4);
+  const th = 8.6;
   return (
     <g className="kr-cad">
       <line x1={x1} y1={y1} x2={ax} y2={ay} />
@@ -173,6 +175,7 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       ref={svgRef}
       className="kr-svg"
       viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
+      style={{ "--kr-min-w": `${Math.round(box.w * 1.5)}px`, "--kr-ar": `${Math.round(box.w)} / ${Math.round(box.h)}` } as CSSProperties}
       role="group"
       aria-label="Rzut kuchni z góry. Przeciągnij element, strzałki przesuwają zaznaczony."
       onPointerDown={(e) => {
@@ -253,9 +256,7 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         const nachodziTeraz = podglad?.id === e.id && podgladNachodzi;
         const szer = Math.max(1, r.x1 - r.x0);
         const gl = Math.max(1, r.z1 - r.z0);
-        const skrot = skrotElementu(e);
         const zaznaczona = zaznaczony === e.id;
-        const napis = zaznaczona && wymiary ? "" : szer >= 26 && gl >= 16 ? skrot || String(e.w) : skrot && szer >= 18 ? skrot : "";
         const przesun = (dx: number, dz: number) => {
           const przy = przyciagnij(plan, e, e.x + dx, e.z + dz);
           const kandydat = { ...e, x: przy.x, z: przy.z };
@@ -345,22 +346,19 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                   przesun(0, krok);
                 }
               }}
-            />
+            >
+              <title>{`${e.nazwa} · ${e.w} × ${e.h} × ${e.d} cm (szer. × wys. × gł.)`}</title>
+            </rect>
             {e.strefa === "polka" ? (
               <line className="kr-shelf" x1={r.x0 + 1.5} y1={(r.z0 + r.z1) / 2} x2={r.x1 - 1.5} y2={(r.z0 + r.z1) / 2} />
             ) : null}
             <line className="kr-front" x1={front.x1} y1={front.y1} x2={front.x2} y2={front.y2} />
-            {napis ? (
-              <text className="kr-label" data-zone={e.strefa} x={(r.x0 + r.x1) / 2} y={(r.z0 + r.z1) / 2} textAnchor="middle" dominantBaseline="central">
-                {napis}
-              </text>
-            ) : null}
             {detale ? (
               <>
                 <Wymiar x1={detale.front.x1} y1={detale.front.y1} x2={detale.front.x2} y2={detale.front.y2} nx={detale.nx} ny={detale.nz} odsun={12} tekst={`${e.w}`} />
                 <Wymiar x1={detale.bok.x1} y1={detale.bok.y1} x2={detale.bok.x2} y2={detale.bok.y2} nx={detale.bx} ny={detale.bz} odsun={12} tekst={`${e.d}`} />
                 <g className="kr-cad">
-                  <rect x={detale.cx - 12} y={detale.cz - 3.6} width={24} height={7.2} rx={1.1} />
+                  <rect x={detale.cx - 14} y={detale.cz - 4.3} width={28} height={8.6} rx={1.1} />
                   <text x={detale.cx} y={detale.cz} textAnchor="middle" dominantBaseline="central">
                     {`h ${e.h}`}
                   </text>
@@ -370,6 +368,50 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
           </g>
         );
       })}
+      {rysowane.map((e) => {
+        if (wymiary && zaznaczony === e.id) return null;
+        const r = rect(e);
+        const napis = napisNaRzucie(e, r);
+        if (!napis) return null;
+        return (
+          <text key={`t-${e.id}`} className="kr-label" data-zone={e.strefa} x={(r.x0 + r.x1) / 2} y={napis.y} textAnchor="middle" dominantBaseline="central">
+            {napis.tekst}
+          </text>
+        );
+      })}
     </svg>
   );
+}
+
+/** Szerokość znaku przy font-size 9 (jednostki rzutu = cm). */
+const ZNAK = 5.1;
+
+/**
+ * Napis elementu: pełna nazwa, gdy się mieści, potem skrót, potem nic (nazwa zostaje w podpowiedzi).
+ * Górne szafki i półki podpisujemy przy ścianie, dolne przy froncie – nie nachodzą na siebie, gdy górna wisi nad dolną.
+ */
+function napisNaRzucie(e: ElementKuchni, r: { x0: number; z0: number; x1: number; z1: number }) {
+  const szer = r.x1 - r.x0;
+  const gl = r.z1 - r.z0;
+  // Napis jest zawsze poziomy, więc mieści się w szerokości obrysu na rzucie.
+  const miejsce = szer - 4;
+  const pelna = nazwaNaRzucie(e) || String(e.w);
+  const krotka = skrotElementu(e);
+  const tekst = pelna.length * ZNAK <= miejsce ? pelna : krotka && krotka.length * ZNAK <= miejsce ? krotka : "";
+  if (!tekst || Math.min(szer, gl) < 10) return null;
+  const pion = e.rot % 180 === 0;
+  const glebokosc = pion ? gl : szer;
+  const odSciany = Math.min(glebokosc / 2, 7);
+  let y = (r.z0 + r.z1) / 2;
+  const gora = e.strefa === "gorna" || e.strefa === "polka";
+  const dol = e.strefa === "dolna" || e.strefa === "wysoka";
+  if (pion && glebokosc >= 24) {
+    if (gora) y = e.rot === 180 ? r.z1 - odSciany : r.z0 + odSciany;
+    else if (dol) y = e.rot === 180 ? r.z0 + 8 : r.z1 - 8;
+  } else if (!pion && gl >= 24) {
+    // Ściana B: górna i dolna leżą w tym samym pasie – rozsuwamy napisy w pionie.
+    if (gora) y -= 5.5;
+    else if (dol) y += 5.5;
+  }
+  return { tekst, y };
 }

@@ -9,7 +9,7 @@
  *   obrót 0: front w +z, plecy przy ścianie A (z = 0),
  *   obrót 90: front w +x, plecy przy ścianie B (x = 0).
  */
-import { LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, sumaModulow, type ModulCennik, type ModulItem } from "./modul";
+import { LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, sumaModulow, type ModulCennik, type ModulItem } from "./modul";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -34,7 +34,8 @@ export type RodzajElementu =
   | "okap-podszafkowy"
   | "lodowka"
   | "lodowka-zabudowa"
-  | "polka";
+  | "polka"
+  | "blat";
 
 export const RODZAJE: readonly RodzajElementu[] = [
   "szafka",
@@ -53,6 +54,7 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "lodowka",
   "lodowka-zabudowa",
   "polka",
+  "blat",
 ];
 
 export type ElementKuchni = {
@@ -114,6 +116,7 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   lodowka: "Lodówka",
   "lodowka-zabudowa": "Zabudowa lodówki",
   polka: "Półka ścienna",
+  blat: "Blat",
 };
 
 export type GrupaPresetu = "dolne" | "gorne" | "polki" | "slupki" | "agd";
@@ -223,6 +226,8 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
       return { w: zakres(45, 90), h: zakres(170, 230), d: zakres(50, 65) };
     case "polka":
       return { w: zakres(30, 120), h: zakres(4, 48), d: zakres(12, 40) };
+    case "blat":
+      return { w: zakres(30, 400), h: zakres(2, 12), d: zakres(30, 160) };
     default:
       if (strefa === "gorna") return { w: zakres(30, 120), h: zakres(28, 110), d: zakres(20, 45) };
       if (strefa === "wysoka") return { w: zakres(30, 100), h: zakres(160, 230), d: zakres(40, 70) };
@@ -243,8 +248,23 @@ export function limityZapisu(rodzaj: RodzajElementu, strefa: Strefa): LimityWymi
   return { w: przytnijDoLinii(typ.w, "w"), h: przytnijDoLinii(typ.h, "h"), d: przytnijDoLinii(typ.d, "d") };
 }
 
-export function ograniczWymiar(el: Pick<ElementKuchni, "rodzaj" | "strefa" | "w" | "h" | "d">, key: "w" | "h" | "d", value: number) {
-  const z = limityRodzaju(el.rodzaj ?? "szafka", el.strefa)[key];
+/**
+ * Model GLB (biblioteka albo wgrany plik) trzyma realny obrys, także blat 240 cm,
+ * płytę o wysokości 1 cm i panel boczny 2 cm. Szafka parametryczna zostaje przy limityRodzaju.
+ */
+export const MODEL_LIMITS: LimityWymiarow = {
+  w: zakres(1, 400),
+  h: zakres(1, 280),
+  d: zakres(1, 400),
+};
+
+export function limityElementu(el: { rodzaj?: RodzajElementu; strefa: Strefa; zrodlo?: ZrodloElementu }): LimityWymiarow {
+  if (el.zrodlo === "model") return MODEL_LIMITS;
+  return limityRodzaju(el.rodzaj ?? "szafka", el.strefa);
+}
+
+export function ograniczWymiar(el: Pick<ElementKuchni, "rodzaj" | "strefa" | "w" | "h" | "d" | "zrodlo">, key: "w" | "h" | "d", value: number) {
+  const z = limityElementu(el)[key];
   const n = Math.round(value);
   if (!Number.isFinite(n)) return el[key];
   return Math.min(z.max, Math.max(z.min, n));
@@ -252,6 +272,29 @@ export function ograniczWymiar(el: Pick<ElementKuchni, "rodzaj" | "strefa" | "w"
 
 export function rodzajElementu(el: { rodzaj?: RodzajElementu }): RodzajElementu {
   return el.rodzaj ?? "szafka";
+}
+
+/** Krótka nazwa na rzucie (pełne słowo); gdy się nie mieści – skrotElementu. Pusta = szafka (pokazujemy szerokość). */
+export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
+  const NAZWY: Partial<Record<RodzajElementu, string>> = {
+    szuflady: "szuflady",
+    narozna: "narożna",
+    zlew: "pod zlew",
+    zlewozmywak: "zlew",
+    bateria: "bateria",
+    zmywarka: "zmywarka",
+    "plyta-indukcja": "indukcja",
+    "plyta-gaz": "płyta gaz.",
+    piekarnik: "piekarnik",
+    mikrofalowka: "mikrofala",
+    okap: "okap",
+    "okap-podszafkowy": "okap",
+    lodowka: "lodówka",
+    "lodowka-zabudowa": "lodówka",
+    polka: "półka",
+    blat: "blat",
+  };
+  return NAZWY[rodzajElementu(el)] ?? "";
 }
 
 export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
@@ -279,6 +322,8 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
       return "B";
     case "polka":
       return "półka";
+    case "blat":
+      return "blat";
     case "szuflady":
       return "SZ";
     case "narozna":
@@ -340,6 +385,9 @@ export function konfliktElementow(
   if ((ar === "bateria" && (br === "zlewozmywak" || br === "zlew")) || (br === "bateria" && (ar === "zlewozmywak" || ar === "zlew"))) {
     return false;
   }
+  // Płyta blatu leży pod płytą grzewczą, zlewem i mikrofalówką — nie wypycha ich z rzędu.
+  const naBlacie = new Set<RodzajElementu>(["zlewozmywak", "bateria", "plyta-indukcja", "plyta-gaz", "mikrofalowka"]);
+  if ((ar === "blat" && naBlacie.has(br)) || (br === "blat" && naBlacie.has(ar))) return false;
   return konfliktStref(a.strefa, b.strefa);
 }
 
@@ -666,12 +714,35 @@ export function wstawPrzyklad(uklad: UkladKuchni): PlanKuchni {
   return doloz(plan, presetPoId("plyta-indukcja-60"), podPlyte.x, podPlyte.z, podPlyte.rot);
 }
 
-/** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. */
-export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
-  return plan.elementy.map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
+/**
+ * Urządzenia, które nie wchodzą do ceny zabudowy (strona klienta: „Bez AGD”).
+ * Zabudowy AGD – słupek z piekarnikiem, piekarnik pod blatem, zmywarka do zabudowy, zabudowa lodówki,
+ * szafka pod zlew – są meblem (korpus, front), więc liczą się jak szafka.
+ */
+export const URZADZENIA_POZA_WYCENA: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>([
+  "zlewozmywak",
+  "bateria",
+  "plyta-indukcja",
+  "plyta-gaz",
+  "mikrofalowka",
+  "okap",
+  "okap-podszafkowy",
+  "lodowka",
+]);
+
+export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
+
+/** Cena netto elementu z cennika modułów; null = urządzenie AGD poza wyceną. */
+export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number }, cennik: ModulCennik): number | null {
+  return wycenianyElement(el) ? modulCena(el, cennik) : null;
 }
 
-/** Suma netto szafek. Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
+/** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
+export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
+}
+
+/** Suma netto zabudowy (bez AGD). Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
   return Math.max(1, sumaModulow(pozycjeKuchni(plan), cennik));
@@ -747,7 +818,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     const strefa = jedno(e.strefa, STREFY, `strefa elementu ${i + 1}`);
     const rodzaj: RodzajElementu =
       e.rodzaj === undefined || e.rodzaj === null ? "szafka" : jedno(e.rodzaj, RODZAJE, `rodzaj elementu ${i + 1}`);
-    const lim = limityZapisu(rodzaj, strefa);
+    const lim = zrodlo === "model" ? MODEL_LIMITS : limityZapisu(rodzaj, strefa);
     return {
       id,
       nazwa,

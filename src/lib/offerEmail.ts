@@ -1,6 +1,7 @@
 import { FIRMA } from "@/content/firma";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "@/components/catalog";
 import { formatPln, totalPrice } from "@/components/pricing";
+import { CENA_ZAKRES } from "@/lib/plans";
 
 /*
  * Mail z ofertą (HTML zgodny z klientami pocztowymi: Gmail, Outlook, Apple Mail).
@@ -114,7 +115,7 @@ export function renderOfferEmail(d: OfferEmailData) {
               showPrice
                 ? `<p style="margin:20px 0 0;font:12px/1.4 Helvetica,Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#78716c;">Szacunek netto</p>
             <p class="price" style="margin:4px 0 0;font:600 34px/1.1 Helvetica,Arial,sans-serif;color:#1c1917;">${formatPln(price)}</p>
-            <p style="margin:6px 0 0;font:13px/1.5 Helvetica,Arial,sans-serif;color:#78716c;">Bez AGD. Montaż wyceniamy po pomiarze.</p>`
+            <p style="margin:6px 0 0;font:13px/1.5 Helvetica,Arial,sans-serif;color:#78716c;">${CENA_ZAKRES}</p>`
                 : ""
             }
 
