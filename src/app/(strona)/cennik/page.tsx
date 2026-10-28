@@ -4,7 +4,7 @@ import PageIntro from "@/components/site/PageIntro";
 import { btn } from "@/components/site/styles";
 import { formatZl, MODEL_SERVICE, PLAN_IDS, PLANS as PLAN_INFO, TRIAL_DAYS } from "@/lib/plans";
 
-export const metadata: Metadata = { title: "Cennik · System ofertowania" };
+export const metadata: Metadata = { title: "Cennik · OP RZUT" };
 
 // Ceny i limity w src/lib/plans.ts – te same, których pilnuje API.
 const PLANS = PLAN_IDS.map((id) => {

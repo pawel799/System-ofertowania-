@@ -7,6 +7,8 @@ import type { KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import { useBrand } from "@/lib/brand";
 import { toast } from "./ui";
 import { useCennik } from "./useCennik";
+import { useKatalog } from "../katalogStore";
+import type { MaterialySnapshot } from "../katalogFirmy";
 import { danePdf, oknoPdf, pdfHtml, pdfTekst, wpiszPdf } from "./ofertaPdf";
 
 /** Link 3D do kodu QR w PDF (zawsze aktywny – w razie potrzeby utworzony przy generowaniu). */
@@ -29,6 +31,7 @@ export function OfertaPdfPrzyciski({
   countertop,
   hardware,
   palettes,
+  materialy,
   linkUrl,
   zapewnijLink,
   ujecie,
@@ -42,6 +45,8 @@ export function OfertaPdfPrzyciski({
   countertop: string;
   hardware: string;
   palettes: Palette[];
+  /** Snapshot materiałów zapisanej oferty – PDF pokazuje te same nazwy i dopłaty co link klienta. */
+  materialy?: MaterialySnapshot | null;
   linkUrl: string | null;
   /** Zwraca aktywny link 3D (tworzy go, gdy go nie ma albo wygasł); null = PDF bez kodu QR. */
   zapewnijLink?: () => Promise<LinkDoPdf | null>;
@@ -49,6 +54,7 @@ export function OfertaPdfPrzyciski({
 }) {
   const brand = useBrand();
   const { cennik, blad } = useCennik();
+  const katalog = useKatalog();
   const busy = useRef(false);
 
   const zloz = (zeZdjeciem: boolean, link: LinkDoPdf | null) =>
@@ -64,6 +70,8 @@ export function OfertaPdfPrzyciski({
       countertop,
       hardware,
       palettes,
+      katalog,
+      snapshot: materialy ?? null,
       cennik,
       cennikUwaga: blad ? "Nie pobrano cennika firmy. Kwoty liczone są cennikiem domyślnym i mogą różnić się od zapisu na serwerze." : null,
       link3d: link?.url ?? linkUrl,

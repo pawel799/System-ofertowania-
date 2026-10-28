@@ -4,8 +4,8 @@
  * To nie jest lista formatek ani rozkrój.
  */
 import qrcode from "qrcode-generator";
-import { COUNTERTOPS, FRONTS, HARDWARE } from "../catalog";
-import { findRalFront, type Palette } from "../palettes";
+import type { Palette } from "../palettes";
+import { findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik } from "@/lib/modul";
 
@@ -59,6 +59,9 @@ export function danePdf(args: {
   countertop: string;
   hardware: string;
   palettes: Palette[];
+  /** Katalog materiałów firmy i snapshot oferty (nazwy, grubości, dopłaty). */
+  katalog?: readonly KatalogPozycja[];
+  snapshot?: MaterialySnapshot | null;
   cennik: ModulCennik;
   cennikUwaga: string | null;
   link3d: string | null;
@@ -66,9 +69,13 @@ export function danePdf(args: {
   link3dPin?: boolean;
   zdjecie: string | null;
 }): PdfDane {
-  const frontSw = FRONTS.find((f) => f.id === args.front) ?? findRalFront(args.palettes, args.front);
-  const blat = COUNTERTOPS.find((c) => c.id === args.countertop);
-  const okucia = HARDWARE.find((h) => h.id === args.hardware);
+  // Snapshot oferty → katalog firmy / RAL → zestaw wbudowany (nigdy gołe id w PDF).
+  const mctx = { palettes: args.palettes, katalog: args.katalog, snapshot: args.snapshot };
+  const frontSw = findMaterial("front", args.front, mctx);
+  const blat = findMaterial("countertop", args.countertop, mctx);
+  const okucia = findMaterial("hardware", args.hardware, mctx);
+  const zGruboscia = (m: { name: string; thicknessMm?: number } | undefined, id: string) =>
+    m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}`,
@@ -89,8 +96,8 @@ export function danePdf(args: {
     firma: args.firma,
     logo: args.logo,
     plan: args.plan,
-    frontNazwa: frontSw?.name ?? args.front,
-    blatNazwa: blat?.name ?? args.countertop,
+    frontNazwa: zGruboscia(frontSw, args.front),
+    blatNazwa: zGruboscia(blat, args.countertop),
     okuciaNazwa: okucia?.name ?? args.hardware,
     pozycje,
     sumaPozycji,

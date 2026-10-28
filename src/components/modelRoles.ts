@@ -2,6 +2,8 @@ import { Mesh, MeshStandardMaterial, type Material, type Object3D } from "three"
 import { FRONTS } from "./catalog";
 import { toPhysical } from "./kitchenMaterials";
 import { FINISH_LOOK, findRalFront, type Palette } from "./palettes";
+import { findCountertop, findFront, findHardware, LOOK_WYKONCZENIA, parseKatRef, type KatalogPozycja, type Material as MaterialKatalogu } from "./katalogFirmy";
+import { getKatalog } from "./katalogStore";
 
 /*
  * Materiały wgranego modelu (nie kuchni demo): elementy oznaczone w panelu jako
@@ -61,8 +63,17 @@ const HARDWARE_LOOK: Record<string, Look> = {
   "push-to-open": { hidden: true, roughness: 0.5 },
 };
 
-export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[]): Look {
+/** Wygląd z pozycji katalogu firmy („cat:…”): kolor + wykończenie (bez tekstury z modelu). */
+function lookKatalogu(m: MaterialKatalogu, metal = false): Look {
+  const f = LOOK_WYKONCZENIA[(m.finish as keyof typeof LOOK_WYKONCZENIA) ?? "satyna"] ?? LOOK_WYKONCZENIA.satyna;
+  if (metal) return { color: m.color, metalness: m.finish === "mat" || m.finish === "struktura" ? 0.2 : 1, roughness: Math.min(0.7, f.roughness + 0.1), dropMap: true };
+  return { color: m.color, roughness: f.roughness, clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, dropMap: true };
+}
+
+export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[], katalog: readonly KatalogPozycja[] = getKatalog()): Look {
   if (role === "front") {
+    const kat = parseKatRef(sel.front) ? findFront(sel.front, palettes, katalog) : undefined;
+    if (kat) return lookKatalogu(kat);
     const ral = findRalFront(palettes, sel.front);
     if (ral) {
       const f = FINISH_LOOK[ral.finish ?? "satyna"];
@@ -71,7 +82,13 @@ export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[]): L
     const swatch = FRONTS.find((f) => f.id === sel.front) ?? FRONTS[0];
     return { color: swatch.color, roughness: FRONT_ROUGHNESS[swatch.id] ?? 0.5, clearcoat: 0.4, clearcoatRoughness: 0.3, dropMap: true };
   }
-  if (role === "blat") return COUNTERTOP_LOOK[sel.countertop] ?? { original: true, roughness: 0.4 };
+  if (role === "blat") {
+    const kat = parseKatRef(sel.countertop) ? findCountertop(sel.countertop, katalog) : undefined;
+    if (kat) return lookKatalogu(kat);
+    return COUNTERTOP_LOOK[sel.countertop] ?? { original: true, roughness: 0.4 };
+  }
+  const kat = parseKatRef(sel.hardware) ? findHardware(sel.hardware, katalog) : undefined;
+  if (kat) return kat.bezUchwytu ? { hidden: true, roughness: 0.5 } : lookKatalogu(kat, true);
   return HARDWARE_LOOK[sel.hardware] ?? { original: true, roughness: 0.4 };
 }
 
@@ -105,13 +122,19 @@ const originalOf = (mesh: Mesh): Material =>
  * Nakłada kolory z wyboru na oznaczone elementy. Zwraca funkcję sprzątającą
  * (przywraca materiały z pliku). Klony materiałów są w pamięci podręcznej per wygląd.
  */
-export function applyRoles(root: Object3D, tags: Record<string, ModelRole>, sel: Selection, palettes: Palette[]) {
+export function applyRoles(
+  root: Object3D,
+  tags: Record<string, ModelRole>,
+  sel: Selection,
+  palettes: Palette[],
+  katalog: readonly KatalogPozycja[] = getKatalog(),
+) {
   const roles = meshRoles(root, tags);
   const clones = new Map<string, Material>();
   roles.forEach((role, mesh) => {
     const original = originalOf(mesh);
     if (Array.isArray(original) || !(original instanceof MeshStandardMaterial)) return;
-    const look = lookFor(role, sel, palettes);
+    const look = lookFor(role, sel, palettes, katalog);
     mesh.visible = !look.hidden;
     if (look.original || look.hidden) {
       mesh.material = original;

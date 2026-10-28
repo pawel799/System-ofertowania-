@@ -25,6 +25,8 @@ export type PlanLimits = {
   domain: boolean;
   /** Kod osadzenia kuchni 3D na stronie firmy. */
   embed: boolean;
+  /** Pozycje własnego katalogu materiałów (płyty, blaty, obrzeża, uchwyty…). */
+  katalog: number | null;
 };
 
 export type PlanInfo = {
@@ -54,7 +56,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     audience: "Dla stolarza lub projektanta, który sam przygotowuje oferty.",
     monthly: 149,
     yearly: 1490,
-    limits: { users: 1, activeOffers: 20, models: 20, palettes: false, domain: false, embed: false },
+    limits: { users: 1, activeOffers: 20, models: 20, palettes: false, domain: false, embed: false, katalog: 30 },
     features: [
       "1 konto",
       "Do 20 ofert w toku",
@@ -63,6 +65,7 @@ export const PLANS: Record<PlanId, PlanInfo> = {
       "Link 3D z PIN-em i datą ważności, oferta PDF",
       "Uwagi klienta, historia otwarć i zgłoszenia",
       "Dane klienta firmowego po NIP-ie",
+      "Własny katalog materiałów: do 30 pozycji",
       "Nazwa i logo stolarni w ofercie",
     ],
   },
@@ -72,13 +75,14 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     audience: "Dla pracowni, w których oferty przygotowuje kilka osób.",
     monthly: 349,
     yearly: 3490,
-    limits: { users: 5, activeOffers: null, models: 200, palettes: true, domain: false, embed: true },
+    limits: { users: 5, activeOffers: null, models: 200, palettes: true, domain: false, embed: true, katalog: 200 },
     features: [
       "Do 5 kont w zespole",
       "Bez limitu ofert",
       "Do 200 własnych modeli 3D",
+      "Katalog materiałów: do 200 pozycji",
       "Własne pakiety kolorów RAL",
-      "Kuchnia 3D na Twojej stronie (kod osadzenia)",
+      "Meble 3D na Twojej stronie (kod osadzenia)",
       "Wszystko z planu Start",
     ],
   },
@@ -91,9 +95,9 @@ export const PLANS: Record<PlanId, PlanInfo> = {
     from: true,
     setup: "wdrożenie od 2 000 zł",
     quote: "dokładną kwotę podajemy po rozmowie",
-    limits: { users: null, activeOffers: null, models: null, palettes: true, domain: true, embed: true },
+    limits: { users: null, activeOffers: null, models: null, palettes: true, domain: true, embed: true, katalog: null },
     features: [
-      "Bez limitu kont, ofert i modeli",
+      "Bez limitu kont, ofert, modeli i pozycji katalogu",
       "Własna domena linków dla klientów",
       "Pomoc przy przygotowaniu modeli",
       "Wszystko z planu Pracownia",

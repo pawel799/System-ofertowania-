@@ -96,6 +96,7 @@ export function PlanTab({ me, onAuthError }: { me: Me | null; onAuthError: (e: u
             <Usage label="Oferty w toku" used={usage.activeOffers} max={plan.limits.activeOffers} />
             <Usage label="Modele 3D" used={usage.models} max={plan.limits.models} />
             <Usage label="Konta w zespole" used={usage.users} max={plan.limits.users} />
+            <Usage label="Katalog materiałów" used={usage.katalog ?? 0} max={plan.limits.katalog} />
           </ul>
         ) : null}
       </section>

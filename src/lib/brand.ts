@@ -47,7 +47,7 @@ export function useBrand(): Brand {
   return brand;
 }
 
-/** Inicjały do znaczka, gdy nie ma logo (np. "Studio Kuchnie" -> "SK"). */
+/** Inicjały do znaczka, gdy nie ma logo (np. "OP RZUT" -> "OR"). */
 export const initials = (name: string) =>
   name
     .split(/\s+/)

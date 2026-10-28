@@ -8,6 +8,8 @@
  */
 import { COUNTERTOP_IDS, FRONT_IDS, HARDWARE_IDS, HttpError, store, type Env, type KVNamespace } from "./offers";
 import { RAL_FRONT_RE } from "../../src/components/palettes";
+import { KAT_REF_RE, parseKatRef, RODZAJ_ROLI, type RolaMaterialu } from "../../src/components/katalogFirmy";
+import { getKatalogPozycja } from "./katalog";
 import { PLANS } from "../../src/lib/plans";
 import { getModel } from "./assets";
 import { firmExpired, getFirm, MAIN_FIRM, scoped, type Firm, type ScopedKV } from "./tenant";
@@ -63,9 +65,19 @@ export async function validateEmbed(kv: KVNamespace, v: unknown): Promise<EmbedS
     if (!(await getModel(kv, b.modelId))) throw bad("Wybrany model 3D nie istnieje.");
     modelId = b.modelId;
   }
-  const front = typeof b.front === "string" && (FRONT_IDS.includes(b.front) || RAL_FRONT_RE.test(b.front)) ? b.front : DEFAULT_EMBED.front;
-  const countertop = typeof b.countertop === "string" && COUNTERTOP_IDS.includes(b.countertop) ? b.countertop : DEFAULT_EMBED.countertop;
-  const hardware = typeof b.hardware === "string" && HARDWARE_IDS.includes(b.hardware) ? b.hardware : DEFAULT_EMBED.hardware;
+  const front = typeof b.front === "string" && (FRONT_IDS.includes(b.front) || RAL_FRONT_RE.test(b.front) || KAT_REF_RE.test(b.front)) ? b.front : DEFAULT_EMBED.front;
+  const countertop = typeof b.countertop === "string" && (COUNTERTOP_IDS.includes(b.countertop) || KAT_REF_RE.test(b.countertop)) ? b.countertop : DEFAULT_EMBED.countertop;
+  const hardware = typeof b.hardware === "string" && (HARDWARE_IDS.includes(b.hardware) || KAT_REF_RE.test(b.hardware)) ? b.hardware : DEFAULT_EMBED.hardware;
+  // Pozycja katalogu firmy musi istnieć, być aktywna i mieć właściwy rodzaj – inaczej materiał startowy domyślny.
+  const katOk = async (id: string, rola: RolaMaterialu) => {
+    const ref = parseKatRef(id);
+    if (!ref) return true;
+    const p = await getKatalogPozycja(kv, ref);
+    return !!p && p.active && p.kind === RODZAJ_ROLI[rola];
+  };
+  if (!(await katOk(front, "front"))) throw bad("Front startowy: tej pozycji nie ma w katalogu albo jest wyłączona.");
+  if (!(await katOk(countertop, "countertop"))) throw bad("Blat startowy: tej pozycji nie ma w katalogu albo jest wyłączona.");
+  if (!(await katOk(hardware, "hardware"))) throw bad("Okucia startowe: tej pozycji nie ma w katalogu albo jest wyłączona.");
   return {
     enabled: b.enabled === true,
     title,

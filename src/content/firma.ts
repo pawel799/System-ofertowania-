@@ -9,7 +9,7 @@ export const FIRMA = {
   /** Pełna nazwa prawna, np. "Jan Kowalski Meble sp. z o.o.". */
   nazwaPrawna: "",
   /** Nazwa handlowa pokazywana klientom (nagłówek maila, podpis). */
-  nazwaHandlowa: "Studio Kuchnie",
+  nazwaHandlowa: "OP RZUT",
   /** NIP w zapisie z kreskami, np. "123-456-78-90". */
   nip: "",
   /** REGON (opcjonalnie). */

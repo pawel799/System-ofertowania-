@@ -13,6 +13,7 @@ import { setCountertop } from "./countertopStore";
 import { setFront } from "./frontStore";
 import { setHardware } from "./hardwareStore";
 import { setPalettes } from "./paletteStore";
+import { setKatalog, setSnapshotMaterialow } from "./katalogStore";
 import { publicEmbedApi, type PublicEmbed } from "./panel/offerApi";
 import { setBrandCache } from "@/lib/brand";
 import { FIRMA } from "@/content/firma";
@@ -33,6 +34,8 @@ export default function EmbedOffer() {
         setBrandCache(embed.brand ?? { name: FIRMA.nazwaHandlowa, logo: null });
         // Pakiety najpierw: front z pakietu RAL musi mieć swój kolor, zanim go wybierzemy.
         setPalettes(embed.palettes ?? []);
+        setKatalog(embed.katalog ?? []);
+        setSnapshotMaterialow(null);
         setFront(embed.front);
         setCountertop(embed.countertop);
         setHardware(embed.hardware);

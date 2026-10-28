@@ -3,7 +3,7 @@ import Link from "next/link";
 import PageIntro from "@/components/site/PageIntro";
 import { btn } from "@/components/site/styles";
 
-export const metadata: Metadata = { title: "O nas · System ofertowania" };
+export const metadata: Metadata = { title: "O nas · OP RZUT" };
 
 const POINTS = [
   { title: "Oferta w 3D", text: "Klient widzi swoją kuchnię w trójwymiarze, a nie tylko listę pozycji i rzut z góry." },
@@ -16,7 +16,7 @@ export default function ONasPage() {
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow="O nas" title="Pomagamy sprzedawać meble na wymiar">
         <p>
-          Tworzymy system ofertowania dla stolarzy, pracowni i producentów mebli na wymiar. Zamiast wysyłać PDF z rysunkiem,
+          Tworzymy OP RZUT – system ofertowania dla stolarzy, pracowni i producentów mebli na wymiar. Zamiast wysyłać PDF z rysunkiem,
           wysyłasz klientowi link do kuchni w 3D, którą może obejrzeć ze wszystkich stron.
         </p>
       </PageIntro>

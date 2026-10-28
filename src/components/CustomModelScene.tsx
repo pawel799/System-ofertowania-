@@ -9,6 +9,7 @@ import { useFront } from "./frontStore";
 import { useHardware } from "./hardwareStore";
 import { applyRoles, type PublicModel } from "./modelRoles";
 import { usePalettes } from "./paletteStore";
+import { useKatalog } from "./katalogStore";
 
 /*
  * Scena wgranego modelu (oferta z własnym modelem zamiast kuchni demo).
@@ -37,6 +38,7 @@ function Model({ model }: { model: PublicModel }) {
   const countertop = useCountertop();
   const hardware = useHardware();
   const palettes = usePalettes();
+  const katalog = useKatalog();
 
   // Środek bryły w (0, 0, 0) w poziomie, podłoga na y = 0.
   const { offset, sphere, floor } = useMemo(() => {
@@ -75,10 +77,10 @@ function Model({ model }: { model: PublicModel }) {
   }, [camera, controls, sphere, aspect, invalidate]);
 
   useEffect(() => {
-    const undo = applyRoles(scene, model.tags, { front, countertop, hardware }, palettes);
+    const undo = applyRoles(scene, model.tags, { front, countertop, hardware }, palettes, katalog);
     invalidate();
     return undo;
-  }, [scene, model.tags, front, countertop, hardware, palettes, invalidate]);
+  }, [scene, model.tags, front, countertop, hardware, palettes, katalog, invalidate]);
 
   return (
     <>

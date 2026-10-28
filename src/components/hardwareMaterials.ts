@@ -1,4 +1,6 @@
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { findHardware, parseKatRef } from "./katalogFirmy";
+import { getKatalog, subscribeKatalog } from "./katalogStore";
 import {
   Box3,
   BoxGeometry,
@@ -180,13 +182,33 @@ export function installHardwareSwap(root: Object3D, onChange: () => void) {
     variants.set(original, byId);
   }
 
+  // Uchwyt z katalogu firmy („cat:…”): kolor metalu z pozycji; „bez uchwytów” ukrywa siatki jak push-to-open.
+  const katVariant = (original: Material, id: string) => {
+    const byId = variants.get(original);
+    if (!byId || !(original instanceof MeshStandardMaterial)) return undefined;
+    const cached = byId.get(id);
+    if (cached) return cached;
+    const m = findHardware(id, getKatalog());
+    if (!m?.color) return undefined;
+    const v = original.clone();
+    v.name = `${original.name}__${id}`;
+    v.color.set(m.color);
+    const mat = m.finish === "mat" || m.finish === "struktura";
+    v.metalness = mat ? 0.2 : 1;
+    v.roughness = mat ? 0.6 : 0.28;
+    v.needsUpdate = true;
+    byId.set(id, v);
+    return v;
+  };
+
   const apply = () => {
     const id = getHardware();
-    const hidden = LOOKS[id]?.kind === "hidden";
+    const kat = parseKatRef(id) ? findHardware(id, getKatalog()) : undefined;
+    const hidden = LOOKS[id]?.kind === "hidden" || !!kat?.bezUchwytu;
     for (const { mesh, original } of targets) {
       mesh.visible = !hidden;
       if (!hidden) {
-        mesh.material = variants.get(original)?.get(id) ?? original;
+        mesh.material = variants.get(original)?.get(id) ?? (kat ? katVariant(original, id) : undefined) ?? original;
       }
     }
     onChange();
@@ -194,9 +216,11 @@ export function installHardwareSwap(root: Object3D, onChange: () => void) {
 
   apply();
   const unsubscribe = subscribeHardware(apply);
+  const unsubscribeKatalog = subscribeKatalog(apply);
 
   return () => {
     unsubscribe();
+    unsubscribeKatalog();
     for (const { mesh, original } of targets) {
       mesh.material = original;
       mesh.visible = true;

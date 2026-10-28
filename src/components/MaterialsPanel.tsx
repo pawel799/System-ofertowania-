@@ -1,14 +1,11 @@
 "use client";
 
-import {
-  COUNTERTOPS,
-  setCountertop,
-  useCountertop,
-} from "./countertopStore";
+import { setCountertop, useCountertop } from "./countertopStore";
 import { FRONTS, setFront, useFront } from "./frontStore";
-import { HARDWARE, setHardware, useHardware } from "./hardwareStore";
+import { setHardware, useHardware } from "./hardwareStore";
 import { usePalettes } from "./paletteStore";
-import { findRalFront, paletteFronts } from "./palettes";
+import { findMaterial, opcjeMaterialu, type Material } from "./katalogFirmy";
+import { useKatalogStan } from "./katalogStore";
 import { formatPln, totalPrice } from "./pricing";
 import { CENA_ZAKRES } from "@/lib/plans";
 import RequestDialog, { openRequest } from "./RequestDialog";
@@ -87,14 +84,21 @@ export default function MaterialsPanel({
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
-  // Kolory z pakietów RAL studia (puste, gdy studio ich nie ustawiło).
+  // Kolory z pakietów RAL i katalog materiałów firmy (puste = zestaw startowy z catalog.ts).
   const palettes = usePalettes();
-  const ralFronts = paletteFronts(palettes);
+  const { katalog, snapshot } = useKatalogStan();
+  const ctx = { palettes, katalog, snapshot };
+  const wszystkieFronty = opcjeMaterialu("front", ctx, front);
+  const plyty = wszystkieFronty.filter((f) => f.zrodlo !== "ral");
+  const ralFronts = wszystkieFronty.filter((f) => f.zrodlo === "ral");
+  const blaty = opcjeMaterialu("countertop", ctx, countertop);
+  const okucia = opcjeMaterialu("hardware", ctx, hardware);
 
-  const selectedFront = FRONTS.find((f) => f.id === front) ?? findRalFront(palettes, front) ?? FRONTS[0];
-  const total = totalPrice({ front, countertop, hardware }, base, palettes);
-  const selectedCountertop = COUNTERTOPS.find((c) => c.id === countertop) ?? COUNTERTOPS[0];
-  const selectedHardware = HARDWARE.find((h) => h.id === hardware) ?? HARDWARE[0];
+  const brak = (id: string): Material => ({ id, name: "—", delta: 0, zrodlo: "katalog" });
+  const selectedFront = findMaterial("front", front, ctx) ?? plyty[0] ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
+  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot });
+  const selectedCountertop = findMaterial("countertop", countertop, ctx) ?? blaty[0] ?? brak(countertop);
+  const selectedHardware = findMaterial("hardware", hardware, ctx) ?? okucia[0] ?? brak(hardware);
   const summary = `front ${selectedFront.name}, blat ${selectedCountertop.name}, okucia ${selectedHardware.name}${
     showPrice ? `, szacunek ${formatPln(total)} netto` : ""
   }`;
@@ -121,7 +125,7 @@ export default function MaterialsPanel({
               </span>
             </legend>
             <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Fronty">
-              {FRONTS.map((swatch) => {
+              {plyty.map((swatch) => {
                 const selected = swatch.id === front;
                 return (
                   <button
@@ -170,7 +174,7 @@ export default function MaterialsPanel({
 
           <OptionGroup
             title="Blat"
-            options={COUNTERTOPS}
+            options={blaty}
             value={countertop}
             onChange={setCountertop}
             showDelta={showPrice}
@@ -178,7 +182,7 @@ export default function MaterialsPanel({
 
           <OptionGroup
             title="Okucia"
-            options={HARDWARE}
+            options={okucia}
             value={hardware}
             onChange={setHardware}
             showDelta={showPrice}
@@ -186,7 +190,7 @@ export default function MaterialsPanel({
         </div>
 
         {/* Telefon: cena i przycisk przyklejone do dołu ekranu. */}
-        <div className="fixed inset-x-0 bottom-0 z-20 flex shrink-0 items-center justify-between gap-4 border-t border-black/10 bg-white px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] desk:static desk:ml-auto desk:justify-end desk:border-0 desk:p-0">
+        <div className="oferta-cena fixed inset-x-0 bottom-0 z-20 flex shrink-0 items-center justify-between gap-4 border-t border-black/10 bg-white px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] desk:static desk:ml-auto desk:justify-end desk:border-0 desk:p-0">
           <div className="desk:text-right">
             <p className={GROUP_LABEL}>Szacunek netto</p>
             <p

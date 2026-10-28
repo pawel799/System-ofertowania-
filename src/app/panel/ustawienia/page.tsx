@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Ustawienia · Panel ofert",
+  title: "Ustawienia · Panel ofert · OP RZUT",
   description: "Modele 3D, pakiety kolorów RAL i własna domena linków.",
   robots: { index: false, follow: false },
 };

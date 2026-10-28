@@ -68,7 +68,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
         <h2>Cennik szafek na wymiar</h2>
         <p className="lede">
           Cena modułu liczy się z wymiarów: baza + płyta korpusu (m²) + front (m²) + metr bieżący szerokości. Ceny netto. Ten sam
-          cennik działa w ofertach dla klientów i w kuchni 3D na Twojej stronie.
+          cennik działa w ofertach dla klientów i w podglądzie 3D na Twojej stronie.
         </p>
         <form onSubmit={save} noValidate>
           {FIELDS.map((f) => (

@@ -1,4 +1,4 @@
-# System ofertowania kuchni z podglądem 3D
+# OP RZUT – system ofertowania mebli z podglądem 3D
 
 Aplikacja dla studiów i salonów meblowych. Projektant przygotowuje ofertę kuchni w panelu
 i wysyła klientowi link. Klient ogląda kuchnię w 3D w przeglądarce, zmienia materiały,

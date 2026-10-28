@@ -8,6 +8,7 @@ import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes } from "../paletteStore";
+import { setKatalog, setSnapshotMaterialow } from "../katalogStore";
 import { ApiError, publicApi, type BrandSettings, type PublicOffer } from "./offerApi";
 import { setBrandCache, useBrand } from "@/lib/brand";
 import { FIRMA } from "@/content/firma";
@@ -92,6 +93,8 @@ export default function ClientOffer() {
     if (state.k !== "ready") return;
     // Pakiety najpierw: front z pakietu RAL musi mieć swój kolor, zanim go wybierzemy.
     setPalettes(state.offer.palettes ?? []);
+    setKatalog(state.offer.katalog ?? []);
+    setSnapshotMaterialow(state.offer.materialy ?? null);
     setFront(state.offer.front);
     setCountertop(state.offer.countertop);
     setHardware(state.offer.hardware);

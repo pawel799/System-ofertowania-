@@ -1,4 +1,5 @@
 import type { PlanKuchni } from "@/lib/kuchnia";
+import type { KatalogPozycja, MaterialySnapshot } from "../katalogFirmy";
 import type { ModulCennik, ModulItem } from "@/lib/modul";
 /*
  * Klient API ofert (Cloudflare Pages Functions pod /api).
@@ -175,6 +176,13 @@ export const assetsApi = {
     call<{ palette: Palette }>("PUT", `/api/palettes/${p.id}`, { body: p, headers: auth() }).then((r) => r.palette),
   removePalette: (id: string) => call<void>("DELETE", `/api/palettes/${id}`, { headers: auth() }),
 
+  katalog: () => call<{ katalog: KatalogPozycja[] }>("GET", "/api/katalog", { headers: auth() }).then((r) => r.katalog),
+  createKatalog: (p: Omit<KatalogPozycja, "id">) =>
+    call<{ pozycja: KatalogPozycja }>("POST", "/api/katalog", { body: p, headers: auth() }).then((r) => r.pozycja),
+  updateKatalog: (p: KatalogPozycja) =>
+    call<{ pozycja: KatalogPozycja }>("PUT", `/api/katalog/${p.id}`, { body: p, headers: auth() }).then((r) => r.pozycja),
+  removeKatalog: (id: string) => call<void>("DELETE", `/api/katalog/${id}`, { headers: auth() }),
+
   domain: () => call<DomainView>("GET", "/api/settings/domain", { headers: auth() }),
   setDomain: (hostname: string) => call<DomainView>("PUT", "/api/settings/domain", { body: { hostname }, headers: auth() }),
   refreshDomain: () => call<DomainView>("POST", "/api/settings/domain/refresh", { headers: auth() }),
@@ -242,6 +250,10 @@ export type PublicOffer = {
   modele?: PublicModel[];
   /** Pakiety RAL studia (fronty do wyboru). */
   palettes?: Palette[];
+  /** Katalog materiałów firmy (aktywne pozycje i wybrane w ofercie). */
+  katalog?: KatalogPozycja[];
+  /** Nazwy i dopłaty materiałów z chwili zapisu oferty. */
+  materialy?: MaterialySnapshot;
   /** Nazwa i logo firmy, która wysłała ofertę. */
   brand?: BrandSettings | null;
 };
@@ -339,7 +351,7 @@ export type BillingView = {
   expired?: boolean;
   /** Dni do końca okresu próbnego albo opłaconego okresu (ujemne = po terminie). */
   daysLeft?: number | null;
-  usage?: { users: number; activeOffers: number; offers: number; models: number };
+  usage?: { users: number; activeOffers: number; offers: number; models: number; katalog?: number };
   /** Działają płatności online (operator skonfigurowany). */
   online?: boolean;
 };
@@ -390,6 +402,7 @@ export type PublicEmbed = {
   moduly?: boolean;
   cennik?: ModulCennik;
   palettes: Palette[];
+  katalog?: KatalogPozycja[];
   brand: BrandSettings | null;
 };
 

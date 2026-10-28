@@ -1,6 +1,6 @@
 /* Znak marki (public/logo.svg): rzut kuchni L z osią Z. Bez nazwy – nazwa jest w alt i w tytule strony. */
 
-export const BRAND_NAME = "System ofertowania";
+export const BRAND_NAME = "OP RZUT";
 
 const SIZES = { sm: "h-8 w-8", md: "h-10 w-10", lg: "h-24 w-24 md:h-32 md:w-32" } as const;
 

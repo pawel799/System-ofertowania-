@@ -16,6 +16,7 @@ import type { ModulItem } from "../../src/lib/modul";
 import { validateModuly } from "./modul";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
 import { RAL_FRONT_RE } from "../../src/components/palettes";
+import { KAT_REF_RE, type MaterialySnapshot } from "../../src/components/katalogFirmy";
 
 /* Minimalne typy runtime'u Cloudflare (bez dodatkowej paczki z typami). */
 export interface KVNamespace {
@@ -150,6 +151,8 @@ export type Offer = {
    * wyliczane na serwerze z tego planu, a nie z pól base/moduly przysyłanych przez panel.
    */
   kuchnia?: PlanKuchni;
+  /** Nazwy i dopłaty materiałów z chwili zapisu (liczy serwer – katalogFirmy.ts). Stare oferty go nie mają. */
+  materialy?: MaterialySnapshot;
   status: Status;
   link: OfferLink | null;
   comment?: string;
@@ -374,8 +377,11 @@ export function validateOffer(input: unknown): Offer {
     o.contactPerson === undefined || o.contactPerson === null ? undefined : str(o.contactPerson, "contactPerson", 200);
   const comment = o.comment === undefined || o.comment === null ? undefined : str(o.comment, "comment", 2000);
   // Front z katalogu albo kolor z pakietu RAL ("ral:<pakiet>:<kod>"; istnienie pakietu sprawdza checkRefs).
+  // Pozycja katalogu firmy ("cat:<id>"): istnienie i rodzaj sprawdza checkKatalogRefs.
   const front =
-    typeof o.front === "string" && RAL_FRONT_RE.test(o.front) ? o.front : oneOf(o.front, FRONT_IDS, "front");
+    typeof o.front === "string" && (RAL_FRONT_RE.test(o.front) || KAT_REF_RE.test(o.front)) ? o.front : oneOf(o.front, FRONT_IDS, "front");
+  const countertop = typeof o.countertop === "string" && KAT_REF_RE.test(o.countertop) ? o.countertop : oneOf(o.countertop, COUNTERTOP_IDS, "countertop");
+  const hardware = typeof o.hardware === "string" && KAT_REF_RE.test(o.hardware) ? o.hardware : oneOf(o.hardware, HARDWARE_IDS, "hardware");
   let modelId: string | undefined;
   if (o.modelId !== undefined && o.modelId !== null && o.modelId !== "") {
     modelId = str(o.modelId, "modelId", 32);
@@ -402,8 +408,8 @@ export function validateOffer(input: unknown): Offer {
     layout: oneOf(o.layout, LAYOUTS, "layout"),
     base: Math.round(o.base * 100) / 100,
     front,
-    countertop: oneOf(o.countertop, COUNTERTOP_IDS, "countertop"),
-    hardware: oneOf(o.hardware, HARDWARE_IDS, "hardware"),
+    countertop,
+    hardware,
     ...(modelId ? { modelId } : {}),
     ...(moduly && moduly.length ? { moduly } : {}),
     ...(kuchnia ? { kuchnia } : {}),
@@ -481,5 +487,11 @@ export function publicView(o: Offer) {
     ...(link.showPrice ? { base: o.base } : {}),
     expires: link.expires,
     ...(o.kuchnia ? { kuchnia: o.kuchnia } : {}),
+    // Snapshot nazw i dopłat; przy ukrytej cenie bez kwot.
+    ...(o.materialy ? { materialy: link.showPrice ? o.materialy : ukryjDoplaty(o.materialy) } : {}),
   };
+}
+
+function ukryjDoplaty(m: MaterialySnapshot): MaterialySnapshot {
+  return { ...m, front: { ...m.front, delta: 0 }, countertop: { ...m.countertop, delta: 0 }, hardware: { ...m.hardware, delta: 0 } };
 }

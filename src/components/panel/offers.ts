@@ -1,3 +1,4 @@
+import type { MaterialySnapshot } from "../katalogFirmy";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { ModulItem } from "@/lib/modul";
 import type { CompanyData } from "./company";
@@ -99,6 +100,8 @@ export type Offer = {
   moduly?: ModulItem[];
   /** Układ z kreatora. Przy zapisie serwer nadpisuje base i moduly ceną z cennika. */
   kuchnia?: PlanKuchni;
+  /** Snapshot nazw i dopłat materiałów (liczy serwer przy zapisie). */
+  materialy?: MaterialySnapshot;
   status: Status;
   link: OfferLink | null;
   comment?: string;

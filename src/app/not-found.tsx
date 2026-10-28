@@ -4,7 +4,7 @@ import SiteFooter from "@/components/site/SiteFooter";
 import SiteHeader from "@/components/site/SiteHeader";
 import { btn } from "@/components/site/styles";
 
-export const metadata: Metadata = { title: "Nie ma takiej strony · System ofertowania" };
+export const metadata: Metadata = { title: "Nie ma takiej strony · OP RZUT" };
 
 /* Strona 404 (w statycznym eksporcie trafia do out/404.html, Cloudflare Pages podaje ją sam). */
 export default function NotFound() {

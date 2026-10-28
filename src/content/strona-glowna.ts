@@ -30,7 +30,7 @@ export const HOME = {
   /** Nagłówek i jedno zdanie w hero: co to jest. */
   hero: {
     title: "Oferty mebli na wymiar w 3D",
-    lead: "Wysyłasz klientowi link do kuchni w 3D – ogląda ją w przeglądarce, zmienia materiały, widzi cenę i zostawia uwagi.",
+    lead: "Wysyłasz klientowi link do mebla w 3D – kuchni, szafy czy komody. Ogląda go w przeglądarce, zmienia materiały, widzi cenę i zostawia uwagi.",
   },
 
   /** Przewijanie pod przyciskami w hero (prowadzi do pierwszej sekcji). */
@@ -38,12 +38,43 @@ export const HOME = {
 
   /** Kotwice w pasku, który pojawia się po zjechaniu z hero. Id sekcji – patrz niżej. */
   nav: [
+    { href: "#meble", label: "Meble" },
     { href: "#jak-to-dziala", label: "Jak to działa" },
     { href: "#funkcje", label: "Funkcje" },
     { href: "#dla-kogo", label: "Dla kogo" },
     { href: "#cennik", label: "Cennik" },
     { href: "#pytania", label: "Pytania" },
   ] satisfies Link[],
+
+  /** Nie tylko kuchnie: rodzaje mebli z kreatora i biblioteki modeli (rendery z public/strona/meble-*.webp). */
+  meble: {
+    id: "meble",
+    eyebrow: "Nie tylko kuchnie",
+    title: "Kuchnie, szafy, komody – każdy mebel na wymiar",
+    lead: "Zabudowę składasz w kreatorze z gotowych modułów albo wgrywasz własny model 3D. Klient obraca mebel, zmienia fronty i uchwyty i od razu widzi cenę.",
+    items: [
+      {
+        title: "Kuchnie",
+        text: "Ciąg, kształt L i wyspa – z blatem, AGD, szafkami dolnymi, górnymi i słupkami.",
+        media: { src: "/strona/meble-kuchnie.webp", alt: "Kuchnia z wyspą w 3D", ratio: "4 / 3" } as Media,
+      },
+      {
+        title: "Szafy i garderoby",
+        text: "Szafy na drzwiach i przesuwne, z lustrami, wnękowe do sufitu oraz otwarte garderoby.",
+        media: { src: "/strona/meble-szafy.webp", alt: "Szafa przesuwna z lustrami w 3D", ratio: "4 / 3" } as Media,
+      },
+      {
+        title: "Komody i szafki",
+        text: "Komody od 40 do 220 cm, szuflandie, szafki RTV, nocne, na buty, regały i witryny.",
+        media: { src: "/strona/meble-komody.webp", alt: "Komoda z dwunastoma szufladami w 3D", ratio: "4 / 3" } as Media,
+      },
+      {
+        title: "Łazienka i przedpokój",
+        text: "Szafki pod umywalkę, słupki, szafki z lustrem i szafy do przedpokoju.",
+        media: { src: "/strona/meble-lazienka.webp", alt: "Szafka łazienkowa z umywalką w 3D", ratio: "4 / 3" } as Media,
+      },
+    ],
+  },
 
   steps: {
     id: "jak-to-dziala",
@@ -52,8 +83,8 @@ export const HOME = {
     lead: "Projektant przygotowuje ofertę w panelu, a klient dostaje link, który otwiera na telefonie albo komputerze. Bez ciężkich PDF-ów i bez instalowania czegokolwiek.",
     items: [
       {
-        title: "Wpisz klienta i wybierz kuchnię",
-        text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Kuchnię składasz w kreatorze z gotowych szafek albo wybierasz własny model 3D. Cena liczy się z Twojego cennika, a Ty decydujesz, czy klient ma ją widzieć.",
+        title: "Wpisz klienta i wybierz mebel",
+        text: "Klient prywatny albo firma: po wpisaniu NIP-u nazwa i adres uzupełniają się same. Kuchnię, szafę albo komodę składasz w kreatorze z gotowych modułów albo wybierasz własny model 3D. Cena liczy się z Twojego cennika, a Ty decydujesz, czy klient ma ją widzieć.",
         media: { src: "/strona/krok-1-nowa-oferta.webp", alt: "Panel: nowa oferta, dane firmy uzupełnione po NIP-ie" } as Media,
       },
       {
@@ -63,7 +94,7 @@ export const HOME = {
       },
       {
         title: "Klient ogląda, a Ty wiesz więcej",
-        text: "Klient obraca kuchnię w 3D, zmienia fronty, blat i uchwyty, i zostawia uwagi. W panelu widzisz, kiedy otworzył ofertę i co napisał.",
+        text: "Klient obraca mebel w 3D, zmienia fronty, blat i uchwyty, i zostawia uwagi. W panelu widzisz, kiedy otworzył ofertę i co napisał.",
         media: { src: "/strona/krok-3-klient.webp", alt: "Strona oferty u klienta: kuchnia 3D z paskiem materiałów" } as Media,
       },
     ],
@@ -105,12 +136,12 @@ export const HOME = {
         text: "Panel pokazuje każde otwarcie linku, więc dzwonisz wtedy, gdy klient ma ofertę przed oczami.",
       },
       {
-        title: "Kreator kuchni i oferta PDF",
-        text: "Składasz zabudowę z gotowych szafek i AGD, a cena liczy się z Twojego cennika. Klient dostaje link 3D i osobno ofertę PDF z pozycjami.",
+        title: "Kreator zabudowy i oferta PDF",
+        text: "Składasz kuchnię, szafę albo komodę z gotowych modułów, a cena liczy się z Twojego cennika. Klient dostaje link 3D i osobno ofertę PDF z pozycjami.",
       },
       {
-        title: "Kuchnia 3D na Twojej stronie",
-        text: "Wklejasz kod na swoją stronę: klient obraca kuchnię, zmienia materiały i prosi o wycenę. W planach Pracownia i Producent.",
+        title: "Meble 3D na Twojej stronie",
+        text: "Wklejasz kod na swoją stronę: klient obraca mebel, zmienia materiały i prosi o wycenę. W planach Pracownia i Producent.",
       },
     ],
   },
@@ -118,7 +149,7 @@ export const HOME = {
   audience: {
     id: "dla-kogo",
     eyebrow: "Dla kogo",
-    title: "Dla firm, które sprzedają kuchnie na wymiar",
+    title: "Dla firm, które sprzedają meble na wymiar",
     items: [
       {
         title: "Studia projektowe",
@@ -157,8 +188,8 @@ export const HOME = {
         a: "Nie. Panel działa w przeglądarce, wystarczy zwykły komputer z dostępem do internetu.",
       },
       {
-        q: "Skąd biorą się modele 3D kuchni?",
-        a: `Kuchnię składasz w kreatorze z gotowych szafek i AGD, więc własne modele nie są potrzebne. Możesz też wgrać własny model 3D (GLB). Jeśli wolisz, przygotujemy go za Ciebie: ${MODEL_SERVICE_PRICE}. W planie Producent pomagamy przy modelach w ramach wdrożenia.`,
+        q: "Skąd biorą się modele 3D mebli?",
+        a: `Zabudowę składasz w kreatorze z gotowych modułów – szafek, szaf, komód i AGD – więc własne modele nie są potrzebne. Możesz też wgrać własny model 3D (GLB). Jeśli wolisz, przygotujemy go za Ciebie: ${MODEL_SERVICE_PRICE}. W planie Producent pomagamy przy modelach w ramach wdrożenia.`,
       },
       {
         q: "Czy mogę ukryć cenę przed klientem?",

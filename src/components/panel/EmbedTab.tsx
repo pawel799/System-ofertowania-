@@ -7,7 +7,8 @@
  * zgłoszenie trafia do Zgłoszeń w panelu.
  */
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { COUNTERTOPS, FRONTS, HARDWARE } from "../catalog";
+import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
+import type { Palette } from "../palettes";
 import { assetsApi, embedApi, type EmbedSettings, type EmbedView, type ModelMeta } from "./offerApi";
 import { CopyButton, toast } from "./ui";
 
@@ -18,6 +19,8 @@ export function EmbedTab({ onAuthError }: { onAuthError: (e: unknown) => boolean
   const [draft, setDraft] = useState<EmbedSettings | null>(null);
   const [base, setBase] = useState("");
   const [models, setModels] = useState<ModelMeta[]>([]);
+  const [katalog, setKatalog] = useState<KatalogPozycja[]>([]);
+  const [palettes, setPalettes] = useState<Palette[]>([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(0);
@@ -25,8 +28,15 @@ export function EmbedTab({ onAuthError }: { onAuthError: (e: unknown) => boolean
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    Promise.all([embedApi.get(), assetsApi.models().catch(() => [] as ModelMeta[])])
-      .then(([v, m]) => {
+    Promise.all([
+      embedApi.get(),
+      assetsApi.models().catch(() => [] as ModelMeta[]),
+      assetsApi.katalog().catch(() => [] as KatalogPozycja[]),
+      assetsApi.palettes().catch(() => [] as Palette[]),
+    ])
+      .then(([v, m, k, p]) => {
+        setKatalog(k);
+        setPalettes(p);
         setView(v);
         setDraft(v.embed);
         setBase(String(v.embed.base));
@@ -73,7 +83,7 @@ export function EmbedTab({ onAuthError }: { onAuthError: (e: unknown) => boolean
   return (
     <div className="set-grid">
       <section className="set-card">
-        <h2>Kuchnia 3D na Twojej stronie</h2>
+        <h2>Meble 3D na Twojej stronie</h2>
         <p className="lede">
           Wstaw kuchnię do obracania na swoją stronę internetową. Klient zmienia fronty, blat i uchwyty, widzi cenę i prosi o wycenę – zgłoszenie
           trafia do Zgłoszeń w panelu.
@@ -121,21 +131,21 @@ export function EmbedTab({ onAuthError }: { onAuthError: (e: unknown) => boolean
             <label htmlFor="e-front">Materiały na start</label>
             <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
               <select id="e-front" className="input" aria-label="Fronty na start" value={draft.front} onChange={(e) => set("front", e.target.value)}>
-                {FRONTS.map((f) => (
+                {opcjeMaterialu("front", { katalog, palettes }, draft.front).map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.name}
                   </option>
                 ))}
               </select>
               <select className="input" aria-label="Blat na start" value={draft.countertop} onChange={(e) => set("countertop", e.target.value)}>
-                {COUNTERTOPS.map((c) => (
+                {opcjeMaterialu("countertop", { katalog, palettes }, draft.countertop).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </select>
               <select className="input" aria-label="Okucia na start" value={draft.hardware} onChange={(e) => set("hardware", e.target.value)}>
-                {HARDWARE.map((h) => (
+                {opcjeMaterialu("hardware", { katalog, palettes }, draft.hardware).map((h) => (
                   <option key={h.id} value={h.id}>
                     {h.name}
                   </option>

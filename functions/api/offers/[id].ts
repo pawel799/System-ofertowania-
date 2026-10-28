@@ -8,6 +8,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, KEY_RE, offerKey, param, putOffer, readJson, validateOffer, type Ctx } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
+import { checkKatalogRefs, snapshotOferty } from "../../_lib/katalog";
 import { zCenaKuchni } from "../../_lib/kuchnia";
 import { assertCanWrite, firmPlan } from "../../_lib/plan";
 
@@ -34,6 +35,8 @@ export const onRequestPut = handle(async (ctx) => {
   const existing = await getOffer(kv, key);
   if (!existing) throw notFound();
   await checkRefs(kv, incoming);
+  await checkKatalogRefs(kv, incoming, existing);
+  incoming.materialy = await snapshotOferty(kv, incoming);
 
   const merged = { ...incoming };
   const oldSlug = existing.link?.slug ?? null;

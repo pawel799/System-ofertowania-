@@ -42,7 +42,7 @@ export default function SiteFooter() {
             <Logo />
           </Link>
           <p className="mt-5 text-sm leading-relaxed text-stone-500">
-            System ofertowania kuchni w 3D dla studiów, salonów i producentów mebli.
+            OP RZUT – oferty mebli na wymiar w 3D dla stolarni, studiów, salonów i producentów.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default function SiteFooter() {
       </div>
 
       <div className="mx-auto mt-14 flex max-w-6xl flex-col gap-3 border-t border-white/10 pt-6 text-xs text-stone-500 sm:flex-row sm:justify-between">
-        <p>© {year} System ofertowania. Wszelkie prawa zastrzeżone.</p>
+        <p>© {year} OP RZUT. Wszelkie prawa zastrzeżone.</p>
         {rejestr ? <p>{rejestr}</p> : null}
       </div>
     </footer>

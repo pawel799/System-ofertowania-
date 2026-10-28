@@ -22,7 +22,9 @@ import { FRONTS, setFront } from "../frontStore";
 import { HARDWARE, setHardware } from "../hardwareStore";
 import { formatPln, totalPrice } from "../pricing";
 import { setPalettes as setPaletteStore } from "../paletteStore";
-import { findRalFront, paletteFronts, type FrontChoice, type Palette } from "../palettes";
+import { getKatalog, setKatalog, useKatalog } from "../katalogStore";
+import { findCountertop, findFront, findHardware, opcjeMaterialu, type KatalogPozycja, type Material } from "../katalogFirmy";
+import type { Palette } from "../palettes";
 import {
   CHANNEL_LABEL,
   COUNTERTOP_COLOR,
@@ -116,12 +118,9 @@ function draftFor(o: Offer): Draft {
     : { channel: o.contact.includes("@") ? "email" : "sms", days: 7, comments: true, pin: false, price: true };
 }
 
-const nameOf = (list: { id: string; name: string }[], id: string) =>
-  list.find((x) => x.id === id)?.name ?? id;
-
-/** Front z katalogu albo z pakietu RAL (nazwa i kolor próbki). */
-const frontInfo = (palettes: Palette[], id: string): FrontChoice | undefined =>
-  FRONTS.find((f) => f.id === id) ?? findRalFront(palettes, id);
+/** Front wbudowany, z pakietu RAL albo z katalogu firmy (nazwa i kolor próbki). */
+const frontInfo = (palettes: Palette[], id: string, katalog: readonly KatalogPozycja[] = []): Material | undefined =>
+  findFront(id, palettes, katalog);
 
 const CloseIcon = () => (
   <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -156,6 +155,8 @@ export default function PanelApp() {
   // Z ustawień (/panel/ustawienia): wgrane modele, pakiety RAL, własna domena linków.
   const [models, setModels] = useState<ModelMeta[]>([]);
   const [palettes, setPalettes] = useState<Palette[]>([]);
+  // Katalog materiałów firmy (Ustawienia → Katalog) – w magazynie, bo czyta go też scena 3D i cena.
+  const katalog = useKatalog();
   const [domain, setDomain] = useState<DomainView | null>(null);
 
   const offer = offers.find((o) => o.id === selId) ?? offers[0];
@@ -184,11 +185,12 @@ export default function PanelApp() {
   useEffect(() => {
     if (store.mode !== "api") return;
     let alive = true;
-    void Promise.allSettled([assetsApi.models(), assetsApi.palettes(), assetsApi.domain()]).then(([m, p, d]) => {
+    void Promise.allSettled([assetsApi.models(), assetsApi.palettes(), assetsApi.domain(), assetsApi.katalog()]).then(([m, p, d, k]) => {
       if (!alive) return;
       if (m.status === "fulfilled") setModels(m.value);
       if (p.status === "fulfilled") setPalettes(p.value);
       if (d.status === "fulfilled") setDomain(d.value);
+      if (k.status === "fulfilled") setKatalog(k.value);
     });
     return () => {
       alive = false;
@@ -316,23 +318,28 @@ export default function PanelApp() {
 
   const L = offer.link;
   const bazaWidok = offer.kuchnia?.elementy.length && cennikGotowy ? bazaKuchni(offer.kuchnia, cennik) : offer.base;
-  const total = totalPrice(offer, bazaWidok, palettes);
+  const total = totalPrice(offer, bazaWidok, palettes, { katalog });
   const linkUrl = L ? `${linkOrigin}/oferta/${L.slug}` : "";
   const shortUrl = L ? `${linkOrigin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
   const offerModel = offer.modelId ? models.find((m) => m.id === offer.modelId) : undefined;
-  const ralFronts = paletteFronts(palettes);
+  const mCtx = { palettes, katalog };
+  const frontyOferty = opcjeMaterialu("front", mCtx, offer.front);
+  const plyty = frontyOferty.filter((f) => f.zrodlo !== "ral");
+  const ralFronts = frontyOferty.filter((f) => f.zrodlo === "ral");
+  const blatyOferty = opcjeMaterialu("countertop", mCtx, offer.countertop);
+  const okuciaOferty = opcjeMaterialu("hardware", mCtx, offer.hardware);
   const lastTime = (o: Offer) => o.events[o.events.length - 1]?.t ?? "";
-  const frontColor = FRONTS.find((f) => f.id === offer.front)?.color ?? "#999";
-  const handle = HARDWARE_COLOR[offer.hardware];
+  const frontColor = frontInfo(palettes, offer.front, katalog)?.color ?? "#999";
+  const handle = HARDWARE_COLOR[offer.hardware] ?? (findHardware(offer.hardware, katalog)?.bezUchwytu ? undefined : findHardware(offer.hardware, katalog)?.color);
 
   const setMaterial = (kind: "front" | "countertop" | "hardware", id: string) => {
     if (offer[kind] === id) return;
     const label =
       kind === "front"
-        ? `Front: ${frontInfo(palettes, id)?.name ?? id}`
+        ? `Front: ${frontInfo(palettes, id, katalog)?.name ?? id}`
         : kind === "countertop"
-          ? `Blat: ${nameOf(COUNTERTOPS, id)}`
-          : `Okucia: ${nameOf(HARDWARE, id)}`;
+          ? `Blat: ${findCountertop(id, katalog)?.name ?? id}`
+          : `Okucia: ${findHardware(id, katalog)?.name ?? id}`;
     update(offer.id, (o) => withEvent({ ...o, [kind]: id }, "edit", label));
   };
 
@@ -654,6 +661,7 @@ export default function PanelApp() {
             countertop={offer.countertop}
             hardware={offer.hardware}
             palettes={palettes}
+            materialy={offer.materialy}
             linkUrl={linkUrl}
             zapewnijLink={zapewnijLink}
             ujecie={ujecie}
@@ -776,8 +784,8 @@ export default function PanelApp() {
                     <span className="row-title">{o.title}</span>
                     <span
                       className="row-swatch"
-                      title={frontInfo(palettes, o.front)?.name ?? o.front}
-                      style={{ background: frontInfo(palettes, o.front)?.color }}
+                      title={frontInfo(palettes, o.front, katalog)?.name ?? o.front}
+                      style={{ background: frontInfo(palettes, o.front, katalog)?.color }}
                     />
                     <span className="row-sub">
                       <span className="mono">{o.id}</span> · {o.clientType === "company" ? "Firma: " : ""}
@@ -934,10 +942,10 @@ export default function PanelApp() {
             ) : null}
             <div>
               <div className="mat-label">
-                Fronty <span>{frontInfo(palettes, offer.front)?.name ?? offer.front}</span>
+                Fronty <span>{frontInfo(palettes, offer.front, katalog)?.name ?? offer.front}</span>
               </div>
               <div className="swatches" role="radiogroup" aria-label="Fronty">
-                {FRONTS.map((f) => (
+                {plyty.map((f) => (
                   <button
                     key={f.id}
                     type="button"
@@ -945,7 +953,7 @@ export default function PanelApp() {
                     role="radio"
                     aria-checked={offer.front === f.id}
                     aria-label={f.name}
-                    data-tip={f.name}
+                    data-tip={`${f.name}${f.delta ? ` · ${f.delta > 0 ? "+" : ""}${formatPln(f.delta)}` : ""}`}
                     onClick={() => setMaterial("front", f.id)}
                   >
                     <span style={{ background: f.color }} />
@@ -974,7 +982,7 @@ export default function PanelApp() {
                 label="Blat"
                 value={offer.countertop}
                 onChange={(id) => setMaterial("countertop", id)}
-                options={COUNTERTOPS.map((c) => ({
+                options={blatyOferty.map((c) => ({
                   value: c.id,
                   label: (
                     <>
@@ -991,7 +999,15 @@ export default function PanelApp() {
                 label="Okucia"
                 value={offer.hardware}
                 onChange={(id) => setMaterial("hardware", id)}
-                options={HARDWARE.map((h) => ({ value: h.id, label: h.name }))}
+                options={okuciaOferty.map((h) => ({
+                  value: h.id,
+                  label: (
+                    <>
+                      {h.name}
+                      {h.delta !== 0 && <span className="delta">{`${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}`}</span>}
+                    </>
+                  ),
+                }))}
               />
             </div>
           </div>
@@ -1242,11 +1258,14 @@ function NewOfferDialog({
     title: "",
     layout: "L" as Layout,
     base: "24900",
-    front: FRONTS[0].id,
-    countertop: COUNTERTOPS[0].id,
-    hardware: HARDWARE[0].id,
+    // Pierwsze opcje z katalogu firmy (albo zestaw startowy, gdy katalog jest pusty).
+    front: opcjeMaterialu("front", { palettes, katalog: getKatalog() })[0]?.id ?? FRONTS[0].id,
+    countertop: opcjeMaterialu("countertop", { katalog: getKatalog() })[0]?.id ?? COUNTERTOPS[0].id,
+    hardware: opcjeMaterialu("hardware", { katalog: getKatalog() })[0]?.id ?? HARDWARE[0].id,
     modelId: "",
   });
+  const katalogNowej = useKatalog();
+  const nCtx = { palettes, katalog: katalogNowej };
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
@@ -1534,8 +1553,8 @@ function NewOfferDialog({
           <div className="field">
             <span className="lab">Fronty</span>
             <div className="swatches" role="radiogroup" aria-label="Fronty">
-              {[...FRONTS, ...paletteFronts(palettes)].map((f, i) => (
-                <button key={f.id} type="button" className="sw" role="radio" aria-checked={form.front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => set("front")(f.id)} data-first-ral={i === FRONTS.length ? "" : undefined}>
+              {opcjeMaterialu("front", nCtx, form.front).map((f, i, all) => (
+                <button key={f.id} type="button" className="sw" role="radio" aria-checked={form.front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => set("front")(f.id)} data-first-ral={f.zrodlo === "ral" && all[i - 1]?.zrodlo !== "ral" ? "" : undefined}>
                   <span style={{ background: f.color }} />
                 </button>
               ))}
@@ -1543,11 +1562,11 @@ function NewOfferDialog({
           </div>
           <div className="field">
             <span className="lab">Blat</span>
-            <Seg label="Blat" value={form.countertop} onChange={set("countertop")} options={COUNTERTOPS.map((c) => ({ value: c.id, label: c.name }))} />
+            <Seg label="Blat" value={form.countertop} onChange={set("countertop")} options={opcjeMaterialu("countertop", nCtx, form.countertop).map((c) => ({ value: c.id, label: c.name }))} />
           </div>
           <div className="field">
             <span className="lab">Okucia</span>
-            <Seg label="Okucia" value={form.hardware} onChange={set("hardware")} options={HARDWARE.map((h) => ({ value: h.id, label: h.name }))} />
+            <Seg label="Okucia" value={form.hardware} onChange={set("hardware")} options={opcjeMaterialu("hardware", nCtx, form.hardware).map((h) => ({ value: h.id, label: h.name }))} />
           </div>
           {error ? <p className="err">{error}</p> : null}
         </div>

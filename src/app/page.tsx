@@ -12,7 +12,7 @@ import { btn } from "@/components/site/styles";
 
 export const metadata: Metadata = {
   title: BRAND_NAME,
-  description: "System do ofert kuchni w 3D dla studiów i salonów meblowych: panel ofert, link dla klienta z podglądem 3D, uwagi i historia otwarć.",
+  description: "System do ofert mebli na wymiar w 3D – kuchnie, szafy, komody – dla stolarni, studiów i salonów: kreator, link dla klienta z podglądem 3D, oferta PDF, uwagi i historia otwarć.",
 };
 
 /*
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
  * Wszystkie teksty i media: src/content/strona-glowna.ts.
  */
 export default function HomePage() {
-  const { steps, demo, features, audience, pricing, faq, finalCta } = HOME;
+  const { meble, steps, demo, features, audience, pricing, faq, finalCta } = HOME;
 
   return (
     <div className="bg-[#0c0b0a] text-stone-200">
@@ -65,6 +65,20 @@ export default function HomePage() {
             </svg>
           </a>
         </section>
+
+        {/* Nie tylko kuchnie */}
+        <Section id={meble.id}>
+          <SectionHead eyebrow={meble.eyebrow} title={meble.title} lead={meble.lead} />
+          <ul className="mt-16 grid gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-4">
+            {meble.items.map((m) => (
+              <li key={m.title}>
+                <MediaSlot media={m.media} />
+                <h3 className="mt-6 text-lg text-stone-50">{m.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-400">{m.text}</p>
+              </li>
+            ))}
+          </ul>
+        </Section>
 
         {/* Jak to działa */}
         <Section id={steps.id}>

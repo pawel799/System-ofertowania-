@@ -8,7 +8,9 @@ import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
-import { paletteFronts, type Palette } from "../palettes";
+import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
+import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
+import type { Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
 import { GRUPY_BIBLIOTEKI, podzielModele } from "@/lib/bibliotekaModeli";
 import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
@@ -41,6 +43,7 @@ import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./Ofert
 import { Seg, Toaster, Tooltips, toast } from "./ui";
 import { KreatorWlasciwosci, PoleCm } from "./KreatorWlasciwosci";
 import { useCennik } from "./useCennik";
+import { KreatorBiblioteka } from "./KreatorBiblioteka";
 import {
   ApiError,
   assetsApi,
@@ -102,6 +105,8 @@ export default function KreatorApp() {
   const [zakladka, setZakladka] = useState<"rzut" | "3d">("rzut");
   const [wymiary, setWymiary] = useState(true);
   const [szukaj, setSzukaj] = useState("");
+  const [biblioteka, setBiblioteka] = useState(false);
+  const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
   const { cennik, blad: cennikBlad } = useCennik();
   const ujecie = useRef<KuchniaUjecie | null>(null);
@@ -128,21 +133,30 @@ export default function KreatorApp() {
       return;
     }
     try {
-      const [list, modele, pakiety, domena] = await Promise.all([
+      const [list, modele, pakiety, domena, katalogFirmy] = await Promise.all([
         panelApi.list(),
         assetsApi.models().catch(() => [] as ModelMeta[]),
         assetsApi.palettes().catch(() => [] as Palette[]),
         assetsApi.domain().catch(() => null),
-      ]);
+        assetsApi.katalog().catch(() => [] as KatalogPozycja[]),
+      ]).then((r) => {
+        setKatalogStore(r[4]);
+        return [r[0], r[1], r[2], r[3], r[4]] as const;
+      });
       setIstniejace(list);
       setModels(modele);
       setPalettes(pakiety);
       setDomain(domena);
       setLokalnie(false);
-      if (id) {
-        const found = list.find((o) => offerKey(o.id) === id || o.id === id);
-        if (found) wczytajOferte(found);
-        else toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nową kuchnię." });
+      const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
+      if (found) wczytajOferte(found);
+      else {
+        if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nową kuchnię." });
+        // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
+        const kat = { palettes: pakiety, katalog: katalogFirmy };
+        setFrontId(opcjeMaterialu("front", kat)[0]?.id ?? FRONTS[0].id);
+        setCountertopId(opcjeMaterialu("countertop", kat)[0]?.id ?? COUNTERTOPS[0].id);
+        setHardwareId(opcjeMaterialu("hardware", kat)[0]?.id ?? HARDWARE[0].id);
       }
       setAuth(false);
     } catch (e) {
@@ -180,14 +194,15 @@ export default function KreatorApp() {
 
   const element = plan.elementy.find((e) => e.id === zaznaczony) ?? null;
   const suma = bazaKuchni(plan, cennik);
-  const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes);
+  const katalog = useKatalog();
+  const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes, { katalog });
+  const kCtx = { palettes, katalog };
   const modeleSceny = useMemo(
     () => models.filter((m) => plan.elementy.some((e) => e.modelId === m.id)).map(toPublicModel),
     [models, plan.elementy],
   );
   const linkOrigin = domain?.active && domain.domain ? `https://${domain.domain.hostname}` : origin;
   const linkUrl = offer?.link ? `${linkOrigin}/oferta/${offer.link.slug}` : null;
-  const ral = paletteFronts(palettes);
 
   const zmien = (fn: (p: PlanKuchni) => PlanKuchni) => setPlan((p) => fn(p));
 
@@ -449,6 +464,9 @@ export default function KreatorApp() {
           <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
             <div className="kr-pad">
               <h2>Katalog</h2>
+              <button type="button" className="btn btn-ghost wide" onClick={() => setBiblioteka(true)}>
+                Biblioteka modeli – miniatury
+              </button>
               <p className="lede">Kliknięcie dodaje element na końcu ściany {sciana === "B" && plan.uklad === "L" ? "B" : "A"}. Wymiary: szer. × wys. × gł.</p>
               <Seg
                 label="Ściana"
@@ -675,7 +693,7 @@ export default function KreatorApp() {
               <div className="field">
                 <span className="lab">Fronty</span>
                 <div className="swatches" role="radiogroup" aria-label="Fronty">
-                  {[...FRONTS, ...ral].map((f) => (
+                  {opcjeMaterialu("front", kCtx, front).map((f) => (
                     <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
                       <span style={{ background: f.color }} />
                     </button>
@@ -684,11 +702,11 @@ export default function KreatorApp() {
               </div>
               <div className="field">
                 <span className="lab">Blat</span>
-                <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={COUNTERTOPS} />
+                <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} />
               </div>
               <div className="field">
                 <span className="lab">Okucia</span>
-                <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={HARDWARE} />
+                <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
               </div>
 
               <div className="kr-sum">
@@ -750,6 +768,7 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
+      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={dodaj} onClose={zamknijBiblioteke} /> : null}
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
       <Tooltips />
       <Toaster />

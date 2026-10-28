@@ -6,6 +6,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, listOffers, offerKey, putOffer, readJson, validateOffer } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
+import { checkKatalogRefs, snapshotOferty } from "../../_lib/katalog";
 import { zCenaKuchni } from "../../_lib/kuchnia";
 import { assertCanWrite, assertLimit, firmPlan, isActiveOffer } from "../../_lib/plan";
 
@@ -23,6 +24,8 @@ export const onRequestPost = handle(async (ctx) => {
     assertLimit(fp, "activeOffers", (await listOffers(kv)).filter((o) => isActiveOffer(o)).length);
   }
   await checkRefs(kv, offer);
+  await checkKatalogRefs(kv, offer);
+  offer.materialy = await snapshotOferty(kv, offer);
   const key = offerKey(offer.id);
   if (await getOffer(kv, key)) {
     throw new HttpError(409, "exists", `Oferta ${offer.id} już istnieje. Odśwież listę.`);

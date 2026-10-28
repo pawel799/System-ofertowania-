@@ -9,6 +9,8 @@ import { FRONTS, getFront, subscribeFront } from "./frontStore";
 import { toPhysical } from "./kitchenMaterials";
 import { getPalettes, subscribePalettes } from "./paletteStore";
 import { FINISH_LOOK, findRalFront } from "./palettes";
+import { findFront, LOOK_WYKONCZENIA, parseKatRef } from "./katalogFirmy";
+import { getKatalog, subscribeKatalog } from "./katalogStore";
 
 /*
  * Podmiana materiału frontów w modelu 3D po wyborze próbki w MaterialsPanel.
@@ -115,9 +117,10 @@ export function installFrontSwap(root: Object3D, onChange: () => void) {
     if (!byId || !(original instanceof MeshStandardMaterial)) return undefined;
     const cached = byId.get(id);
     if (cached) return cached;
-    const ral = findRalFront(getPalettes(), id);
-    if (!ral) return undefined;
-    const look = FINISH_LOOK[ral.finish ?? "satyna"];
+    // Kolor z pakietu RAL albo pozycja katalogu firmy („cat:…”): gładki front w kolorze z wykończeniem.
+    const ral = findRalFront(getPalettes(), id) ?? (parseKatRef(id) ? findFront(id, [], getKatalog()) : undefined);
+    if (!ral?.color) return undefined;
+    const look = LOOK_WYKONCZENIA[(ral.finish as keyof typeof LOOK_WYKONCZENIA) ?? "satyna"] ?? FINISH_LOOK.satyna;
     const m = toPhysical(original.clone());
     m.name = `${original.name}__${id}`;
     m.map = null;
@@ -142,10 +145,12 @@ export function installFrontSwap(root: Object3D, onChange: () => void) {
   const unsubscribe = subscribeFront(apply);
   // Pakiety RAL mogą dojść po wyborze frontu (oferta wczytuje się z API).
   const unsubscribePalettes = subscribePalettes(apply);
+  const unsubscribeKatalog = subscribeKatalog(apply);
 
   return () => {
     unsubscribe();
     unsubscribePalettes();
+    unsubscribeKatalog();
     for (const { mesh, original } of targets) mesh.material = original;
     // Tekstury są wspólne z modelem, więc zwalniamy tylko same klony.
     variants.forEach((byId) => byId.forEach((m) => m.dispose()));

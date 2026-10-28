@@ -2,7 +2,7 @@
 
 Stolarnia wstawia na swoją stronę internetową kuchnię 3D: klient obraca ją, zmienia fronty, blat
 i uchwyty, widzi szacunkową cenę i wysyła „Poproś o wycenę” albo „Umów pomiar”. Zgłoszenie trafia do
-**Zgłoszeń** w panelu tej firmy (z dopiskiem „Z kuchni 3D na Twojej stronie”) i – przy skonfigurowanym
+**Zgłoszeń** w panelu tej firmy (z dopiskiem „Z podglądu 3D na Twojej stronie”) i – przy skonfigurowanym
 Resend – mailem do właściciela konta.
 
 ## W panelu

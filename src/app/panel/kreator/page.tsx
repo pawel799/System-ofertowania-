@@ -15,7 +15,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Kreator kuchni · Panel ofert",
+  title: "Kreator · Panel ofert · OP RZUT",
   description: "Złóż kuchnię z modułów albo modeli firmy i zapisz ją jako ofertę.",
   robots: { index: false, follow: false },
 };

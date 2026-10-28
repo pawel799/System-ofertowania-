@@ -1,5 +1,5 @@
-import { COUNTERTOPS, FRONTS, HARDWARE } from "./catalog";
-import { findRalFront, type Palette } from "./palettes";
+import { deltaMaterialu, type KatalogPozycja, type MaterialySnapshot } from "./katalogFirmy";
+import type { Palette } from "./palettes";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)
@@ -23,17 +23,20 @@ export function formatPln(value: number) {
 
 /**
  * Kwota netto: cena bazowa + dopłaty za front, blat i okucia.
- * palettes: pakiety RAL, gdy front pochodzi z pakietu ("ral:…") – wtedy dopłata pakietu.
+ * palettes: pakiety RAL („ral:…”); katalog: pozycje katalogu firmy („cat:…”);
+ * snapshot: dopłaty zapisane w ofercie – mają pierwszeństwo, żeby link klienta nie zmieniał ceny po edycji katalogu.
  */
 export function totalPrice(
   selection: { front: string; countertop: string; hardware: string },
   base: number = BASE_PRICE,
   palettes: Palette[] = [],
+  extra: { katalog?: readonly KatalogPozycja[]; snapshot?: MaterialySnapshot | null } = {},
 ) {
+  const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot };
   return (
     base +
-    (FRONTS.find((f) => f.id === selection.front)?.delta ?? findRalFront(palettes, selection.front)?.delta ?? 0) +
-    (COUNTERTOPS.find((c) => c.id === selection.countertop)?.delta ?? 0) +
-    (HARDWARE.find((h) => h.id === selection.hardware)?.delta ?? 0)
+    deltaMaterialu("front", selection.front, ctx) +
+    deltaMaterialu("countertop", selection.countertop, ctx) +
+    deltaMaterialu("hardware", selection.hardware, ctx)
   );
 }

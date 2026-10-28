@@ -11,6 +11,8 @@ import {
   getCountertop,
   subscribeCountertop,
 } from "./countertopStore";
+import { findCountertop, LOOK_WYKONCZENIA, parseKatRef } from "./katalogFirmy";
+import { getKatalog, subscribeKatalog } from "./katalogStore";
 
 /*
  * Podmiana materiału blatu w modelu 3D po wyborze w MaterialsPanel.
@@ -119,19 +121,44 @@ export function installCountertopSwap(root: Object3D, onChange: () => void) {
     variants.set(original, byId);
   }
 
+  // Blat z katalogu firmy („cat:…”): kolor i wykończenie z pozycji, bez tekstury kamienia z modelu.
+  const katVariant = (original: Material, id: string) => {
+    const byId = variants.get(original);
+    if (!byId || !(original instanceof MeshStandardMaterial) || !parseKatRef(id)) return undefined;
+    const cached = byId.get(id);
+    if (cached) return cached;
+    const m = findCountertop(id, getKatalog());
+    if (!m?.color) return undefined;
+    const look = LOOK_WYKONCZENIA[(m.finish as keyof typeof LOOK_WYKONCZENIA) ?? "satyna"] ?? LOOK_WYKONCZENIA.satyna;
+    const v = original.clone();
+    v.name = `${original.name}__${id}`;
+    v.map = null;
+    v.color.set(m.color);
+    v.roughness = look.roughness;
+    if (v instanceof MeshPhysicalMaterial) {
+      v.clearcoat = look.clearcoat;
+      v.clearcoatRoughness = look.clearcoatRoughness;
+    }
+    v.needsUpdate = true;
+    byId.set(id, v);
+    return v;
+  };
+
   const apply = () => {
     const id = getCountertop();
     for (const { mesh, original } of targets) {
-      mesh.material = variants.get(original)?.get(id) ?? original;
+      mesh.material = variants.get(original)?.get(id) ?? katVariant(original, id) ?? original;
     }
     onChange();
   };
 
   apply();
   const unsubscribe = subscribeCountertop(apply);
+  const unsubscribeKatalog = subscribeKatalog(apply);
 
   return () => {
     unsubscribe();
+    unsubscribeKatalog();
     for (const { mesh, original } of targets) mesh.material = original;
     // Tekstury są wspólne z modelem, więc zwalniamy tylko same klony.
     variants.forEach((byId, original) =>

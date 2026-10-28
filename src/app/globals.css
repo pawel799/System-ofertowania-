@@ -24,3 +24,66 @@ body {
     text-wrap: balance;
   }
 }
+
+/*
+ * Strona oferty na telefonie: „Otwórz podgląd” (PodgladTelefon.tsx) – ta sama strona w układzie poziomym:
+ * scena 3D po lewej, po prawej kolumna z nazwą, materiałami, ceną i przyciskiem. Bez drugiej sceny WebGL.
+ */
+.oferta-podglad-otworz {
+  position: absolute; right: 12px; bottom: 12px; z-index: 6;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 999px;
+  background: rgba(12, 11, 10, 0.82); color: #f5f5f4; border: 1px solid rgba(255, 255, 255, 0.25);
+  font-size: 14px; line-height: 1; backdrop-filter: blur(6px);
+}
+main[data-oferta][data-podglad] {
+  position: fixed !important; inset: 0; z-index: 60;
+  display: grid; grid-template-columns: minmax(0, 1fr) min(380px, 46vw); grid-template-rows: 100%;
+  height: 100dvh; min-height: 0 !important; padding: 0 !important; overflow: hidden;
+}
+main[data-oferta][data-podglad] > .oferta-scena { grid-column: 1; height: 100% !important; }
+main[data-oferta][data-podglad] > .oferta-nakladka {
+  grid-column: 2; grid-row: 1; height: 100%; overflow-y: auto; overscroll-behavior: contain;
+  pointer-events: auto; background: #0c0b0a; border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+main[data-oferta][data-podglad] .oferta-naglowek {
+  position: static !important; transform: none !important; padding: 10px 14px !important; font-size: 10px; letter-spacing: 0.2em;
+}
+main[data-oferta][data-podglad] .oferta-kod { display: none !important; }
+main[data-oferta][data-podglad] .oferta-tytul { flex: none !important; padding: 4px 14px 10px !important; }
+main[data-oferta][data-podglad] .oferta-tytul h1 { font-size: 20px !important; line-height: 1.15 !important; margin-top: 4px !important; }
+main[data-oferta][data-podglad] .oferta-tytul .mt-5 { margin-top: 10px !important; }
+main[data-oferta][data-podglad] aside > div { padding: 12px 14px !important; gap: 12px !important; }
+/* Cena i „Poproś o wycenę” zawsze widoczne na dole kolumny; materiały w rzędach przewijanych w bok. */
+main[data-oferta][data-podglad] > .oferta-nakladka { display: flex !important; flex-direction: column; }
+main[data-oferta][data-podglad] aside { flex: 1 0 auto; display: flex; flex-direction: column; }
+main[data-oferta][data-podglad] aside > div { flex: 1 0 auto; display: flex; flex-direction: column; }
+main[data-oferta][data-podglad] .oferta-cena {
+  position: sticky !important; bottom: 0; margin: auto -14px 0 !important; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important; background: #fff; gap: 10px;
+}
+main[data-oferta][data-podglad] .oferta-cena .text-2xl { font-size: 20px !important; }
+main[data-oferta][data-podglad] .oferta-cena button { padding: 10px 14px !important; font-size: 13px !important; }
+main[data-oferta][data-podglad] aside [role="radiogroup"] { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+main[data-oferta][data-podglad] aside [role="radiogroup"]::-webkit-scrollbar { display: none; }
+main[data-oferta][data-podglad] aside [role="radiogroup"] button[class*="rounded-full border px"] { padding: 6px 11px !important; font-size: 12.5px !important; flex: none; }
+main[data-oferta][data-podglad] aside [role="radiogroup"] button.h-9 { height: 28px !important; width: 28px !important; flex: none; }
+main[data-oferta][data-podglad] aside fieldset, main[data-oferta][data-podglad] aside fieldset + div { min-width: 0; }
+main[data-oferta][data-podglad] aside > div > div:first-child { flex-wrap: nowrap !important; flex-direction: column; align-items: stretch !important; gap: 10px !important; }
+main[data-oferta][data-podglad] aside p.mb-2, main[data-oferta][data-podglad] aside legend { margin-bottom: 4px !important; }
+.oferta-podglad-zamknij {
+  position: fixed; left: max(10px, env(safe-area-inset-left, 0px)); top: 10px; z-index: 70;
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px;
+  background: rgba(12, 11, 10, 0.82); color: #f5f5f4; border: 1px solid rgba(255, 255, 255, 0.25); font-size: 13px;
+}
+.oferta-obroc { display: none; }
+@media (orientation: portrait) {
+  .oferta-obroc {
+    position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 32px; text-align: center; background: rgba(12, 11, 10, 0.94); color: #f5f5f4; font-size: 16px; line-height: 1.45;
+  }
+  .oferta-obroc button { padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.3); color: #f5f5f4; }
+}
+main[data-oferta][data-podglad] .oferta-tytul .mt-5 > * { padding: 6px 12px !important; font-size: 12.5px !important; min-height: 0 !important; }
+main[data-oferta][data-podglad] .oferta-tytul .mt-5 { gap: 8px !important; }
+main[data-oferta][data-podglad] .oferta-tytul p { font-size: 10px; }

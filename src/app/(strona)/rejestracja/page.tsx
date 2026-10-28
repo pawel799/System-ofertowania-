@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthCard, RegisterForm } from "@/components/site/AuthForms";
 
-export const metadata: Metadata = { title: "Rejestracja · System ofertowania" };
+export const metadata: Metadata = { title: "Rejestracja · OP RZUT" };
 
 export default function RejestracjaPage() {
   return (

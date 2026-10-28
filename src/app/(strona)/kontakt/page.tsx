@@ -3,7 +3,7 @@ import PageIntro from "@/components/site/PageIntro";
 import { ContactForm } from "@/components/site/SiteForms";
 import { FIRMA, adresFirmy } from "@/content/firma";
 
-export const metadata: Metadata = { title: "Kontakt · System ofertowania" };
+export const metadata: Metadata = { title: "Kontakt · OP RZUT" };
 
 // Dane z src/content/firma.ts – puste pola się nie wyświetlają.
 const DETAILS = [

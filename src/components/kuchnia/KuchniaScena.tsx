@@ -3,16 +3,18 @@
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
-import { Box3, PerspectiveCamera, Vector3 } from "three";
+import { PerspectiveCamera, Vector3 } from "three";
 import { rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
 import { useCountertop } from "../countertopStore";
 import { useFront } from "../frontStore";
 import { useHardware } from "../hardwareStore";
 import { usePalettes } from "../paletteStore";
+import { useKatalog } from "../katalogStore";
 import AgdBryla from "./AgdBryla";
 import { yElementu } from "./uklad3d";
 import Wymiary3D from "./Wymiary3D";
+import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
 
@@ -108,27 +110,25 @@ function Ujecie({ aktywne, onUjecie }: { aktywne: boolean; onUjecie?: (u: Kuchni
 
 function ModelBryla({ model, w, h, d }: { model: PublicModel; w: number; h: number; d: number }) {
   const { scene } = useGLTF(model.url, true, true);
-  const clone = useMemo(() => scene.clone(true), [scene]);
+  // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
+  const uchwyt = useUchwytModelu(scene);
+  // Pudełko liczone w układzie modelu (nie świata) – patrz obrys.tsx.
+  const fit = useMemo(() => dopasuj(uchwyt, w / 100, h / 100, d / 100), [uchwyt, w, h, d]);
+  const invalidate = useThree((s) => s.invalidate);
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
   const palettes = usePalettes();
-  useLayoutEffect(() => {
-    clone.scale.set(1, 1, 1);
-    clone.position.set(0, 0, 0);
-    clone.updateMatrixWorld(true);
-    const box = new Box3().setFromObject(clone);
-    const size = box.getSize(new Vector3());
-    clone.scale.set((w / 100) / Math.max(size.x, 0.001), (h / 100) / Math.max(size.y, 0.001), (d / 100) / Math.max(size.z, 0.001));
-    clone.updateMatrixWorld(true);
-    const box2 = new Box3().setFromObject(clone);
-    const c = box2.getCenter(new Vector3());
-    clone.position.set(-c.x, -box2.min.y, -c.z);
-  }, [clone, w, h, d]);
+  const katalogMat = useKatalog();
   useEffect(() => {
-    return applyRoles(clone, model.tags, { front, countertop, hardware }, palettes);
-  }, [clone, model, front, countertop, hardware, palettes]);
-  return <primitive object={clone} />;
+    return applyRoles(uchwyt, model.tags, { front, countertop, hardware }, palettes, katalogMat);
+  }, [uchwyt, model, front, countertop, hardware, palettes, katalogMat]);
+  useEffect(() => invalidate(), [fit, invalidate]);
+  return (
+    <group position={fit.position} scale={fit.scale}>
+      <primitive object={uchwyt} />
+    </group>
+  );
 }
 
 class BladModelu extends Component<{ children: ReactNode; fallback: ReactNode }, { blad: boolean }> {
@@ -173,21 +173,17 @@ function ElementWidok({
         onWybierz?.(el.id);
       }}
     >
-      {model ? (
-        <BladModelu fallback={szafka}>
-          <Suspense fallback={szafka}>
-            <ModelBryla model={model} w={el.w} h={el.h} d={el.d} />
-          </Suspense>
-        </BladModelu>
-      ) : (
-        szafka
-      )}
-      {zaznaczony ? (
-        <mesh position={[0, el.h / 200, 0]}>
-          <boxGeometry args={[el.w / 100 + 0.02, el.h / 100 + 0.02, el.d / 100 + 0.02]} />
-          <meshBasicMaterial color="#7c98ff" wireframe />
-        </mesh>
-      ) : null}
+      <Obrys aktywny={zaznaczony}>
+        {model ? (
+          <BladModelu fallback={szafka}>
+            <Suspense fallback={szafka}>
+              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} />
+            </Suspense>
+          </BladModelu>
+        ) : (
+          szafka
+        )}
+      </Obrys>
     </group>
   );
 }
@@ -197,19 +193,20 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
   const countertop = useCountertop();
   const hardware = useHardware();
   const palettes = usePalettes();
+  const katalogMat = useKatalog();
   const invalidate = useThree((s) => s.invalidate);
   const wybor = { front, countertop, hardware };
-  const wyglad = lookFor("front", wybor, palettes);
-  const blatLook = lookFor("blat", wybor, palettes);
+  const wyglad = lookFor("front", wybor, palettes, katalogMat);
+  const blatLook = lookFor("blat", wybor, palettes, katalogMat);
   const kolor = wyglad.color ?? "#c9bcaa";
   const blat = blatLook.color ?? BLAT[countertop] ?? "#ece8e1";
-  const uchwyt = hardware !== "push-to-open";
+  const uchwyt = !lookFor("uchwyt", wybor, palettes, katalogMat).hidden;
   const katalog = useMemo(() => new Map(modele.map((m) => [m.id, m])), [modele]);
   const { x0, x1, z0, z1 } = zakres(plan);
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, plan, front, countertop, hardware, palettes, zaznaczony]);
+  }, [invalidate, plan, front, countertop, hardware, palettes, katalogMat, zaznaczony]);
 
   return (
     <>

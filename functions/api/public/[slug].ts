@@ -8,6 +8,7 @@ import { bazaKuchni, pozycjeKuchni } from "../../_lib/kuchnia";
 import { handle, json, publicView } from "../../_lib/offers";
 import { publicBrand, resolvePublic } from "../../_lib/public";
 import { getCennik, pricedModuly } from "../../_lib/modul";
+import { listKatalog, publicznyKatalog } from "../../_lib/katalog";
 
 export const onRequestGet = handle(async (ctx) => {
   const { kv, offer } = await resolvePublic(ctx);
@@ -32,6 +33,8 @@ export const onRequestGet = handle(async (ctx) => {
       ...(modele.length ? { modele } : {}),
       // Pakiety RAL do wyboru frontu (przy ukrytej cenie bez dopłat).
       palettes: publicPalettes(await listPalettes(kv), showPrice),
+      // Katalog materiałów firmy (aktywne pozycje + wybrane w ofercie); dopłaty wybranych są w offer.materialy.
+      katalog: publicznyKatalog(await listKatalog(kv), offer, showPrice),
       // Nazwa i logo firmy, która wysłała ofertę.
       brand: await publicBrand(kv),
       // Cena zabudowy z kreatora zawsze z aktualnego cennika (nie ze zrzutu przy zapisie).

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AuthCard, ResetForm } from "@/components/site/AuthForms";
 
-export const metadata: Metadata = { title: "Zmiana hasła · System ofertowania", robots: { index: false } };
+export const metadata: Metadata = { title: "Zmiana hasła · OP RZUT", robots: { index: false } };
 
 export default function ResetHaslaPage() {
   return (

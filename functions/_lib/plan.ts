@@ -9,6 +9,7 @@
 import { PLANS, type PlanInfo, type PlanLimits } from "../../src/lib/plans";
 import type { Session } from "./auth";
 import { listModels } from "./assets";
+import { listKatalog } from "./katalog";
 import { HttpError, listOffers, store, type Env, type KVNamespace, type Offer } from "./offers";
 import { firmExpired, getFirm, MAIN_FIRM, type Firm } from "./tenant";
 
@@ -33,11 +34,12 @@ export function assertCanWrite({ firm }: FirmPlan) {
   );
 }
 
-type CountedLimit = "users" | "activeOffers" | "models";
+type CountedLimit = "users" | "activeOffers" | "models" | "katalog";
 const LIMIT_TEXT: Record<CountedLimit, (n: number) => string> = {
   users: (n) => `Plan pozwala na ${n} ${n === 1 ? "konto" : "konta"} w zespole.`,
   activeOffers: (n) => `Plan pozwala na ${n} ofert w toku. Usuń stare oferty albo oznacz je jako zaakceptowane.`,
   models: (n) => `Plan pozwala na ${n} modeli 3D. Usuń nieużywane modele.`,
+  katalog: (n) => `Plan pozwala na ${n} pozycji w katalogu materiałów. Usuń albo połącz nieużywane pozycje.`,
 };
 
 /** Rzuca 403, gdy po dodaniu jednej rzeczy firma przekroczy limit planu. */
@@ -51,7 +53,7 @@ type Feature = keyof Pick<PlanLimits, "palettes" | "domain" | "embed">;
 const FEATURE_TEXT: Record<Feature, string> = {
   palettes: "Własne pakiety kolorów RAL są w planie Pracownia i wyższym.",
   domain: "Własna domena linków jest w planie Producent.",
-  embed: "Kuchnia 3D na Twojej stronie (kod osadzenia) jest w planie Pracownia i wyższym.",
+  embed: "Meble 3D na Twojej stronie (kod osadzenia) jest w planie Pracownia i wyższym.",
 };
 
 export function assertFeature({ plan }: FirmPlan, feature: Feature) {
@@ -68,6 +70,6 @@ export function isActiveOffer(o: Offer, now = Date.now()) {
 }
 
 export async function usage(kv: KVNamespace, users: number) {
-  const [offers, models] = await Promise.all([listOffers(kv), listModels(kv)]);
-  return { users, activeOffers: offers.filter((o) => isActiveOffer(o)).length, offers: offers.length, models: models.length };
+  const [offers, models, katalog] = await Promise.all([listOffers(kv), listModels(kv), listKatalog(kv)]);
+  return { users, activeOffers: offers.filter((o) => isActiveOffer(o)).length, offers: offers.length, models: models.length, katalog: katalog.length };
 }

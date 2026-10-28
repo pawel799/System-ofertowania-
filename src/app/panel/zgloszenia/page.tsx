@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Zgłoszenia · Panel ofert",
+  title: "Zgłoszenia · Panel ofert · OP RZUT",
   description: "Prośby o wycenę i pomiar oraz wiadomości z formularza kontaktowego.",
   robots: { index: false, follow: false },
 };

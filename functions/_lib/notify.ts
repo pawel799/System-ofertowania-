@@ -26,7 +26,7 @@ export async function sendMail(
       method: "POST",
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
       body: JSON.stringify({
-        from: env.NOTIFY_FROM || "System ofertowania <onboarding@resend.dev>",
+        from: env.NOTIFY_FROM || "OP RZUT <onboarding@resend.dev>",
         to: mail.to,
         reply_to: mail.replyTo || undefined,
         subject: mail.subject,

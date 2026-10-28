@@ -10,7 +10,7 @@ const rubik = Rubik({
 });
 
 export const metadata: Metadata = {
-  title: "System ofertowania",
+  title: "OP RZUT",
   description: "Oferty mebli na wymiar w 3D.",
 };
 

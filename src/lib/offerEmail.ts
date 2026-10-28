@@ -2,6 +2,8 @@ import { FIRMA } from "@/content/firma";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "@/components/catalog";
 import { formatPln, totalPrice } from "@/components/pricing";
 import { CENA_ZAKRES } from "@/lib/plans";
+import { findMaterial, type KontekstMaterialow } from "@/components/katalogFirmy";
+import type { Palette } from "@/components/palettes";
 
 /*
  * Mail z ofertą (HTML zgodny z klientami pocztowymi: Gmail, Outlook, Apple Mail).
@@ -30,6 +32,8 @@ export type OfferEmailData = {
   validUntil?: string;
   pin?: string | null;
   showPrice?: boolean;
+  /** Pakiety RAL, katalog firmy i snapshot oferty (bez nich – zestaw wbudowany). */
+  materialy?: KontekstMaterialow;
   studio: { name: string; phone?: string; email?: string; /** Logo firmy (adres albo data URL); brak = sama nazwa. */ logo?: string | null };
 };
 
@@ -48,10 +52,15 @@ const HANDLE_COLOR: Record<string, string> = {
 };
 
 export function renderOfferEmail(d: OfferEmailData) {
-  const front = FRONTS.find((f) => f.id === d.front) ?? FRONTS[0];
-  const countertop = COUNTERTOPS.find((c) => c.id === d.countertop) ?? COUNTERTOPS[0];
-  const hardware = HARDWARE.find((h) => h.id === d.hardware) ?? HARDWARE[0];
-  const price = totalPrice({ front: d.front, countertop: d.countertop, hardware: d.hardware }, d.base);
+  // Nazwy i dopłaty: snapshot oferty → katalog firmy / RAL → zestaw wbudowany.
+  const m = d.materialy ?? {};
+  const front = findMaterial("front", d.front, m) ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
+  const countertop = findMaterial("countertop", d.countertop, m) ?? { ...COUNTERTOPS[0], zrodlo: "wbudowany" as const };
+  const hardware = findMaterial("hardware", d.hardware, m) ?? { ...HARDWARE[0], zrodlo: "wbudowany" as const };
+  const price = totalPrice({ front: d.front, countertop: d.countertop, hardware: d.hardware }, d.base, (m.palettes ?? []) as Palette[], {
+    katalog: m.katalog,
+    snapshot: m.snapshot,
+  });
   const url = `${d.origin}${d.offerPath}`;
   const showPrice = d.showPrice ?? true;
 
@@ -105,9 +114,9 @@ export function renderOfferEmail(d: OfferEmailData) {
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;">
               ${row("Układ", d.layout)}
-              ${row("Fronty", front.name, front.color)}
-              ${row("Blat", countertop.name, COUNTERTOP_COLOR[countertop.id] ?? "#e7e5e4")}
-              ${row("Uchwyty", hardware.name, HANDLE_COLOR[hardware.id] ?? "#e7e5e4")}
+              ${row("Fronty", front.name, front.color ?? "#d6d3d1")}
+              ${row("Blat", countertop.name, COUNTERTOP_COLOR[countertop.id] ?? countertop.color ?? "#e7e5e4")}
+              ${row("Uchwyty", hardware.name, HANDLE_COLOR[hardware.id] ?? hardware.color ?? "#e7e5e4")}
               <tr><td colspan="2" style="border-top:1px solid #e7e5e4;font-size:0;line-height:0;">&nbsp;</td></tr>
             </table>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { KatalogTab } from "./KatalogTab";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
@@ -25,16 +26,17 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "cennik" | "models" | "palettes" | "domain" | "osadzanie" | "konto" | "zespol" | "plan" | "firmy";
+type Tab = "firma" | "cennik" | "models" | "palettes" | "katalog" | "domain" | "osadzanie" | "konto" | "zespol" | "plan" | "firmy";
 const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
   { value: "cennik", label: "Cennik modułów" },
   { value: "models", label: "Modele 3D" },
   { value: "palettes", label: "Kolory RAL" },
+  { value: "katalog", label: "Katalog materiałów" },
   { value: "domain", label: "Domena" },
   { value: "osadzanie", label: "Na stronie" },
 ];
-const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "domain", "osadzanie", "konto", "zespol", "plan", "firmy"];
+const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "katalog", "domain", "osadzanie", "konto", "zespol", "plan", "firmy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -123,6 +125,8 @@ export default function SettingsApp() {
             <ModelsTab onAuthError={onAuthError} />
           ) : tab === "palettes" ? (
             <PalettesTab onAuthError={onAuthError} />
+          ) : tab === "katalog" ? (
+            <KatalogTab canEdit={me?.role !== "member"} onAuthError={onAuthError} />
           ) : tab === "konto" ? (
             <AccountTab me={me} onAuthError={onAuthError} />
           ) : tab === "zespol" ? (

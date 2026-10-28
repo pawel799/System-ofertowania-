@@ -7,6 +7,7 @@ import { resolveEmbed } from "../../_lib/embed";
 import { handle, HttpError, json, param } from "../../_lib/offers";
 import { publicBrand } from "../../_lib/public";
 import { getCennik } from "../../_lib/modul";
+import { listKatalog, publicznyKatalog } from "../../_lib/katalog";
 import { FIRM_ID_RE, MAIN_FIRM } from "../../_lib/tenant";
 
 export const onRequestGet = handle(async (ctx) => {
@@ -25,6 +26,7 @@ export const onRequestGet = handle(async (ctx) => {
         hardware: embed.hardware,
         model: model ? publicModel(model) : null,
         palettes: publicPalettes(await listPalettes(kv), embed.showPrice),
+        katalog: publicznyKatalog(await listKatalog(kv), embed, embed.showPrice),
         brand: await publicBrand(kv),
         // Konfigurator szafki na wymiar: cennik firmy tylko przy widocznej cenie.
         moduly: embed.moduly,
