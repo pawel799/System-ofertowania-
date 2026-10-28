@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
-import { initials, useBrand } from "@/lib/brand";
+import { initials, loadBrand, useBrand } from "@/lib/brand";
 import { ApiError, authApi } from "./offerApi";
 import { TURNSTILE_SITE_KEY, useTurnstile } from "../Turnstile";
 import { useMe } from "./AccountTabs";
@@ -184,6 +184,8 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
     try {
       if (mode === "account") await authApi.login(email.trim(), password, token);
       else await authApi.loginWithCode(code);
+      // Marka (nazwa, logo) była pobrana przed zalogowaniem – bez tego w nagłówku zostaje domyślna nazwa.
+      void loadBrand(true);
       onLoggedIn();
     } catch (err) {
       if (mode === "account") resetCaptcha();
