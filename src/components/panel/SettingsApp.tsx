@@ -9,7 +9,7 @@ import { AccountTab, AdminFirmsTab, TeamTab, useMe } from "./AccountTabs";
 import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
-import { podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
+import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
 import { LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
@@ -302,8 +302,9 @@ function ModelsTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
       <section className="set-card">
         <h2>Twoje modele</h2>
         <p className="lede">
-          Po wgraniu oznacz, które elementy to fronty, blat i uchwyty – to one zmieniają kolor w ofercie. Biblioteka 50 modeli
-          (cztery gotowe kuchnie i moduły kreatora) pojawia się tutaj po wgraniu skryptem z <span className="mono">seed/modele-kuchnia-50</span>.
+          Po wgraniu oznacz, które elementy to fronty, blat i uchwyty – to one zmieniają kolor w ofercie. Biblioteka kuchni
+          (cztery gotowe kuchnie i moduły kreatora) oraz szafy, szafki i komody pojawiają się tutaj po wgraniu skryptami z{" "}
+          <span className="mono">seed/modele-kuchnia-50</span> i <span className="mono">seed/modele-szafy-komody-100</span>.
           Oznaczenia front / blat / uchwyt są wtedy już ustawione.
         </p>
         {error ? <p className="err">{error}</p> : null}
@@ -313,7 +314,8 @@ function ModelsTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
           {uporzadkujModele(models ?? []).map((m) => {
             const tagged = Object.keys(m.tags).length;
             const wpis = wpisPoId(m.id);
-            const rola = !wpis ? null : wpis.uzycie === "kuchnia" ? "Gotowa kuchnia" : `Moduł kreatora · ${wpis.w}×${wpis.h}×${wpis.d} cm`;
+            const grupa = wpis ? GRUPY_BIBLIOTEKI.find((g) => g.id === wpis.grupa)?.label : null;
+            const rola = !wpis ? null : wpis.uzycie === "kuchnia" ? "Gotowa kuchnia" : `${grupa ?? "Moduł kreatora"} · ${wpis.w}×${wpis.h}×${wpis.d} cm`;
             return (
               <li key={m.id} className="set-row">
                 <div className="set-row-main">
