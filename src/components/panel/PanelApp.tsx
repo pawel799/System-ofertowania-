@@ -480,7 +480,7 @@ export default function PanelApp() {
                 <Counter value={L.views} />
               </dd>
             </dl>
-            <div className="actions">
+            <div className="actions link-actions">
               {(() => {
                 const href = sendHref(offer, L.channel, message);
                 return href ? (
@@ -514,9 +514,13 @@ export default function PanelApp() {
               >
                 Kopiuj wiadomość
               </button>
+            </div>
+            {/* Osobny wiersz: nie ucina się w wąskiej kolumnie i nie leży tuż obok „Wyślij”. */}
+            <div className="actions revoke-row">
               <HoldButton holdLabel="Przytrzymaj…" ariaLabel="Przytrzymaj, aby unieważnić link" onConfirm={revoke}>
-                Unieważnij
+                Unieważnij link
               </HoldButton>
+              <span className="faint">Przytrzymaj 2 s. Stary adres przestanie działać.</span>
             </div>
             {L.pin ? (
               <div className="field">

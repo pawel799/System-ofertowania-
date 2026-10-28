@@ -5,6 +5,10 @@ i dostaje własny panel: swoje oferty, linki, zgłoszenia, modele 3D, pakiety RA
 Właściciel konta dodaje pracowników w **Ustawienia → Zespół**. Nowa firma ma okres próbny
 (`TRIAL_DAYS` w `src/lib/plans.ts`, 30 dni) na planie wybranym przy rejestracji.
 
+Logowanie jest w jednym miejscu: okno w panelu (`/panel`, `LoginDialog` w `PanelGate.tsx`) – e-mail i hasło
+albo „Mam kod administratora”. `/reset-hasla` i `/rejestracja` wracają do niego („Wróć do logowania”,
+„Zaloguj się”), a stary adres `/logowanie` przekierowuje na `/panel` (`public/_redirects`).
+
 ## Jak to działa
 
 - **Dane firmy w KV** – każda firma ma prefiks `t:<firmId>:` (oferty, modele, pakiety, marka, domena,

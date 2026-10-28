@@ -208,6 +208,11 @@
 .pnl .kv dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .pnl .actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
 .pnl .actions .btn { flex: 1; }
+/* Wysyłka linku: przyciski zawijają się zamiast ucinać napisy. */
+.pnl .link-actions .btn { flex: 1 1 auto; }
+.pnl .revoke-row { align-items: center; margin-top: 10px; }
+.pnl .revoke-row .btn { flex: none; }
+.pnl .revoke-row .faint { font-size: 12px; }
 .pnl .hold { position: relative; overflow: hidden; color: var(--red); }
 .pnl .hold .fill { position: absolute; inset: 0; background: var(--red); color: #fff; display: inline-flex; align-items: center; justify-content: center; clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out); }
 .pnl .hold[data-holding] .fill { clip-path: inset(0 0 0 0); transition: clip-path 2s linear; }

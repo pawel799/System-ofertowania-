@@ -7,3 +7,7 @@
 /oferta/view      /oferta/view      200
 /oferta/view.txt  /oferta/view.txt  200
 /oferta/:id       /oferta/view      200
+
+# Jedno logowanie: okno w panelu. Stary adres /logowanie (zakładki, linki w mailach) prowadzi do panelu.
+/logowanie   /panel  302
+/logowanie/  /panel  302

@@ -1,8 +1,9 @@
 "use client";
 
 /*
- * Konta firm na stronie: logowanie (/logowanie), rejestracja stolarni (/rejestracja)
- * i zmiana hasła (/reset-hasla). Po zalogowaniu albo rejestracji – przejście do panelu.
+ * Konta firm na stronie: rejestracja stolarni (/rejestracja) i zmiana hasła (/reset-hasla).
+ * Logowanie jest w jednym miejscu – okno w panelu (/panel, LoginDialog); /logowanie przekierowuje tam
+ * (public/_redirects), więc „Wróć do logowania” zawsze prowadzi do tego samego okna.
  */
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -35,66 +36,6 @@ function FormError({ text }: { text: string }) {
 }
 
 /* ---------- Logowanie ---------- */
-
-export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [sendError, setSendError] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [captcha, token, resetCaptcha] = useTurnstile();
-
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
-    const next: typeof errors = {};
-    if (!EMAIL.test(email.trim())) next.email = "Wpisz adres e-mail, np. jan@firma.pl.";
-    if (!password) next.password = "Wpisz hasło.";
-    setErrors(next);
-    if (Object.keys(next).length) return;
-    if (TURNSTILE_SITE_KEY && !token) return setSendError("Potwierdź, że nie jesteś robotem.");
-    setBusy(true);
-    setSendError("");
-    try {
-      await authApi.login(email.trim(), password, token);
-      window.location.href = "/panel";
-    } catch (err) {
-      setSendError(errText(err));
-      resetCaptcha();
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form onSubmit={submit} noValidate className="space-y-6">
-      <Field id="login-email" label="E-mail" type="email" autoComplete="email" autoCapitalize="none" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} error={errors.email} />
-      <Field
-        id="login-password"
-        label="Hasło"
-        type="password"
-        autoComplete="current-password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        error={errors.password}
-        right={
-          <Link href="/reset-hasla" className="text-xs text-stone-400 transition-colors hover:text-stone-100">
-            Nie pamiętasz hasła?
-          </Link>
-        }
-      />
-      {captcha}
-      <FormError text={sendError} />
-      <button type="submit" className={`${btn("solid")} w-full`} disabled={busy}>
-        {busy ? "Logowanie…" : "Zaloguj się"}
-      </button>
-      <p className="text-center text-sm text-stone-500">
-        Nie masz konta?{" "}
-        <Link href="/rejestracja" className="text-stone-200 underline-offset-4 hover:underline">
-          Załóż konto firmy
-        </Link>
-      </p>
-    </form>
-  );
-}
 
 /* ---------- Rejestracja firmy ---------- */
 
@@ -225,9 +166,9 @@ export function RegisterForm() {
       </button>
       <p className="text-center text-sm text-stone-500">
         Masz już konto?{" "}
-        <Link href="/logowanie" className="text-stone-200 underline-offset-4 hover:underline">
+        <a href="/panel" className="text-stone-200 underline-offset-4 hover:underline">
           Zaloguj się
-        </Link>
+        </a>
       </p>
     </form>
   );
@@ -281,9 +222,9 @@ export function ResetForm() {
     return (
       <Done title="Hasło zmienione">
         <p>Możesz się teraz zalogować nowym hasłem.</p>
-        <Link href="/logowanie" className={`${btn("solid")} mt-6`}>
+        <a href="/panel" className={`${btn("solid")} mt-6`}>
           Zaloguj się
-        </Link>
+        </a>
       </Done>
     );
   if (done)
@@ -302,9 +243,9 @@ export function ResetForm() {
             .
           </p>
         )}
-        <Link href="/logowanie" className={`${btn("ghost")} mt-6`}>
+        <a href="/panel" className={`${btn("ghost")} mt-6`}>
           Wróć do logowania
-        </Link>
+        </a>
       </Done>
     );
 
@@ -325,9 +266,9 @@ export function ResetForm() {
         {busy ? "Wysyłanie…" : "Wyślij link"}
       </button>
       <p className="text-center text-sm text-stone-500">
-        <Link href="/logowanie" className="text-stone-200 underline-offset-4 hover:underline">
+        <a href="/panel" className="text-stone-200 underline-offset-4 hover:underline">
           Wróć do logowania
-        </Link>
+        </a>
       </p>
     </form>
   );
