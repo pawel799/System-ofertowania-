@@ -1,0 +1,1900 @@
+{
+  "wersja": 1,
+  "jednostki": "metry w pliku, cm w katalogu",
+  "modele": [
+    {
+      "nr": 1,
+      "id": "szafa_2d_100",
+      "plik": "szafy-i-szafki/01_szafa_2d_100.glb",
+      "nazwa": "Szafa 2-drzwiowa 100 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 31.0,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 376,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 2,
+      "id": "szafa_2d_100_lustro",
+      "plik": "szafy-i-szafki/02_szafa_2d_100_lustro.glb",
+      "nazwa": "Szafa 2-drzwiowa 100 cm z lustrem",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 32.7,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 388,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 3,
+      "id": "szafa_3d_150",
+      "plik": "szafy-i-szafki/03_szafa_3d_150.glb",
+      "nazwa": "Szafa 3-drzwiowa 150 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 40.4,
+      "szerokosc_cm": 150.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 210.0,
+      "trojkaty": 500,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 4,
+      "id": "szafa_3d_150_szuflady",
+      "plik": "szafy-i-szafki/04_szafa_3d_150_szuflady.glb",
+      "nazwa": "Szafa 3-drzwiowa 150 cm z szufladami",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 92.2,
+      "szerokosc_cm": 150.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 210.0,
+      "trojkaty": 1172,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_7": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 5,
+      "id": "szafa_4d_200",
+      "plik": "szafy-i-szafki/05_szafa_4d_200.glb",
+      "nazwa": "Szafa 4-drzwiowa 200 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 49.7,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 220.0,
+      "trojkaty": 624,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Front_drzwi_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 6,
+      "id": "szafa_4d_200_nadstawka",
+      "plik": "szafy-i-szafki/06_szafa_4d_200_nadstawka.glb",
+      "nazwa": "Szafa 4-drzwiowa 200 cm z nadstawką (240 cm)",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 84.4,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 240.0,
+      "trojkaty": 1072,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_6": "front",
+        "Front_drzwi_8": "front",
+        "Front_klapa_1": "front",
+        "Front_klapa_3": "front",
+        "Front_klapa_5": "front",
+        "Front_klapa_7": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 7,
+      "id": "szafa_5d_250",
+      "plik": "szafy-i-szafki/07_szafa_5d_250.glb",
+      "nazwa": "Szafa 5-drzwiowa 250 cm, 2 lustra",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 62.3,
+      "szerokosc_cm": 250.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 230.0,
+      "trojkaty": 772,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 8,
+      "id": "szafa_1d_50",
+      "plik": "szafy-i-szafki/08_szafa_1d_50.glb",
+      "nazwa": "Szafa wąska 1-drzwiowa 50 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 21.6,
+      "szerokosc_cm": 50.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 252,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 9,
+      "id": "szafa_przesuwna_150",
+      "plik": "szafy-i-szafki/09_szafa_przesuwna_150.glb",
+      "nazwa": "Szafa przesuwna 150 cm, 2 drzwi",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 25.1,
+      "szerokosc_cm": 150.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 220.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_panel_1": "front",
+        "Front_panel_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 10,
+      "id": "szafa_przesuwna_180_lustro",
+      "plik": "szafy-i-szafki/10_szafa_przesuwna_180_lustro.glb",
+      "nazwa": "Szafa przesuwna 180 cm z lustrem",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 25.4,
+      "szerokosc_cm": 180.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 220.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_panel_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 11,
+      "id": "szafa_przesuwna_200",
+      "plik": "szafy-i-szafki/11_szafa_przesuwna_200.glb",
+      "nazwa": "Szafa przesuwna 200 cm, 2 drzwi",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 25.1,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 230.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_panel_1": "front",
+        "Front_panel_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 12,
+      "id": "szafa_przesuwna_250_3d",
+      "plik": "szafy-i-szafki/12_szafa_przesuwna_250_3d.glb",
+      "nazwa": "Szafa przesuwna 250 cm, 3 drzwi",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 30.6,
+      "szerokosc_cm": 250.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 240.0,
+      "trojkaty": 368,
+      "tags": {
+        "Front_panel_1": "front",
+        "Front_panel_2": "front",
+        "Front_panel_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 13,
+      "id": "szafa_przesuwna_250_lustra",
+      "plik": "szafy-i-szafki/13_szafa_przesuwna_250_lustra.glb",
+      "nazwa": "Szafa przesuwna 250 cm, 2 lustra",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 30.8,
+      "szerokosc_cm": 250.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 240.0,
+      "trojkaty": 368,
+      "tags": {
+        "Front_panel_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 14,
+      "id": "szafa_wnekowa_300",
+      "plik": "szafy-i-szafki/14_szafa_wnekowa_300.glb",
+      "nazwa": "Szafa wnękowa 300 cm (do sufitu)",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 28.5,
+      "szerokosc_cm": 300.0,
+      "glebokosc_cm": 62.0,
+      "wysokosc_cm": 253.0,
+      "trojkaty": 344,
+      "tags": {
+        "Front_panel_1": "front",
+        "Front_panel_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 15,
+      "id": "szafa_narozna_100",
+      "plik": "szafy-i-szafki/15_szafa_narozna_100.glb",
+      "nazwa": "Szafa narożna 100×100 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 26.1,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 100.0,
+      "wysokosc_cm": 210.0,
+      "trojkaty": 300,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 16,
+      "id": "szafa_dziecieca_100",
+      "plik": "szafy-i-szafki/16_szafa_dziecieca_100.glb",
+      "nazwa": "Szafa dziecięca 100 cm z szufladami",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 46.9,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 62.4,
+      "wysokosc_cm": 160.0,
+      "trojkaty": 720,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_3": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 17,
+      "id": "szafa_nozki_100",
+      "plik": "szafy-i-szafki/17_szafa_nozki_100.glb",
+      "nazwa": "Szafa na nóżkach 100 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 33.6,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 62.4,
+      "wysokosc_cm": 190.0,
+      "trojkaty": 512,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 18,
+      "id": "szafa_regal_120",
+      "plik": "szafy-i-szafki/18_szafa_regal_120.glb",
+      "nazwa": "Szafa 120 cm z kolumną otwartych półek",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 34.3,
+      "szerokosc_cm": 120.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 424,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 19,
+      "id": "garderoba_200",
+      "plik": "szafy-i-szafki/19_garderoba_200.glb",
+      "nazwa": "Garderoba otwarta 200 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 47.7,
+      "szerokosc_cm": 201.8,
+      "glebokosc_cm": 55.0,
+      "wysokosc_cm": 210.0,
+      "trojkaty": 608,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 20,
+      "id": "garderoba_120",
+      "plik": "szafy-i-szafki/20_garderoba_120.glb",
+      "nazwa": "Garderoba otwarta 120 cm, 2 drążki",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 23.5,
+      "szerokosc_cm": 121.8,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 210.0,
+      "trojkaty": 316,
+      "tags": {}
+    },
+    {
+      "nr": 21,
+      "id": "szafa_przedpokoj_100",
+      "plik": "szafy-i-szafki/21_szafa_przedpokoj_100.glb",
+      "nazwa": "Szafa do przedpokoju 100 cm (drzwi + półki)",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 24.9,
+      "szerokosc_cm": 100.0,
+      "glebokosc_cm": 45.0,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 300,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 22,
+      "id": "szafa_bezuchwytowa_200",
+      "plik": "szafy-i-szafki/22_szafa_bezuchwytowa_200.glb",
+      "nazwa": "Szafa bezuchwytowa 200 cm (push-to-open)",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 29.2,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 59.8,
+      "wysokosc_cm": 230.0,
+      "trojkaty": 352,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Front_drzwi_4": "front"
+      }
+    },
+    {
+      "nr": 23,
+      "id": "szafa_profil_150",
+      "plik": "szafy-i-szafki/23_szafa_profil_150.glb",
+      "nazwa": "Szafa 150 cm z uchwytem krawędziowym",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 28.1,
+      "szerokosc_cm": 150.0,
+      "glebokosc_cm": 60.6,
+      "wysokosc_cm": 220.0,
+      "trojkaty": 332,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 24,
+      "id": "szafa_niska_80",
+      "plik": "szafy-i-szafki/24_szafa_niska_80.glb",
+      "nazwa": "Szafa niska 80 cm (150 cm)",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 32.6,
+      "szerokosc_cm": 80.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 150.0,
+      "trojkaty": 400,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 25,
+      "id": "nadstawka_200",
+      "plik": "szafy-i-szafki/25_nadstawka_200.glb",
+      "nazwa": "Nadstawka na szafę 200 cm",
+      "kategoria": "Szafy",
+      "rozmiar_kb": 43.5,
+      "szerokosc_cm": 200.0,
+      "glebokosc_cm": 63.0,
+      "wysokosc_cm": 40.0,
+      "trojkaty": 544,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Front_klapa_3": "front",
+        "Front_klapa_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 26,
+      "id": "szafka_buty_60",
+      "plik": "szafy-i-szafki/26_szafka_buty_60.glb",
+      "nazwa": "Szafka na buty 60 cm, 2 klapy",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 30.2,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 29.0,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 352,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 27,
+      "id": "szafka_buty_80",
+      "plik": "szafy-i-szafki/27_szafka_buty_80.glb",
+      "nazwa": "Szafka na buty 80 cm, 3 klapy",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 43.3,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 30.4,
+      "wysokosc_cm": 120.0,
+      "trojkaty": 644,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Front_klapa_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 28,
+      "id": "szafka_buty_120",
+      "plik": "szafy-i-szafki/28_szafka_buty_120.glb",
+      "nazwa": "Szafka na buty 120 cm, 4 klapy",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 38.8,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 30.6,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 516,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Front_klapa_3": "front",
+        "Front_klapa_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 29,
+      "id": "szafka_rtv_120",
+      "plik": "szafy-i-szafki/29_szafka_rtv_120.glb",
+      "nazwa": "Szafka RTV 120 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 28.0,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 44.4,
+      "wysokosc_cm": 50.0,
+      "trojkaty": 392,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_3": "front"
+      }
+    },
+    {
+      "nr": 30,
+      "id": "szafka_rtv_160",
+      "plik": "szafy-i-szafki/30_szafka_rtv_160.glb",
+      "nazwa": "Szafka RTV 160 cm z szufladami",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 49.0,
+      "szerokosc_cm": 161.2,
+      "glebokosc_cm": 47.0,
+      "wysokosc_cm": 50.0,
+      "trojkaty": 600,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 31,
+      "id": "szafka_rtv_180_wiszaca",
+      "plik": "szafy-i-szafki/31_szafka_rtv_180_wiszaca.glb",
+      "nazwa": "Szafka RTV wisząca 180 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 22.1,
+      "szerokosc_cm": 181.2,
+      "glebokosc_cm": 40.4,
+      "wysokosc_cm": 40.0,
+      "trojkaty": 260,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Front_klapa_3": "front"
+      }
+    },
+    {
+      "nr": 32,
+      "id": "szafka_rtv_200",
+      "plik": "szafy-i-szafki/32_szafka_rtv_200.glb",
+      "nazwa": "Szafka RTV 200 cm na nóżkach",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 44.1,
+      "szerokosc_cm": 201.2,
+      "glebokosc_cm": 44.6,
+      "wysokosc_cm": 55.0,
+      "trojkaty": 524,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_6": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 33,
+      "id": "witryna_60",
+      "plik": "szafy-i-szafki/33_witryna_60.glb",
+      "nazwa": "Witryna 60 cm, 190 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 45.0,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 44.4,
+      "wysokosc_cm": 190.0,
+      "trojkaty": 656,
+      "tags": {
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_witryna_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 34,
+      "id": "witryna_100",
+      "plik": "szafy-i-szafki/34_witryna_100.glb",
+      "nazwa": "Witryna 100 cm, szkło + drzwi",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 55.0,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 45.0,
+      "wysokosc_cm": 180.0,
+      "trojkaty": 668,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_witryna_1": "front",
+        "Front_witryna_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 35,
+      "id": "regal_80",
+      "plik": "szafy-i-szafki/35_regal_80.glb",
+      "nazwa": "Regał otwarty 80 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 15.2,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 34.4,
+      "wysokosc_cm": 180.0,
+      "trojkaty": 176,
+      "tags": {}
+    },
+    {
+      "nr": 36,
+      "id": "regal_40",
+      "plik": "szafy-i-szafki/36_regal_40.glb",
+      "nazwa": "Regał wąski 40 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 17.6,
+      "szerokosc_cm": 41.2,
+      "glebokosc_cm": 32.4,
+      "wysokosc_cm": 190.0,
+      "trojkaty": 212,
+      "tags": {}
+    },
+    {
+      "nr": 37,
+      "id": "regal_120_drzwi",
+      "plik": "szafy-i-szafki/37_regal_120_drzwi.glb",
+      "nazwa": "Regał 120 cm z drzwiami na dole",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 31.6,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 40.4,
+      "wysokosc_cm": 200.0,
+      "trojkaty": 420,
+      "tags": {
+        "Front_drzwi_4": "front",
+        "Front_drzwi_8": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 38,
+      "id": "kredens_120",
+      "plik": "szafy-i-szafki/38_kredens_120.glb",
+      "nazwa": "Kredens 120 cm z witryną",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 89.6,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 190.0,
+      "trojkaty": 1308,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_6": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Nadstawka_Front_witryna_1": "front",
+        "Nadstawka_Front_witryna_2": "front",
+        "Nadstawka_Uchwyty": "uchwyt",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 39,
+      "id": "szafka_lazienkowa_60",
+      "plik": "szafy-i-szafki/39_szafka_lazienkowa_60.glb",
+      "nazwa": "Szafka łazienkowa 60 cm z umywalką",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 44.8,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 48.6,
+      "wysokosc_cm": 82.1,
+      "trojkaty": 616,
+      "tags": {
+        "Blat": "blat",
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 40,
+      "id": "szafka_lazienkowa_80",
+      "plik": "szafy-i-szafki/40_szafka_lazienkowa_80.glb",
+      "nazwa": "Szafka łazienkowa 80 cm, 2 szuflady, umywalka",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 52.1,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 51.0,
+      "wysokosc_cm": 82.1,
+      "trojkaty": 716,
+      "tags": {
+        "Blat": "blat",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 41,
+      "id": "slupek_lazienkowy_40",
+      "plik": "szafy-i-szafki/41_slupek_lazienkowy_40.glb",
+      "nazwa": "Słupek łazienkowy 40 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 19.5,
+      "szerokosc_cm": 41.2,
+      "glebokosc_cm": 32.6,
+      "wysokosc_cm": 160.0,
+      "trojkaty": 216,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 42,
+      "id": "szafka_lustrzana_60",
+      "plik": "szafy-i-szafki/42_szafka_lustrzana_60.glb",
+      "nazwa": "Szafka łazienkowa z lustrem 60 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 18.0,
+      "szerokosc_cm": 60.0,
+      "glebokosc_cm": 17.1,
+      "wysokosc_cm": 70.0,
+      "trojkaty": 196,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front"
+      }
+    },
+    {
+      "nr": 43,
+      "id": "szafka_nocna_45",
+      "plik": "szafy-i-szafki/43_szafka_nocna_45.glb",
+      "nazwa": "Szafka nocna 45 cm z szufladą i półką",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 26.9,
+      "szerokosc_cm": 46.2,
+      "glebokosc_cm": 44.4,
+      "wysokosc_cm": 50.0,
+      "trojkaty": 396,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 44,
+      "id": "szafka_nocna_50",
+      "plik": "szafy-i-szafki/44_szafka_nocna_50.glb",
+      "nazwa": "Szafka nocna 50 cm, 2 szuflady",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 23.7,
+      "szerokosc_cm": 51.2,
+      "glebokosc_cm": 42.6,
+      "wysokosc_cm": 48.0,
+      "trojkaty": 264,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 45,
+      "id": "szafka_biurowa_80",
+      "plik": "szafy-i-szafki/45_szafka_biurowa_80.glb",
+      "nazwa": "Szafka biurowa 80 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 32.7,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 47.0,
+      "wysokosc_cm": 120.0,
+      "trojkaty": 388,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 46,
+      "id": "szafka_aktowa_80",
+      "plik": "szafy-i-szafki/46_szafka_aktowa_80.glb",
+      "nazwa": "Szafka na dokumenty 80 cm, 190 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 34.3,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 47.0,
+      "wysokosc_cm": 190.0,
+      "trojkaty": 412,
+      "tags": {
+        "Front_drzwi_3": "front",
+        "Front_drzwi_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 47,
+      "id": "kontenerek_40",
+      "plik": "szafy-i-szafki/47_kontenerek_40.glb",
+      "nazwa": "Kontenerek biurowy na kółkach",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 50.1,
+      "szerokosc_cm": 41.2,
+      "glebokosc_cm": 55.0,
+      "wysokosc_cm": 59.9,
+      "trojkaty": 696,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 48,
+      "id": "szafka_wiszaca_80_klapa",
+      "plik": "szafy-i-szafki/48_szafka_wiszaca_80_klapa.glb",
+      "nazwa": "Szafka wisząca 80 cm z klapą",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 14.9,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 34.6,
+      "wysokosc_cm": 40.0,
+      "trojkaty": 160,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 49,
+      "id": "szafka_wiszaca_120",
+      "plik": "szafy-i-szafki/49_szafka_wiszaca_120.glb",
+      "nazwa": "Szafka wisząca 120 cm, półka i drzwi",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 14.0,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 32.4,
+      "wysokosc_cm": 36.0,
+      "trojkaty": 160,
+      "tags": {
+        "Front_drzwi_2": "front"
+      }
+    },
+    {
+      "nr": 50,
+      "id": "szafka_gospodarcza_60",
+      "plik": "szafy-i-szafki/50_szafka_gospodarcza_60.glb",
+      "nazwa": "Szafka gospodarcza 60 cm, 180 cm",
+      "kategoria": "Szafki",
+      "rozmiar_kb": 33.5,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 55.0,
+      "wysokosc_cm": 180.0,
+      "trojkaty": 400,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 1,
+      "id": "komoda_40_3sz",
+      "plik": "komody/01_komoda_40_3sz.glb",
+      "nazwa": "Komoda 40 cm, 3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 45.7,
+      "szerokosc_cm": 41.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 75.0,
+      "trojkaty": 616,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 2,
+      "id": "komoda_40_5sz",
+      "plik": "komody/02_komoda_40_5sz.glb",
+      "nazwa": "Komoda 40 cm, 5 szuflad (szuflandia)",
+      "kategoria": "Komody",
+      "rozmiar_kb": 46.0,
+      "szerokosc_cm": 41.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 110.0,
+      "trojkaty": 648,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 3,
+      "id": "komoda_50_4sz",
+      "plik": "komody/03_komoda_50_4sz.glb",
+      "nazwa": "Komoda 50 cm, 4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 31.0,
+      "szerokosc_cm": 51.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 352,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 4,
+      "id": "komoda_60_3sz",
+      "plik": "komody/04_komoda_60_3sz.glb",
+      "nazwa": "Komoda 60 cm, 3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 40.4,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 488,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 5,
+      "id": "komoda_60_4sz",
+      "plik": "komody/05_komoda_60_4sz.glb",
+      "nazwa": "Komoda 60 cm, 4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 47.3,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 576,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 6,
+      "id": "komoda_60_5sz_wysoka",
+      "plik": "komody/06_komoda_60_5sz_wysoka.glb",
+      "nazwa": "Komoda wysoka 60 cm, 5 szuflad",
+      "kategoria": "Komody",
+      "rozmiar_kb": 46.0,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 120.0,
+      "trojkaty": 648,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 7,
+      "id": "komoda_60_6sz_wysoka",
+      "plik": "komody/07_komoda_60_6sz_wysoka.glb",
+      "nazwa": "Komoda wysoka 60 cm, 6 szuflad, bezuchwytowa",
+      "kategoria": "Komody",
+      "rozmiar_kb": 41.1,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 47.4,
+      "wysokosc_cm": 135.0,
+      "trojkaty": 544,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front"
+      }
+    },
+    {
+      "nr": 8,
+      "id": "komoda_80_3sz",
+      "plik": "komody/08_komoda_80_3sz.glb",
+      "nazwa": "Komoda 80 cm, 3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 48.6,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 772,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 9,
+      "id": "komoda_80_4sz",
+      "plik": "komody/09_komoda_80_4sz.glb",
+      "nazwa": "Komoda 80 cm, 4 szuflady, rama",
+      "kategoria": "Komody",
+      "rozmiar_kb": 52.2,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 648,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 10,
+      "id": "komoda_80_5sz",
+      "plik": "komody/10_komoda_80_5sz.glb",
+      "nazwa": "Komoda 80 cm, 5 szuflad",
+      "kategoria": "Komody",
+      "rozmiar_kb": 35.1,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 105.0,
+      "trojkaty": 408,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 11,
+      "id": "komoda_90_gradient",
+      "plik": "komody/11_komoda_90_gradient.glb",
+      "nazwa": "Komoda 90 cm, szuflady stopniowane",
+      "kategoria": "Komody",
+      "rozmiar_kb": 47.4,
+      "szerokosc_cm": 91.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 576,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 12,
+      "id": "komoda_100_2x3",
+      "plik": "komody/12_komoda_100_2x3.glb",
+      "nazwa": "Komoda 100 cm, 2×3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 72.3,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 964,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 13,
+      "id": "komoda_100_2x4",
+      "plik": "komody/13_komoda_100_2x4.glb",
+      "nazwa": "Komoda 100 cm, 2×4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 66.9,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 95.0,
+      "trojkaty": 972,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 14,
+      "id": "komoda_100_3sz",
+      "plik": "komody/14_komoda_100_3sz.glb",
+      "nazwa": "Komoda 100 cm, 3 szerokie szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 28.2,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 75.0,
+      "trojkaty": 320,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 15,
+      "id": "komoda_120_2x3",
+      "plik": "komody/15_komoda_120_2x3.glb",
+      "nazwa": "Komoda 120 cm, 2×3 szuflady, rama",
+      "kategoria": "Komody",
+      "rozmiar_kb": 70.2,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 884,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 16,
+      "id": "komoda_120_2x4",
+      "plik": "komody/16_komoda_120_2x4.glb",
+      "nazwa": "Komoda 120 cm, 2×4 szuflady, bezuchwytowa",
+      "kategoria": "Komody",
+      "rozmiar_kb": 42.3,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 47.4,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 492,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front"
+      }
+    },
+    {
+      "nr": 17,
+      "id": "komoda_120_drzwi_szuflady",
+      "plik": "komody/17_komoda_120_drzwi_szuflady.glb",
+      "nazwa": "Komoda 120 cm: drzwi + 3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 47.0,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 708,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 18,
+      "id": "komoda_120_2d_2sz",
+      "plik": "komody/18_komoda_120_2d_2sz.glb",
+      "nazwa": "Komoda 120 cm, 2 drzwi i 2 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 48.2,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 588,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 19,
+      "id": "komoda_140_3x3",
+      "plik": "komody/19_komoda_140_3x3.glb",
+      "nazwa": "Komoda 140 cm, 3×3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 98.8,
+      "szerokosc_cm": 141.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 1312,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 20,
+      "id": "komoda_140_nisza",
+      "plik": "komody/20_komoda_140_nisza.glb",
+      "nazwa": "Komoda 140 cm z otwartą półką",
+      "kategoria": "Komody",
+      "rozmiar_kb": 44.2,
+      "szerokosc_cm": 141.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 524,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 21,
+      "id": "komoda_140_d_sz_d",
+      "plik": "komody/21_komoda_140_d_sz_d.glb",
+      "nazwa": "Komoda 140 cm: drzwi, szuflady, drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 47.6,
+      "szerokosc_cm": 141.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 672,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_5": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 22,
+      "id": "komoda_150_3x3",
+      "plik": "komody/22_komoda_150_3x3.glb",
+      "nazwa": "Komoda 150 cm, 3×3 szuflady, rama",
+      "kategoria": "Komody",
+      "rozmiar_kb": 51.6,
+      "szerokosc_cm": 151.2,
+      "glebokosc_cm": 47.4,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 620,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front"
+      }
+    },
+    {
+      "nr": 23,
+      "id": "komoda_160_2d_3sz",
+      "plik": "komody/23_komoda_160_2d_3sz.glb",
+      "nazwa": "Komoda 160 cm, 2 drzwi i 3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 57.5,
+      "szerokosc_cm": 161.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 712,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 24,
+      "id": "komoda_160_niska",
+      "plik": "komody/24_komoda_160_niska.glb",
+      "nazwa": "Komoda niska 160 cm, 3×2 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 73.1,
+      "szerokosc_cm": 161.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 60.0,
+      "trojkaty": 976,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 25,
+      "id": "komoda_160_4d",
+      "plik": "komody/25_komoda_160_4d.glb",
+      "nazwa": "Komoda 160 cm, 4 drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 43.3,
+      "szerokosc_cm": 161.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 604,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Front_drzwi_3": "front",
+        "Front_drzwi_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 26,
+      "id": "komoda_180_3d_3sz",
+      "plik": "komody/26_komoda_180_3d_3sz.glb",
+      "nazwa": "Komoda 180 cm, 3 drzwi z szufladami",
+      "kategoria": "Komody",
+      "rozmiar_kb": 41.7,
+      "szerokosc_cm": 181.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 488,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_6": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 27,
+      "id": "komoda_180_4x3",
+      "plik": "komody/27_komoda_180_4x3.glb",
+      "nazwa": "Komoda 180 cm, 4×3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 125.3,
+      "szerokosc_cm": 181.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 1660,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_10": "front",
+        "Front_szuflada_11": "front",
+        "Front_szuflada_12": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 28,
+      "id": "komoda_180_d_sz_sz_d",
+      "plik": "komody/28_komoda_180_d_sz_sz_d.glb",
+      "nazwa": "Komoda 180 cm: drzwi, 2×3 szuflady, drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 43.9,
+      "szerokosc_cm": 181.2,
+      "glebokosc_cm": 47.4,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 516,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_8": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front"
+      }
+    },
+    {
+      "nr": 29,
+      "id": "komoda_200_4x3",
+      "plik": "komody/29_komoda_200_4x3.glb",
+      "nazwa": "Komoda 200 cm, 4×3 szuflady, rama",
+      "kategoria": "Komody",
+      "rozmiar_kb": 122.6,
+      "szerokosc_cm": 201.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 1580,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_10": "front",
+        "Front_szuflada_11": "front",
+        "Front_szuflada_12": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 30,
+      "id": "komoda_200_4d_sz",
+      "plik": "komody/30_komoda_200_4d_sz.glb",
+      "nazwa": "Komoda 200 cm, 4 drzwi z szufladami",
+      "kategoria": "Komody",
+      "rozmiar_kb": 75.5,
+      "szerokosc_cm": 201.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 1148,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_6": "front",
+        "Front_drzwi_8": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_7": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 31,
+      "id": "komoda_200_wiszaca",
+      "plik": "komody/31_komoda_200_wiszaca.glb",
+      "nazwa": "Komoda wisząca 200 cm, 3×2 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 33.1,
+      "szerokosc_cm": 201.2,
+      "glebokosc_cm": 42.4,
+      "wysokosc_cm": 55.0,
+      "trojkaty": 392,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front"
+      }
+    },
+    {
+      "nr": 32,
+      "id": "komoda_wiszaca_120",
+      "plik": "komody/32_komoda_wiszaca_120.glb",
+      "nazwa": "Komoda wisząca 120 cm, 2×2 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 29.3,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 42.6,
+      "wysokosc_cm": 50.0,
+      "trojkaty": 340,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 33,
+      "id": "komoda_wiszaca_160_klapy",
+      "plik": "komody/33_komoda_wiszaca_160_klapy.glb",
+      "nazwa": "Komoda wisząca 160 cm, 3 klapy",
+      "kategoria": "Komody",
+      "rozmiar_kb": 22.1,
+      "szerokosc_cm": 161.2,
+      "glebokosc_cm": 40.4,
+      "wysokosc_cm": 40.0,
+      "trojkaty": 260,
+      "tags": {
+        "Front_klapa_1": "front",
+        "Front_klapa_2": "front",
+        "Front_klapa_3": "front"
+      }
+    },
+    {
+      "nr": 34,
+      "id": "komoda_wiszaca_80",
+      "plik": "komody/34_komoda_wiszaca_80.glb",
+      "nazwa": "Komoda wisząca 80 cm, 2 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 27.6,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 45.0,
+      "wysokosc_cm": 45.0,
+      "trojkaty": 328,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 35,
+      "id": "komoda_przewijak_80",
+      "plik": "komody/35_komoda_przewijak_80.glb",
+      "nazwa": "Komoda z przewijakiem 80 cm, 4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 61.8,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 54.4,
+      "wysokosc_cm": 99.0,
+      "trojkaty": 916,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 36,
+      "id": "komoda_przewijak_100",
+      "plik": "komody/36_komoda_przewijak_100.glb",
+      "nazwa": "Komoda z przewijakiem 100 cm, 2×3 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 82.7,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 55.0,
+      "wysokosc_cm": 99.0,
+      "trojkaty": 1096,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 37,
+      "id": "komoda_lustro_100",
+      "plik": "komody/37_komoda_lustro_100.glb",
+      "nazwa": "Komoda 100 cm z lustrem",
+      "kategoria": "Komody",
+      "rozmiar_kb": 65.9,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 158.0,
+      "trojkaty": 972,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Lustro_rama": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 38,
+      "id": "komoda_lustro_80",
+      "plik": "komody/38_komoda_lustro_80.glb",
+      "nazwa": "Komoda 80 cm z lustrem, 4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 52.8,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 168.0,
+      "trojkaty": 632,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Lustro_rama": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 39,
+      "id": "komoda_nisza_80",
+      "plik": "komody/39_komoda_nisza_80.glb",
+      "nazwa": "Komoda 80 cm z niszą u góry",
+      "kategoria": "Komody",
+      "rozmiar_kb": 41.2,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 500,
+      "tags": {
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 40,
+      "id": "komoda_nisza_120",
+      "plik": "komody/40_komoda_nisza_120.glb",
+      "nazwa": "Komoda 120 cm z niszami",
+      "kategoria": "Komody",
+      "rozmiar_kb": 33.5,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 90.0,
+      "trojkaty": 388,
+      "tags": {
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 41,
+      "id": "komoda_witryna_120",
+      "plik": "komody/41_komoda_witryna_120.glb",
+      "nazwa": "Komoda 120 cm z witrynami",
+      "kategoria": "Komody",
+      "rozmiar_kb": 58.2,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 856,
+      "tags": {
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_witryna_1": "front",
+        "Front_witryna_5": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 42,
+      "id": "komoda_100_2d",
+      "plik": "komody/42_komoda_100_2d.glb",
+      "nazwa": "Komoda 100 cm, 2 drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 26.7,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 348,
+      "tags": {
+        "Front_drzwi_1": "front",
+        "Front_drzwi_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 43,
+      "id": "komoda_80_2d_sz",
+      "plik": "komody/43_komoda_80_2d_sz.glb",
+      "nazwa": "Komoda 80 cm, szuflada i 2 drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 55.1,
+      "szerokosc_cm": 81.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 740,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 44,
+      "id": "komoda_60_d_2sz",
+      "plik": "komody/44_komoda_60_d_2sz.glb",
+      "nazwa": "Komoda 60 cm, 2 szuflady i drzwi",
+      "kategoria": "Komody",
+      "rozmiar_kb": 26.6,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 85.0,
+      "trojkaty": 296,
+      "tags": {
+        "Front_drzwi_3": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 45,
+      "id": "komoda_kolka_60",
+      "plik": "komody/45_komoda_kolka_60.glb",
+      "nazwa": "Komoda 60 cm na kółkach, 4 szuflady",
+      "kategoria": "Komody",
+      "rozmiar_kb": 58.7,
+      "szerokosc_cm": 61.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 74.9,
+      "trojkaty": 808,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 46,
+      "id": "komoda_45_7sz",
+      "plik": "komody/46_komoda_45_7sz.glb",
+      "nazwa": "Szuflandia 45 cm, 7 szuflad",
+      "kategoria": "Komody",
+      "rozmiar_kb": 59.4,
+      "szerokosc_cm": 46.2,
+      "glebokosc_cm": 44.4,
+      "wysokosc_cm": 130.0,
+      "trojkaty": 856,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 47,
+      "id": "komoda_120_3sz_rama",
+      "plik": "komody/47_komoda_120_3sz_rama.glb",
+      "nazwa": "Komoda 120 cm, 3 szuflady, rama",
+      "kategoria": "Komody",
+      "rozmiar_kb": 46.6,
+      "szerokosc_cm": 121.2,
+      "glebokosc_cm": 49.4,
+      "wysokosc_cm": 75.0,
+      "trojkaty": 692,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 48,
+      "id": "komoda_140_2x4_frez",
+      "plik": "komody/48_komoda_140_2x4_frez.glb",
+      "nazwa": "Komoda 140 cm, 2×4 szuflady, uchwyt krawędziowy",
+      "kategoria": "Komody",
+      "rozmiar_kb": 56.8,
+      "szerokosc_cm": 141.2,
+      "glebokosc_cm": 47.6,
+      "wysokosc_cm": 95.0,
+      "trojkaty": 740,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 49,
+      "id": "komoda_100_wysoka_2x5",
+      "plik": "komody/49_komoda_100_wysoka_2x5.glb",
+      "nazwa": "Komoda wysoka 100 cm, 2×5 szuflad",
+      "kategoria": "Komody",
+      "rozmiar_kb": 99.6,
+      "szerokosc_cm": 101.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 115.0,
+      "trojkaty": 1260,
+      "tags": {
+        "Front_szuflada_1": "front",
+        "Front_szuflada_10": "front",
+        "Front_szuflada_2": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_4": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_6": "front",
+        "Front_szuflada_7": "front",
+        "Front_szuflada_8": "front",
+        "Front_szuflada_9": "front",
+        "Uchwyty": "uchwyt"
+      }
+    },
+    {
+      "nr": 50,
+      "id": "komoda_220_bufet",
+      "plik": "komody/50_komoda_220_bufet.glb",
+      "nazwa": "Bufet 220 cm, 4 drzwi z szufladami",
+      "kategoria": "Komody",
+      "rozmiar_kb": 86.1,
+      "szerokosc_cm": 221.2,
+      "glebokosc_cm": 50.0,
+      "wysokosc_cm": 80.0,
+      "trojkaty": 1084,
+      "tags": {
+        "Front_drzwi_2": "front",
+        "Front_drzwi_4": "front",
+        "Front_drzwi_6": "front",
+        "Front_drzwi_8": "front",
+        "Front_szuflada_1": "front",
+        "Front_szuflada_3": "front",
+        "Front_szuflada_5": "front",
+        "Front_szuflada_7": "front",
+        "Uchwyty": "uchwyt"
+      }
+    }
+  ]
+}

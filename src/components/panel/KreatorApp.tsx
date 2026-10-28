@@ -841,8 +841,8 @@ function BibliotekaModeli({
         ) : !fraza ? (
           <p className="lede">
             {moduly.length
-              ? "Własne GLB, spoza biblioteki 50 modeli, pojawią się tutaj."
-              : "Biblioteka 46 modułów pojawi się po wgraniu (seed/modele-kuchnia-50). Własny GLB dodasz w "}
+              ? "Własne GLB, spoza biblioteki, pojawią się tutaj."
+              : "Biblioteka modułów pojawi się po wgraniu (seed/modele-kuchnia-50 oraz seed/modele-szafy-komody-100). Własny GLB dodasz w "}
             {moduly.length ? null : <a href="/panel/ustawienia?tab=models">Ustawieniach → Modele 3D</a>}
             {moduly.length ? null : "."}
           </p>

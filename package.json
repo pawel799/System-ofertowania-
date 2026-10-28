@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "pages:dev": "npx -y wrangler@4 pages dev out --kv OFFERS --r2 MODELS",
-    "seed:modele:check": "node seed/modele-kuchnia-50/seed.mjs --check"
+    "seed:modele:check": "node seed/modele-kuchnia-50/seed.mjs --check",
+    "seed:szafy:check": "node seed/modele-szafy-komody-100/seed.mjs --check"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.5.1",

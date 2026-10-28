@@ -19,6 +19,7 @@ To nie jest rozkrój płyt. Nie ma nestingu ani listy formatek.
    - **AGD**: zmywarka, piekarnik (słupek i pod blatem), płyta indukcyjna i gazowa, lodówka wolnostojąca i zabudowa, mikrofalówka, okap kominowy i podszafkowy, zlewozmywak, bateria oraz szafka pod zlew. Gdy nie ma własnego GLB, kreator rysuje bryłę parametryczną o właściwym obrysie,
    - **modele 3D firmy** wgrane w Ustawienia → Modele 3D. Bryła jest skalowana do podanych wymiarów.
    - **bibliotekę 50 GLB** (`seed/modele-kuchnia-50`, po wgraniu skryptem do firmy `main`): szafki, blaty, AGD i dodatki (01–46) w katalogu kreatora, z wymiarami z `katalog.json` (cm, zaokrąglone) i rolami front / blat / uchwyt. Cztery gotowe kuchnie (47–50: prosta, L, z wyspą, aneks) nie są szafką w kreatorze — wybiera się je jako model całej oferty (nowa oferta albo karta oferty → Model 3D, grupa „Gotowe kuchnie”).
+   - **bibliotekę 100 GLB** szaf, szafek i komód (`seed/modele-szafy-komody-100`): grupy **Szafy**, **Szafki** i **Komody** w katalogu kreatora. Wstawiają się jak moduły kuchenne (wymiary i strefa z `id-map.json`). Nie zastępują mk01–mk50 i nie są modelem całej oferty.
 3. Na rzucie przeciągasz element (napis to nazwa albo szerokość; pełna nazwa i wymiary w podpowiedzi po najechaniu) (albo strzałkami, co 5 cm; krawędź przyciąga się do ściany i sąsiada). Obrót o 90°. Gruba kreska to front. Szafka górna może stać nad dolną. Płyta, zlew i bateria leżą na blacie i nie zasłaniają szafki dolnej. Półka dzieli miejsce z szafkami górnymi. Słupek nie może nachodzić na żaden inny element.
 4. **Wymiary** (włączone domyślnie) rysują linie jak w rysunku meblowym: długość ścian, pomieszczenie, długość ciągu oraz — po zaznaczeniu — szerokość, głębokość i wysokość. To samo widać w podglądzie 3D. Przycisk „Wymiary” chowa nakładkę; zrzut do PDF bierze aktualny widok.
 5. Zaznaczenie otwiera **właściwości**: nazwa, szerokość, wysokość i głębokość w widełkach tego rodzaju (np. zmywarka 45–60 cm, półka płytsza niż szafka). Zmiana szerokości trzyma krawędź od strony narożnika i przesuwa dalsze elementy rzędu, więc styk zostaje. „Dociągnij rząd” zsuwa przerwę do 25 cm. Cena pozycji liczy się z nowych wymiarów tym samym wzorem co szafka (urządzenia AGD bez ceny).
@@ -72,6 +73,28 @@ SEED_CONFIRM=kuchnia-modele node seed/modele-kuchnia-50/seed.mjs --remote
 Klucze KV: `model:<id>` (opis, w tym `tags` z katalogu: Front→front, Blat→blat, Uchwyt→uchwyt) i `modelowner:<id>` → `main`. Plik R2: `models/<id>/<wersja>.glb`. Firma `main` nie ma limitu liczby modeli; inne firmy tej biblioteki nie widzą, dopóki nie mają tych samych wpisów u siebie.
 
 Model użyty w kreatorze nie da się usunąć, dopóki jest w jakiejś ofercie (tak samo jak model całej kuchni). Link publiczny nie zwraca katalogu firmy — tylko modele wstawione w tę kuchnię.
+
+## Biblioteka szaf, szafek i komód
+
+Druga paczka: `seed/modele-szafy-komody-100/` (100 GLB, `katalog.json`, `id-map.json`). Id: `ms` + numer `001`–`100` + id z katalogu bez podkreśleń (np. `ms001szafa2d100`). Nie pokrywa się z `mk01`–`mk50`. Wszystkie mają `uzycie: "modul"`.
+
+W katalogu kreatora są trzy grupy: Szafy, Szafki, Komody. Strefa `wysoka` jest dla szaf i innych mebli od podłogi o wysokości od 145 cm (słupek nie nachodzi na szafkę górną). Wiszące, nadstawka i szafka z lustrem mają strefę `gorna`. Komody, RTV, szafki na buty i łazienkowe z umywalką są `dolne`. Szafa narożna ma rodzaj `narozna`, umywalka `zlew`, komoda z szufladami `szuflady`.
+
+Sprawdzenie plików, bez sieci (ma wypisać 100/100; kuchnia osobno zostaje 50):
+
+```
+node seed/modele-szafy-komody-100/seed.mjs --check
+node seed/modele-kuchnia-50/seed.mjs --check
+```
+
+Wgranie jest idempotentne i dotyczy tylko tych 100 id. Skrypt odmawia zapisu i kasowania, gdy id albo plik należy do mk01–mk50. **Nie uruchamiać na produkcji, dopóki nie ma zgody na deploy.**
+
+```
+node seed/modele-szafy-komody-100/seed.mjs --local
+SEED_CONFIRM=kuchnia-modele node seed/modele-szafy-komody-100/seed.mjs --remote
+```
+
+Ten sam bucket R2 `kuchnia-modele` i KV firmy `main` co biblioteka kuchni. Klucze: `model:<id>` i `modelowner:<id>` → `main`. Plik: `models/<id>/<wersja>.glb`.
 
 ## Lokalnie
 

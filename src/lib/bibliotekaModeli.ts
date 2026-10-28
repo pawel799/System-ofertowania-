@@ -1,12 +1,14 @@
 /*
- * Biblioteka 50 modeli GLB (seed/modele-kuchnia-50).
+ * Biblioteka modeli GLB.
+ * Kuchnia: seed/modele-kuchnia-50 (mk01–mk50). 01–46 wstawia kreator, 47–50 są modelem całej oferty.
+ * Szafy, szafki i komody: seed/modele-szafy-komody-100 (ms001–ms100). Wszystkie wstawia kreator jak moduły.
  * Id są w id-map.json i spełniają ASSET_ID_RE. Po seedzie te same id wracają z GET /api/models.
- * 01–46 wstawia kreator, 47–50 są modelem całej oferty (zamiast kuchni demo).
  */
 import type { RodzajElementu, Strefa } from "./kuchnia";
-import mapa from "../../seed/modele-kuchnia-50/id-map.json";
+import mapaKuchnia from "../../seed/modele-kuchnia-50/id-map.json";
+import mapaMeble from "../../seed/modele-szafy-komody-100/id-map.json";
 
-export type GrupaBiblioteki = "dolne" | "gorne" | "slupki" | "blaty" | "agd" | "dodatki";
+export type GrupaBiblioteki = "dolne" | "gorne" | "slupki" | "blaty" | "agd" | "dodatki" | "szafy" | "szafki" | "komody";
 export type UzycieModelu = "modul" | "kuchnia";
 
 export type WpisModelu = {
@@ -32,11 +34,17 @@ export const GRUPY_BIBLIOTEKI: { id: GrupaBiblioteki; label: string }[] = [
   { id: "blaty", label: "Blaty (model 3D)" },
   { id: "agd", label: "AGD (model 3D)" },
   { id: "dodatki", label: "Dodatki (model 3D)" },
+  { id: "szafy", label: "Szafy" },
+  { id: "szafki", label: "Szafki" },
+  { id: "komody", label: "Komody" },
 ];
 
-export const WPISY_MODELI: readonly WpisModelu[] = mapa.modele as WpisModelu[];
+export const WPISY_MODELI: readonly WpisModelu[] = [...mapaKuchnia.modele, ...mapaMeble.modele] as WpisModelu[];
 
 const poId = new Map(WPISY_MODELI.map((w) => [w.id, w]));
+if (poId.size !== WPISY_MODELI.length) {
+  throw new Error("Biblioteka modeli ma powtórzone id.");
+}
 
 export function wpisPoId(id: string): WpisModelu | undefined {
   return poId.get(id);

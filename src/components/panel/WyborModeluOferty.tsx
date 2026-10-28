@@ -5,7 +5,8 @@ import type { ModelMeta } from "./offerApi";
 
 /**
  * Model całej oferty (zamiast kuchni demo).
- * Gotowe kuchnie 47–50 i pliki wgrane w ustawieniach. Moduły biblioteki zostają w kreatorze.
+ * Gotowe kuchnie 47–50 i pliki wgrane w ustawieniach.
+ * Moduły biblioteki (kuchnia 01–46 oraz szafy, szafki i komody) zostają w kreatorze.
  */
 export default function WyborModeluOferty({
   id,
