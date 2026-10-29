@@ -14,6 +14,7 @@ import { useKatalog } from "../katalogStore";
 import AgdBryla from "./AgdBryla";
 import { yElementu } from "./uklad3d";
 import Wymiary3D from "./Wymiary3D";
+import { tloDlaKoloru, type TloSceny } from "../tloSceny";
 import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
@@ -188,7 +189,7 @@ function ElementWidok({
   );
 }
 
-function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary }: Props) {
+function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, tlo }: Props & { tlo: TloSceny }) {
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
@@ -210,22 +211,22 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
 
   return (
     <>
-      <color attach="background" args={["#141311"]} />
+      <color attach="background" args={[tlo.tlo]} />
       <ambientLight intensity={0.45} />
       <directionalLight position={[4, 6, 3]} intensity={1.7} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 3, -2]} intensity={0.35} />
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} receiveShadow>
         <planeGeometry args={[Math.max(1.2, x1 - x0 + 1.4), Math.max(1.2, z1 - z0 + 1.4)]} />
-        <meshStandardMaterial color="#2a2622" roughness={0.95} />
+        <meshStandardMaterial color={tlo.podloga} roughness={0.95} />
       </mesh>
       <mesh position={[plan.scianaA / 200, 1.25, -0.01]}>
         <planeGeometry args={[plan.scianaA / 100, 2.5]} />
-        <meshStandardMaterial color="#3a342e" roughness={0.9} />
+        <meshStandardMaterial color={tlo.sciana} roughness={0.9} />
       </mesh>
       {plan.uklad === "L" ? (
         <mesh position={[-0.01, 1.25, plan.scianaB / 200]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[plan.scianaB / 100, 2.5]} />
-          <meshStandardMaterial color="#3a342e" roughness={0.9} />
+          <meshStandardMaterial color={tlo.sciana} roughness={0.9} />
         </mesh>
       ) : null}
       <Suspense fallback={null}>
@@ -253,9 +254,20 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
   );
 }
 
+/** Ciemne fronty → jasne tło sceny (tloSceny.ts); kolor frontu z tych samych magazynów co pasek materiałów. */
+function useTloKuchni(): TloSceny {
+  const front = useFront();
+  const countertop = useCountertop();
+  const hardware = useHardware();
+  const palettes = usePalettes();
+  const katalogMat = useKatalog();
+  return tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalogMat).color ?? null);
+}
+
 export default function KuchniaScena(props: Props) {
+  const tlo = useTloKuchni();
   return (
-    <div className="absolute inset-0 h-full w-full bg-[#141311]">
+    <div className="absolute inset-0 h-full w-full" data-tlo={tlo.jasne ? "jasne" : "ciemne"} style={{ background: tlo.tlo }}>
       <Canvas
         shadows
         frameloop="demand"
@@ -263,7 +275,7 @@ export default function KuchniaScena(props: Props) {
         camera={{ position: [2.4, 1.8, 3.2], fov: 42 }}
         gl={{ antialias: true, preserveDrawingBuffer: !!props.zdjecie }}
       >
-        <Wnetrze {...props} />
+        <Wnetrze {...props} tlo={tlo} />
       </Canvas>
     </div>
   );

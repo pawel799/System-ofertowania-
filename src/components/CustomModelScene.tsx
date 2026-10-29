@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, PerspectiveCamera, Sphere, Vector3 } from "three";
@@ -10,6 +10,7 @@ import { useHardware } from "./hardwareStore";
 import { applyRoles, type PublicModel } from "./modelRoles";
 import { usePalettes } from "./paletteStore";
 import { useKatalog } from "./katalogStore";
+import { sredniKolorModelu, tloDlaKoloru } from "./tloSceny";
 
 /*
  * Scena wgranego modelu (oferta z własnym modelem zamiast kuchni demo).
@@ -27,7 +28,7 @@ function Loading() {
   );
 }
 
-function Model({ model }: { model: PublicModel }) {
+function Model({ model, onKolor }: { model: PublicModel; onKolor?: (hex: string | null) => void }) {
   // Drugi argument: dekoder Draco, trzeci: meshopt (pliki z panelu są skompresowane meshopt).
   const { scene } = useGLTF(model.url, true, true);
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
@@ -78,9 +79,11 @@ function Model({ model }: { model: PublicModel }) {
 
   useEffect(() => {
     const undo = applyRoles(scene, model.tags, { front, countertop, hardware }, palettes, katalog);
+    // Średni kolor po podmianie materiałów: ciemny model → jasne tło (tloSceny.ts).
+    onKolor?.(sredniKolorModelu(scene));
     invalidate();
     return undo;
-  }, [scene, model.tags, front, countertop, hardware, palettes, katalog, invalidate]);
+  }, [scene, model.tags, front, countertop, hardware, palettes, katalog, invalidate, onKolor]);
 
   return (
     <>
@@ -120,8 +123,11 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
 }
 
 export default function CustomModelScene({ model, embedded = false }: { model: PublicModel; embedded?: boolean }) {
+  const [kolor, setKolor] = useState<string | null>(null);
+  const tlo = tloDlaKoloru(kolor);
+  const tloKolor = tlo.jasne ? tlo.tlo : "#0c0b0a";
   return (
-    <div className={embedded ? "absolute inset-0 h-full w-full bg-[#0c0b0a]" : "absolute inset-0 h-full w-full bg-[#0c0b0a]"}>
+    <div className="absolute inset-0 h-full w-full" data-embedded={embedded ? "" : undefined} data-tlo={tlo.jasne ? "jasne" : "ciemne"} style={{ background: tloKolor }}>
       <Boundary>
         <Canvas
           frameloop="demand"
@@ -130,10 +136,10 @@ export default function CustomModelScene({ model, embedded = false }: { model: P
           gl={{ antialias: true, toneMappingExposure: 1.1 }}
           camera={{ position: [3, 2, 3], fov: 45 }}
         >
-          <color attach="background" args={["#0c0b0a"]} />
+          <color attach="background" args={[tloKolor]} />
           <directionalLight position={[4, 6, 5]} intensity={2} color="#fff4e6" />
           <Suspense fallback={<Loading />}>
-            <Model model={model} />
+            <Model model={model} onKolor={setKolor} />
             <Environment files={HDRI_URL} environmentIntensity={0.9} />
           </Suspense>
         </Canvas>

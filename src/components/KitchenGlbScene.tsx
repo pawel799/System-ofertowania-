@@ -33,6 +33,13 @@ import { prepareKitchenModel } from "./kitchenMaterials";
 import { installFrontSwap } from "./frontMaterials";
 import { installCountertopSwap } from "./countertopMaterials";
 import { installHardwareSwap } from "./hardwareMaterials";
+import { lookFor } from "./modelRoles";
+import { useFront } from "./frontStore";
+import { useCountertop } from "./countertopStore";
+import { useHardware } from "./hardwareStore";
+import { usePalettes } from "./paletteStore";
+import { useKatalog } from "./katalogStore";
+import { tloDlaKoloru } from "./tloSceny";
 
 const MODEL_URL = "/models/kitchen-opt.glb";
 
@@ -337,14 +344,21 @@ export default function KitchenGlbScene({
   // Licznik FPS ma sens tylko wtedy, gdy klatki faktycznie lecą, czyli podczas
   // obracania i przybliżania. W bezruchu scena nic nie rysuje (frameloop="demand").
   const [orbiting, setOrbiting] = useState(false);
+  // Ciemne fronty → jasne tło (tloSceny.ts).
+  const front = useFront();
+  const countertop = useCountertop();
+  const hardware = useHardware();
+  const palettes = usePalettes();
+  const katalog = useKatalog();
+  const tlo = tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalog).color ?? null);
+  const tloKolor = tlo.jasne ? tlo.tlo : "#0c0b0a";
 
   return (
     <div
-      className={
-        embedded
-          ? "absolute inset-0 h-full w-full bg-[#0c0b0a]"
-          : "absolute inset-0 h-full w-full bg-[#0c0b0a]"
-      }
+      className="absolute inset-0 h-full w-full"
+      data-embedded={embedded ? "" : undefined}
+      data-tlo={tlo.jasne ? "jasne" : "ciemne"}
+      style={{ background: tloKolor }}
     >
       <SceneErrorBoundary>
         {/* frameloop="demand": nowa klatka tylko przy zmianie (ruch kamery,
@@ -356,7 +370,7 @@ export default function KitchenGlbScene({
           gl={{ antialias: false, toneMappingExposure: EXPOSURE }}
           camera={{ position: [3, 2.2, 3], fov: 50, near: 0.05, far: 60 }}
         >
-          <color attach="background" args={["#0c0b0a"]} />
+          <color attach="background" args={[tloKolor]} />
           {orbiting && (
             <PerformanceMonitor
               onDecline={() => setLowQuality(true)}
