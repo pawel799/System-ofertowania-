@@ -5,6 +5,7 @@
  */
 import { getModel, listPalettes, publicModel, publicPalettes } from "../../_lib/assets";
 import { bazaKuchni, pozycjeKuchni } from "../../_lib/kuchnia";
+import { pozycjeKuchniZCena } from "../../../src/lib/kuchnia";
 import { handle, json, publicView } from "../../_lib/offers";
 import { publicBrand, resolvePublic } from "../../_lib/public";
 import { getCennik, pricedModuly } from "../../_lib/modul";
@@ -40,7 +41,14 @@ export const onRequestGet = handle(async (ctx) => {
       // Cena zabudowy z kreatora zawsze z aktualnego cennika (nie ze zrzutu przy zapisie).
       ...(zKreatora && showPrice && cennik ? { base: bazaKuchni(offer.kuchnia!, cennik) } : {}),
       // Moduły na wymiar; ceny z cennika firmy (liczone tutaj), tylko gdy oferta pokazuje cenę.
-      moduly: pozycje.length ? (showPrice && cennik ? pricedModuly(pozycje, cennik) : pozycje) : [],
+      // Kreator: cena pozycji z dopłatą za wnętrze (półki, szuflady, drążki) – ta sama co w sumie.
+      moduly: pozycje.length
+        ? showPrice && cennik
+          ? zKreatora
+            ? pozycjeKuchniZCena(offer.kuchnia!, cennik)
+            : pricedModuly(pozycje, cennik)
+          : pozycje
+        : [],
     },
   });
 });

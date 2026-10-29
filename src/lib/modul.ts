@@ -28,9 +28,14 @@ export type ModulCennik = {
   frontM2: number;
   /** Za metr bieżący szerokości (np. blat, cokół) */
   mb: number;
+  /** Szuflada we wnętrzu modułu (prowadnice, za sztukę). Brak w starych cennikach = domyślna. */
+  szuflada?: number;
+  /** Drążek w szafie (za sztukę). */
+  drazek?: number;
 };
 
-export const DEFAULT_CENNIK: ModulCennik = { baza: 250, plytaM2: 120, frontM2: 380, mb: 0 };
+export const DEFAULT_CENNIK: ModulCennik = { baza: 250, plytaM2: 120, frontM2: 380, mb: 0, szuflada: 90, drazek: 35 };
+export const DOMYSLNE_DODATKI = { szuflada: 90, drazek: 35 } as const;
 
 /** Szafka z płyty — suwak na stronie modułu i formularz „szafki na wymiar”. */
 export const MODUL_LIMITS = {

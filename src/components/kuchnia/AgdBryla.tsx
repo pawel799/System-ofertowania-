@@ -3,7 +3,8 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
-import { MEBLE, rodzajElementu, type ElementKuchni, type RodzajElementu } from "@/lib/kuchnia";
+import MebelParametryczny from "./MebelParametryczny";
+import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
 
 type Props = {
   el: ElementKuchni;
@@ -11,6 +12,8 @@ type Props = {
   chropowatosc: number;
   blat: string;
   uchwyt: boolean;
+  /** Drzwi i szuflady otwarte (podgląd wnętrza). */
+  otwarte?: boolean;
 };
 
 const STAL = "#d5d8dc";
@@ -317,14 +320,9 @@ function Polka({ el }: { el: ElementKuchni }) {
   );
 }
 
-function zSzufladami(rodzaj: RodzajElementu, h: number) {
-  if (rodzaj === "komoda") return h >= 80 ? 4 : h >= 50 ? 3 : 1;
-  if (rodzaj !== "szuflady") return 1;
-  return h >= 60 ? 3 : 2;
-}
 
 export default function AgdBryla(props: Props) {
-  const { el, kolor, chropowatosc, blat, uchwyt } = props;
+  const { el, kolor, chropowatosc, blat, uchwyt, otwarte } = props;
   const rodzaj = rodzajElementu(el);
   if (rodzaj === "blat") {
     return (
@@ -357,7 +355,8 @@ export default function AgdBryla(props: Props) {
       {rodzaj === "zmywarka" ? (
         <Zmywarka {...props} />
       ) : (
-        <Korpus el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} szuflady={zSzufladami(rodzaj, el.h)} />
+        // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
+        <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} />
       )}
       {blatNaDole ? <Blat el={el} kolor={blat} /> : null}
       {rodzaj === "zlew" ? <ZlewNaSzafce el={el} /> : null}

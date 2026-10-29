@@ -22,6 +22,8 @@ type Props = {
   onWybierz: (id: string | null) => void;
   onPrzesun: (id: string, x: number, z: number) => void;
   onKolizja: () => void;
+  /** Podwójne kliknięcie (albo Enter) na elemencie – okno wymiarów i wnętrza. */
+  onOtworz?: (id: string) => void;
 };
 
 type Ciagniecie = { id: string; pointer: number; dx: number; dz: number };
@@ -136,7 +138,9 @@ function wymiaryZaznaczenia(e: ElementKuchni) {
   return { front, nx, nz, bok, bx, bz, r, cx, cz };
 }
 
-export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja }: Props) {
+export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz }: Props) {
+  // Podwójne kliknięcie liczymy sami: przechwycenie wskaźnika (przeciąganie) zjada zdarzenie dblclick.
+  const ostatnieKlikniecie = useRef<{ id: string; t: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [podglad, setPodglad] = useState<{ id: string; x: number; z: number } | null>(null);
   const ostatnie = useRef(podglad);
@@ -278,10 +282,19 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
               height={gl}
               tabIndex={0}
               role="button"
-              aria-label={`${e.nazwa}, ${STREFA_LABEL[e.strefa]}, ${e.w} na ${e.d} na ${e.h} cm. Strzałki przesuwają o 5 cm.`}
+              aria-label={`${e.nazwa}, ${STREFA_LABEL[e.strefa]}, ${e.w} na ${e.d} na ${e.h} cm. Strzałki przesuwają o 5 cm, Enter otwiera wymiary i wnętrze.`}
               onPointerDown={(ev) => {
                 if (ev.button !== 0) return;
                 ev.stopPropagation();
+                const teraz = performance.now();
+                const poprzednie = ostatnieKlikniecie.current;
+                ostatnieKlikniecie.current = { id: e.id, t: teraz };
+                if (poprzednie && poprzednie.id === e.id && teraz - poprzednie.t < 380 && onOtworz) {
+                  ostatnieKlikniecie.current = null;
+                  onWybierz(e.id);
+                  onOtworz(e.id);
+                  return;
+                }
                 const svg = svgRef.current;
                 if (!svg) return;
                 const p = punkt(svg, ev);
@@ -344,6 +357,9 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                 } else if (ev.key === "ArrowDown") {
                   ev.preventDefault();
                   przesun(0, krok);
+                } else if (ev.key === "Enter" && onOtworz) {
+                  ev.preventDefault();
+                  onOtworz(e.id);
                 }
               }}
             >

@@ -6,6 +6,7 @@
 import qrcode from "qrcode-generator";
 import type { Palette } from "../palettes";
 import { findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
+import { opisWnetrza } from "@/lib/wnetrze";
 import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik } from "@/lib/modul";
 
@@ -78,7 +79,8 @@ export function danePdf(args: {
     m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
-    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}`,
+    // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
+    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}`,
     w: e.w,
     h: e.h,
     d: e.d,

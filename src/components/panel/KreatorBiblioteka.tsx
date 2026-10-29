@@ -4,7 +4,7 @@
  * Kreator → „Biblioteka modeli”: okno z miniaturami i krótkim opisem każdego elementu.
  * Te same pozycje co lista w kolumnie katalogu (moduły na wymiar, biblioteka GLB, modele firmy),
  * tylko łatwiej wybrać po wyglądzie. Kliknięcie dodaje element na końcu wybranej ściany; okno zostaje
- * otwarte, żeby dało się dodać kilka rzeczy z rzędu.
+ * otwarte, żeby dało się dodać kilka rzeczy z rzędu. Kliknięcie otwiera okno elementu (wymiary, wnętrze), potem „Dodaj”.
  *
  * Miniatury biblioteki: public/biblioteka/<id>.webp (render z Blendera, 240 px).
  * Opisy: src/lib/bibliotekaOpisy.json – policzone z nazw elementów w plikach GLB (drzwi, szuflady, podstawa…).
@@ -16,7 +16,6 @@ import { GRUPY_PRESETOW, PRESETY, RODZAJ_LABEL, wycenianyElement, type NowyEleme
 import { modulCena, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 import type { ModelMeta } from "./offerApi";
-import { toast } from "./ui";
 import { GRUPY_TYPU, TYP_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 
 type Pozycja = {
@@ -63,7 +62,8 @@ export function KreatorBiblioteka({
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
     szukajRef.current?.focus();
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    // Esc zamyka bibliotekę, chyba że nad nią jest otwarte okno elementu (ono zamyka się samo).
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && !document.querySelector(".kr-wn") && onClose();
     window.addEventListener("keydown", esc);
     return () => {
       cancelAnimationFrame(raf);
@@ -175,10 +175,7 @@ export function KreatorBiblioteka({
                 key={p.key}
                 type="button"
                 className="kr-lib-card"
-                onClick={() => {
-                  onDodaj(p.element);
-                  toast(`Dodano: ${p.nazwa}`, { desc: "Możesz dodać kolejny element albo zamknąć bibliotekę." });
-                }}
+                onClick={() => onDodaj(p.element)}
               >
                 {p.miniatura ? (
                   // eslint-disable-next-line @next/next/no-img-element -- statyczny eksport, miniatury z public/

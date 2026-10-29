@@ -9,7 +9,8 @@
  *   obrót 0: front w +z, plecy przy ścianie A (z = 0),
  *   obrót 90: front w +x, plecy przy ścianie B (x = 0).
  */
-import { LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, sumaModulow, type ModulCennik, type ModulItem } from "./modul";
+import { DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, type ModulCennik, type ModulItem } from "./modul";
+import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, type Wnetrze } from "./wnetrze";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -89,6 +90,8 @@ export type ElementKuchni = {
   x: number;
   z: number;
   rot: Obrot;
+  /** Półki, szuflady, drążki i rodzaj frontu (tylko moduły na wymiar). Brak = układ domyślny (wnetrzeDomyslne). */
+  wnetrze?: Wnetrze;
 };
 
 export type PlanKuchni = {
@@ -517,6 +520,16 @@ function dopasujSciany(plan: PlanKuchni): PlanKuchni {
   return { ...plan, scianaA, scianaB };
 }
 
+/** Po zmianie wymiaru wnętrze przelicza się na nową bryłę; gdy przestaje mieć sens – wraca układ domyślny. */
+function zWnetrzemPo(e: ElementKuchni): ElementKuchni {
+  if (!e.wnetrze) return e;
+  const wn = dopasujWnetrze(e.wnetrze, e);
+  if (wn) return { ...e, wnetrze: wn };
+  const reszta = { ...e };
+  delete reszta.wnetrze;
+  return reszta;
+}
+
 /**
  * Zmiana szerokości trzyma lewą krawędź i przesuwa dalsze szafki tego rzędu,
  * żeby styk albo przerwa zostały takie same. Głębokość rośnie od ściany.
@@ -528,7 +541,7 @@ export function zmienWymiar(plan: PlanKuchni, id: string, key: "w" | "h" | "d", 
   const v = ograniczWymiar(el, key, value);
   if (key === "h") {
     if (v === el.h) return plan;
-    return { ...plan, elementy: plan.elementy.map((e) => (e.id === id ? { ...e, h: v } : e)) };
+    return { ...plan, elementy: plan.elementy.map((e) => (e.id === id ? zWnetrzemPo({ ...e, h: v }) : e)) };
   }
   const narozna = rodzajElementu(el) === "narozna";
   const nowaSzer = key === "w" || narozna ? v : el.w;
@@ -540,7 +553,7 @@ export function zmienWymiar(plan: PlanKuchni, id: string, key: "w" | "h" | "d", 
   // Najpierw szerokość (stara głębokość zostaje, żeby tylna krawędź była liczona od ściany).
   let pierwszy = ustawOdStartu(el, os, kraniec(el, os, "start"), nowaSzer);
   if (key === "d" || narozna) pierwszy = ustawGlebokoscOdTylu(pierwszy, nowaGl);
-  placed.set(el.id, pierwszy);
+  placed.set(el.id, zWnetrzemPo(pierwszy));
   // Dalsze elementy tego samego rzędu — też górne, blat i słupek — jadą o tę samą różnicę,
   // żeby styk przy ścianie został. Sama głębokość nikogo nie przesuwa.
   if (key !== "d" || narozna) {
@@ -688,6 +701,7 @@ export type NowyElement = {
   d: number;
   zrodlo: ZrodloElementu;
   modelId?: string;
+  wnetrze?: Wnetrze;
 };
 
 const ALFABET = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -722,6 +736,7 @@ export function dodajElement(plan: PlanKuchni, bazowy: NowyElement, sciana: Scia
     h: bazowy.h,
     d: bazowy.d,
     ...pos,
+    ...(bazowy.wnetrze && bazowy.zrodlo === "modul" ? { wnetrze: bazowy.wnetrze } : {}),
   };
   return dopasujSciany({ ...plan, elementy: [...plan.elementy, el] });
 }
@@ -812,9 +827,9 @@ export const URZADZENIA_POZA_WYCENA: ReadonlySet<RodzajElementu> = new Set<Rodza
 
 export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
 
-/** Cena netto elementu z cennika modułów; null = urządzenie AGD poza wyceną. */
-export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number }, cennik: ModulCennik): number | null {
-  return wycenianyElement(el) ? modulCena(el, cennik) : null;
+/** Cena netto elementu z cennika modułów (z dopłatą za zapisane wnętrze); null = urządzenie AGD poza wyceną. */
+export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze }, cennik: ModulCennik): number | null {
+  return wycenianyElement(el) ? modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, cennik, DOMYSLNE_DODATKI) : null;
 }
 
 /** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
@@ -822,10 +837,15 @@ export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
   return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
 }
 
+/** Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze. */
+export function pozycjeKuchniZCena(plan: PlanKuchni, cennik: ModulCennik) {
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaElementu(e, cennik) ?? 0 }));
+}
+
 /** Suma netto zabudowy (bez AGD). Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
-  return Math.max(1, sumaModulow(pozycjeKuchni(plan), cennik));
+  return Math.max(1, plan.elementy.reduce((s, e) => s + (cenaElementu(e, cennik) ?? 0), 0));
 }
 
 export function wystajePozaSciany(plan: PlanKuchni) {
@@ -899,6 +919,20 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     const rodzaj: RodzajElementu =
       e.rodzaj === undefined || e.rodzaj === null ? "szafka" : jedno(e.rodzaj, RODZAJE, `rodzaj elementu ${i + 1}`);
     const lim = zrodlo === "model" ? MODEL_LIMITS : limityZapisu(rodzaj, strefa);
+    const w = cm(e.w, `szerokość elementu ${i + 1}`, lim.w.min, lim.w.max);
+    const h = cm(e.h, `wysokość elementu ${i + 1}`, lim.h.min, lim.h.max);
+    const d = cm(e.d, `głębokość elementu ${i + 1}`, lim.d.min, lim.d.max);
+    let wnetrze: Wnetrze | undefined;
+    if (e.wnetrze !== undefined && e.wnetrze !== null) {
+      if (!maWnetrze({ rodzaj, strefa, zrodlo })) blad(`„${nazwa}”: ten element nie ma wnętrza do ustawienia.`);
+      try {
+        wnetrze = parseWnetrze(e.wnetrze, `„${nazwa}”`);
+      } catch (err) {
+        blad(err instanceof Error ? err.message : `„${nazwa}”: złe wnętrze.`);
+      }
+      const ocena = sprawdzWnetrze({ w, h, d, rodzaj, strefa }, wnetrze);
+      if (ocena.bledy.length) blad(`„${nazwa}”: ${ocena.bledy[0]}`);
+    }
     return {
       id,
       nazwa,
@@ -906,12 +940,13 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(modelId ? { modelId } : {}),
       strefa,
       rodzaj,
-      w: cm(e.w, `szerokość elementu ${i + 1}`, lim.w.min, lim.w.max),
-      h: cm(e.h, `wysokość elementu ${i + 1}`, lim.h.min, lim.h.max),
-      d: cm(e.d, `głębokość elementu ${i + 1}`, lim.d.min, lim.d.max),
+      w,
+      h,
+      d,
       x: cm(e.x, `pozycja x elementu ${i + 1}`, POLOZENIE.min, POLOZENIE.max),
       z: cm(e.z, `pozycja z elementu ${i + 1}`, POLOZENIE.min, POLOZENIE.max),
       rot: rot as Obrot,
+      ...(wnetrze ? { wnetrze } : {}),
     };
   });
   const plan: PlanKuchni = { uklad, scianaA, scianaB, pomieszczenie, elementy };

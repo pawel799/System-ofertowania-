@@ -22,7 +22,15 @@ const money = (v: unknown, field: string) => {
 export function validateCennik(v: unknown): ModulCennik {
   if (!v || typeof v !== "object" || Array.isArray(v)) throw bad("Oczekiwano obiektu cennika.");
   const b = v as Record<string, unknown>;
-  return { baza: money(b.baza, "baza"), plytaM2: money(b.plytaM2, "płyta za m²"), frontM2: money(b.frontM2, "front za m²"), mb: money(b.mb, "metr bieżący") };
+  return {
+    baza: money(b.baza, "baza"),
+    plytaM2: money(b.plytaM2, "płyta za m²"),
+    frontM2: money(b.frontM2, "front za m²"),
+    mb: money(b.mb, "metr bieżący"),
+    // Starsze panele nie wysyłają tych pól – wtedy zostaje cena domyślna.
+    szuflada: b.szuflada === undefined || b.szuflada === null ? (DEFAULT_CENNIK.szuflada ?? 0) : money(b.szuflada, "szuflada"),
+    drazek: b.drazek === undefined || b.drazek === null ? (DEFAULT_CENNIK.drazek ?? 0) : money(b.drazek, "drążek"),
+  };
 }
 
 const dim = (v: unknown, k: keyof typeof LINIA_LIMITS, i: number) => {

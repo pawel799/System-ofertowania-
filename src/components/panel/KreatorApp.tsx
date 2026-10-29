@@ -47,6 +47,7 @@ import { Seg, Toaster, Tooltips, toast } from "./ui";
 import { KreatorWlasciwosci, PoleCm } from "./KreatorWlasciwosci";
 import { useCennik } from "./useCennik";
 import { KreatorBiblioteka } from "./KreatorBiblioteka";
+import { KreatorWnetrze, type ElementOkna } from "./KreatorWnetrze";
 import {
   ApiError,
   assetsApi,
@@ -112,6 +113,9 @@ export default function KreatorApp() {
   const [typ, setTyp] = useState<TypProjektu>("kuchnia");
   const [wszystkieGrupy, setWszystkieGrupy] = useState(false);
   const [biblioteka, setBiblioteka] = useState(false);
+  /** Okno elementu: przed dodaniem z katalogu (nowy) albo zmiana zaznaczonego (edycja). */
+  const [okno, setOkno] = useState<{ tryb: "nowy"; el: ElementOkna } | { tryb: "edycja"; id: string } | null>(null);
+  const otworzNowy = useCallback((el: ElementOkna) => setOkno({ tryb: "nowy", el }), []);
   const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
   const { cennik, blad: cennikBlad } = useCennik();
@@ -223,6 +227,51 @@ export default function KreatorApp() {
     const next = dodajElement(plan, bazowy, sciana);
     setPlan(next);
     setZaznaczony(next.elementy[next.elementy.length - 1]?.id ?? null);
+  };
+
+  /** Zapis z okna elementu: zamiana modelu na moduł, wymiary (rząd dosuwa się jak przy edycji), na końcu wnętrze. */
+  const zapiszElement = (id: string, nowy: ElementOkna) => {
+    const el = plan.elementy.find((e) => e.id === id);
+    if (!el) return false;
+    let p: PlanKuchni = plan;
+    if (nowy.zrodlo !== el.zrodlo || nowy.rodzaj !== el.rodzaj || nowy.strefa !== el.strefa) {
+      p = {
+        ...p,
+        elementy: p.elementy.map((e) => {
+          if (e.id !== id) return e;
+          const out: ElementKuchni = { ...e, zrodlo: nowy.zrodlo, rodzaj: nowy.rodzaj, strefa: nowy.strefa };
+          if (nowy.zrodlo === "modul") delete out.modelId;
+          return out;
+        }),
+      };
+    }
+    for (const key of ["w", "h", "d"] as const) {
+      const teraz = p.elementy.find((e) => e.id === id);
+      if (!teraz || teraz[key] === nowy[key]) continue;
+      const n = zmienWymiar(p, id, key, nowy[key]);
+      if (!n) {
+        toast("Nie da się tak zmienić wymiaru", { type: "err", desc: "Sąsiad wszedłby na inny element. Odsuń go albo zmniejsz wymiar." });
+        return false;
+      }
+      p = n;
+    }
+    p = {
+      ...p,
+      elementy: p.elementy.map((e) => {
+        if (e.id !== id) return e;
+        const out: ElementKuchni = { ...e, nazwa: nowy.nazwa.trim() || e.nazwa };
+        if (nowy.wnetrze && nowy.zrodlo === "modul") out.wnetrze = nowy.wnetrze;
+        else delete out.wnetrze;
+        return out;
+      }),
+    };
+    try {
+      setPlan(parseKuchnia(p));
+      return true;
+    } catch (e) {
+      toast("Nie da się tak ustawić", { type: "err", desc: e instanceof Error ? e.message : "" });
+      return false;
+    }
   };
 
   const ustawWymiar = (id: string, key: "w" | "h" | "d", value: number) => {
@@ -512,7 +561,7 @@ export default function KreatorApp() {
                   <div key={g.id} className="kr-group">
                     <h3>{g.label}</h3>
                     {lista.map((p) => (
-                      <button key={p.id} type="button" className="kr-item" onClick={() => dodaj({ ...p, zrodlo: "modul" })}>
+                      <button key={p.id} type="button" className="kr-item" onClick={() => otworzNowy({ nazwa: p.nazwa, strefa: p.strefa, rodzaj: p.rodzaj, w: p.w, h: p.h, d: p.d, zrodlo: "modul" })}>
                         <b>{p.nazwa}</b>
                         <span className="mono">
                           {p.w}×{p.h}×{p.d} cm
@@ -527,7 +576,7 @@ export default function KreatorApp() {
                 models={models}
                 fraza={szukaj.trim().toLowerCase()}
                 cennik={cennik}
-                onDodaj={dodaj}
+                onDodaj={otworzNowy}
                 grupy={wszystkieGrupy ? null : GRUPY_TYPU[typ].biblioteka}
               />
             </div>
@@ -554,6 +603,7 @@ export default function KreatorApp() {
                   onWybierz={setZaznaczony}
                   onPrzesun={(id, x, z) => zmien((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) }))}
                   onKolizja={() => toast("Elementy nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
+                  onOtworz={(id) => setOkno({ tryb: "edycja", id })}
                 />
                 </div>
                 <p className="kr-legend">
@@ -627,10 +677,14 @@ export default function KreatorApp() {
                     d: element.d,
                     zrodlo: element.zrodlo,
                     modelId: element.modelId,
+                    wnetrze: element.wnetrze,
                   });
                 }}
                 onDociagnij={() => {
                   if (element) dociagnij(element.id);
+                }}
+                onWnetrze={() => {
+                  if (element) setOkno({ tryb: "edycja", id: element.id });
                 }}
               />
               <h2>Oferta</h2>
@@ -798,7 +852,30 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
-      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={dodaj} onClose={zamknijBiblioteke} typ={typ} /> : null}
+      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
+      {okno && gotowe && !auth
+        ? (() => {
+            const edytowany = okno.tryb === "edycja" ? plan.elementy.find((e) => e.id === okno.id) : null;
+            if (okno.tryb === "edycja" && !edytowany) return null;
+            const start: ElementOkna = okno.tryb === "nowy" ? okno.el : (edytowany as ElementKuchni);
+            return (
+              <KreatorWnetrze
+                key={okno.tryb === "nowy" ? `n-${start.nazwa}-${start.modelId ?? ""}` : `e-${okno.id}`}
+                tryb={okno.tryb}
+                el={start}
+                cennik={cennik}
+                onAnuluj={() => setOkno(null)}
+                onZapisz={(nowy) => {
+                  if (okno.tryb === "nowy") {
+                    dodaj(nowy);
+                    toast(`Dodano: ${nowy.nazwa}`, { desc: biblioteka ? "Możesz dodać kolejny element albo zamknąć bibliotekę." : undefined });
+                    setOkno(null);
+                  } else if (zapiszElement(okno.id, nowy)) setOkno(null);
+                }}
+              />
+            );
+          })()
+        : null}
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
       <Tooltips />
       <Toaster />

@@ -17,6 +17,8 @@ const FIELDS: { k: keyof ModulCennik; label: string }[] = [
   { k: "plytaM2", label: "Płyta korpusu 18 mm (zł/m²)" },
   { k: "frontM2", label: "Front (zł/m²)" },
   { k: "mb", label: "Za metr bieżący szerokości (zł/mb)" },
+  { k: "szuflada", label: "Szuflada we wnętrzu – prowadnice (zł/szt.)" },
+  { k: "drazek", label: "Drążek w szafie (zł/szt.)" },
 ];
 const SAMPLES = [
   { w: 40, h: 72, d: 56 },
@@ -34,7 +36,16 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
   useEffect(() => {
     cennikApi
       .get()
-      .then((c) => setForm({ baza: String(c.baza), plytaM2: String(c.plytaM2), frontM2: String(c.frontM2), mb: String(c.mb) }))
+      .then((c) =>
+        setForm({
+          baza: String(c.baza),
+          plytaM2: String(c.plytaM2),
+          frontM2: String(c.frontM2),
+          mb: String(c.mb),
+          szuflada: String(c.szuflada ?? DEFAULT_CENNIK.szuflada),
+          drazek: String(c.drazek ?? DEFAULT_CENNIK.drazek),
+        }),
+      )
       .catch((e) => {
         if (!onAuthError(e)) setErr(errText(e));
       });
@@ -44,7 +55,14 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
   if (!form) return <p className="lede">Wczytywanie…</p>;
 
   const num = (v: string) => Number(v.replace(/\s/g, "").replace(",", "."));
-  const parsed: ModulCennik = { baza: num(form.baza), plytaM2: num(form.plytaM2), frontM2: num(form.frontM2), mb: num(form.mb) };
+  const parsed: ModulCennik = {
+    baza: num(form.baza),
+    plytaM2: num(form.plytaM2),
+    frontM2: num(form.frontM2),
+    mb: num(form.mb),
+    szuflada: num(form.szuflada),
+    drazek: num(form.drazek),
+  };
   const valid = Object.values(parsed).every((n) => Number.isFinite(n) && n >= 0 && n <= 1_000_000);
 
   const save = async (e: FormEvent) => {
@@ -68,7 +86,8 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
         <h2>Cennik szafek na wymiar</h2>
         <p className="lede">
           Cena modułu liczy się z wymiarów: baza + płyta korpusu (m²) + front (m²) + metr bieżący szerokości. Ceny netto. Ten sam
-          cennik działa w ofertach dla klientów i w podglądzie 3D na Twojej stronie.
+          cennik działa w ofertach dla klientów i w podglądzie 3D na Twojej stronie. Gdy w kreatorze ustawisz wnętrze modułu,
+          dochodzi płyta dodatkowych półek i przegród oraz szuflady i drążki z cen poniżej.
         </p>
         <form onSubmit={save} noValidate>
           {FIELDS.map((f) => (
@@ -104,6 +123,8 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
                     plytaM2: String(DEFAULT_CENNIK.plytaM2),
                     frontM2: String(DEFAULT_CENNIK.frontM2),
                     mb: String(DEFAULT_CENNIK.mb),
+                    szuflada: String(DEFAULT_CENNIK.szuflada),
+                    drazek: String(DEFAULT_CENNIK.drazek),
                   })
                 }
               >

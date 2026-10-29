@@ -11,6 +11,7 @@ import {
   type PlanKuchni,
 } from "@/lib/kuchnia";
 import { formatPln } from "../pricing";
+import { maWnetrze, opisWnetrza, wnetrzeDomyslne } from "@/lib/wnetrze";
 
 export function PoleCm({
   id,
@@ -74,6 +75,7 @@ export function KreatorWlasciwosci({
   onUsun,
   onKopiuj,
   onDociagnij,
+  onWnetrze,
 }: {
   plan: PlanKuchni;
   element: ElementKuchni | null;
@@ -86,12 +88,14 @@ export function KreatorWlasciwosci({
   onUsun: () => void;
   onKopiuj: () => void;
   onDociagnij: () => void;
+  /** Okno wymiarów i wnętrza (półki, szuflady, drążki). */
+  onWnetrze?: () => void;
 }) {
   if (!element) {
     return (
       <div className="kr-card kr-selected">
         <h3>Właściwości</h3>
-        <p className="lede">Kliknij element na rzucie albo w 3D. Tu zmienisz nazwę i wymiary — rząd obok zostaje dosunięty.</p>
+        <p className="lede">Kliknij element na rzucie albo w 3D. Tu zmienisz nazwę i wymiary — rząd obok zostaje dosunięty. Dwuklik otwiera okno z wnętrzem (półki, szuflady, drążki).</p>
       </div>
     );
   }
@@ -119,6 +123,23 @@ export function KreatorWlasciwosci({
         {rzad != null ? ` · rząd ${rzad} cm` : ""}
         {agd ? " · AGD, poza ceną" : cena != null ? ` · ${formatPln(cena)} netto` : ""}
       </p>
+      {maWnetrze(element) ? (
+        <p className="kr-wn-skrot">
+          <span>Wnętrze: {opisWnetrza(element.wnetrze ?? wnetrzeDomyslne(element)!)}</span>
+          {onWnetrze ? (
+            <button type="button" className="btn btn-ghost" onClick={onWnetrze}>
+              Zmień wnętrze
+            </button>
+          ) : null}
+        </p>
+      ) : onWnetrze ? (
+        <p className="kr-wn-skrot">
+          <span>{element.zrodlo === "model" ? "Wnętrze z modelu 3D" : "Bez wnętrza"}</span>
+          <button type="button" className="btn btn-ghost" onClick={onWnetrze}>
+            Wymiary i wnętrze
+          </button>
+        </p>
+      ) : null}
       <div className="actions">
         <button type="button" className="btn btn-ghost" onClick={onObrot}>
           Obróć 90°
