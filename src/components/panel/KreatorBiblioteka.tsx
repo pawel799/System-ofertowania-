@@ -17,6 +17,7 @@ import { modulCena, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 import type { ModelMeta } from "./offerApi";
 import { toast } from "./ui";
+import { GRUPY_TYPU, TYP_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 
 type Pozycja = {
   key: string;
@@ -26,6 +27,8 @@ type Pozycja = {
   miniatura: string | null;
   rodzaj: RodzajElementu;
   element: NowyElement;
+  /** Pasuje do rodzaju projektu (kuchnia, szafa…) – domyślny filtr okna. */
+  doProjektu: boolean;
 };
 
 const opisy = OPISY as Record<string, string>;
@@ -43,15 +46,18 @@ export function KreatorBiblioteka({
   cennik,
   onDodaj,
   onClose,
+  typ = "kuchnia",
 }: {
   models: ModelMeta[];
   cennik: ModulCennik | null;
   onDodaj: (el: NowyElement) => void;
   onClose: () => void;
+  typ?: TypProjektu;
 }) {
   const [open, setOpen] = useState(false);
   const [fraza, setFraza] = useState("");
-  const [grupa, setGrupa] = useState("wszystkie");
+  const [grupa, setGrupa] = useState(typ === "inne" ? "wszystkie" : "projekt");
+  const zTypu = GRUPY_TYPU[typ];
   const szukajRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -80,6 +86,7 @@ export function KreatorBiblioteka({
         miniatura: `/biblioteka/${model.id}.webp`,
         rodzaj: wpis.rodzaj,
         element: { nazwa: wpis.nazwa, strefa: wpis.strefa, rodzaj: wpis.rodzaj, w: wpis.w, h: wpis.h, d: wpis.d, zrodlo: "model", modelId: model.id },
+        doProjektu: !!wpis.grupa && zTypu.biblioteka.includes(wpis.grupa),
       });
     }
     for (const p of PRESETY) {
@@ -92,6 +99,7 @@ export function KreatorBiblioteka({
         miniatura: null,
         rodzaj: p.rodzaj,
         element: { nazwa: p.nazwa, strefa: p.strefa, rodzaj: p.rodzaj, w: p.w, h: p.h, d: p.d, zrodlo: "modul" },
+        doProjektu: zTypu.presety.includes(p.grupa),
       });
     }
     for (const m of wlasne) {
@@ -103,10 +111,11 @@ export function KreatorBiblioteka({
         miniatura: null,
         rodzaj: "szafka",
         element: { nazwa: m.name.slice(0, 80) || "Model", strefa: "dolna", w: 60, h: 72, d: 56, zrodlo: "model", modelId: m.id },
+        doProjektu: true,
       });
     }
     return out;
-  }, [models]);
+  }, [models, zTypu]);
 
   // Kolejność przycisków: grupy biblioteki jak w katalogu, potem moduły na wymiar i modele firmy.
   const grupy = useMemo(() => {
@@ -118,7 +127,10 @@ export function KreatorBiblioteka({
   const q = fraza.trim().toLowerCase();
   const widoczne = pozycje.filter(
     (p) =>
-      (grupa === "wszystkie" || p.grupa === grupa || (grupa === "Na wymiar" && p.grupa.startsWith("Na wymiar"))) &&
+      (grupa === "wszystkie" ||
+        (grupa === "projekt" && p.doProjektu) ||
+        p.grupa === grupa ||
+        (grupa === "Na wymiar" && p.grupa.startsWith("Na wymiar"))) &&
       (!q || `${p.nazwa} ${p.opis} ${p.grupa}`.toLowerCase().includes(q)),
   );
 
@@ -149,9 +161,9 @@ export function KreatorBiblioteka({
             aria-label="Szukaj w bibliotece"
           />
           <div className="kr-choice" role="radiogroup" aria-label="Grupa">
-            {["wszystkie", ...grupy].map((g) => (
+            {[...(typ === "inne" ? [] : ["projekt"]), "wszystkie", ...grupy].map((g) => (
               <button key={g} type="button" role="radio" aria-checked={grupa === g} className="btn btn-ghost" onClick={() => setGrupa(g)}>
-                {g === "wszystkie" ? "Wszystkie" : g}
+                {g === "projekt" ? `Do projektu: ${TYP_PROJEKTU[typ].label}` : g === "wszystkie" ? "Wszystkie" : g}
               </button>
             ))}
           </div>

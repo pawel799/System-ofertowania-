@@ -12,7 +12,8 @@ import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
 import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import type { Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
-import { GRUPY_BIBLIOTEKI, podzielModele } from "@/lib/bibliotekaModeli";
+import { GRUPY_BIBLIOTEKI, podzielModele, type GrupaBiblioteki } from "@/lib/bibliotekaModeli";
+import { GRUPY_TYPU, parseTypProjektu, TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
 import {
   bazaKuchni,
@@ -28,6 +29,7 @@ import {
   type NowyElement,
   UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
+  wstawPrzykladMebli,
   wystajePozaSciany,
   wycenianyElement,
   zmienWymiar,
@@ -106,6 +108,9 @@ export default function KreatorApp() {
   const [zakladka, setZakladka] = useState<"rzut" | "3d">("rzut");
   const [wymiary, setWymiary] = useState(true);
   const [szukaj, setSzukaj] = useState("");
+  /** Co projektujemy – od tego zależą grupy katalogu (reszta po „Pokaż wszystkie”). */
+  const [typ, setTyp] = useState<TypProjektu>("kuchnia");
+  const [wszystkieGrupy, setWszystkieGrupy] = useState(false);
   const [biblioteka, setBiblioteka] = useState(false);
   const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
@@ -124,6 +129,7 @@ export default function KreatorApp() {
     setFrontId(o.front);
     setCountertopId(o.countertop);
     setHardwareId(o.hardware);
+    setTyp(o.projekt ?? "kuchnia");
   }, []);
 
   const wczytaj = useCallback(async () => {
@@ -152,6 +158,8 @@ export default function KreatorApp() {
       const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
       if (found) wczytajOferte(found);
       else {
+        // Nowa oferta z panelu: /panel/kreator?typ=szafa
+        setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
         if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nową kuchnię." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
         const kat = { palettes: pakiety, katalog: katalogFirmy };
@@ -292,11 +300,12 @@ export default function KreatorApp() {
       hardware,
       kuchnia: parsed,
       moduly: pozycjeKuchni(parsed),
+      projekt: typ,
     };
     if (offer) {
       const reszta: Offer = { ...offer };
       delete reszta.modelId;
-      const zdarzenie: OfferEvent = { t: stamp(), k: "edit", x: "Zapis z kreatora kuchni" };
+      const zdarzenie: OfferEvent = { t: stamp(), k: "edit", x: `Zapis z kreatora (${TYP_PROJEKTU[typ].label.toLowerCase()})` };
       return {
         ...reszta,
         ...wspolne,
@@ -310,7 +319,7 @@ export default function KreatorApp() {
       greet: imie || null,
       status: "szkic",
       link: null,
-      events: [{ t: stamp(), k: "create", x: "Oferta z kreatora kuchni" }],
+      events: [{ t: stamp(), k: "create", x: `Oferta z kreatora (${TYP_PROJEKTU[typ].label.toLowerCase()})` }],
     };
   };
 
@@ -433,7 +442,7 @@ export default function KreatorApp() {
 
   const przyklad = () => {
     if (plan.elementy.length && !window.confirm("Zastąpić obecne szafki układem przykładowym?")) return;
-    setPlan(wstawPrzyklad(plan.uklad));
+    setPlan(typ === "kuchnia" || typ === "inne" ? wstawPrzyklad(plan.uklad) : wstawPrzykladMebli(typ));
     setZaznaczony(null);
   };
 
@@ -448,7 +457,7 @@ export default function KreatorApp() {
         <PanelBrand />
         <div className="crumb">
           <span>/</span>
-          <b>Kreator kuchni</b>
+          <b>{TYP_PROJEKTU[typ].kreator}</b>
         </div>
         <span className="grow" />
         {lokalnie ? <span className="sample">Dane demo</span> : null}
@@ -464,7 +473,7 @@ export default function KreatorApp() {
         <div className="kr-body">
           <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
             <div className="kr-pad">
-              <h2>Katalog</h2>
+              <h2>Katalog · {TYP_PROJEKTU[typ].label}</h2>
               <button type="button" className="btn btn-ghost wide" onClick={() => setBiblioteka(true)}>
                 Biblioteka modeli – miniatury
               </button>
@@ -492,7 +501,11 @@ export default function KreatorApp() {
                   aria-label="Szukaj w katalogu"
                 />
               </label>
-              {GRUPY_PRESETOW.map((g) => {
+              <label className="kr-check">
+                <input type="checkbox" checked={wszystkieGrupy || typ === "inne"} disabled={typ === "inne"} onChange={(e) => setWszystkieGrupy(e.target.checked)} />
+                Pokaż wszystkie elementy (nie tylko: {TYP_PROJEKTU[typ].label.toLowerCase()})
+              </label>
+              {GRUPY_PRESETOW.filter((g) => wszystkieGrupy || GRUPY_TYPU[typ].presety.includes(g.id)).map((g) => {
                 const lista = PRESETY.filter((p) => p.grupa === g.id && p.nazwa.toLowerCase().includes(szukaj.trim().toLowerCase()));
                 if (!lista.length) return null;
                 return (
@@ -510,7 +523,13 @@ export default function KreatorApp() {
                   </div>
                 );
               })}
-              <BibliotekaModeli models={models} fraza={szukaj.trim().toLowerCase()} cennik={cennik} onDodaj={dodaj} />
+              <BibliotekaModeli
+                models={models}
+                fraza={szukaj.trim().toLowerCase()}
+                cennik={cennik}
+                onDodaj={dodaj}
+                grupy={wszystkieGrupy ? null : GRUPY_TYPU[typ].biblioteka}
+              />
             </div>
           </aside>
 
@@ -626,6 +645,16 @@ export default function KreatorApp() {
               <div className="field">
                 <label htmlFor="k-title">Nazwa oferty</label>
                 <input id="k-title" className="input" value={title} placeholder="Np. Kuchnia w ciągu, dąb" onChange={(e) => setTitle(e.target.value)} />
+              </div>
+              <div className="field">
+                <label htmlFor="k-typ">Co projektujemy</label>
+                <select id="k-typ" className="input" value={typ} onChange={(e) => setTyp(parseTypProjektu(e.target.value) ?? "kuchnia")}>
+                  {TYPY_PROJEKTU.map((t) => (
+                    <option key={t} value={t}>
+                      {TYP_PROJEKTU[t].label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="field">
                 <span className="lab">Układ</span>
@@ -769,7 +798,7 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
-      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={dodaj} onClose={zamknijBiblioteke} /> : null}
+      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={dodaj} onClose={zamknijBiblioteke} typ={typ} /> : null}
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
       <Tooltips />
       <Toaster />
@@ -782,18 +811,21 @@ function BibliotekaModeli({
   fraza,
   cennik,
   onDodaj,
+  grupy,
 }: {
   models: ModelMeta[];
   fraza: string;
   cennik: ModulCennik | null;
   onDodaj: (el: NowyElement) => void;
+  /** Grupy pasujące do projektu; null = wszystkie. */
+  grupy: readonly GrupaBiblioteki[] | null;
 }) {
   const { moduly, wlasne, kuchnie } = podzielModele(models);
   const pasuje = (nazwa: string) => nazwa.toLowerCase().includes(fraza);
   const wlasneWidoczne = wlasne.filter((m) => pasuje(m.name));
   return (
     <>
-      {GRUPY_BIBLIOTEKI.map((g) => {
+      {GRUPY_BIBLIOTEKI.filter((g) => !grupy || grupy.includes(g.id)).map((g) => {
         const lista = moduly.filter((x) => x.wpis.grupa === g.id && x.wpis.strefa && x.wpis.rodzaj && pasuje(x.wpis.nazwa));
         if (!lista.length) return null;
         return (
@@ -867,7 +899,7 @@ function BibliotekaModeli({
             {moduly.length ? null : "."}
           </p>
         ) : null}
-        {!fraza && kuchnie.length ? (
+        {!fraza && kuchnie.length && (!grupy || grupy.includes("dolne")) ? (
           <p className="lede">
             Gotowe kuchnie ({kuchnie.map((k) => k.wpis.nazwa.replace(" (komplet)", "")).join(", ")}) wybierzesz jako model całej oferty, nie jako
             szafkę.

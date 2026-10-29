@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
-import { rodzajElementu, type ElementKuchni, type RodzajElementu } from "@/lib/kuchnia";
+import { MEBLE, rodzajElementu, type ElementKuchni, type RodzajElementu } from "@/lib/kuchnia";
 
 type Props = {
   el: ElementKuchni;
@@ -318,6 +318,7 @@ function Polka({ el }: { el: ElementKuchni }) {
 }
 
 function zSzufladami(rodzaj: RodzajElementu, h: number) {
+  if (rodzaj === "komoda") return h >= 80 ? 4 : h >= 50 ? 3 : 1;
   if (rodzaj !== "szuflady") return 1;
   return h >= 60 ? 3 : 2;
 }
@@ -349,7 +350,8 @@ export default function AgdBryla(props: Props) {
     );
   }
   if (rodzaj === "lodowka-zabudowa") return <LodowkaZabudowa {...props} />;
-  const blatNaDole = el.strefa === "dolna";
+  // Komoda, RTV, szafka pod umywalkę stoją bez blatu kuchennego (wierzch to płyta korpusu).
+  const blatNaDole = el.strefa === "dolna" && !MEBLE.has(rodzaj);
   return (
     <group>
       {rodzaj === "zmywarka" ? (

@@ -10,6 +10,7 @@
  *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
+import { parseTypProjektu, type TypProjektu } from "../../src/lib/projekt";
 import type { PlanKuchni } from "../../src/lib/kuchnia";
 import { parseKuchnia } from "../../src/lib/kuchnia";
 import type { ModulItem } from "../../src/lib/modul";
@@ -151,6 +152,8 @@ export type Offer = {
    * wyliczane na serwerze z tego planu, a nie z pól base/moduly przysyłanych przez panel.
    */
   kuchnia?: PlanKuchni;
+  /** Co projektujemy (kuchnia, szafa, komoda…) – src/lib/projekt.ts. Brak = kuchnia. */
+  projekt?: TypProjektu;
   /** Nazwy i dopłaty materiałów z chwili zapisu (liczy serwer – katalogFirmy.ts). Stare oferty go nie mają. */
   materialy?: MaterialySnapshot;
   status: Status;
@@ -398,6 +401,8 @@ export function validateOffer(input: unknown): Offer {
   // Oferta z kreatora: pozycje i cenę liczy serwer z planu (zCenaKuchni), więc moduły z panelu pomijamy.
   // Wcześniej szły przez limity szafki na wymiar (4–120 cm) i odrzucały np. komodę 141 cm albo blat 240 cm z biblioteki.
   const moduly = kuchnia?.elementy.length ? undefined : validateModuly(o.moduly);
+  if (o.projekt !== undefined && o.projekt !== null && !parseTypProjektu(o.projekt)) throw bad("Nieznany rodzaj projektu.");
+  const projekt = parseTypProjektu(o.projekt);
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
@@ -415,6 +420,7 @@ export function validateOffer(input: unknown): Offer {
     ...(modelId ? { modelId } : {}),
     ...(moduly && moduly.length ? { moduly } : {}),
     ...(kuchnia ? { kuchnia } : {}),
+    ...(projekt ? { projekt } : {}),
     status: oneOf(o.status, STATUSES, "status"),
     link: validateLink(o.link),
     ...(comment !== undefined ? { comment } : {}),

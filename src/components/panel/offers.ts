@@ -1,3 +1,4 @@
+import type { TypProjektu } from "@/lib/projekt";
 import type { MaterialySnapshot } from "../katalogFirmy";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { ModulItem } from "@/lib/modul";
@@ -100,6 +101,8 @@ export type Offer = {
   moduly?: ModulItem[];
   /** Układ z kreatora. Przy zapisie serwer nadpisuje base i moduly ceną z cennika. */
   kuchnia?: PlanKuchni;
+  /** Co projektujemy – src/lib/projekt.ts. Brak = kuchnia. */
+  projekt?: TypProjektu;
   /** Snapshot nazw i dopłat materiałów (liczy serwer przy zapisie). */
   materialy?: MaterialySnapshot;
   status: Status;

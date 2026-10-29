@@ -35,7 +35,14 @@ export type RodzajElementu =
   | "lodowka"
   | "lodowka-zabudowa"
   | "polka"
-  | "blat";
+  | "blat"
+  // Meble poza kuchnią (szafy, komody, łazienka) – bryła parametryczna z wnętrzem.
+  | "szafa"
+  | "szafa-przesuwna"
+  | "komoda"
+  | "regal"
+  | "rtv"
+  | "umywalka";
 
 export const RODZAJE: readonly RodzajElementu[] = [
   "szafka",
@@ -55,7 +62,16 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "lodowka-zabudowa",
   "polka",
   "blat",
+  "szafa",
+  "szafa-przesuwna",
+  "komoda",
+  "regal",
+  "rtv",
+  "umywalka",
 ];
+
+/** Rodzaje mebli spoza kuchni: własne widełki wymiarów (szafa do 4 m szerokości, do sufitu), bez blatu kuchennego. */
+export const MEBLE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["szafa", "szafa-przesuwna", "komoda", "regal", "rtv", "umywalka"]);
 
 export type ElementKuchni = {
   id: string;
@@ -117,9 +133,15 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   "lodowka-zabudowa": "Zabudowa lodówki",
   polka: "Półka ścienna",
   blat: "Blat",
+  szafa: "Szafa",
+  "szafa-przesuwna": "Szafa przesuwna",
+  komoda: "Komoda",
+  regal: "Regał",
+  rtv: "Szafka RTV",
+  umywalka: "Szafka pod umywalkę",
 };
 
-export type GrupaPresetu = "dolne" | "gorne" | "polki" | "slupki" | "agd";
+export type GrupaPresetu = "dolne" | "gorne" | "polki" | "slupki" | "agd" | "szafy" | "komody" | "regaly" | "lazienka";
 
 export const GRUPY_PRESETOW: { id: GrupaPresetu; label: string }[] = [
   { id: "dolne", label: "Szafki dolne" },
@@ -127,6 +149,10 @@ export const GRUPY_PRESETOW: { id: GrupaPresetu; label: string }[] = [
   { id: "polki", label: "Półki ścienne" },
   { id: "slupki", label: "Słupki" },
   { id: "agd", label: "AGD" },
+  { id: "szafy", label: "Szafy na wymiar" },
+  { id: "komody", label: "Komody i szafki RTV" },
+  { id: "regaly", label: "Regały" },
+  { id: "lazienka", label: "Łazienka" },
 ];
 
 export type PresetModul = {
@@ -173,6 +199,22 @@ export const PRESETY: PresetModul[] = [
   { id: "okap-pod-60", nazwa: "Okap podszafkowy 60", grupa: "agd", strefa: "gorna", rodzaj: "okap-podszafkowy", w: 60, h: 15, d: 48 },
   { id: "zlewozmywak-50", nazwa: "Zlewozmywak", grupa: "agd", strefa: "blat", rodzaj: "zlewozmywak", w: 50, h: 18, d: 40 },
   { id: "bateria", nazwa: "Bateria kuchenna", grupa: "agd", strefa: "blat", rodzaj: "bateria", w: 8, h: 34, d: 14 },
+  { id: "szafa-1d-50", nazwa: "Szafa 1-drzwiowa 50", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa", w: 50, h: 220, d: 60 },
+  { id: "szafa-2d-100", nazwa: "Szafa 2-drzwiowa 100", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa", w: 100, h: 220, d: 60 },
+  { id: "szafa-3d-150", nazwa: "Szafa 3-drzwiowa 150", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa", w: 150, h: 220, d: 60 },
+  { id: "szafa-przesuwna-180", nazwa: "Szafa przesuwna 180", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa-przesuwna", w: 180, h: 240, d: 65 },
+  { id: "szafa-przesuwna-250", nazwa: "Szafa przesuwna 250", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa-przesuwna", w: 250, h: 240, d: 65 },
+  { id: "szafa-wnekowa-200", nazwa: "Szafa wnękowa do sufitu 200", grupa: "szafy", strefa: "wysoka", rodzaj: "szafa-przesuwna", w: 200, h: 260, d: 62 },
+  { id: "komoda-80-3", nazwa: "Komoda 80, 3 szuflady", grupa: "komody", strefa: "dolna", rodzaj: "komoda", w: 80, h: 85, d: 45 },
+  { id: "komoda-120-6", nazwa: "Komoda 120, 2×3 szuflady", grupa: "komody", strefa: "dolna", rodzaj: "komoda", w: 120, h: 85, d: 45 },
+  { id: "komoda-160-mix", nazwa: "Komoda 160, drzwi i szuflady", grupa: "komody", strefa: "dolna", rodzaj: "komoda", w: 160, h: 85, d: 45 },
+  { id: "nocna-45", nazwa: "Szafka nocna 45", grupa: "komody", strefa: "dolna", rodzaj: "komoda", w: 45, h: 50, d: 40 },
+  { id: "rtv-160", nazwa: "Szafka RTV 160", grupa: "komody", strefa: "dolna", rodzaj: "rtv", w: 160, h: 45, d: 40 },
+  { id: "regal-80", nazwa: "Regał 80", grupa: "regaly", strefa: "wysoka", rodzaj: "regal", w: 80, h: 190, d: 35 },
+  { id: "regal-40", nazwa: "Regał wąski 40", grupa: "regaly", strefa: "wysoka", rodzaj: "regal", w: 40, h: 190, d: 32 },
+  { id: "umywalka-60", nazwa: "Szafka pod umywalkę 60", grupa: "lazienka", strefa: "dolna", rodzaj: "umywalka", w: 60, h: 55, d: 46 },
+  { id: "umywalka-80", nazwa: "Szafka pod umywalkę 80", grupa: "lazienka", strefa: "dolna", rodzaj: "umywalka", w: 80, h: 55, d: 46 },
+  { id: "slupek-lazienka-40", nazwa: "Słupek łazienkowy 40", grupa: "lazienka", strefa: "wysoka", rodzaj: "szafa", w: 40, h: 170, d: 33 },
 ];
 
 const SCIANA = { min: 80, max: 1200 };
@@ -228,6 +270,19 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
       return { w: zakres(30, 120), h: zakres(4, 48), d: zakres(12, 40) };
     case "blat":
       return { w: zakres(30, 400), h: zakres(2, 12), d: zakres(30, 160) };
+    // Meble: szerokość skrzydła drzwi pilnuje wnętrze (do 60 cm), tu cała bryła.
+    case "szafa":
+      return { w: zakres(30, 300), h: zakres(100, 280), d: zakres(30, 75) };
+    case "szafa-przesuwna":
+      return { w: zakres(100, 400), h: zakres(180, 280), d: zakres(55, 75) };
+    case "komoda":
+      return { w: zakres(30, 240), h: zakres(35, 140), d: zakres(30, 60) };
+    case "regal":
+      return { w: zakres(25, 200), h: zakres(40, 280), d: zakres(20, 50) };
+    case "rtv":
+      return { w: zakres(60, 280), h: zakres(25, 70), d: zakres(30, 55) };
+    case "umywalka":
+      return { w: zakres(40, 160), h: zakres(40, 90), d: zakres(35, 55) };
     default:
       if (strefa === "gorna") return { w: zakres(30, 120), h: zakres(28, 110), d: zakres(20, 45) };
       if (strefa === "wysoka") return { w: zakres(30, 100), h: zakres(160, 230), d: zakres(40, 70) };
@@ -244,6 +299,7 @@ function przytnijDoLinii(z: Zakres, key: keyof LimityWymiarow): Zakres {
 /** Zakres przyjęty przy zapisie. Szafka zostaje przy starych limitach, żeby nie odrzucić ofert. */
 export function limityZapisu(rodzaj: RodzajElementu, strefa: Strefa): LimityWymiarow {
   if (rodzaj === "szafka") return { w: MODUL_LIMITS.w, h: MODUL_LIMITS.h, d: MODUL_LIMITS.d };
+  if (MEBLE.has(rodzaj)) return limityRodzaju(rodzaj, strefa);
   const typ = limityRodzaju(rodzaj, strefa);
   return { w: przytnijDoLinii(typ.w, "w"), h: przytnijDoLinii(typ.h, "h"), d: przytnijDoLinii(typ.d, "d") };
 }
@@ -293,6 +349,12 @@ export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
     "lodowka-zabudowa": "lodówka",
     polka: "półka",
     blat: "blat",
+    szafa: "szafa",
+    "szafa-przesuwna": "szafa",
+    komoda: "komoda",
+    regal: "regał",
+    rtv: "RTV",
+    umywalka: "umywalka",
   };
   return NAZWY[rodzajElementu(el)] ?? "";
 }
@@ -328,6 +390,17 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
       return "SZ";
     case "narozna":
       return "N";
+    case "szafa":
+    case "szafa-przesuwna":
+      return "SZF";
+    case "komoda":
+      return "K";
+    case "regal":
+      return "R";
+    case "rtv":
+      return "TV";
+    case "umywalka":
+      return "U";
     default:
       return "";
   }
@@ -712,6 +785,13 @@ export function wstawPrzyklad(uklad: UkladKuchni): PlanKuchni {
   const podPlyte = [...plan.elementy].reverse().find((e) => e.strefa === "dolna" && rodzajElementu(e) === "szafka");
   if (!podPlyte) return plan;
   return doloz(plan, presetPoId("plyta-indukcja-60"), podPlyte.x, podPlyte.z, podPlyte.rot);
+}
+
+/** Przykład na start dla mebli spoza kuchni (kuchnia: wstawPrzyklad). */
+export function wstawPrzykladMebli(rodzaj: "szafa" | "komoda" | "lazienka"): PlanKuchni {
+  const lista: string[] =
+    rodzaj === "szafa" ? ["szafa-przesuwna-250", "regal-40"] : rodzaj === "komoda" ? ["nocna-45", "komoda-120-6", "rtv-160"] : ["umywalka-80", "slupek-lazienka-40"];
+  return lista.reduce((acc, id) => dodajElement(acc, presetPoId(id), "A"), pustyPlan("ciag"));
 }
 
 /**
