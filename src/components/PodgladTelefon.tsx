@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 
 /*
  * Telefon: „Otwórz podgląd” – oferta w poziomie, cała na jednym ekranie:
- * scena 3D po lewej, po prawej nazwa, materiały, cena i „Poproś o wycenę”.
+ * u góry cienki pasek (nazwa, „Umów pomiar”, cena, „Poproś o wycenę”), scena 3D na całą szerokość,
+ * na dole jeden rząd materiałów.
  *
  * To ta sama strona (ta sama scena WebGL i wybrane materiały), tylko w innym układzie:
  * <main data-oferta> dostaje data-podglad, a układ robią reguły w globals.css.
@@ -46,10 +47,16 @@ export default function PodgladTelefon() {
     else main.removeAttribute("data-podglad");
     // Scena 3D liczy rozmiar z kontenera – po zmianie układu niech przeliczy od razu.
     window.dispatchEvent(new Event("resize"));
+    // Ciemne tło strony: iPhone w poziomie zostawia pasy po bokach (wycięcie ekranu) w kolorze tła strony.
+    const tlo = otwarty ? "#0c0b0a" : "";
     document.documentElement.style.overflow = otwarty ? "hidden" : "";
+    document.documentElement.style.background = tlo;
+    document.body.style.background = tlo;
     return () => {
       main.removeAttribute("data-podglad");
       document.documentElement.style.overflow = "";
+      document.documentElement.style.background = "";
+      document.body.style.background = "";
     };
   }, [otwarty]);
 
@@ -85,11 +92,10 @@ export default function PodgladTelefon() {
   if (!telefon) return null;
   return otwarty ? (
     <>
-      <button type="button" onClick={zamknij} className="oferta-podglad-zamknij" aria-label="Zamknij podgląd">
+      <button type="button" onClick={zamknij} className="oferta-podglad-zamknij" aria-label="Zamknij podgląd" title="Zamknij podgląd">
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" aria-hidden>
           <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
-        Zamknij podgląd
       </button>
       <div className="oferta-obroc" role="dialog" aria-modal="true" aria-label="Obróć telefon">
         <svg viewBox="0 0 48 48" width="56" height="56" fill="none" aria-hidden>
