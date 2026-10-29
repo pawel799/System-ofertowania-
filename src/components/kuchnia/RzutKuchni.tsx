@@ -192,6 +192,32 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       ))}
       <line className="kr-wall" x1={0} y1={0} x2={plan.scianaA} y2={0} />
       {plan.uklad === "L" ? <line className="kr-wall" x1={0} y1={0} x2={0} y2={plan.scianaB} /> : null}
+      {/* Z kroku „Okna i instalacje”: okna i drzwi na ścianach, przyłącze wody. */}
+      {(plan.wywiad?.otwory ?? []).map((o, i) => {
+        const A = o.sciana === "A";
+        const x1 = A ? o.od : 0;
+        const y1 = A ? 0 : o.od;
+        const x2 = A ? o.od + o.szer : 0;
+        const y2 = A ? 0 : o.od + o.szer;
+        const tx = A ? o.od + o.szer / 2 : -14;
+        const ty = A ? -6 : o.od + o.szer / 2;
+        return (
+          <g key={`o${i}`} className={o.rodzaj === "okno" ? "kr-okno" : "kr-drzwi"} aria-hidden>
+            <line x1={x1} y1={y1} x2={x2} y2={y2} />
+            {o.rodzaj === "drzwi" ? (
+              <path d={A ? `M${x1} 0 A${o.szer} ${o.szer} 0 0 1 ${x1 + o.szer} ${-o.szer * 0.0001} M${x1} 0 L${x1} ${-Math.min(o.szer, 40)}` : `M0 ${y1} L${-Math.min(o.szer, 40)} ${y1}`} />
+            ) : null}
+            <text x={tx} y={ty} textAnchor="middle" transform={A ? undefined : `rotate(-90 ${tx} ${ty})`}>
+              {o.rodzaj === "okno" ? `okno ${o.szer}` : `drzwi ${o.szer}`}
+            </text>
+          </g>
+        );
+      })}
+      {plan.wywiad?.woda ? (
+        <g className="kr-woda" aria-hidden>
+          <circle cx={plan.wywiad.woda.sciana === "A" ? plan.wywiad.woda.od : 5} cy={plan.wywiad.woda.sciana === "A" ? 5 : plan.wywiad.woda.od} r={3.2} />
+        </g>
+      ) : null}
       {wymiary ? (
         <g>
           <Wymiar x1={0} y1={0} x2={plan.scianaA} y2={0} nx={0} ny={-1} odsun={18} tekst={`${plan.scianaA}`} />

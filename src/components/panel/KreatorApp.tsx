@@ -13,7 +13,7 @@ import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import type { Palette } from "../palettes";
 import { formatPln, totalPrice } from "../pricing";
 import { GRUPY_BIBLIOTEKI, podzielModele, type GrupaBiblioteki } from "@/lib/bibliotekaModeli";
-import { GRUPY_TYPU, parseTypProjektu, TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
+import { GRUPY_TYPU, parseTypProjektu, TYP_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
 import {
   bazaKuchni,
@@ -27,7 +27,6 @@ import {
   PRESETY,
   pustyPlan,
   type NowyElement,
-  UKLAD_KUCHNI_LABEL,
   wstawPrzyklad,
   wstawPrzykladMebli,
   wystajePozaSciany,
@@ -37,7 +36,6 @@ import {
   type Obrot,
   type PlanKuchni,
   type Sciana,
-  type UkladKuchni,
 } from "@/lib/kuchnia";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import RzutKuchni from "../kuchnia/RzutKuchni";
@@ -45,10 +43,14 @@ import PrzyciskOtwarcia from "../kuchnia/PrzyciskOtwarcia";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { Seg, Toaster, Tooltips, toast } from "./ui";
-import { KreatorWlasciwosci, PoleCm } from "./KreatorWlasciwosci";
+import { KreatorWlasciwosci } from "./KreatorWlasciwosci";
 import { useCennik } from "./useCennik";
 import { KreatorBiblioteka } from "./KreatorBiblioteka";
 import { KreatorWnetrze, type ElementOkna } from "./KreatorWnetrze";
+import { etykietaKroku, KROKI, KrokOtoczenie, KrokPomieszczenie, KrokWyposazenie, PasekKrokow, type Krok } from "./KreatorKroki";
+import { KreatorSamouczek, samouczekWidziany } from "./KreatorSamouczek";
+import { AGD_LABEL, wywiadDomyslny, type Wywiad } from "@/lib/wywiad";
+import { ulozPropozycje } from "@/lib/propozycja";
 import {
   ApiError,
   assetsApi,
@@ -101,7 +103,15 @@ export default function KreatorApp() {
   const [countertop, setCountertopId] = useState(COUNTERTOPS[0].id);
   const [hardware, setHardwareId] = useState(HARDWARE[0].id);
   const [sciana, setSciana] = useState<Sciana>("A");
-  const [zaznaczony, setZaznaczony] = useState<string | null>(null);
+  const [zaznaczony, ustawZaznaczony] = useState<string | null>(null);
+  /** Krok kreatora: pomieszczenie → okna i instalacje → wyposażenie → meble → materiały → oferta. */
+  const [krok, setKrok] = useState<Krok>("pomieszczenie");
+  const [samouczek, setSamouczek] = useState(false);
+  // Zaznaczenie mebla (rzut, 3D, lista) przenosi do kroku „Meble”, gdzie są jego właściwości.
+  const setZaznaczony = useCallback((id: string | null) => {
+    ustawZaznaczony(id);
+    if (id) setKrok("meble");
+  }, []);
   const [models, setModels] = useState<ModelMeta[]>([]);
   const [palettes, setPalettes] = useState<Palette[]>([]);
   const [domain, setDomain] = useState<DomainView | null>(null);
@@ -135,6 +145,8 @@ export default function KreatorApp() {
     setCountertopId(o.countertop);
     setHardwareId(o.hardware);
     setTyp(o.projekt ?? "kuchnia");
+    // Zapisana oferta: projekt już jest – zaczynamy od mebli.
+    setKrok("meble");
   }, []);
 
   const wczytaj = useCallback(async () => {
@@ -163,8 +175,9 @@ export default function KreatorApp() {
       const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
       if (found) wczytajOferte(found);
       else {
-        // Nowa oferta z panelu: /panel/kreator?typ=szafa
+        // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
+        if (!samouczekWidziany()) setSamouczek(true);
         if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nową kuchnię." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
         const kat = { palettes: pakiety, katalog: katalogFirmy };
@@ -207,6 +220,14 @@ export default function KreatorApp() {
   }, [front, countertop, hardware, palettes]);
 
   const element = plan.elementy.find((e) => e.id === zaznaczony) ?? null;
+  const wywiad: Wywiad = plan.wywiad ?? wywiadDomyslny(typ);
+  const setWywiad = (fn: (w: Wywiad) => Wywiad) => setPlan((p) => ({ ...p, wywiad: fn(p.wywiad ?? wywiadDomyslny(typ)) }));
+  const indeksKroku = KROKI.indexOf(krok);
+  const gotoweKroki = new Set<Krok>([
+    ...(plan.wywiad ? (["pomieszczenie", "otoczenie"] as Krok[]) : []),
+    ...(plan.elementy.length ? (["wyposazenie", "meble"] as Krok[]) : []),
+    ...(offer ? (["materialy", "oferta"] as Krok[]) : []),
+  ]);
   const suma = bazaKuchni(plan, cennik);
   const katalog = useKatalog();
   const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes, { katalog });
@@ -490,10 +511,42 @@ export default function KreatorApp() {
     else void navigator.clipboard.writeText(tekst).then(() => toast("Wiadomość 3D skopiowana"));
   };
 
+  /** „Ułóż propozycję” z odpowiedzi z kroków 1–3; pokazuje, czego nie dało się zmieścić. */
+  const propozycja = () => {
+    if (plan.elementy.length && !window.confirm("Zastąpić obecne elementy propozycją z odpowiedzi?")) return;
+    const next = ulozPropozycje(typ, plan, wywiad);
+    if (!next.elementy.length) {
+      toast("Nic się nie zmieściło", { type: "err", desc: "Sprawdź długość ściany i drzwi na niej." });
+      return;
+    }
+    setPlan(next);
+    ustawZaznaczony(null);
+    const rodzaje = new Set(next.elementy.map((e) => e.rodzaj));
+    const brak =
+      typ === "kuchnia"
+        ? wywiad.agd.filter((a) => {
+            if (a === "zmywarka-60" || a === "zmywarka-45") return !rodzaje.has("zmywarka");
+            if (a === "piekarnik-slupek" || a === "piekarnik-dolny") return !rodzaje.has("piekarnik");
+            if (a === "lodowka-zabudowa") return !rodzaje.has("lodowka-zabudowa");
+            if (a === "lodowka-wolnostojaca") return !rodzaje.has("lodowka");
+            if (a === "plyta") return !rodzaje.has("plyta-indukcja") && !rodzaje.has("plyta-gaz");
+            if (a === "okap") return !rodzaje.has("okap");
+            if (a === "mikrofalowka") return !rodzaje.has("mikrofalowka");
+            return false;
+          })
+        : [];
+    const n = next.elementy.length;
+    toast(`Propozycja gotowa: ${n} ${n === 1 ? "element" : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? "elementy" : "elementów"}`, {
+      desc: brak.length ? `Nie zmieściło się: ${brak.map((a) => AGD_LABEL[a].toLowerCase()).join(", ")}. Wydłuż ścianę albo dodaj ręcznie.` : "Popraw ją na rzucie – dwuklik na meblu otwiera wnętrze.",
+    });
+    setKrok("meble");
+  };
+
   const przyklad = () => {
     if (plan.elementy.length && !window.confirm("Zastąpić obecne szafki układem przykładowym?")) return;
-    setPlan(typ === "kuchnia" || typ === "inne" ? wstawPrzyklad(plan.uklad) : wstawPrzykladMebli(typ));
-    setZaznaczony(null);
+    setPlan((p) => ({ ...(typ === "kuchnia" || typ === "inne" ? wstawPrzyklad(p.uklad) : wstawPrzykladMebli(typ)), ...(p.wywiad ? { wywiad: p.wywiad } : {}) }));
+    ustawZaznaczony(null);
+    setKrok("meble");
   };
 
   return (
@@ -511,7 +564,13 @@ export default function KreatorApp() {
         </div>
         <span className="grow" />
         {lokalnie ? <span className="sample">Dane demo</span> : null}
-        <button type="button" className="btn btn-ink" disabled={zapisuje || auth} onClick={() => void zapisz()}>
+        <button type="button" className="btn btn-plain" aria-label="Samouczek" title="Samouczek" onClick={() => setSamouczek(true)}>
+          <span className="hide-sm">Samouczek</span>
+          <span className="kr-tylko-sm" aria-hidden>
+            ?
+          </span>
+        </button>
+        <button type="button" className="btn btn-ink" data-tour="zapisz" disabled={zapisuje || auth} onClick={() => void zapisz()}>
           Zapisz ofertę
         </button>
         <LogoutButton />
@@ -521,7 +580,7 @@ export default function KreatorApp() {
 
       {gotowe && !auth ? (
         <div className="kr-body">
-          <aside className="kr-col kr-catalog" aria-label="Katalog elementów">
+          <aside className="kr-col kr-catalog" aria-label="Katalog elementów" data-tour="katalog">
             <div className="kr-pad">
               <h2>Katalog · {TYP_PROJEKTU[typ].label}</h2>
               <button type="button" className="btn btn-ghost wide" onClick={() => setBiblioteka(true)}>
@@ -595,7 +654,7 @@ export default function KreatorApp() {
               </div>
             ) : null}
             {(!waski || zakladka === "rzut") && (
-              <div className="kr-plan">
+              <div className="kr-plan" data-tour="rzut">
                 <div className="kr-scroll">
                 <RzutKuchni
                   plan={plan}
@@ -633,7 +692,7 @@ export default function KreatorApp() {
               </div>
             )}
             {(!waski || zakladka === "3d") && (
-              <div className="kr-view3d">
+              <div className="kr-view3d" data-tour="widok3d">
                 <PrzyciskOtwarcia className="btn btn-ghost kr-otworz" />
                 <KuchniaTlo
                   plan={plan}
@@ -648,207 +707,221 @@ export default function KreatorApp() {
             )}
           </section>
 
-          <aside className="kr-col kr-side" aria-label="Dane oferty i cena">
-            <div className="kr-pad kr-side-body">
-              <KreatorWlasciwosci
-                plan={plan}
-                element={element}
-                cena={element ? cenaElementu(element, cennik) : null}
-                agd={element ? !wycenianyElement(element) : false}
-                onNazwa={(nazwa) => {
-                  if (!element) return;
-                  setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
-                }}
-                onWymiar={(key, value) => (element ? ustawWymiar(element.id, key, value) : false)}
-                onObrot={() => {
-                  if (element) aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }));
-                }}
-                onUsun={() => {
-                  if (!element) return;
-                  setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
-                  setZaznaczony(null);
-                }}
-                onKopiuj={() => {
-                  if (!element) return;
-                  dodaj({
-                    nazwa: element.nazwa,
-                    strefa: element.strefa,
-                    rodzaj: element.rodzaj,
-                    w: element.w,
-                    h: element.h,
-                    d: element.d,
-                    zrodlo: element.zrodlo,
-                    modelId: element.modelId,
-                    wnetrze: element.wnetrze,
-                  });
-                }}
-                onDociagnij={() => {
-                  if (element) dociagnij(element.id);
-                }}
-                onWnetrze={() => {
-                  if (element) setOkno({ tryb: "edycja", id: element.id });
-                }}
-              />
-              <h2>Oferta</h2>
-              <div className="field">
-                <label htmlFor="k-client">Klient</label>
-                <input id="k-client" className="input" value={client} onChange={(e) => setClient(e.target.value)} autoComplete="name" />
-              </div>
-              <div className="field">
-                <label htmlFor="k-contact">E-mail lub telefon</label>
-                <input id="k-contact" className="input" value={contact} onChange={(e) => setContact(e.target.value)} autoComplete="email" />
-              </div>
-              <div className="field">
-                <label htmlFor="k-title">Nazwa oferty</label>
-                <input id="k-title" className="input" value={title} placeholder="Np. Kuchnia w ciągu, dąb" onChange={(e) => setTitle(e.target.value)} />
-              </div>
-              <div className="field">
-                <label htmlFor="k-typ">Co projektujemy</label>
-                <select id="k-typ" className="input" value={typ} onChange={(e) => setTyp(parseTypProjektu(e.target.value) ?? "kuchnia")}>
-                  {TYPY_PROJEKTU.map((t) => (
-                    <option key={t} value={t}>
-                      {TYP_PROJEKTU[t].label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <span className="lab">Układ</span>
-                <Seg
-                  label="Układ zabudowy"
-                  value={plan.uklad}
-                  onChange={(v) => {
+          <aside className="kr-col kr-side" aria-label="Kroki kreatora i cena">
+            <PasekKrokow krok={krok} typ={typ} onKrok={setKrok} gotowe={gotoweKroki} />
+            <div className="kr-pad kr-side-body" key={krok}>
+              {krok === "pomieszczenie" ? (
+                <KrokPomieszczenie
+                  typ={typ}
+                  setTyp={setTyp}
+                  plan={plan}
+                  setPlan={setPlan}
+                  wywiad={wywiad}
+                  setWywiad={setWywiad}
+                  onUklad={(v) => {
                     setPlan((p) => ({ ...p, uklad: v }));
                     if (v === "ciag") setSciana("A");
                   }}
-                  options={(Object.keys(UKLAD_KUCHNI_LABEL) as UkladKuchni[]).map((u) => ({ value: u, label: UKLAD_KUCHNI_LABEL[u] }))}
                 />
-              </div>
-              <div className="kr-dims">
-                <PoleCm id="k-sciana-a" label="Ściana A" value={plan.scianaA} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaA: n }))} />
-                {plan.uklad === "L" ? (
-                  <PoleCm id="k-sciana-b" label="Ściana B" value={plan.scianaB} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaB: n }))} />
-                ) : null}
-              </div>
-              <label className="kr-check">
-                <input
-                  type="checkbox"
-                  checked={!!plan.pomieszczenie}
-                  onChange={(e) =>
-                    setPlan((p) => ({
-                      ...p,
-                      pomieszczenie: e.target.checked
-                        ? { szer: Math.min(2000, Math.max(120, p.scianaA + 80)), dlug: Math.min(2000, Math.max(120, p.scianaB + 80)) }
-                        : null,
-                    }))
-                  }
-                />
-                Pokaż pomieszczenie
-              </label>
-              {plan.pomieszczenie ? (
-                <div className="kr-dims">
-                  <label>
-                    Szer. (cm)
-                    <input
-                      className="input"
-                      inputMode="numeric"
-                      value={plan.pomieszczenie.szer}
-                      onChange={(e) =>
-                        setPlan((p) => ({ ...p, pomieszczenie: { szer: Number(e.target.value) || 120, dlug: p.pomieszczenie?.dlug ?? 200 } }))
-                      }
-                    />
-                  </label>
-                  <label>
-                    Dł. (cm)
-                    <input
-                      className="input"
-                      inputMode="numeric"
-                      value={plan.pomieszczenie.dlug}
-                      onChange={(e) =>
-                        setPlan((p) => ({ ...p, pomieszczenie: { szer: p.pomieszczenie?.szer ?? 200, dlug: Number(e.target.value) || 120 } }))
-                      }
-                    />
-                  </label>
+              ) : krok === "otoczenie" ? (
+                <KrokOtoczenie typ={typ} plan={plan} wywiad={wywiad} setWywiad={setWywiad} />
+              ) : krok === "wyposazenie" ? (
+                <KrokWyposazenie typ={typ} plan={plan} wywiad={wywiad} setWywiad={setWywiad} onPropozycja={propozycja} onPrzyklad={przyklad} />
+              ) : krok === "meble" ? (
+                <div className="kr-krok" data-krok="meble">
+                  <h2>Meble</h2>
+                  <p className="lede">Dodawaj z katalogu po lewej (okno z wymiarami i wnętrzem), przeciągaj na rzucie. Dwuklik na meblu – wymiary i wnętrze.</p>
+                  {plan.elementy.length ? (
+                    <ul className="kr-lista-el" aria-label="Elementy projektu">
+                      {plan.elementy.map((e) => (
+                        <li key={e.id}>
+                          <button type="button" aria-pressed={zaznaczony === e.id} onClick={() => setZaznaczony(e.id)} onDoubleClick={() => setOkno({ tryb: "edycja", id: e.id })}>
+                            <b>{e.nazwa}</b>
+                            <span className="mono">
+                              {e.w}×{e.h}×{e.d}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="kr-hint">Projekt jest pusty. Wróć do kroku „{etykietaKroku("wyposazenie", typ)}” i ułóż propozycję albo dodaj elementy z katalogu.</p>
+                  )}
+                  <KreatorWlasciwosci
+                    plan={plan}
+                    element={element}
+                    cena={element ? cenaElementu(element, cennik) : null}
+                    agd={element ? !wycenianyElement(element) : false}
+                    onNazwa={(nazwa) => {
+                      if (!element) return;
+                      setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, nazwa } : el)) }));
+                    }}
+                    onWymiar={(key, value) => (element ? ustawWymiar(element.id, key, value) : false)}
+                    onObrot={() => {
+                      if (element) aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }));
+                    }}
+                    onUsun={() => {
+                      if (!element) return;
+                      setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
+                      setZaznaczony(null);
+                    }}
+                    onKopiuj={() => {
+                      if (!element) return;
+                      dodaj({
+                        nazwa: element.nazwa,
+                        strefa: element.strefa,
+                        rodzaj: element.rodzaj,
+                        w: element.w,
+                        h: element.h,
+                        d: element.d,
+                        zrodlo: element.zrodlo,
+                        modelId: element.modelId,
+                        wnetrze: element.wnetrze,
+                      });
+                    }}
+                    onDociagnij={() => {
+                      if (element) dociagnij(element.id);
+                    }}
+                    onWnetrze={() => {
+                      if (element) setOkno({ tryb: "edycja", id: element.id });
+                    }}
+                  />
+                  {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
                 </div>
-              ) : null}
-              <button type="button" className="btn btn-ghost" onClick={przyklad}>
-                Wstaw przykład
-              </button>
-              {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
-
-              <div className="field">
-                <span className="lab">Fronty</span>
-                <div className="swatches" role="radiogroup" aria-label="Fronty">
-                  {opcjeMaterialu("front", kCtx, front).map((f) => (
-                    <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
-                      <span style={{ background: f.color }} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="field">
-                <span className="lab">Blat</span>
-                <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} />
-              </div>
-              <div className="field">
-                <span className="lab">Okucia</span>
-                <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
-              </div>
-
-
-              <section className="kr-card">
-                <h3>Oferta PDF</h3>
-                <p className="lede">Handlowa: pozycje, wymiary i ceny, z kodem QR do kuchni w 3D. Pobranie zapisuje ofertę i w razie potrzeby tworzy link. W oknie drukowania wybierz „Zapisz jako PDF”.</p>
-                <OfertaPdfPrzyciski
-                  id={offer?.id ?? "SZKIC"}
-                  title={title}
-                  client={client}
-                  contact={contact}
-                  plan={plan}
-                  front={front}
-                  countertop={countertop}
-                  hardware={hardware}
-                  palettes={palettes}
-                  linkUrl={linkUrl}
-                  zapewnijLink={zapewnijLink}
-                  ujecie={ujecie}
-                />
-              </section>
-
-              <section className="kr-card">
-                <h3>Podgląd 3D</h3>
-                <p className="lede">Link jak przy zwykłej ofercie. Klient obraca kuchnię i zmienia front, blat i okucia.</p>
-                {linkUrl ? (
-                  <>
-                    <input className="input" readOnly value={linkUrl} aria-label="Link podglądu 3D" />
-                    <div className="actions">
-                      <button type="button" className="btn btn-ink" onClick={wyslij3d}>
-                        Wyślij podgląd 3D
-                      </button>
-                      <a className="btn btn-ghost" href={`/panel`}>
-                        Otwórz w panelu
-                      </a>
+              ) : krok === "materialy" ? (
+                <div className="kr-krok" data-krok="materialy">
+                  <h2>Materiały</h2>
+                  <p className="lede">Na start oferty. Klient i tak zmieni je w podglądzie 3D – cena przeliczy się z dopłatami.</p>
+                  <div className="field">
+                    <span className="lab">Fronty</span>
+                    <div className="swatches" role="radiogroup" aria-label="Fronty">
+                      {opcjeMaterialu("front", kCtx, front).map((f) => (
+                        <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
+                          <span style={{ background: f.color }} />
+                        </button>
+                      ))}
                     </div>
-                  </>
-                ) : (
-                  <button type="button" className="btn btn-ink" disabled={zapisuje} onClick={() => void utworzLink()}>
-                    Utwórz link 3D
-                  </button>
-                )}
-              </section>
+                  </div>
+                  {typ === "kuchnia" || typ === "inne" ? (
+                    <div className="field">
+                      <span className="lab">Blat</span>
+                      <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} />
+                    </div>
+                  ) : null}
+                  <div className="field">
+                    <span className="lab">Okucia</span>
+                    <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
+                  </div>
+                </div>
+              ) : (
+                <div className="kr-krok" data-krok="oferta">
+                  <h2>Klient i oferta</h2>
+                  <div className="field">
+                    <label htmlFor="k-client">Klient</label>
+                    <input id="k-client" className="input" value={client} onChange={(e) => setClient(e.target.value)} autoComplete="name" />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="k-contact">E-mail lub telefon</label>
+                    <input id="k-contact" className="input" value={contact} onChange={(e) => setContact(e.target.value)} autoComplete="email" />
+                  </div>
+                  <div className="field">
+                    <label htmlFor="k-title">Nazwa oferty</label>
+                    <input id="k-title" className="input" value={title} placeholder={`Np. ${TYP_PROJEKTU[typ].label}, dąb`} onChange={(e) => setTitle(e.target.value)} />
+                  </div>
+                  <div className="kr-dims">
+                    <label htmlFor="k-budzet">
+                      Budżet klienta (zł)
+                      <input
+                        id="k-budzet"
+                        className="input"
+                        inputMode="numeric"
+                        value={wywiad.budzet ?? ""}
+                        placeholder="opcjonalnie"
+                        onChange={(e) => setWywiad((w) => ({ ...w, budzet: e.target.value.replace(/\D/g, "") ? Math.min(10_000_000, Number(e.target.value.replace(/\D/g, ""))) : null }))}
+                      />
+                    </label>
+                    <label htmlFor="k-termin">
+                      Termin
+                      <input id="k-termin" className="input" maxLength={80} value={wywiad.termin} placeholder="np. do końca marca" onChange={(e) => setWywiad((w) => ({ ...w, termin: e.target.value }))} />
+                    </label>
+                  </div>
+                  <label htmlFor="k-uwagi" className="kr-pole">
+                    Uwagi z pomiaru
+                    <textarea id="k-uwagi" className="input" rows={3} maxLength={1000} value={wywiad.uwagi} placeholder="np. krzywa ściana, gniazdka do przeniesienia" onChange={(e) => setWywiad((w) => ({ ...w, uwagi: e.target.value }))} />
+                  </label>
+                  {wywiad.budzet && plan.elementy.length && razem > wywiad.budzet ? (
+                    <p className="kr-warn">Projekt ({formatPln(razem)}) przekracza budżet klienta o {formatPln(razem - wywiad.budzet)}.</p>
+                  ) : null}
+
+                  <section className="kr-card">
+                    <h3>Oferta PDF</h3>
+                    <p className="lede">Handlowa: pozycje, wymiary i ceny, z kodem QR do podglądu 3D. Pobranie zapisuje ofertę i w razie potrzeby tworzy link. W oknie drukowania wybierz „Zapisz jako PDF”.</p>
+                    <OfertaPdfPrzyciski
+                      id={offer?.id ?? "SZKIC"}
+                      title={title}
+                      client={client}
+                      contact={contact}
+                      plan={plan}
+                      front={front}
+                      countertop={countertop}
+                      hardware={hardware}
+                      palettes={palettes}
+                      linkUrl={linkUrl}
+                      zapewnijLink={zapewnijLink}
+                      ujecie={ujecie}
+                    />
+                  </section>
+
+                  <section className="kr-card">
+                    <h3>Podgląd 3D</h3>
+                    <p className="lede">Link jak przy zwykłej ofercie. Klient obraca projekt, otwiera drzwi i szuflady, zmienia materiały.</p>
+                    {linkUrl ? (
+                      <>
+                        <input className="input" readOnly value={linkUrl} aria-label="Link podglądu 3D" />
+                        <div className="actions">
+                          <button type="button" className="btn btn-ink" onClick={wyslij3d}>
+                            Wyślij podgląd 3D
+                          </button>
+                          <a className="btn btn-ghost" href={`/panel`}>
+                            Otwórz w panelu
+                          </a>
+                        </div>
+                      </>
+                    ) : (
+                      <button type="button" className="btn btn-ink" disabled={zapisuje} onClick={() => void utworzLink()}>
+                        Utwórz link 3D
+                      </button>
+                    )}
+                  </section>
+                </div>
+              )}
             </div>
-            <div className="kr-sum kr-side-foot">
+            <div className="kr-sum kr-side-foot" data-tour="dalej">
               <p>
                 Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
               </p>
               <p>
                 Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
               </p>
-              <p className="lede">
-                {cennikBlad
-                  ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika."
-                  : "Szafki z Twojego cennika modułów (Ustawienia → Cennik modułów). Urządzenia AGD nie są wliczane."}
-              </p>
+              {cennikBlad ? <p className="lede">Cennik firmy się nie wczytał — kwota orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika.</p> : null}
+              <div className="kr-nav">
+                {indeksKroku > 0 ? (
+                  <button type="button" className="btn btn-ghost" onClick={() => setKrok(KROKI[indeksKroku - 1])}>
+                    Wstecz
+                  </button>
+                ) : (
+                  <span />
+                )}
+                {indeksKroku < KROKI.length - 1 ? (
+                  <button type="button" className="btn btn-ink" onClick={() => setKrok(KROKI[indeksKroku + 1])}>
+                    Dalej: {etykietaKroku(KROKI[indeksKroku + 1], typ)}
+                  </button>
+                ) : (
+                  <button type="button" className="btn btn-ink" disabled={zapisuje || auth} onClick={() => void zapisz()}>
+                    Zapisz ofertę
+                  </button>
+                )}
+              </div>
             </div>
           </aside>
         </div>
@@ -879,6 +952,7 @@ export default function KreatorApp() {
           })()
         : null}
       {auth ? <LoginDialog error="" onLoggedIn={() => void wczytaj()} /> : null}
+      {samouczek && gotowe && !auth ? <KreatorSamouczek typ={typ} onKoniec={() => setSamouczek(false)} /> : null}
       <Tooltips />
       <Toaster />
     </div>

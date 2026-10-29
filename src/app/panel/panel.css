@@ -563,3 +563,45 @@
 .pnl .kr-wn-skrot .btn { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
 .pnl .kr-otworz { position: absolute; top: 10px; right: 10px; z-index: 3; min-height: 30px; padding: 4px 12px; font-size: 12.5px; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(6px); }
 .pnl .kr-otworz[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
+
+/* Kreator krok po kroku: pasek kroków, kroki, nawigacja w stopce */
+.pnl .kr-kroki { flex: none; padding: 10px 10px 0; }
+.pnl .kr-kroki ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.pnl .kr-kroki button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 2px; border-radius: 8px; color: var(--text-2); font-size: 10.5px; line-height: 1.15; text-align: center; background: transparent; }
+.pnl .kr-krok-nr { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--g2); color: var(--text-2); font-size: 11.5px; font-weight: 600; }
+.pnl .kr-kroki button[data-gotowy] .kr-krok-nr { background: color-mix(in srgb, var(--green) 16%, var(--panel)); color: var(--green); }
+.pnl .kr-kroki button[aria-current="step"] { color: var(--text); font-weight: 600; background: var(--g2); }
+.pnl .kr-kroki button[aria-current="step"] .kr-krok-nr { background: var(--ink); color: var(--panel); }
+@media (hover: hover) and (pointer: fine) { .pnl .kr-kroki button:hover { background: var(--g2); } }
+.pnl .kr-krok { display: flex; flex-direction: column; gap: 10px; }
+.pnl .kr-krok h2 { margin: 0; font-size: 14px; font-weight: 600; }
+.pnl .kr-otwory { display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-otwor, .pnl .kr-lista { border: 0; margin: 0; padding: 10px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-otwor legend, .pnl .kr-lista legend { font-size: 12.5px; font-weight: 600; padding: 0 4px; }
+.pnl .kr-otwor > .btn-plain { align-self: flex-start; min-height: 0; padding: 2px 4px; font-size: 12px; }
+.pnl .kr-pole { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+.pnl .kr-pole textarea { resize: vertical; min-height: 64px; font: inherit; }
+.pnl .kr-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.pnl .kr-nav .btn { min-height: 34px; }
+.pnl .kr-lista-el { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.pnl .kr-lista-el button { width: 100%; display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--g2); color: inherit; font-size: 12.5px; text-align: left; }
+.pnl .kr-lista-el b { font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pnl .kr-lista-el button[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+
+/* Samouczek kreatora */
+.pnl .kr-tour { position: fixed; inset: 0; z-index: 90; }
+.pnl .kr-tour-tlo { position: absolute; inset: 0; background: rgba(12, 11, 10, 0.45); }
+.pnl .kr-tour-cel { position: fixed; border-radius: 12px; box-shadow: 0 0 0 2px var(--accent), 0 0 0 9999px rgba(12, 11, 10, 0.45); pointer-events: none; transition: top 0.2s, left 0.2s, width 0.2s, height 0.2s; }
+.pnl .kr-tour-dymek { position: fixed; width: min(340px, calc(100vw - 24px)); padding: 14px 16px; border-radius: 12px; background: var(--panel); box-shadow: var(--sh-lg, 0 12px 40px rgba(0, 0, 0, 0.25)); display: flex; flex-direction: column; gap: 6px; }
+.pnl .kr-tour-dymek h3 { margin: 0; font-size: 15px; font-weight: 600; }
+.pnl .kr-tour-dymek p { margin: 0; font-size: 13px; line-height: 1.45; }
+.pnl .kr-tour-dymek .actions { justify-content: flex-end; margin-top: 6px; }
+@media (prefers-reduced-motion: reduce) { .pnl .kr-tour-cel { transition: none; } }
+.pnl .kr-okno line { stroke: #4f8fd6; stroke-width: 5; opacity: 0.85; }
+.pnl .kr-drzwi line { stroke: var(--g2); stroke-width: 5; }
+.pnl .kr-drzwi path { fill: none; stroke: var(--text-3); stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+.pnl .kr-okno text, .pnl .kr-drzwi text { font-size: 7.5px; fill: var(--text-2); pointer-events: none; }
+.pnl .kr-woda circle { fill: #2f7fd1; stroke: #f7f1e6; stroke-width: 1; }
+.pnl .kr-card .kr-check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+.pnl .kr-tylko-sm { display: none; }
+@media (max-width: 640px) { .pnl .kr-tylko-sm { display: inline; font-weight: 600; } }

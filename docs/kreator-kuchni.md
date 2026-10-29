@@ -6,7 +6,7 @@ To nie jest rozkrój płyt. Nie ma nestingu ani listy formatek.
 
 ## Gdzie to jest
 
-- Panel → **Kreator** (`/panel/kreator`), albo „Kreator kuchni” przy nowej ofercie.
+- Panel → **Nowa** → co projektujemy → „W kreatorze, krok po kroku” (`/panel/kreator?typ=kuchnia|szafa|komoda|lazienka|inne`).
 - Zapisana kuchnia wraca na listę ofert. W karcie oferty: **Edytuj w kreatorze**, oraz w kolumnie linku sekcje **Link dla klienta** (3D) i **Oferta PDF**.
 - Klient otwiera ten sam adres co dotychczas (`/oferta/…`) i widzi złożoną kuchnię w 3D, z wyborem frontu, blatu i okuć.
 
@@ -28,6 +28,38 @@ To nie jest rozkrój płyt. Nie ma nestingu ani listy formatek.
 
 „Wstaw przykład” kładzie typowy ciąg albo L — ze zmywarką, płytą, okapem i półką ścienną — żeby nie zaczynać od pustego rzutu.
 
+## Kreator krok po kroku (kuchnia, szafa, komoda, łazienka)
+
+**Nowa oferta** w panelu pyta najpierw **co projektujemy** (kuchnia, szafa / garderoba, komoda / RTV / regał, łazienka, inny mebel), potem **jak**: „W kreatorze, krok po kroku” (`/panel/kreator?typ=…`) albo „Z gotowego modelu albo kwoty” (dotychczasowy formularz). Rodzaj zapisuje się w `offer.projekt` (`src/lib/projekt.ts`; brak = kuchnia).
+
+Kreator ma sześć kroków w prawej kolumnie (pasek u góry, „Dalej” / „Wstecz” w stopce pod sumą):
+
+1. **Pomiar / Wnęka** – szerokość, długość i wysokość pomieszczenia (do sufitu), układ (ciąg, L), długość ściany pod zabudowę.
+2. **Okna i instalacje** – okna (od narożnika, szerokość, parapet) i drzwi na ścianach zabudowy, przyłącze wody, gaz czy indukcja. Na rzucie: okno niebieską kreską, drzwi z łukiem, woda kropką; w 3D okno i drzwi na ścianie.
+3. **Wyposażenie** – kuchnia: AGD do zabudowy (jedna zmywarka / piekarnik / lodówka z pary) i wysokość szafek górnych (72, 90, do sufitu); szafa: drzwi przesuwne albo uchylne i co ma się zmieścić; komoda: które meble; łazienka: szerokość szafki pod umywalkę i słupek. **Ułóż propozycję** (`src/lib/propozycja.ts`) robi pierwszy układ: zlew przy wodzie, zmywarka obok, płyta z okapem poza oknem, słupki na końcu (nigdy pod oknem, nie kosztem zlewu i płyty), szafki górne nad dolnymi poza oknem, nic w drzwiach; szafa na całą wnękę do sufitu z wnętrzem pod potrzeby. Czego nie dało się zmieścić – komunikat.
+4. **Meble** – lista elementów (dwuklik: okno elementu) i właściwości zaznaczonego. Zaznaczenie na rzucie albo w 3D przenosi do tego kroku.
+5. **Materiały** – fronty, blat (kuchnia), okucia.
+6. **Klient i oferta** – klient, kontakt, nazwa, budżet (ostrzeżenie, gdy projekt go przekracza), termin, uwagi z pomiaru, PDF i link 3D.
+
+Odpowiedzi z kroków 1–3 i 6 zapisują się w planie (`kuchnia.wywiad`, `src/lib/wywiad.ts`, walidacja w `parseKuchnia`). Zapisana oferta otwiera się od kroku „Meble”.
+
+**Samouczek** (6 dymków: kroki, katalog, rzut, 3D, cena, zapis) startuje sam przy pierwszej nowej ofercie w danej przeglądarce; potem przycisk „Samouczek” w nagłówku.
+
+Katalog pokazuje najpierw grupy pasujące do projektu (`GRUPY_TYPU` w `projekt.ts`), reszta po „Pokaż wszystkie elementy”; okno biblioteki ma filtr „Do projektu”. Na wymiar są też szafy (uchylne, przesuwne, wnękowe do sufitu), komody, szafki nocne, RTV, regały, szafki pod umywalkę i słupek łazienkowy.
+
+## Okno elementu: wymiary i wnętrze
+
+Kliknięcie elementu w katalogu (albo w bibliotece) otwiera okno: wymiary w widełkach rodzaju, **gotowe układy wnętrza** (miniatury; te, które nie pasują do wymiarów, są wyszarzone z powodem) albo **własny układ**: kolumny (przegrody), w każdej przestrzenie od góry – półka, szuflada, drążek – z wysokością w świetle, „bez drzwi” dla kolumny, rodzaj frontu (uchylne, przesuwne, regał). Podgląd z wymiarami, opis („3 kolumny · 6 półek · 2 szuflady · drążek · drzwi przesuwne”), cena. Ten sam widok: dwuklik na meblu (rzut, lista) albo „Zmień wnętrze” we właściwościach. Model 3D z biblioteki ma tylko wymiary – i przycisk „Zamień na … na wymiar z własnym wnętrzem”.
+
+Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze – zapis z nierealnym wnętrzem dostaje 400): kolumna min. 20 cm; półka do 100 cm szerokości (ostrzeżenie od 80 cm przy kilku półkach); między półkami min. 10 cm; szuflada 8–45 cm wysokości, 20–110 cm szerokości, moduł min. 30 cm głębokości; drążek min. 60 cm wysokości, min. 50 cm głębokości, 30–120 cm długości; skrzydło drzwi do 60 cm (szersza kolumna dostaje dwa skrzydła); drzwi przesuwne od 100 cm szerokości i 55 cm głębokości; suma przestrzeni i półek = światło korpusu (wysokość − 2 × 1,8 cm). Po zmianie wymiaru wnętrze przelicza się samo; gdy przestaje mieć sens, wraca układ domyślny.
+
+Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
+
+## 3D: drzwi i szuflady, tło
+
+- **Otwórz drzwi i szuflady** (kreator nad podglądem 3D, strona klienta przy „Uwagi do projektu”) otwiera wszystkie fronty; dwuklik na meblu w 3D – tylko ten. Moduły na wymiar: drzwi na zawiasach, szuflady ze skrzynką, drzwi przesuwne, w środku półki i drążki. Modele GLB (biblioteka i wgrane pliki z nazwami `Front_drzwi*`, `Front_szuflada*`, `Front_klapa*`, `Front_panel*`, `Front_zmywarka*`): zawiasy przy bliższym boku, klapy do góry, szuflady z dorobioną skrzynką, uchwyty jadą razem z frontem (`src/components/kuchnia/ruchomeGlb.ts`).
+- **Tło** sceny przełącza się na jasne, gdy fronty (albo cały wgrany model) są ciemne – grafit, dąb wędzony, czarny (`src/components/tloSceny.ts`).
+
 ## Dwie wysyłki
 
 - **Podgląd 3D** — „Utwórz link 3D”, potem „Wyślij podgląd 3D”. To dotychczasowy mail albo SMS z adresem `/oferta/…`. Ważność, PIN i ukrycie ceny doprecyzujesz w panelu oferty.
@@ -46,7 +78,9 @@ Przy każdym zapisie z panelem funkcja `zCenaKuchni` nadpisuje `base` i `moduly`
 
 **Po wdrożeniu tej wersji** istniejąca oferta publiczna, w której plan miał płytę, okap, zlewozmywak, baterię, lodówkę wolnostojącą albo mikrofalówkę, pokaże **niższą kwotę**. Cena liczy się na żywo, bez tych urządzeń. Zabudowy (szafka, słupek, zmywarka do zabudowy) zostają w cenie.
 
-Element z własnym GLB (`zrodlo: "model"`) może mieć obrys od 1×1×1 do 400×280×400 cm, żeby zmieścił się blat 240 cm, cienka płyta i panel boczny. Szafka parametryczna ma dotychczasowe widełki.
+Element z własnym GLB (`zrodlo: "model"`) może mieć obrys od 1×1×1 do 400×280×400 cm, żeby zmieścił się blat 240 cm, cienka płyta i panel boczny. Szafka parametryczna ma dotychczasowe widełki, szafy i komody na wymiar – własne (np. szafa przesuwna do 400 cm, do 280 cm wysokości).
+
+Lista `moduly` z panelu przy ofercie z kreatora jest pomijana przy walidacji – i tak liczy ją serwer z planu. Wcześniej szła przez limity szafki na wymiar (4–120 cm) i zapis z modelem szerszym niż 120 cm (komoda 141 cm, blat 240 cm) kończył się błędem „Moduł 1: wymiar w poza zakresem 4–120 cm”.
 
 ## Biblioteka 50 modeli
 

@@ -11,6 +11,7 @@
  */
 import { DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, type ModulCennik, type ModulItem } from "./modul";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, type Wnetrze } from "./wnetrze";
+import { parseWywiad, type Wywiad } from "./wywiad";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -103,6 +104,8 @@ export type PlanKuchni = {
   /** Opcjonalny obrys pomieszczenia [cm]. Nie przycina szafek. */
   pomieszczenie: { szer: number; dlug: number } | null;
   elementy: ElementKuchni[];
+  /** Odpowiedzi z kreatora krok po kroku (wysokość, okna, drzwi, woda, AGD, potrzeby). */
+  wywiad?: Wywiad;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -949,7 +952,15 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(wnetrze ? { wnetrze } : {}),
     };
   });
-  const plan: PlanKuchni = { uklad, scianaA, scianaB, pomieszczenie, elementy };
+  let wywiad: Wywiad | undefined;
+  if (o.wywiad !== undefined && o.wywiad !== null) {
+    try {
+      wywiad = parseWywiad(o.wywiad);
+    } catch (e) {
+      blad(e instanceof Error ? e.message : "Wywiad ma zły format.");
+    }
+  }
+  const plan: PlanKuchni = { uklad, scianaA, scianaB, pomieszczenie, elementy, ...(wywiad ? { wywiad } : {}) };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);
   return plan;

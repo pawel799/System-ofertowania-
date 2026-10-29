@@ -212,6 +212,47 @@ function ElementWidok({
   );
 }
 
+/** Okna (jasna szyba z ramą), drzwi (płyta drzwi) i przyłącze wody z kroku „Okna i instalacje”. */
+function Otwory({ plan }: { plan: PlanKuchni }) {
+  const wy = plan.wywiad;
+  if (!wy) return null;
+  const wys = Math.min(2.5, wy.wysokosc / 100);
+  return (
+    <group>
+      {wy.otwory.map((o, i) => {
+        const A = o.sciana === "A";
+        const szer = o.szer / 100;
+        const od = o.od / 100 + szer / 2;
+        const y0 = o.rodzaj === "okno" ? (o.parapet ?? 90) / 100 : 0;
+        // Okno do ok. 30 cm pod sufitem (max 140 cm wysokości), drzwi 205 cm.
+        const hOkna = o.rodzaj === "okno" ? Math.max(0.4, Math.min(1.4, wys - 0.3 - y0)) : Math.min(2.05, wys - 0.1);
+        const pos: [number, number, number] = A ? [od, y0 + hOkna / 2, 0.002] : [0.002, y0 + hOkna / 2, od];
+        const rot: [number, number, number] = A ? [0, 0, 0] : [0, Math.PI / 2, 0];
+        return (
+          <group key={i} position={pos} rotation={rot}>
+            <mesh>
+              <planeGeometry args={[szer, hOkna]} />
+              <meshStandardMaterial color={o.rodzaj === "okno" ? "#cfe3f5" : "#8a6f55"} roughness={o.rodzaj === "okno" ? 0.15 : 0.7} emissive={o.rodzaj === "okno" ? "#9ec4ea" : "#000000"} emissiveIntensity={o.rodzaj === "okno" ? 0.35 : 0} />
+            </mesh>
+            {o.rodzaj === "okno" ? (
+              <mesh position={[0, -hOkna / 2 - 0.015, 0.06]}>
+                <boxGeometry args={[szer + 0.08, 0.03, 0.14]} />
+                <meshStandardMaterial color="#eceae6" roughness={0.5} />
+              </mesh>
+            ) : null}
+          </group>
+        );
+      })}
+      {wy.woda ? (
+        <mesh position={wy.woda.sciana === "A" ? [wy.woda.od / 100, 0.5, 0.02] : [0.02, 0.5, wy.woda.od / 100]}>
+          <sphereGeometry args={[0.025, 16, 12]} />
+          <meshStandardMaterial color="#2f7fd1" roughness={0.3} />
+        </mesh>
+      ) : null}
+    </group>
+  );
+}
+
 function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, tlo }: Props & { tlo: TloSceny }) {
   const front = useFront();
   const countertop = useCountertop();
@@ -253,6 +294,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
           <meshStandardMaterial color={tlo.sciana} roughness={0.9} />
         </mesh>
       ) : null}
+      <Otwory plan={plan} />
       <Suspense fallback={null}>
         {plan.elementy.map((el) => (
           <ElementWidok
