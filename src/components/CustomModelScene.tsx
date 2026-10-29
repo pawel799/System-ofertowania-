@@ -11,6 +11,9 @@ import { applyRoles, type PublicModel } from "./modelRoles";
 import { usePalettes } from "./paletteStore";
 import { useKatalog } from "./katalogStore";
 import { sredniKolorModelu, tloDlaKoloru } from "./tloSceny";
+import { przygotujRuchome, ustawOtwarcie } from "./kuchnia/ruchomeGlb";
+import { useRuch } from "./kuchnia/MebelParametryczny";
+import { useOtwarcie } from "./kuchnia/otwarcieStore";
 
 /*
  * Scena wgranego modelu (oferta z własnym modelem zamiast kuchni demo).
@@ -40,6 +43,11 @@ function Model({ model, onKolor }: { model: PublicModel; onKolor?: (hex: string 
   const hardware = useHardware();
   const palettes = usePalettes();
   const katalog = useKatalog();
+  // Drzwi i szuflady modelu (nazwy jak w bibliotece: Front_drzwi, Front_szuflada…) – przycisk „Otwórz drzwi i szuflady”.
+  const { ruchome, aliasy } = useMemo(() => przygotujRuchome(scene, model.tags), [scene, model.tags]);
+  const tagi = useMemo(() => ({ ...model.tags, ...aliasy }), [model.tags, aliasy]);
+  const { wszystkie } = useOtwarcie();
+  useRuch(wszystkie, (p) => ustawOtwarcie(ruchome, p));
 
   // Środek bryły w (0, 0, 0) w poziomie, podłoga na y = 0.
   const { offset, sphere, floor } = useMemo(() => {
@@ -78,12 +86,12 @@ function Model({ model, onKolor }: { model: PublicModel; onKolor?: (hex: string 
   }, [camera, controls, sphere, aspect, invalidate]);
 
   useEffect(() => {
-    const undo = applyRoles(scene, model.tags, { front, countertop, hardware }, palettes, katalog);
+    const undo = applyRoles(scene, tagi, { front, countertop, hardware }, palettes, katalog);
     // Średni kolor po podmianie materiałów: ciemny model → jasne tło (tloSceny.ts).
     onKolor?.(sredniKolorModelu(scene));
     invalidate();
     return undo;
-  }, [scene, model.tags, front, countertop, hardware, palettes, katalog, invalidate, onKolor]);
+  }, [scene, tagi, front, countertop, hardware, palettes, katalog, invalidate, onKolor]);
 
   return (
     <>

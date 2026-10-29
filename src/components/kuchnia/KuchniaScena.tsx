@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, type ReactNode } from "react";
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { PerspectiveCamera, Vector3 } from "three";
@@ -16,6 +16,9 @@ import { yElementu } from "./uklad3d";
 import Wymiary3D from "./Wymiary3D";
 import { tloDlaKoloru, type TloSceny } from "../tloSceny";
 import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
+import { useRuch } from "./MebelParametryczny";
+import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
+import { otwarty, przelaczElement, useOtwarcie } from "./otwarcieStore";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
 
@@ -109,12 +112,25 @@ function Ujecie({ aktywne, onUjecie }: { aktywne: boolean; onUjecie?: (u: Kuchni
   return null;
 }
 
-function ModelBryla({ model, w, h, d }: { model: PublicModel; w: number; h: number; d: number }) {
+function ModelBryla({ model, w, h, d, otwarte = false }: { model: PublicModel; w: number; h: number; d: number; otwarte?: boolean }) {
   const { scene } = useGLTF(model.url, true, true);
   // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
   const uchwyt = useUchwytModelu(scene);
-  // Pudełko liczone w układzie modelu (nie świata) – patrz obrys.tsx.
-  const fit = useMemo(() => dopasuj(uchwyt, w / 100, h / 100, d / 100), [uchwyt, w, h, d]);
+  // Drzwi, klapy, szuflady i drzwi przesuwne na pivotach (ruchomeGlb.ts) + aliasy ról dla kawałków uchwytów.
+  const { ruchome, aliasy } = useMemo(() => przygotujRuchome(uchwyt, model.tags), [uchwyt, model.tags]);
+  const postep = useRef(0);
+  // Pudełko liczone w układzie modelu (nie świata) – patrz obrys.tsx. Zawsze przy zamkniętych frontach.
+  const fit = useMemo(() => {
+    ustawOtwarcie(ruchome, 0);
+    const f = dopasuj(uchwyt, w / 100, h / 100, d / 100);
+    ustawOtwarcie(ruchome, postep.current);
+    return f;
+  }, [uchwyt, ruchome, w, h, d]);
+  useRuch(otwarte, (p) => {
+    postep.current = p;
+    ustawOtwarcie(ruchome, p);
+  });
+  const tagi = useMemo(() => ({ ...model.tags, ...aliasy }), [model.tags, aliasy]);
   const invalidate = useThree((s) => s.invalidate);
   const front = useFront();
   const countertop = useCountertop();
@@ -122,8 +138,8 @@ function ModelBryla({ model, w, h, d }: { model: PublicModel; w: number; h: numb
   const palettes = usePalettes();
   const katalogMat = useKatalog();
   useEffect(() => {
-    return applyRoles(uchwyt, model.tags, { front, countertop, hardware }, palettes, katalogMat);
-  }, [uchwyt, model, front, countertop, hardware, palettes, katalogMat]);
+    return applyRoles(uchwyt, tagi, { front, countertop, hardware }, palettes, katalogMat);
+  }, [uchwyt, tagi, front, countertop, hardware, palettes, katalogMat]);
   useEffect(() => invalidate(), [fit, invalidate]);
   return (
     <group position={fit.position} scale={fit.scale}>
@@ -152,6 +168,7 @@ function ElementWidok({
   blat,
   uchwyt,
   onWybierz,
+  otwarte,
 }: {
   el: ElementKuchni;
   plan: PlanKuchni;
@@ -162,9 +179,10 @@ function ElementWidok({
   blat: string;
   uchwyt: boolean;
   onWybierz?: (id: string) => void;
+  otwarte: boolean;
 }) {
   const y = yElementu(el, plan);
-  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} />;
+  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} />;
   return (
     <group
       position={[el.x / 100, y, el.z / 100]}
@@ -173,12 +191,17 @@ function ElementWidok({
         e.stopPropagation();
         onWybierz?.(el.id);
       }}
+      onDoubleClick={(e) => {
+        // Dwuklik otwiera albo zamyka ten jeden mebel (drzwi, szuflady).
+        e.stopPropagation();
+        przelaczElement(el.id);
+      }}
     >
       <Obrys aktywny={zaznaczony}>
         {model ? (
           <BladModelu fallback={szafka}>
             <Suspense fallback={szafka}>
-              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} />
+              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} />
             </Suspense>
           </BladModelu>
         ) : (
@@ -203,6 +226,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
   const blat = blatLook.color ?? BLAT[countertop] ?? "#ece8e1";
   const uchwyt = !lookFor("uchwyt", wybor, palettes, katalogMat).hidden;
   const katalog = useMemo(() => new Map(modele.map((m) => [m.id, m])), [modele]);
+  const otwarcie = useOtwarcie();
   const { x0, x1, z0, z1 } = zakres(plan);
 
   useEffect(() => {
@@ -242,6 +266,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
             blat={blat}
             uchwyt={uchwyt}
             onWybierz={onWybierz}
+            otwarte={otwarty(otwarcie, el.id)}
           />
         ))}
       </Suspense>

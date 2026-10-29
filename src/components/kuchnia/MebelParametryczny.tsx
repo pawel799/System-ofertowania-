@@ -49,7 +49,7 @@ function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: num
     else g.current.rotation.x = kat * p;
   });
   return (
-    <group ref={g} position={pivot}>
+    <group ref={g} position={pivot} userData={{ ruchomy: true }}>
       <group position={[-pivot[0], -pivot[1], -pivot[2]]}>{children}</group>
     </group>
   );
@@ -60,7 +60,11 @@ function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwart
   useRuch(otwarte, (p) => {
     g.current?.position.set(o[0] * p, o[1] * p, o[2] * p);
   });
-  return <group ref={g}>{children}</group>;
+  return (
+    <group ref={g} userData={{ ruchomy: true }}>
+      {children}
+    </group>
+  );
 }
 
 function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, number]; m: THREE.Material }) {

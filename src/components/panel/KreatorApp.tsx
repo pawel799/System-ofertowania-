@@ -41,6 +41,7 @@ import {
 } from "@/lib/kuchnia";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import RzutKuchni from "../kuchnia/RzutKuchni";
+import PrzyciskOtwarcia from "../kuchnia/PrzyciskOtwarcia";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { Seg, Toaster, Tooltips, toast } from "./ui";
@@ -633,6 +634,7 @@ export default function KreatorApp() {
             )}
             {(!waski || zakladka === "3d") && (
               <div className="kr-view3d">
+                <PrzyciskOtwarcia className="btn btn-ghost kr-otworz" />
                 <KuchniaTlo
                   plan={plan}
                   modele={modeleSceny}

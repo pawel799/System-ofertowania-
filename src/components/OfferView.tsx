@@ -7,6 +7,7 @@ import MaterialsPanel from "./MaterialsPanel";
 import { MeasureButton } from "./RequestDialog";
 import { DragHint } from "./ViewerHints";
 import PodgladTelefon from "./PodgladTelefon";
+import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "./modelRoles";
 
@@ -79,7 +80,13 @@ export default function OfferView({
             ) : null}
             {/* Nagłówek: docelowo font Sreda – niedostępny w Google Fonts, patrz raport. */}
             <h1 className="mt-2 text-3xl leading-[1.05] text-stone-50 desk:mt-4 desk:text-6xl">{title}</h1>
-            {actions ? <div className="pointer-events-auto mt-5 flex flex-wrap items-center gap-3 desk:mt-6">{actions}</div> : null}
+            {actions || kuchnia?.elementy.length || model ? (
+              <div className="pointer-events-auto mt-5 flex flex-wrap items-center gap-3 desk:mt-6">
+                {actions}
+                {/* Drzwi i szuflady w 3D: klient zagląda do środka (półki, szuflady, drążki). */}
+                <PrzyciskOtwarcia className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 aria-pressed:bg-white/15" />
+              </div>
+            ) : null}
           </section>
         </div>
 

@@ -36,23 +36,30 @@ const _b = new Box3();
  * Pudełko widocznych siatek `content` w układzie lokalnym węzła `root` (root może być samym content).
  * Ukryte siatki (np. uchwyty przy push-to-open) się nie liczą.
  */
-export function boxWzgledem(root: Object3D, content: Object3D, out = new Box3()) {
+export function boxWzgledem(root: Object3D, content: Object3D, out = new Box3(), pomin?: (o: Object3D) => boolean) {
   out.makeEmpty();
   root.updateWorldMatrix(true, false);
   content.updateWorldMatrix(true, true);
   _odwr.copy(root.matrixWorld).invert();
-  content.traverseVisible((o) => {
+  const odwiedz = (o: Object3D) => {
+    if (!o.visible || (pomin && o !== content && pomin(o))) return;
     const mesh = o as Mesh;
-    if (!mesh.isMesh) return;
-    const g = mesh.geometry as BufferGeometry | undefined;
-    if (!g?.attributes?.position) return;
-    if (!g.boundingBox) g.computeBoundingBox();
-    if (!g.boundingBox) return;
-    _m.multiplyMatrices(_odwr, mesh.matrixWorld);
-    out.union(_b.copy(g.boundingBox).applyMatrix4(_m));
-  });
+    const g = mesh.isMesh ? (mesh.geometry as BufferGeometry | undefined) : undefined;
+    if (g?.attributes?.position) {
+      if (!g.boundingBox) g.computeBoundingBox();
+      if (g.boundingBox) {
+        _m.multiplyMatrices(_odwr, mesh.matrixWorld);
+        out.union(_b.copy(g.boundingBox).applyMatrix4(_m));
+      }
+    }
+    for (const c of o.children) odwiedz(c);
+  };
+  odwiedz(content);
   return out;
 }
+
+/** Drzwi i szuflady (pivoty otwierania) – obrys i dopasowanie liczą bryłę bez nich, więc otwarcie nie rozdmuchuje ramki. */
+export const ruchomy = (o: Object3D) => o.userData.ruchomy === true;
 
 export type Dopasowanie = { scale: [number, number, number]; position: [number, number, number] };
 
@@ -124,7 +131,8 @@ export function Obrys({
     const g = grupa.current;
     const l = linie.current;
     if (!aktywny || !g || !l) return;
-    boxWzgledem(g, g, tmp);
+    boxWzgledem(g, g, tmp, ruchomy);
+    if (tmp.isEmpty()) boxWzgledem(g, g, tmp);
     if (tmp.isEmpty()) {
       l.visible = false;
       return;
