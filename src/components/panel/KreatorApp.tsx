@@ -22,6 +22,7 @@ import {
   GRUPY_PRESETOW,
   opiszKolizje,
   parseKuchnia,
+  pozycjeKuchni,
   PRESETY,
   pustyPlan,
   type NowyElement,
@@ -290,7 +291,7 @@ export default function KreatorApp() {
       countertop,
       hardware,
       kuchnia: parsed,
-      moduly: parsed.elementy.map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d })),
+      moduly: pozycjeKuchni(parsed),
     };
     if (offer) {
       const reszta: Offer = { ...offer };

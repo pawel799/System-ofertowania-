@@ -387,7 +387,6 @@ export function validateOffer(input: unknown): Offer {
     modelId = str(o.modelId, "modelId", 32);
     if (!ASSET_ID_RE.test(modelId)) throw bad("Zły identyfikator modelu 3D.");
   }
-  const moduly = validateModuly(o.moduly);
   let kuchnia: PlanKuchni | undefined;
   if (o.kuchnia !== undefined && o.kuchnia !== null) {
     try {
@@ -396,6 +395,9 @@ export function validateOffer(input: unknown): Offer {
       throw bad(e instanceof Error ? e.message : "Zły plan kuchni.");
     }
   }
+  // Oferta z kreatora: pozycje i cenę liczy serwer z planu (zCenaKuchni), więc moduły z panelu pomijamy.
+  // Wcześniej szły przez limity szafki na wymiar (4–120 cm) i odrzucały np. komodę 141 cm albo blat 240 cm z biblioteki.
+  const moduly = kuchnia?.elementy.length ? undefined : validateModuly(o.moduly);
   return {
     id,
     title: str(o.title, "title", 200, { min: 1 }),
