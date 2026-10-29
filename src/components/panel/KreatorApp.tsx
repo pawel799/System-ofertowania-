@@ -578,7 +578,7 @@ export default function KreatorApp() {
           </section>
 
           <aside className="kr-col kr-side" aria-label="Dane oferty i cena">
-            <div className="kr-pad">
+            <div className="kr-pad kr-side-body">
               <KreatorWlasciwosci
                 plan={plan}
                 element={element}
@@ -710,19 +710,6 @@ export default function KreatorApp() {
                 <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
               </div>
 
-              <div className="kr-sum">
-                <p>
-                  Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
-                </p>
-                <p>
-                  Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
-                </p>
-                <p className="lede">
-                  {cennikBlad
-                    ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika."
-                    : "Szafki z Twojego cennika modułów (Ustawienia → Cennik modułów). Urządzenia AGD nie są wliczane."}
-                </p>
-              </div>
 
               <section className="kr-card">
                 <h3>Oferta PDF</h3>
@@ -764,6 +751,19 @@ export default function KreatorApp() {
                   </button>
                 )}
               </section>
+            </div>
+            <div className="kr-sum kr-side-foot">
+              <p>
+                Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
+              </p>
+              <p>
+                Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
+              </p>
+              <p className="lede">
+                {cennikBlad
+                  ? "Cennik firmy się nie wczytał — kwota jest orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika."
+                  : "Szafki z Twojego cennika modułów (Ustawienia → Cennik modułów). Urządzenia AGD nie są wliczane."}
+              </p>
             </div>
           </aside>
         </div>
