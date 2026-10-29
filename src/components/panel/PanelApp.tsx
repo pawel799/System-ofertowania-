@@ -52,6 +52,7 @@ import {
 } from "./offers";
 import { cleanNip, formatNip, isValidNip, type CompanyLookup } from "./company";
 import { pokazWyborModelu } from "@/lib/bibliotekaModeli";
+import { TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { assetsApi, offerKey, panelApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
 import WyborModeluOferty from "./WyborModeluOferty";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
@@ -1244,6 +1245,9 @@ function NewOfferDialog({
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState("");
+  // Najpierw: co projektujemy, potem: kreator krok po kroku albo gotowy model (ten formularz).
+  const [krok, setKrok] = useState<"typ" | "sposob" | "formularz">("typ");
+  const [projekt, setProjekt] = useState<TypProjektu>("kuchnia");
   const [type, setType] = useState<ClientType>("private");
   const [company, setCompany] = useState<CompanyForm>(EMPTY_COMPANY);
   const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
@@ -1378,6 +1382,7 @@ function NewOfferDialog({
       countertop: form.countertop,
       hardware: form.hardware,
       ...(form.modelId ? { modelId: form.modelId } : {}),
+      projekt,
       status: "szkic",
       link: null,
       events: [{ t: stamp(), k: "create", x: isCompany ? "Oferta przygotowana dla firmy" : "Oferta przygotowana" }],
@@ -1418,13 +1423,58 @@ function NewOfferDialog({
         <div className="m-pad">
           <div className="m-top">
             <h2 id="new-title" style={{ fontSize: 15 }}>
-              Nowa oferta <span className="mono faint">{nextId}</span>
+              Nowa oferta{krok !== "typ" ? ` · ${TYP_PROJEKTU[projekt].label}` : ""} <span className="mono faint">{nextId}</span>
             </h2>
             <button type="button" className="icon-btn" aria-label="Zamknij" onClick={close}>
               <CloseIcon />
             </button>
           </div>
 
+          {krok === "typ" ? (
+            <div className="no-krok swap-in" key="typ">
+              <p className="lede">Co projektujemy? Od tego zależą pytania w kreatorze i elementy w katalogu.</p>
+              <div className="no-typy" role="list">
+                {TYPY_PROJEKTU.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    role="listitem"
+                    className="no-typ"
+                    data-typ={t}
+                    onClick={() => {
+                      setProjekt(t);
+                      setKrok("sposob");
+                    }}
+                  >
+                    <TypIkona typ={t} />
+                    <b>{TYP_PROJEKTU[t].label}</b>
+                    <span>{TYP_PROJEKTU[t].opis}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : krok === "sposob" ? (
+            <div className="no-krok swap-in" key="sposob">
+              <p className="lede">
+                {TYP_PROJEKTU[projekt].label}: jak przygotujesz ofertę?{" "}
+                <button type="button" className="btn btn-plain no-wstecz" onClick={() => setKrok("typ")}>
+                  Zmień rodzaj
+                </button>
+              </p>
+              <div className="no-sposoby">
+                <a className="no-sposob" data-polecany="" href={`/panel/kreator?typ=${projekt}`}>
+                  <b>W kreatorze, krok po kroku</b>
+                  <span>Wymiary pomieszczenia, okna i instalacje, moduły z wnętrzem (półki, szuflady, drążki), materiały, PDF i link 3D.</span>
+                  <em>Zalecane</em>
+                </a>
+                <button type="button" className="no-sposob" onClick={() => setKrok("formularz")}>
+                  <b>Z gotowego modelu albo kwoty</b>
+                  <span>Wybierasz gotowy model 3D (albo własny GLB z PRO100) i wpisujesz cenę zabudowy.</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+          <div className="swap-in" key="formularz">
           <div className="field">
             <span className="lab">Klient</span>
             <Seg
@@ -1540,7 +1590,7 @@ function NewOfferDialog({
               options={(Object.keys(LAYOUT_LABEL) as Layout[]).map((l) => ({ value: l, label: l === "wyspa" ? "Wyspa" : l }))}
             />
             <p className="lede">
-              Zabudowę z gotowych szafek, bez modelu z PRO100, złożysz w <a href="/panel/kreator">kreatorze kuchni</a>.
+              Zabudowę z gotowych modułów, bez modelu z PRO100, złożysz w <a href={`/panel/kreator?typ=${projekt}`}>kreatorze</a>.
             </p>
           </div>
           {pokazWyborModelu(models, form.modelId) ? (
@@ -1569,16 +1619,61 @@ function NewOfferDialog({
             <Seg label="Okucia" value={form.hardware} onChange={set("hardware")} options={opcjeMaterialu("hardware", nCtx, form.hardware).map((h) => ({ value: h.id, label: h.name }))} />
           </div>
           {error ? <p className="err">{error}</p> : null}
+          </div>
+          )}
         </div>
         <div className="m-foot">
+          {krok === "formularz" ? (
+            <button type="button" className="btn btn-plain" onClick={() => setKrok("sposob")}>
+              Wstecz
+            </button>
+          ) : null}
           <button type="button" className="btn btn-ghost" onClick={close}>
             Anuluj
           </button>
-          <button type="submit" className="btn btn-ink">
-            Dodaj ofertę
-          </button>
+          {krok === "formularz" ? (
+            <button type="submit" className="btn btn-ink">
+              Dodaj ofertę
+            </button>
+          ) : null}
         </div>
       </form>
     </div>
+  );
+}
+
+/** Prosty piktogram rodzaju projektu w oknie „Nowa oferta”. */
+function TypIkona({ typ }: { typ: TypProjektu }) {
+  const s = { stroke: "currentColor", strokeWidth: 1.6, fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  return (
+    <svg viewBox="0 0 48 48" width="40" height="40" aria-hidden>
+      {typ === "kuchnia" ? (
+        <>
+          <path d="M6 22h36v18H6z" {...s} />
+          <path d="M6 22h36M18 22v18M30 22v18M6 8h36v8H6z" {...s} />
+          <path d="M22 26h4" {...s} />
+        </>
+      ) : typ === "szafa" ? (
+        <>
+          <path d="M10 6h28v36H10z" {...s} />
+          <path d="M24 6v36M21 22v4M27 22v4" {...s} />
+        </>
+      ) : typ === "komoda" ? (
+        <>
+          <path d="M8 14h32v24H8z" {...s} />
+          <path d="M8 22h32M8 30h32M21 18h6M21 26h6M21 34h6M12 38v3M36 38v3" {...s} />
+        </>
+      ) : typ === "lazienka" ? (
+        <>
+          <path d="M8 24h32v16H8z" {...s} />
+          <path d="M12 24c0-5 4-8 12-8s12 3 12 8M24 10v6M20 10h8M24 30v6" {...s} />
+        </>
+      ) : (
+        <>
+          <path d="M8 10h14v28H8zM26 20h14v18H26z" {...s} />
+          <path d="M8 24h14M26 29h14" {...s} />
+        </>
+      )}
+    </svg>
   );
 }

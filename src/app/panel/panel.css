@@ -508,3 +508,18 @@
 .pnl .kat-probka { width: 28px; height: 28px; border-radius: 7px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); align-self: center; }
 .pnl .set-row[data-off] { opacity: 0.6; }
 .pnl .set-row .kat-probka + .set-row-main { flex: 1 1 220px; }
+
+/* Panel → Nowa oferta: najpierw co projektujemy, potem jak (kreator albo gotowy model) */
+.pnl .no-krok { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.pnl .no-typy { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.pnl .no-typ, .pnl .no-sposob { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px; border-radius: 12px; background: var(--g2); color: inherit; text-align: left; text-decoration: none; }
+.pnl .no-typ svg { color: var(--text-2); margin-bottom: 4px; }
+.pnl .no-typ b, .pnl .no-sposob b { font-weight: 600; font-size: 14px; }
+.pnl .no-typ span, .pnl .no-sposob span { font-size: 12.5px; line-height: 1.4; color: var(--text-2); }
+.pnl .no-sposoby { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.pnl .no-sposob { position: relative; }
+.pnl .no-sposob[data-polecany] { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.pnl .no-sposob em { position: absolute; top: 12px; right: 12px; font-style: normal; font-size: 11px; color: var(--accent); }
+.pnl .no-typ:active, .pnl .no-sposob:active { transform: scale(0.99); }
+@media (hover: hover) and (pointer: fine) { .pnl .no-typ:hover, .pnl .no-sposob:hover { background: var(--g3); } }
+.pnl .no-wstecz { min-height: 0; padding: 0 4px; font-size: 13px; text-decoration: underline; }
