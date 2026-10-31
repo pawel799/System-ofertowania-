@@ -58,6 +58,7 @@ Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuf
 ## 3D: drzwi i szuflady, tło
 
 - **Otwórz drzwi i szuflady** (kreator nad podglądem 3D, strona klienta przy „Uwagi do projektu”) otwiera wszystkie fronty; dwuklik na meblu w 3D – tylko ten. Moduły na wymiar: drzwi na zawiasach, szuflady ze skrzynką, drzwi przesuwne, w środku półki i drążki. Modele GLB (biblioteka i wgrane pliki z nazwami `Front_drzwi*`, `Front_szuflada*`, `Front_klapa*`, `Front_panel*`, `Front_zmywarka*`): zawiasy przy bliższym boku, klapy do góry, szuflady z dorobioną skrzynką, uchwyty jadą razem z frontem (`src/components/kuchnia/ruchomeGlb.ts`).
+- **Pełny ekran** (strona klienta, `src/components/PelnyEkran.tsx`): przycisk w prawym dolnym rogu – na komputerze nad paskiem materiałów, na telefonie w rogu sceny. Na pełnym ekranie jest tylko scena 3D (bez materiałów, ceny, przycisków) i „Zamknij” (albo Esc / wstecz); żeby zmienić materiał, klient wychodzi z pełnego ekranu. Komputer, Android i iPad: prawdziwy pełny ekran (Fullscreen API – znikają karty i pasek adresu). iPhone: Safari nie daje stronom pełnego ekranu (API działa tam tylko dla wideo), więc scena zakrywa całą stronę od krawędzi do krawędzi, a podpowiedź mówi, jak schować pasek Safari („Ukryj pasek narzędzi” w menu strony). Wcześniejszy poziomy podgląd z paskiem i materiałami jest usunięty.
 - **Tło** sceny przełącza się na jasne, gdy fronty (albo cały wgrany model) są ciemne – grafit, dąb wędzony, czarny (`src/components/tloSceny.ts`).
 
 ## Dwie wysyłki

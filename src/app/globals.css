@@ -26,99 +26,36 @@ body {
 }
 
 /*
- * Strona oferty na telefonie: „Otwórz podgląd” (PodgladTelefon.tsx) – ta sama strona w układzie poziomym:
- * pasek u góry, scena 3D na całą szerokość, materiały w jednym rzędzie na dole. Bez drugiej sceny WebGL.
+ * Pełny ekran podglądu 3D (PelnyEkran.tsx): przycisk w prawym dolnym rogu sceny. Na pełnym ekranie tylko scena.
+ * Fullscreen API: przeglądarka sama rozciąga .oferta-scena. iPhone (bez API): data-pelny na <main> – scena na całą stronę.
  */
-.oferta-podglad-otworz {
-  position: absolute; right: 12px; bottom: 12px; z-index: 6;
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 16px; border-radius: 999px;
-  background: rgba(12, 11, 10, 0.82); color: #f5f5f4; border: 1px solid rgba(255, 255, 255, 0.25);
-  font-size: 14px; line-height: 1; backdrop-filter: blur(6px);
+/* display ustawiają klasy Tailwinda przy przycisku (telefon: w scenie, komputer: nad paskiem materiałów). */
+.oferta-pelny-wejdz,
+.oferta-pelny-wejdz-desk,
+.oferta-pelny-zamknij {
+  align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px;
+  background: rgba(12, 11, 10, 0.78); color: #f5f5f4; border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 14px; line-height: 1; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-/*
- * Układ podglądu (poziomo): u góry cienki pasek – zamknij, marka, nazwa oferty, „Umów pomiar”, cena i „Poproś o wycenę”;
- * w środku scena 3D na całą szerokość; na dole jeden rząd materiałów (fronty | blat | okucia, przewijany w bok).
- * Elementy zostają tam, gdzie są w OfferView / MaterialsPanel – opakowania dostają display: contents
- * i ich dzieci układają się w siatce <main>. Poza podglądem nic się nie zmienia.
- */
-main[data-oferta][data-podglad] {
-  position: fixed !important; inset: 0; z-index: 60;
-  display: grid; height: 100dvh; min-height: 0 !important; padding: 0 !important; overflow: hidden;
-  grid-template-columns: 48px auto minmax(0, 1fr) auto auto;
-  grid-template-rows: 48px minmax(0, 1fr) auto;
-  grid-template-areas: "zam marka tytul pomiar cena" "scena scena scena scena scena" "mat mat mat mat mat";
+.oferta-pelny-wejdz { position: absolute; right: 12px; bottom: 12px; z-index: 6; }
+.oferta-pelny-wejdz-desk { margin-bottom: 4px; }
+.oferta-pelny-zamknij {
+  display: inline-flex; position: absolute; z-index: 20;
+  top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px));
 }
-main[data-oferta][data-podglad]::before {
-  content: ""; grid-area: 1 / 1 / 2 / -1; background: #0c0b0a; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .oferta-pelny-wejdz:hover, .oferta-pelny-wejdz-desk:hover, .oferta-pelny-zamknij:hover { background: rgba(12, 11, 10, 0.92); border-color: rgba(255, 255, 255, 0.6); }
 }
-main[data-oferta][data-podglad] > .oferta-scena { grid-area: scena; height: auto !important; min-height: 0; }
-main[data-oferta][data-podglad] > .oferta-nakladka,
-main[data-oferta][data-podglad] .oferta-naglowek,
-main[data-oferta][data-podglad] .oferta-tytul,
-main[data-oferta][data-podglad] .oferta-tytul > section,
-main[data-oferta][data-podglad] aside,
-main[data-oferta][data-podglad] aside > div { display: contents !important; }
-main[data-oferta][data-podglad] .oferta-naglowek > :first-child {
-  grid-area: marka; align-self: center; z-index: 1; margin-right: 14px; max-height: 24px; font-size: 10px; letter-spacing: 0.2em; white-space: nowrap;
+.oferta-scena:fullscreen { width: 100%; height: 100%; background: #0c0b0a; }
+main[data-oferta][data-pelny] > .oferta-scena {
+  position: fixed !important; inset: 0; z-index: 100; width: 100vw; height: 100vh !important; height: 100dvh !important; background: #0c0b0a;
 }
-main[data-oferta][data-podglad] .oferta-kod,
-main[data-oferta][data-podglad] .oferta-tytul > section > p { display: none !important; }
-main[data-oferta][data-podglad] .oferta-naglowek > a {
-  grid-area: pomiar; align-self: center; z-index: 1; margin-left: 10px; padding: 7px 12px !important; font-size: 10px; letter-spacing: 0.18em; white-space: nowrap;
-}
-main[data-oferta][data-podglad] .oferta-tytul h1 {
-  grid-area: tytul; align-self: center; z-index: 1; margin: 0 !important; min-width: 0;
-  font-size: 16px !important; line-height: 1.2 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-/* Uwagi / Pozycje kuchni: na scenie, w lewym dolnym rogu (jak na komputerze – nad sceną). */
-main[data-oferta][data-podglad] .oferta-tytul .mt-5 {
-  grid-area: scena; align-self: end; justify-self: start; z-index: 2; margin: 0 0 10px 10px !important; gap: 8px !important; pointer-events: auto;
-}
-main[data-oferta][data-podglad] .oferta-tytul .mt-5 > * { padding: 6px 12px !important; font-size: 12.5px !important; min-height: 0 !important; }
-/* Cena i „Poproś o wycenę” w pasku u góry. */
-main[data-oferta][data-podglad] .oferta-cena {
-  grid-area: cena; position: static !important; z-index: 1; margin: 0 !important; padding: 0 10px 0 14px !important;
-  border: 0 !important; background: transparent !important; gap: 12px; align-self: stretch;
-}
-main[data-oferta][data-podglad] .oferta-cena > div > p:not([aria-live]) { display: none; }
-main[data-oferta][data-podglad] .oferta-cena [aria-live] { font-size: 17px !important; color: #f5f5f4 !important; white-space: nowrap; }
-main[data-oferta][data-podglad] .oferta-cena button {
-  padding: 8px 14px !important; font-size: 13px !important; background: #f5f5f4 !important; color: #0c0b0a !important;
-}
-/* Materiały: jeden rząd na dole, przewijany w bok. */
-main[data-oferta][data-podglad] aside > div > div:first-child {
-  grid-area: mat; display: flex !important; flex-wrap: nowrap !important; align-items: flex-start !important; gap: 22px !important;
-  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; background: #fff; color: #1c1917;
-  padding: 7px max(14px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
-  border-top: 1px solid rgba(0, 0, 0, 0.1); pointer-events: auto;
-}
-main[data-oferta][data-podglad] aside > div > div:first-child::-webkit-scrollbar { display: none; }
-main[data-oferta][data-podglad] aside > div > div:first-child > * { flex: none; min-width: 0; }
-main[data-oferta][data-podglad] aside fieldset { display: flex; gap: 8px; align-items: center; }
-main[data-oferta][data-podglad] aside fieldset > [role="radiogroup"] { margin-top: 0 !important; max-width: none !important; }
-main[data-oferta][data-podglad] aside p.mb-2, main[data-oferta][data-podglad] aside legend { margin-bottom: 4px !important; font-size: 10px; white-space: nowrap; }
-main[data-oferta][data-podglad] aside legend span { font-size: 12px; }
-main[data-oferta][data-podglad] aside [role="radiogroup"] { flex-wrap: nowrap !important; gap: 6px !important; }
-main[data-oferta][data-podglad] aside [role="radiogroup"] button[class*="rounded-full border px"] { padding: 5px 10px !important; font-size: 12.5px !important; flex: none; }
-main[data-oferta][data-podglad] aside [role="radiogroup"] button.h-9,
-main[data-oferta][data-podglad] aside [role="radiogroup"] button.h-7 { height: 26px !important; width: 26px !important; flex: none; }
-/* Wąskie telefony (iPhone SE): bez marki w pasku, żeby zmieściła się nazwa oferty. */
-@media (max-width: 720px) {
-  main[data-oferta][data-podglad] .oferta-naglowek > :first-child { display: none; }
-}
-.oferta-podglad-zamknij {
-  position: fixed; left: max(8px, env(safe-area-inset-left, 0px)); top: 8px; z-index: 70;
-  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08); color: #f5f5f4; border: 1px solid rgba(255, 255, 255, 0.25);
-}
-.oferta-obroc { display: none; }
-@media (orientation: portrait) {
-  .oferta-obroc {
-    position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 16px; padding: 32px; text-align: center; background: rgba(12, 11, 10, 0.94); color: #f5f5f4; font-size: 16px; line-height: 1.45;
-  }
-  .oferta-obroc button { padding: 10px 20px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.3); color: #f5f5f4; }
+main[data-oferta][data-pelny] > .oferta-nakladka { display: none !important; }
+.oferta-pelny-podpowiedz {
+  position: absolute; z-index: 20; left: 50%; transform: translateX(-50%);
+  bottom: max(14px, env(safe-area-inset-bottom, 0px)); width: min(440px, calc(100% - 32px)); margin: 0;
+  padding: 10px 14px; border-radius: 12px; background: rgba(12, 11, 10, 0.86); color: #f5f5f4;
+  font-size: 13px; line-height: 1.4; text-align: center;
 }
 
 /*
@@ -130,8 +67,7 @@ main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul h1 {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 18px rgba(0, 0, 0, 0.35);
 }
 main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul p { color: #f5f5f4; }
-main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul .mt-5 > *,
-main[data-oferta][data-podglad] .oferta-tytul .mt-5 > * {
+main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul .mt-5 > * {
   background-color: rgba(12, 11, 10, 0.72);
   border-color: rgba(255, 255, 255, 0.28);
   -webkit-backdrop-filter: blur(6px);

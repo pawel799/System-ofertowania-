@@ -6,7 +6,7 @@ import KuchniaTlo from "./kuchnia/KuchniaTlo";
 import MaterialsPanel from "./MaterialsPanel";
 import { MeasureButton } from "./RequestDialog";
 import { DragHint } from "./ViewerHints";
-import PodgladTelefon from "./PodgladTelefon";
+import { PelnyEkranWarstwa, PrzyciskPelnegoEkranu } from "./PelnyEkran";
 import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "./modelRoles";
@@ -57,7 +57,8 @@ export default function OfferView({
           <KitchenGlbBackground />
         )}
         <DragHint />
-        <PodgladTelefon />
+        {/* Pełny ekran: tylko scena (przycisk na telefonie tutaj, na komputerze nad paskiem materiałów). */}
+        <PelnyEkranWarstwa />
       </div>
 
       {/* Nakładka z ofertą. Domyślnie nie łapie myszy, żeby nie blokować obracania sceny. */}
@@ -88,6 +89,7 @@ export default function OfferView({
               </div>
             ) : null}
           </section>
+          <PrzyciskPelnegoEkranu className="oferta-pelny-wejdz-desk pointer-events-auto ml-auto hidden self-end desk:inline-flex" />
         </div>
 
         {/* Pasek wyboru materiałów na dole, jak pasek zadań. */}
