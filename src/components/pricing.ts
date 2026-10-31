@@ -1,6 +1,8 @@
 import { deltaMaterialu, type KatalogPozycja, type MaterialySnapshot } from "./katalogFirmy";
 import type { Palette } from "./palettes";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
+import { doplataKolorow, type KoloryProjektu } from "@/lib/kolory";
+import type { PlanKuchni } from "@/lib/kuchnia";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)
@@ -27,18 +29,29 @@ export function formatPln(value: number) {
  * palettes: pakiety RAL („ral:…”); katalog: pozycje katalogu firmy („cat:…”);
  * snapshot: dopłaty zapisane w ofercie – mają pierwszeństwo, żeby link klienta nie zmieniał ceny po edycji katalogu.
  * grupy: które materiały oferta w ogóle ma (opcjeProjektu.ts) – np. szafa bez blatu nie dolicza dopłaty za blat.
+ * plan + kolory: meble w różnych kolorach (fronty, boki, środek – kolory.ts) – dopłata za kolor według powierzchni.
  */
 export function totalPrice(
   selection: { front: string; countertop: string; hardware: string },
   base: number = BASE_PRICE,
   palettes: Palette[] = [],
-  extra: { katalog?: readonly KatalogPozycja[]; snapshot?: MaterialySnapshot | null; grupy?: GrupyMaterialow } = {},
+  extra: {
+    katalog?: readonly KatalogPozycja[];
+    snapshot?: MaterialySnapshot | null;
+    grupy?: GrupyMaterialow;
+    plan?: PlanKuchni | null;
+    kolory?: KoloryProjektu | null;
+  } = {},
 ) {
   const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot };
   const g = extra.grupy;
+  const kolorowe = !g || g.front || g.korpus || g.srodek;
+  const zaKolor = extra.plan?.elementy.length
+    ? doplataKolorow(extra.plan.elementy, selection.front, extra.kolory ?? extra.plan.kolory, (id) => deltaMaterialu("front", id, ctx)).kwota
+    : deltaMaterialu("front", selection.front, ctx);
   return (
     base +
-    (!g || g.front ? deltaMaterialu("front", selection.front, ctx) : 0) +
+    (kolorowe ? zaKolor : 0) +
     (!g || g.blat ? deltaMaterialu("countertop", selection.countertop, ctx) : 0) +
     (!g || g.okucia ? deltaMaterialu("hardware", selection.hardware, ctx) : 0)
   );

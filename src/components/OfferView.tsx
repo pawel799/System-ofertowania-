@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import BrandMark from "./BrandMark";
 import CustomModelBackground from "./CustomModelBackground";
 import KitchenGlbBackground from "./KitchenGlbBackground";
@@ -48,6 +50,13 @@ export default function OfferView({
   /** Co projektujemy (brak = kuchnia). */
   projekt?: TypProjektu;
 }) {
+  // Kolory pojedynczych mebli klient zmienia na kopii planu (nic nie zapisuje – wybór idzie w zgłoszeniu).
+  const [plan, setPlan] = useState<PlanKuchni | null>(kuchnia ?? null);
+  const [wybrany, setWybrany] = useState<string | null>(null);
+  useEffect(() => {
+    setPlan(kuchnia ?? null);
+    setWybrany(null);
+  }, [kuchnia]);
   // Te same grupy materiałów co w kreatorze: szafa bez blatu, otwarty regał bez uchwytów…
   const zPlanu = !!kuchnia?.elementy.length;
   const grupy = grupyMaterialow({ plan: zPlanu ? kuchnia : null, model: zPlanu ? null : model, modele });
@@ -58,8 +67,8 @@ export default function OfferView({
     <main data-oferta className="relative min-h-[100svh] w-full bg-[#0c0b0a] pb-24 text-stone-100 desk:h-screen desk:overflow-hidden desk:pb-0">
       {/* Scena 3D (obracanie palcem/myszą, przybliżanie). */}
       <div className="oferta-scena relative h-[58svh] w-full [@media(orientation:landscape)_and_(max-height:500px)]:h-[82svh] desk:fixed desk:inset-0 desk:h-auto">
-        {kuchnia?.elementy.length ? (
-          <KuchniaTlo plan={kuchnia} modele={modele ?? []} />
+        {plan?.elementy.length ? (
+          <KuchniaTlo plan={plan} modele={modele ?? []} zaznaczony={wybrany} onWybierz={setWybrany} />
         ) : model ? (
           <CustomModelBackground model={model} />
         ) : (
@@ -102,7 +111,19 @@ export default function OfferView({
         </div>
 
         {/* Pasek wyboru materiałów na dole, jak pasek zadań. */}
-        <MaterialsPanel className="shrink-0" base={base} showPrice={showPrice} code={code} grupy={grupy} agd={agd} />
+        <MaterialsPanel
+          className="shrink-0"
+          base={base}
+          showPrice={showPrice}
+          code={code}
+          grupy={grupy}
+          agd={agd}
+          plan={zPlanu ? plan : null}
+          onPlan={setPlan}
+          wybrany={wybrany}
+          onWybrany={setWybrany}
+          modele={modele ?? []}
+        />
       </div>
     </main>
   );

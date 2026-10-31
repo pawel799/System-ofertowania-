@@ -9,6 +9,7 @@ import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes } from "../paletteStore";
 import { setKatalog, setSnapshotMaterialow } from "../katalogStore";
+import { setKoloryProjektu } from "../koloryStore";
 import { ApiError, publicApi, type BrandSettings, type PublicOffer } from "./offerApi";
 import { setBrandCache, useBrand } from "@/lib/brand";
 import { FIRMA } from "@/content/firma";
@@ -99,6 +100,7 @@ export default function ClientOffer() {
     setFront(state.offer.front);
     setCountertop(state.offer.countertop);
     setHardware(state.offer.hardware);
+    setKoloryProjektu(state.offer.kuchnia?.kolory);
   }, [state]);
 
   if (state.k === "ready") {

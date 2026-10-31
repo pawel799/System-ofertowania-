@@ -76,7 +76,8 @@ export const onRequestPost = handle(async (ctx) => {
     email,
     uwagi,
     oferta: str(b.oferta, 60),
-    wybor: str(b.wybor, 300),
+    // Wybór klienta: materiały i kolory poszczególnych mebli (KoloryMebli.tsx) – do 1000 znaków.
+    wybor: str(b.wybor, 1000),
     firma: str(b.firma, 200),
     ...(target.source ? { zrodlo: target.source } : {}),
     utworzono: now,

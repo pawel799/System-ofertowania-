@@ -55,7 +55,7 @@ export function OfertaPdfPrzyciski({
   zapewnijLink?: () => Promise<LinkDoPdf | null>;
   ujecie?: { current: KuchniaUjecie | null };
   /** Modele w planie (oznaczenia ról) – PDF pokazuje tylko materiały, które projekt ma. */
-  modele?: readonly { id: string; tags: Record<string, "front" | "blat" | "uchwyt"> }[];
+  modele?: readonly { id: string; tags: Record<string, string> }[];
   projekt?: TypProjektu;
 }) {
   const brand = useBrand();

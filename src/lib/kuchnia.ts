@@ -13,6 +13,7 @@ import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS,
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
+import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -97,6 +98,8 @@ export type ElementKuchni = {
   kat?: number;
   /** Półki, szuflady, drążki i rodzaj frontu (tylko moduły na wymiar). Brak = układ domyślny (wnetrzeDomyslne). */
   wnetrze?: Wnetrze;
+  /** Własne kolory tego mebla (fronty, boki, środek – kolory.ts). Brak = kolory projektu. */
+  kolory?: KoloryMebla;
 };
 
 export type PlanKuchni = {
@@ -114,6 +117,8 @@ export type PlanKuchni = {
   plyta?: string;
   /** Dodatki do ceny: pozycje z cennika i własne pozycje oferty (dodatki.ts). */
   dodatki?: DodatekOferty[];
+  /** Wspólne kolory boków i środka (front jest w ofercie). Brak = jak fronty / jak boki. */
+  kolory?: KoloryProjektu;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -1009,6 +1014,12 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       const ocena = sprawdzWnetrze({ w, h, d, rodzaj, strefa }, wnetrze);
       if (ocena.bledy.length) blad(`„${nazwa}”: ${ocena.bledy[0]}`);
     }
+    let kolory: KoloryMebla | undefined;
+    try {
+      kolory = parseKoloryMebla(e.kolory, `„${nazwa}”`);
+    } catch (err) {
+      blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
+    }
     return {
       id,
       nazwa,
@@ -1024,6 +1035,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       rot: rot as Obrot,
       ...(kat ? { kat } : {}),
       ...(wnetrze ? { wnetrze } : {}),
+      ...(kolory ? { kolory } : {}),
     };
   });
   let wywiad: Wywiad | undefined;
@@ -1035,6 +1047,13 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     }
   }
   const plyta = typeof o.plyta === "string" && /^[A-Za-z0-9-]{1,24}$/.test(o.plyta) ? o.plyta : undefined;
+  let kolory: KoloryProjektu | undefined;
+  try {
+    const k = parseKoloryMebla(o.kolory, "Kolory projektu");
+    if (k?.korpus || k?.srodek) kolory = { ...(k.korpus ? { korpus: k.korpus } : {}), ...(k.srodek ? { srodek: k.srodek } : {}) };
+  } catch (err) {
+    blad(err instanceof Error ? err.message : "Złe kolory projektu.");
+  }
   let dodatki: DodatekOferty[] | undefined;
   if (o.dodatki !== undefined && o.dodatki !== null) {
     try {
@@ -1052,6 +1071,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(wywiad ? { wywiad } : {}),
     ...(plyta ? { plyta } : {}),
     ...(dodatki?.length ? { dodatki } : {}),
+    ...(kolory ? { kolory } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

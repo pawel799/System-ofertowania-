@@ -78,7 +78,7 @@ export function MeasureButton({ className = "" }: { className?: string }) {
 export default function RequestDialog({ code, summary: base }: { code?: string; summary: string }) {
   const typ = useRequest();
   const brand = useBrand();
-  const summary = typ && extra ? `${base}; ${extra}`.slice(0, 300) : base;
+  const summary = (typ && extra ? `${base}; ${extra}` : base).slice(0, 1000);
   const dialog = useRef<HTMLDialogElement>(null);
   const first = useRef<HTMLInputElement>(null);
   const uid = useId();

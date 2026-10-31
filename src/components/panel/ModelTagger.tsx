@@ -17,8 +17,8 @@ import { toast } from "./ui";
 
 type Element = { name: string; material: string; meshes: Mesh[]; triangles: number };
 
-const ROLE_COLOR: Record<ModelRole, string> = { front: "#3f63e0", blat: "#c27100", uchwyt: "#0f8f84" };
-const ROLES: ModelRole[] = ["front", "blat", "uchwyt"];
+const ROLE_COLOR: Record<ModelRole, string> = { front: "#3f63e0", korpus: "#8a5cd0", blat: "#c27100", uchwyt: "#0f8f84" };
+const ROLES: ModelRole[] = ["front", "korpus", "blat", "uchwyt"];
 
 type Associations = Map<Object3D, { nodes?: number; meshes?: number; primitives?: number }>;
 

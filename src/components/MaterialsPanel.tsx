@@ -9,6 +9,10 @@ import { useKatalogStan } from "./katalogStore";
 import { formatPln, totalPrice } from "./pricing";
 import { CENA_ZAKRES, CENA_ZAKRES_MEBLE } from "@/lib/plans";
 import { WSZYSTKIE_GRUPY, type GrupyMaterialow } from "@/lib/opcjeProjektu";
+import type { PlanKuchni } from "@/lib/kuchnia";
+import type { PublicModel } from "./modelRoles";
+import KoloryMebli, { meblaKolorowe, opisKoloruKlienta } from "./KoloryMebli";
+import { setKoloryProjektu, useKoloryProjektu } from "./koloryStore";
 import RequestDialog, { openRequest } from "./RequestDialog";
 
 type Option = { id: string; name: string; delta: number };
@@ -74,8 +78,20 @@ export default function MaterialsPanel({
   code,
   grupy = WSZYSTKIE_GRUPY,
   agd = true,
+  plan,
+  onPlan,
+  wybrany = null,
+  onWybrany,
+  modele = [],
 }: {
   className?: string;
+  /** Projekt z kreatora: kolory mebli (fronty, boki, środek), każdy mebel osobno – KoloryMebli.tsx. */
+  plan?: PlanKuchni | null;
+  onPlan?: (p: PlanKuchni) => void;
+  /** Mebel zaznaczony w 3D – kolory zmieniają się tylko dla niego. */
+  wybrany?: string | null;
+  onWybrany?: (id: string | null) => void;
+  modele?: readonly PublicModel[];
   /** Które materiały oferta ma (opcjeProjektu.ts): szafa bez blatu, regał bez uchwytów… Te same co w kreatorze. */
   grupy?: GrupyMaterialow;
   /** W projekcie są urządzenia AGD – dopisek „Bez AGD…” przy cenie. */
@@ -103,11 +119,13 @@ export default function MaterialsPanel({
 
   const brak = (id: string): Material => ({ id, name: "—", delta: 0, zrodlo: "katalog" });
   const selectedFront = findMaterial("front", front, ctx) ?? plyty[0] ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
-  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy });
+  const koloryProjektu = useKoloryProjektu();
+  const zKolorami = !!plan && !!onPlan && meblaKolorowe(plan, modele).length > 0;
+  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy, plan, kolory: koloryProjektu });
   const selectedCountertop = findMaterial("countertop", countertop, ctx) ?? blaty[0] ?? brak(countertop);
   const selectedHardware = findMaterial("hardware", hardware, ctx) ?? okucia[0] ?? brak(hardware);
   const summary = [
-    grupy.front ? `front ${selectedFront.name}` : null,
+    zKolorami && plan ? opisKoloruKlienta(plan, front, koloryProjektu, ctx) : grupy.front ? `front ${selectedFront.name}` : null,
     grupy.blat ? `blat ${selectedCountertop.name}` : null,
     grupy.okucia ? `okucia ${selectedHardware.name}` : null,
     showPrice ? `szacunek ${formatPln(total)} netto` : null,
@@ -126,7 +144,22 @@ export default function MaterialsPanel({
       <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4 desk:gap-x-8">
-          {grupy.front ? (
+          {zKolorami && plan && onPlan ? (
+            <KoloryMebli
+              plan={plan}
+              onPlan={onPlan}
+              front={front}
+              setFront={setFront}
+              projekt={koloryProjektu}
+              setProjekt={setKoloryProjektu}
+              wybrany={wybrany}
+              onWybrany={onWybrany ?? (() => {})}
+              grupy={grupy}
+              modele={modele}
+              ctx={ctx}
+              showPrice={showPrice}
+            />
+          ) : grupy.front ? (
             <fieldset>
               <legend className={`mb-2 flex items-baseline gap-2 ${GROUP_LABEL}`}>
                 Fronty

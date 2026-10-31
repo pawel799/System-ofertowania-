@@ -11,13 +11,17 @@ import { getKatalog } from "./katalogStore";
  * dopasowaną do niej podmianę (frontMaterials.ts itd.) i tego modułu nie używa.
  */
 
-export type ModelRole = "front" | "blat" | "uchwyt";
+export type ModelRole = "front" | "blat" | "uchwyt" | "korpus";
 
 export const ROLE_LABEL: Record<ModelRole, string> = {
   front: "Front",
   blat: "Blat",
   uchwyt: "Uchwyt",
+  korpus: "Boki i obudowa",
 };
+
+/** Węzły „Korpus” / „…_Korpus” (biblioteka modeli, eksport z Blendera) – boki i obudowa, gdy nie są oznaczone ręcznie. */
+const KORPUS_RE = /(^|_)korpus$/i;
 
 export type PublicModel = {
   id: string;
@@ -27,7 +31,8 @@ export type PublicModel = {
   tags: Record<string, ModelRole>;
 };
 
-export type Selection = { front: string; countertop: string; hardware: string };
+/** korpus: kolor boków i obudowy (brak = jak front). */
+export type Selection = { front: string; countertop: string; hardware: string; korpus?: string };
 
 type Look = {
   color?: string;
@@ -71,6 +76,7 @@ function lookKatalogu(m: MaterialKatalogu, metal = false): Look {
 }
 
 export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[], katalog: readonly KatalogPozycja[] = getKatalog()): Look {
+  if (role === "korpus") return lookFor("front", { ...sel, front: sel.korpus ?? sel.front }, palettes, katalog);
   if (role === "front") {
     const kat = parseKatRef(sel.front) ? findFront(sel.front, palettes, katalog) : undefined;
     if (kat) return lookKatalogu(kat);
@@ -107,6 +113,10 @@ export function meshRoles(root: Object3D, tags: Record<string, ModelRole>) {
   const roles = new Map<Mesh, ModelRole>();
   // Najpierw elementy wyżej w drzewie, potem niżej: dokładniejsze oznaczenie wygrywa.
   const depth = (o: Object3D | null): number => (o?.parent ? 1 + depth(o.parent) : 0);
+  // Najpierw węzły „Korpus” bez oznaczenia (najsłabsze), potem oznaczenia od góry drzewa.
+  root.traverse((o) => {
+    if (o.name && KORPUS_RE.test(o.name) && !tags[o.name]) for (const m of meshesOf(root, o.name)) roles.set(m, "korpus");
+  });
   const named = Object.keys(tags)
     .map((name) => ({ name, node: root.getObjectByName(name) }))
     .filter((x) => x.node)

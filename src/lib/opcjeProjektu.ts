@@ -14,12 +14,14 @@
 import { wpisPoId } from "./bibliotekaModeli";
 import { MEBLE, rodzajElementu, type ElementKuchni, type PlanKuchni } from "./kuchnia";
 import { kategoriaWnetrza, wnetrzeDomyslne } from "./wnetrze";
+import { czesciMebla } from "./kolory";
 
-export type GrupyMaterialow = { front: boolean; blat: boolean; okucia: boolean };
+/** korpus / srodek – kolor boków i środka mebla (kolory.ts); brak = tych części nie ma (kuchnia demo, model bez oznaczeń). */
+export type GrupyMaterialow = { front: boolean; blat: boolean; okucia: boolean; korpus?: boolean; srodek?: boolean };
 
 export const WSZYSTKIE_GRUPY: GrupyMaterialow = { front: true, blat: true, okucia: true };
 
-type Role = "front" | "blat" | "uchwyt";
+type Role = string;
 type ModelZTagami = { id: string; tags: Record<string, Role> };
 
 /** AGD z frontem meblowym (zabudowa) – front i uchwyt jak szafka. */
@@ -56,6 +58,17 @@ function grupyModelu(el: ElementKuchni, modele: ReadonlyMap<string, ModelZTagami
   return { front: true, blat: kuchenny && el.strefa === "dolna", okucia: true };
 }
 
+/** Grupy jednego mebla (kolory zaznaczonego mebla w kreatorze i u klienta). */
+export function grupyElementu(el: ElementKuchni, modele: ReadonlyMap<string, ModelZTagami>): GrupyMaterialow {
+  const g = el.zrodlo === "model" ? grupyModelu(el, modele) : grupyModulu(el);
+  const pola = czesciMebla(el);
+  // Model: boki, gdy ma oznaczony korpus albo jest z biblioteki mebli (węzeł „Korpus”).
+  const r = el.zrodlo === "model" ? role(el.modelId ? modele.get(el.modelId) : undefined) : null;
+  const wpis = el.modelId ? wpisPoId(el.modelId) : undefined;
+  const korpusModelu = !!r?.has("korpus") || (!!wpis && wpis.grupa !== "agd" && wpis.grupa !== "blaty" && wpis.grupa !== "dodatki");
+  return { ...g, korpus: el.zrodlo === "model" ? korpusModelu : pola.korpus > 0, srodek: el.zrodlo === "model" ? false : pola.srodek > 0 };
+}
+
 export function grupyMaterialow(args: {
   plan?: PlanKuchni | null;
   /** Jeden model całej oferty (bez kreatora). */
@@ -66,18 +79,20 @@ export function grupyMaterialow(args: {
   const { plan, model } = args;
   if (plan?.elementy.length) {
     const mapa = new Map((args.modele ?? []).map((m) => [m.id, m]));
-    const out = { front: false, blat: false, okucia: false };
+    const out: GrupyMaterialow = { front: false, blat: false, okucia: false, korpus: false, srodek: false };
     for (const el of plan.elementy) {
-      const g = el.zrodlo === "model" ? grupyModelu(el, mapa) : grupyModulu(el);
+      const g = grupyElementu(el, mapa);
       out.front ||= g.front;
       out.blat ||= g.blat;
       out.okucia ||= g.okucia;
+      out.korpus ||= !!g.korpus;
+      out.srodek ||= !!g.srodek;
     }
     return out;
   }
   if (model) {
     const r = role(model)!;
-    return { front: r.has("front"), blat: r.has("blat"), okucia: r.has("uchwyt") };
+    return { front: r.has("front"), blat: r.has("blat"), okucia: r.has("uchwyt"), korpus: r.has("korpus") };
   }
   return WSZYSTKIE_GRUPY;
 }

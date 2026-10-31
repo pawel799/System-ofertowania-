@@ -100,14 +100,25 @@ export default function MebelParametryczny({
   chropowatosc,
   uchwyt,
   otwarte = false,
+  korpus,
+  srodek,
 }: {
   el: ElementKuchni;
   kolor: string;
   chropowatosc: number;
   uchwyt: boolean;
   otwarte?: boolean;
+  /** Boki i obudowa (boki, wieńce, przegrody zewnętrzne) – kolor z kolory.ts; brak = drewno. */
+  korpus?: { color: string; roughness: number };
+  /** Środek: półki, przegrody, skrzynki szuflad. */
+  srodek?: { color: string; roughness: number };
 }) {
-  const m = useDrewno();
+  const drewno = useDrewno();
+  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => [korpusMat, srodekMat].forEach((x) => x?.dispose()), [korpusMat, srodekMat]);
+  // m.korpus – boki i wieńce; m.srodek – półki, przegrody i skrzynki szuflad.
+  const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
   const wn = useMemo(() => el.wnetrze ?? wnetrzeDomyslne(el), [el]);
   const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
   const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2b2b2b", metalness: 0.8, roughness: 0.35 }), []);
@@ -143,7 +154,7 @@ export default function MebelParametryczny({
   }
   czesci.push(<Box key="pl" m={m.plecy} s={[W, H, PLECY]} p={[0, H / 2, -D / 2 + PLECY / 2]} />);
   for (let c = 1; c < n; c++) {
-    czesci.push(<Box key={`pr${c}`} m={m.korpus} s={[T, H - 2 * T, dK - 0.01]} p={[kolX(c) - T / 2, H / 2, zK - 0.005]} />);
+    czesci.push(<Box key={`pr${c}`} m={m.srodek} s={[T, H - 2 * T, dK - 0.01]} p={[kolX(c) - T / 2, H / 2, zK - 0.005]} />);
   }
 
   // Fronty: drzwi uchylne nad ciągiem nie-szuflad, szuflady z własnym frontem (chyba że za drzwiami / przesuwne).
@@ -157,7 +168,7 @@ export default function MebelParametryczny({
     const prz = przestrzenie(kol, H);
     // Półki
     prz.forEach((s, i) => {
-      if (s.plytaNad) czesci.push(<Box key={`po${c}-${i}`} m={m.korpus} s={[colW, T, dK - 0.02]} p={[x0 + colW / 2, s.y1 + T / 2, zK - 0.01]} />);
+      if (s.plytaNad) czesci.push(<Box key={`po${c}-${i}`} m={m.srodek} s={[colW, T, dK - 0.02]} p={[x0 + colW / 2, s.y1 + T / 2, zK - 0.01]} />);
       if (s.typ === "drazek") {
         czesci.push(
           <mesh key={`dr${c}-${i}`} position={[x0 + colW / 2, s.y1 - 0.07, zK]} rotation={[0, 0, Math.PI / 2]} material={chrom} castShadow>
@@ -178,10 +189,10 @@ export default function MebelParametryczny({
       const skrzynka = (
         <group key="sk">
           <Box m={dno} s={[bw, 0.008, bd]} p={[x0 + colW / 2, yb + 0.004, zb]} />
-          <Box m={m.korpus} s={[0.016, hb, bd]} p={[x0 + 0.013 + 0.008, yb + hb / 2, zb]} />
-          <Box m={m.korpus} s={[0.016, hb, bd]} p={[x0 + colW - 0.013 - 0.008, yb + hb / 2, zb]} />
-          <Box m={m.korpus} s={[bw, hb, 0.016]} p={[x0 + colW / 2, yb + hb / 2, zb - bd / 2 + 0.008]} />
-          <Box m={m.korpus} s={[bw, hb, 0.016]} p={[x0 + colW / 2, yb + hb / 2, zb + bd / 2 - 0.008]} />
+          <Box m={m.srodek} s={[0.016, hb, bd]} p={[x0 + 0.013 + 0.008, yb + hb / 2, zb]} />
+          <Box m={m.srodek} s={[0.016, hb, bd]} p={[x0 + colW - 0.013 - 0.008, yb + hb / 2, zb]} />
+          <Box m={m.srodek} s={[bw, hb, 0.016]} p={[x0 + colW / 2, yb + hb / 2, zb - bd / 2 + 0.008]} />
+          <Box m={m.srodek} s={[bw, hb, 0.016]} p={[x0 + colW / 2, yb + hb / 2, zb + bd / 2 - 0.008]} />
         </group>
       );
       let front: ReactNode = null;
@@ -201,7 +212,7 @@ export default function MebelParametryczny({
         );
       } else {
         // Szuflada wewnętrzna: niższy przód w kolorze korpusu.
-        front = <Box key="fw" m={m.korpus} s={[bw, hb + 0.02, T]} p={[x0 + colW / 2, yb + (hb + 0.02) / 2, zK + dK / 2 - 0.03]} />;
+        front = <Box key="fw" m={m.srodek} s={[bw, hb + 0.02, T]} p={[x0 + colW / 2, yb + (hb + 0.02) / 2, zK + dK / 2 - 0.03]} />;
       }
       czesci.push(
         <Przesuw key={`sz${c}-${i}`} o={[0, 0, wysuw]} otwarte={otwarte}>

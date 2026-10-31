@@ -55,6 +55,15 @@ Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze –
 
 Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
 
+## Kolory mebli: fronty, boki, środek – każdy mebel osobno
+
+Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.
+
+- „Kolory dla: Wszystkie meble” – kolory wspólne (front w ofercie, boki i środek w `kuchnia.kolory`).
+- Kliknięty mebel (rzut / 3D albo wybór z listy) – własne kolory tylko tego mebla (`element.kolory`). W kroku „Materiały” kliknięcie mebla nie przenosi do kroku „Meble”.
+- Klient na linku robi to samo: wybór z listy albo klik w 3D; jego kolory nie zapisują się w ofercie, ale idą w zgłoszeniu „Poproś o wycenę” (do 1000 znaków).
+- Dopłata za kolor liczy się **według powierzchni**: dopłata próbki × udział jej m² we wszystkich kolorowanych m² (front: szer. × wys., boki: 2 × wys. × gł. + 2 × szer. × gł., środek: półki i przegrody). Cały projekt w jednym kolorze = pełna dopłata, jak dotąd. Rozbicie ceny i PDF pokazują „Kolory: Grafit 62%, Dąb naturalny 38%”, a przy meblu z własnymi kolorami: „fronty …, boki …, środek …”.
+
 ## Obrót mebla o dowolny kąt
 
 We właściwościach zaznaczonego mebla (krok „Meble”) jest pole **Obrót** (0–359°) i przyciski ↻/↺ 15°, „Prosto” i „Obróć 90°”. Zapis: `rot` (najbliższy kierunek ściany 0/90/180/270 – ściany, rzędy, „Dociągnij”) + `kat` (reszta, −45…45°, `zKata` w `src/lib/kuchnia.ts`). Rzut rysuje mebel obrócony, 3D obraca bryłę i wymiary, PDF dopisuje „pod kątem 30°”. Kolizje i przyciąganie liczą się z prostokąta obejmującego obrócony mebel (`rect`), więc nic nie wejdzie w jego narożnik. Mebel stojący przy ścianie zostaje przy niej po obrocie i nie wchodzi w ścianę.

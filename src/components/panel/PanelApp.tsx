@@ -21,6 +21,7 @@ import { FRONTS, setFront } from "../frontStore";
 import { HARDWARE, setHardware } from "../hardwareStore";
 import { formatPln, totalPrice } from "../pricing";
 import { grupyMaterialow } from "@/lib/opcjeProjektu";
+import { setKoloryProjektu } from "../koloryStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { getKatalog, setKatalog, useKatalog } from "../katalogStore";
 import { findCountertop, findFront, findHardware, opcjeMaterialu, type KatalogPozycja, type Material } from "../katalogFirmy";
@@ -210,7 +211,8 @@ export default function PanelApp() {
     setFront(offer.front);
     setCountertop(offer.countertop);
     setHardware(offer.hardware);
-  }, [offer?.front, offer?.countertop, offer?.hardware]); // eslint-disable-line react-hooks/exhaustive-deps
+    setKoloryProjektu(offer.kuchnia?.kolory);
+  }, [offer?.front, offer?.countertop, offer?.hardware, offer?.kuchnia?.kolory]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wiadomość odświeża się sama, dopóki ktoś jej nie poprawił ręcznie.
   useEffect(() => {
@@ -326,7 +328,7 @@ export default function PanelApp() {
   const grupy = offer.kuchnia?.elementy.length
     ? grupyMaterialow({ plan: offer.kuchnia, modele: models })
     : grupyMaterialow({ model: offerModel ?? null });
-  const total = totalPrice(offer, bazaWidok, palettes, { katalog, grupy });
+  const total = totalPrice(offer, bazaWidok, palettes, { katalog, grupy, plan: offer.kuchnia, kolory: offer.kuchnia?.kolory });
   const mCtx = { palettes, katalog };
   const frontyOferty = opcjeMaterialu("front", mCtx, offer.front);
   const plyty = frontyOferty.filter((f) => f.zrodlo !== "ral");

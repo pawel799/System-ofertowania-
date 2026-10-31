@@ -19,6 +19,8 @@ import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 import { useRuch } from "./MebelParametryczny";
 import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
 import { otwarty, przelaczElement, useOtwarcie } from "./otwarcieStore";
+import { useKoloryProjektu } from "../koloryStore";
+import { koloryMebla } from "@/lib/kolory";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
 
@@ -112,7 +114,24 @@ function Ujecie({ aktywne, onUjecie }: { aktywne: boolean; onUjecie?: (u: Kuchni
   return null;
 }
 
-function ModelBryla({ model, w, h, d, otwarte = false }: { model: PublicModel; w: number; h: number; d: number; otwarte?: boolean }) {
+function ModelBryla({
+  model,
+  w,
+  h,
+  d,
+  otwarte = false,
+  kolorFrontu,
+  kolorKorpusu,
+}: {
+  model: PublicModel;
+  w: number;
+  h: number;
+  d: number;
+  otwarte?: boolean;
+  /** Kolory tego mebla (kolory.ts): front i boki; brak = wybór z paska materiałów. */
+  kolorFrontu?: string;
+  kolorKorpusu?: string;
+}) {
   const { scene } = useGLTF(model.url, true, true);
   // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
   const uchwyt = useUchwytModelu(scene);
@@ -132,14 +151,15 @@ function ModelBryla({ model, w, h, d, otwarte = false }: { model: PublicModel; w
   });
   const tagi = useMemo(() => ({ ...model.tags, ...aliasy }), [model.tags, aliasy]);
   const invalidate = useThree((s) => s.invalidate);
-  const front = useFront();
+  const frontWspolny = useFront();
+  const front = kolorFrontu ?? frontWspolny;
   const countertop = useCountertop();
   const hardware = useHardware();
   const palettes = usePalettes();
   const katalogMat = useKatalog();
   useEffect(() => {
-    return applyRoles(uchwyt, tagi, { front, countertop, hardware }, palettes, katalogMat);
-  }, [uchwyt, tagi, front, countertop, hardware, palettes, katalogMat]);
+    return applyRoles(uchwyt, tagi, { front, countertop, hardware, korpus: kolorKorpusu ?? front }, palettes, katalogMat);
+  }, [uchwyt, tagi, front, countertop, hardware, kolorKorpusu, palettes, katalogMat]);
   useEffect(() => invalidate(), [fit, invalidate]);
   return (
     <group position={fit.position} scale={fit.scale}>
@@ -169,6 +189,9 @@ function ElementWidok({
   uchwyt,
   onWybierz,
   otwarte,
+  korpus,
+  srodek,
+  ids,
 }: {
   el: ElementKuchni;
   plan: PlanKuchni;
@@ -180,9 +203,13 @@ function ElementWidok({
   uchwyt: boolean;
   onWybierz?: (id: string) => void;
   otwarte: boolean;
+  /** Boki i środek (kolory.ts) – wygląd z próbki; ids do modeli GLB. */
+  korpus: { color: string; roughness: number };
+  srodek: { color: string; roughness: number };
+  ids: { front: string; korpus: string };
 }) {
   const y = yElementu(el, plan);
-  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} />;
+  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} />;
   return (
     <group
       position={[el.x / 100, y, el.z / 100]}
@@ -201,7 +228,7 @@ function ElementWidok({
         {model ? (
           <BladModelu fallback={szafka}>
             <Suspense fallback={szafka}>
-              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} />
+              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} kolorFrontu={ids.front} kolorKorpusu={ids.korpus} />
             </Suspense>
           </BladModelu>
         ) : (
@@ -268,11 +295,17 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
   const uchwyt = !lookFor("uchwyt", wybor, palettes, katalogMat).hidden;
   const katalog = useMemo(() => new Map(modele.map((m) => [m.id, m])), [modele]);
   const otwarcie = useOtwarcie();
+  const projektKolory = useKoloryProjektu();
+  // Wygląd próbki (kolor, połysk) – ta sama funkcja co front, dla boków i środka każdego mebla.
+  const wygladProbki = (id: string) => {
+    const l = id === front ? wyglad : lookFor("front", { ...wybor, front: id }, palettes, katalogMat);
+    return { color: l.color ?? "#c9bcaa", roughness: l.roughness };
+  };
   const { x0, x1, z0, z1 } = zakres(plan);
 
   useEffect(() => {
     invalidate();
-  }, [invalidate, plan, front, countertop, hardware, palettes, katalogMat, zaznaczony]);
+  }, [invalidate, plan, front, countertop, hardware, palettes, katalogMat, zaznaczony, projektKolory]);
 
   return (
     <>
@@ -296,21 +329,28 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
       ) : null}
       <Otwory plan={plan} />
       <Suspense fallback={null}>
-        {plan.elementy.map((el) => (
-          <ElementWidok
-            key={el.id}
-            el={el}
-            plan={plan}
-            model={el.modelId ? katalog.get(el.modelId) : undefined}
-            zaznaczony={zaznaczony === el.id}
-            kolor={kolor}
-            chropowatosc={wyglad.roughness}
-            blat={blat}
-            uchwyt={uchwyt}
-            onWybierz={onWybierz}
-            otwarte={otwarty(otwarcie, el.id)}
-          />
-        ))}
+        {plan.elementy.map((el) => {
+          const kol = koloryMebla(el, front, projektKolory);
+          const fr = kol.front === front ? { color: kolor, roughness: wyglad.roughness } : wygladProbki(kol.front);
+          return (
+            <ElementWidok
+              key={el.id}
+              el={el}
+              plan={plan}
+              model={el.modelId ? katalog.get(el.modelId) : undefined}
+              zaznaczony={zaznaczony === el.id}
+              kolor={fr.color}
+              chropowatosc={fr.roughness}
+              blat={blat}
+              uchwyt={uchwyt}
+              onWybierz={onWybierz}
+              otwarte={otwarty(otwarcie, el.id)}
+              korpus={wygladProbki(kol.korpus)}
+              srodek={wygladProbki(kol.srodek)}
+              ids={{ front: kol.front, korpus: kol.korpus }}
+            />
+          );
+        })}
       </Suspense>
       {wymiary ? <Wymiary3D plan={plan} zaznaczony={zaznaczony} /> : null}
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={12} blur={2.4} far={2} />

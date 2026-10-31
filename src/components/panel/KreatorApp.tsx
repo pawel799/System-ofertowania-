@@ -59,6 +59,8 @@ import { dodatkiDomyslne, type DodatekOferty } from "@/lib/dodatki";
 import { cennikZPlyta } from "@/lib/modul";
 import { useCenaKoncowa } from "./useCenaKoncowa";
 import { KreatorCena } from "./KreatorCena";
+import { KreatorKolory } from "./KreatorKolory";
+import { setKoloryProjektu, useKoloryProjektu } from "../koloryStore";
 import {
   ApiError,
   assetsApi,
@@ -118,10 +120,11 @@ export default function KreatorApp() {
   /** Krok kreatora: pomieszczenie → okna i instalacje → wyposażenie → meble → materiały → oferta. */
   const [krok, setKrok] = useState<Krok>("pomieszczenie");
   const [samouczek, setSamouczek] = useState(false);
-  // Zaznaczenie mebla (rzut, 3D, lista) przenosi do kroku „Meble”, gdzie są jego właściwości.
+  // Zaznaczenie mebla (rzut, 3D, lista) przenosi do kroku „Meble”, gdzie są jego właściwości –
+  // poza krokiem „Materiały”: tam kliknięty mebel dostaje własne kolory.
   const setZaznaczony = useCallback((id: string | null) => {
     ustawZaznaczony(id);
-    if (id) setKrok("meble");
+    if (id) setKrok((k) => (k === "materialy" ? k : "meble"));
   }, []);
   const [models, setModels] = useState<ModelMeta[]>([]);
   const [palettes, setPalettes] = useState<Palette[]>([]);
@@ -157,6 +160,7 @@ export default function KreatorApp() {
     setHardwareId(o.hardware);
     setTyp(o.projekt ?? "kuchnia");
     setPlytaId(o.kuchnia?.plyta);
+    setKoloryProjektu(o.kuchnia?.kolory);
     setDodatki(o.kuchnia?.dodatki ?? []);
     // Zapisana oferta: projekt już jest – zaczynamy od mebli.
     setKrok("meble");
@@ -190,6 +194,7 @@ export default function KreatorApp() {
       else {
         // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
+        setKoloryProjektu(null);
         if (!samouczekWidziany()) setSamouczek(true);
         if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nowy projekt." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
@@ -241,10 +246,17 @@ export default function KreatorApp() {
     ...(plan.elementy.length ? (["wyposazenie", "meble"] as Krok[]) : []),
     ...(offer ? (["materialy", "oferta"] as Krok[]) : []),
   ]);
-  // Plan z płytą i dodatkami – to idzie do ceny, PDF i na serwer.
+  // Wspólne kolory boków i środka (kolory.ts) – w magazynie, jak front; scena 3D czyta je stamtąd.
+  const koloryProjektu = useKoloryProjektu();
+  // Plan z płytą, dodatkami i kolorami – to idzie do ceny, PDF i na serwer.
   const planCeny = useMemo<PlanKuchni>(
-    () => ({ ...plan, ...(plytaId ? { plyta: plytaId } : {}), ...(dodatki?.length ? { dodatki } : {}) }),
-    [plan, plytaId, dodatki],
+    () => ({
+      ...plan,
+      ...(plytaId ? { plyta: plytaId } : {}),
+      ...(dodatki?.length ? { dodatki } : {}),
+      ...(koloryProjektu.korpus || koloryProjektu.srodek ? { kolory: koloryProjektu } : {}),
+    }),
+    [plan, plytaId, dodatki, koloryProjektu],
   );
   const katalog = useKatalog();
   const kCtx = { palettes, katalog };
@@ -254,6 +266,10 @@ export default function KreatorApp() {
   );
   // Te same grupy materiałów co na stronie klienta (opcjeProjektu.ts): szafa bez blatu, regał bez uchwytów…
   const grupy = useMemo(() => grupyMaterialow({ plan, modele: modeleSceny }), [plan, modeleSceny]);
+  // Krok „Materiały” zaczyna od kolorów wszystkich mebli; kliknięty potem mebel dostaje własne.
+  useEffect(() => {
+    if (krok === "materialy") setZaznaczony(null);
+  }, [krok, setZaznaczony]);
   // Nowa oferta: pozycje cennika oznaczone „zawsze” wchodzą same (raz, po wczytaniu cennika).
   useEffect(() => {
     if (dodatki === null && cennikGotowy && !offer) setDodatki(dodatkiDomyslne(cennik));
@@ -833,21 +849,22 @@ export default function KreatorApp() {
                 <div className="kr-krok" data-krok="materialy">
                   <h2>Materiały</h2>
                   <p className="lede">Na start oferty. Klient i tak zmieni je w podglądzie 3D – cena przeliczy się z dopłatami.</p>
-                  {!grupy.front && !grupy.blat && !grupy.okucia ? (
+                  {!grupy.front && !grupy.korpus && !grupy.blat && !grupy.okucia ? (
                     <p className="kr-hint">Elementy tego projektu nie mają frontów, blatu ani uchwytów do wyboru.</p>
                   ) : null}
-                  {grupy.front ? (
-                    <div className="field">
-                      <span className="lab">Fronty</span>
-                      <div className="swatches" role="radiogroup" aria-label="Fronty">
-                        {opcjeMaterialu("front", kCtx, front).map((f) => (
-                          <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
-                            <span style={{ background: f.color }} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+                  <KreatorKolory
+                    plan={plan}
+                    setPlan={setPlan}
+                    front={front}
+                    setFront={setFrontId}
+                    projekt={koloryProjektu}
+                    setProjekt={setKoloryProjektu}
+                    zaznaczony={zaznaczony}
+                    setZaznaczony={setZaznaczony}
+                    grupy={grupy}
+                    modele={modeleSceny}
+                    ctx={kCtx}
+                  />
                   {grupy.blat ? (
                     <div className="field">
                       <span className="lab">Blat</span>

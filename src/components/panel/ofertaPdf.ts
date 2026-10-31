@@ -5,11 +5,13 @@
  */
 import qrcode from "qrcode-generator";
 import type { Palette } from "../palettes";
-import { findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
+import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { opisWnetrza } from "@/lib/wnetrze";
 import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
+import { doplataKolorow, koloryMebla } from "@/lib/kolory";
+import { opisKolorow } from "./useCenaKoncowa";
 import { grupyMaterialow, maAgd, opisGrup, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { slowaProjektu, type SlowaProjektu, type TypProjektu } from "@/lib/projekt";
 
@@ -84,7 +86,7 @@ export function danePdf(args: {
   link3dPin?: boolean;
   zdjecie: string | null;
   /** Modele użyte w planie (oznaczenia ról: front, blat, uchwyt). */
-  modele?: readonly { id: string; tags: Record<string, "front" | "blat" | "uchwyt"> }[];
+  modele?: readonly { id: string; tags: Record<string, string> }[];
   projekt?: TypProjektu;
 }): PdfDane {
   const grupy = grupyMaterialow({ plan: args.plan, modele: args.modele ?? [] });
@@ -96,10 +98,16 @@ export function danePdf(args: {
   const zGruboscia = (m: { name: string; thicknessMm?: number } | undefined, id: string) =>
     m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
   const cennikPlyty = cennikZPlyta(args.cennik, args.plan.plyta);
+  // Mebel z kolorami innymi niż reszta projektu: „· fronty Grafit, boki Dąb, środek Biały”.
+  const opisKoloruMebla = (e: (typeof args.plan.elementy)[number]) => {
+    if (!e.kolory) return "";
+    const k = koloryMebla(e, args.front, args.plan.kolory);
+    return ` · fronty ${nazwaKoloru(k.front)}, boki ${nazwaKoloru(k.korpus)}, środek ${nazwaKoloru(k.srodek)}`;
+  };
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
-    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}`,
+    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
     w: e.w,
     h: e.h,
     d: e.d,
@@ -108,7 +116,11 @@ export function danePdf(args: {
   // Meble, dodatki i płyta – ta sama funkcja co cena w kreatorze i na serwerze (cenaKoncowa).
   const cena = cenaKoncowa({ plan: args.plan, cennik: args.cennik, zl: pln });
   const sumaPozycji = cena.meble;
-  const dopFront = grupy.front ? (frontSw?.delta ?? 0) : 0;
+  // Kolory mebli (fronty, boki, środek) – dopłata według powierzchni, jak na stronie klienta (kolory.ts).
+  const kolory = doplataKolorow(args.plan.elementy, args.front, args.plan.kolory, (id) => deltaMaterialu("front", id, mctx));
+  const kolorowe = grupy.front || grupy.korpus || grupy.srodek;
+  const dopFront = kolorowe ? kolory.kwota : 0;
+  const nazwaKoloru = (id: string) => findMaterial("front", id, mctx)?.name ?? id;
   const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
   const dopOkucia = grupy.okucia ? (okucia?.delta ?? 0) : 0;
   return {
@@ -119,7 +131,7 @@ export function danePdf(args: {
     firma: args.firma,
     logo: args.logo,
     plan: args.plan,
-    frontNazwa: zGruboscia(frontSw, args.front),
+    frontNazwa: kolory.udzialy.length > 1 ? opisKolorow(kolory.udzialy, mctx).replace(/^Kolory: /, "") : zGruboscia(frontSw, args.front),
     blatNazwa: zGruboscia(blat, args.countertop),
     okuciaNazwa: okucia?.name ?? args.hardware,
     pozycje,
@@ -151,7 +163,7 @@ function wierszDop(nazwa: string, kwota: number) {
 /** „Fronty: … · Blat: … · Okucia: …” – tylko materiały, które projekt ma. */
 function materialyTekst(d: PdfDane, sep: string) {
   return [
-    d.grupy.front ? `Fronty: ${d.frontNazwa}` : null,
+    d.grupy.front || d.grupy.korpus ? `Kolor: ${d.frontNazwa}` : null,
     d.grupy.blat ? `Blat: ${d.blatNazwa}` : null,
     d.grupy.okucia ? `Okucia: ${d.okuciaNazwa}` : null,
   ]
@@ -161,7 +173,7 @@ function materialyTekst(d: PdfDane, sep: string) {
 
 function materialyHtml(d: PdfDane) {
   const czesci = [
-    d.grupy.front ? `<b>Fronty:</b> ${esc(d.frontNazwa)}` : null,
+    d.grupy.front || d.grupy.korpus ? `<b>Kolor mebli:</b> ${esc(d.frontNazwa)}` : null,
     d.grupy.blat ? `<b>Blat:</b> ${esc(d.blatNazwa)}` : null,
     d.grupy.okucia ? `<b>Okucia:</b> ${esc(d.okuciaNazwa)}` : null,
   ].filter(Boolean);
@@ -252,7 +264,7 @@ ${zdjecie}
     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
     <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
     ${d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
-    ${wierszDop(`Fronty: ${d.frontNazwa}`, d.dopFront)}
+    ${wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
     ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
     ${wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
     <tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>
@@ -287,7 +299,7 @@ export function pdfTekst(d: PdfDane) {
     "",
     `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
     ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
-    ...(d.dopFront ? [`Fronty: ${plnSp(d.dopFront)}`] : []),
+    ...(d.dopFront ? [`Kolor mebli: ${plnSp(d.dopFront)}`] : []),
     ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
     ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
     `Razem netto: ${plnSp(d.razem)}`,

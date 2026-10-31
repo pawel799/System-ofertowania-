@@ -15,7 +15,7 @@ import { ASSET_ID_RE, HttpError, listOffers, type Env, type KVNamespace, type Of
 
 /* ---------- Modele 3D ---------- */
 
-export const MODEL_ROLES = ["front", "blat", "uchwyt"] as const;
+export const MODEL_ROLES = ["front", "blat", "uchwyt", "korpus"] as const;
 export type ModelRole = (typeof MODEL_ROLES)[number];
 
 export type ModelMeta = {
