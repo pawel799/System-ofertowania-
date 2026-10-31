@@ -502,6 +502,10 @@
 .pnl .kr-lib-dim { font-size: 11px; color: var(--text-3); }
 .pnl .kr-lib-card:active { transform: scale(0.99); }
 @media (hover: hover) and (pointer: fine) { .pnl .kr-lib-card:hover { background: var(--g3); } }
+/* iPhone: lista okna przewija się dopiero po animacji otwarcia (useOknoPrzewijane.ts) – wtedy Safari łapie dotyk. */
+.pnl .kr-lib-grid, .pnl .kr-lib-head .kr-choice { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.pnl .kr-lib-grid:not([data-przewijanie]), .pnl .kr-lib-head .kr-choice:not([data-przewijanie]) { overflow: hidden; }
+@media (pointer: coarse) { .pnl .modal.kr-lib, .pnl .modal.kr-wn { transform: none; } }
 @media (max-width: 640px) { .pnl .kr-lib-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 10px; } .pnl .modal.kr-lib { height: calc(100dvh - 16px); } }
 
 /* Ustawienia → Katalog materiałów */
@@ -573,6 +577,7 @@
 .pnl .modal.kr-wn { width: min(1040px, 100%); height: min(820px, calc(100dvh - 32px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
 .pnl .kr-wn-head { border-bottom: 1px solid var(--g3); display: flex; flex-direction: column; gap: 6px; }
 .pnl .kr-wn-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 280px; }
+.pnl .kr-wn-body:not([data-przewijanie]) .kr-wn-lewa, .pnl .kr-wn-body:not([data-przewijanie]) .kr-wn-prawa { overflow: hidden; }
 .pnl .kr-wn-lewa { min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 14px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
 .pnl .kr-wn-prawa { min-height: 0; overflow: auto; padding: 14px 16px; border-left: 1px solid var(--g3); display: flex; flex-direction: column; gap: 8px; align-items: stretch; background: color-mix(in srgb, var(--g2) 60%, var(--panel)); }
 .pnl .kr-wn-schemat { color: var(--text); display: block; margin: 0 auto; max-width: 100%; height: auto; }
@@ -600,7 +605,8 @@
 .pnl .kr-wn-ostrz { color: var(--amber); }
 @media (max-width: 760px) {
   .pnl .modal.kr-wn { height: calc(100dvh - 16px); }
-  .pnl .kr-wn-body { grid-template-columns: 1fr; overflow: auto; }
+  .pnl .kr-wn-body { grid-template-columns: 1fr; overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+  .pnl .kr-wn-body:not([data-przewijanie]) { overflow: hidden; }
   .pnl .kr-wn-lewa, .pnl .kr-wn-prawa { overflow: visible; }
   .pnl .kr-wn-prawa { border-left: 0; border-top: 1px solid var(--g3); }
 }

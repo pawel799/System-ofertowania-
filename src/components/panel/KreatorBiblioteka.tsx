@@ -16,6 +16,7 @@ import { GRUPY_PRESETOW, PRESETY, RODZAJ_LABEL, wycenianyElement, type NowyEleme
 import { modulCena, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 import type { ModelMeta } from "./offerApi";
+import { useOknoPrzewijane } from "./useOknoPrzewijane";
 import { GRUPY_TYPU, TYP_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 
 type Pozycja = {
@@ -58,6 +59,7 @@ export function KreatorBiblioteka({
   const [grupa, setGrupa] = useState(typ === "inne" ? "wszystkie" : "projekt");
   const zTypu = GRUPY_TYPU[typ];
   const szukajRef = useRef<HTMLInputElement>(null);
+  const przewijanie = useOknoPrzewijane(open);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
@@ -160,7 +162,7 @@ export function KreatorBiblioteka({
             placeholder="Szukaj: komoda, szuflady, lustro, 80 cm…"
             aria-label="Szukaj w bibliotece"
           />
-          <div className="kr-choice" role="radiogroup" aria-label="Grupa">
+          <div className="kr-choice" role="radiogroup" aria-label="Grupa" data-przewijanie={przewijanie ? "" : undefined}>
             {[...(typ === "inne" ? [] : ["projekt"]), "wszystkie", ...grupy].map((g) => (
               <button key={g} type="button" role="radio" aria-checked={grupa === g} className="btn btn-ghost" onClick={() => setGrupa(g)}>
                 {g === "projekt" ? `Do projektu: ${TYP_PROJEKTU[typ].label}` : g === "wszystkie" ? "Wszystkie" : g}
@@ -168,7 +170,7 @@ export function KreatorBiblioteka({
             ))}
           </div>
         </div>
-        <div className="kr-lib-grid">
+        <div className="kr-lib-grid" data-przewijanie={przewijanie ? "" : undefined}>
           {widoczne.length ? (
             widoczne.map((p) => (
               <button

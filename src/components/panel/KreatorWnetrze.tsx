@@ -34,6 +34,7 @@ import {
 } from "@/lib/wnetrze";
 import { formatPln } from "../pricing";
 import { PoleCm } from "./KreatorWlasciwosci";
+import { useOknoPrzewijane } from "./useOknoPrzewijane";
 
 export type ElementOkna = NowyElement;
 
@@ -142,6 +143,7 @@ export function KreatorWnetrze({
   const [open, setOpen] = useState(false);
   const [wlasny, setWlasny] = useState(false);
   const pierwszy = useRef<HTMLButtonElement>(null);
+  const przewijanie = useOknoPrzewijane(open);
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
@@ -231,7 +233,7 @@ export function KreatorWnetrze({
             <span>{el.zrodlo === "model" ? "model 3D" : "na wymiar"}</span>
           </p>
         </div>
-        <div className="kr-wn-body">
+        <div className="kr-wn-body" data-przewijanie={przewijanie ? "" : undefined}>
           <div className="kr-wn-lewa">
             <div className="kr-dims kr-dims-3">
               <PoleCm id="wn-w" label="Szerokość" value={el.w} min={lim.w.min} max={lim.w.max} onCommit={(v) => ustawWymiar("w", v)} />
