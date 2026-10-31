@@ -20,6 +20,7 @@ import { COUNTERTOPS, setCountertop } from "../countertopStore";
 import { FRONTS, setFront } from "../frontStore";
 import { HARDWARE, setHardware } from "../hardwareStore";
 import { formatPln, totalPrice } from "../pricing";
+import { grupyMaterialow } from "@/lib/opcjeProjektu";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { getKatalog, setKatalog, useKatalog } from "../katalogStore";
 import { findCountertop, findFront, findHardware, opcjeMaterialu, type KatalogPozycja, type Material } from "../katalogFirmy";
@@ -288,7 +289,7 @@ export default function PanelApp() {
   const newDialog = newOpen ? (
     <NewOfferDialog
       instant={newOpen.instant}
-      nextId={nextOfferId(offers)}
+      nextId={(typ) => nextOfferId(offers, typ)}
       models={models}
       palettes={palettes}
       onClose={() => setNewOpen(null)}
@@ -318,10 +319,14 @@ export default function PanelApp() {
 
   const L = offer.link;
   const bazaWidok = offer.kuchnia?.elementy.length && cennikGotowy ? bazaKuchni(offer.kuchnia, cennik) : offer.base;
-  const total = totalPrice(offer, bazaWidok, palettes, { katalog });
   const linkUrl = L ? `${linkOrigin}/oferta/${L.slug}` : "";
   const shortUrl = L ? `${linkOrigin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
   const offerModel = offer.modelId ? models.find((m) => m.id === offer.modelId) : undefined;
+  // Te same grupy materiałów co w kreatorze i u klienta (opcjeProjektu.ts).
+  const grupy = offer.kuchnia?.elementy.length
+    ? grupyMaterialow({ plan: offer.kuchnia, modele: models })
+    : grupyMaterialow({ model: offerModel ?? null });
+  const total = totalPrice(offer, bazaWidok, palettes, { katalog, grupy });
   const mCtx = { palettes, katalog };
   const frontyOferty = opcjeMaterialu("front", mCtx, offer.front);
   const plyty = frontyOferty.filter((f) => f.zrodlo !== "ral");
@@ -649,7 +654,7 @@ export default function PanelApp() {
         <section className="side">
           <h2>Oferta PDF</h2>
           <p className="lede">
-            Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój — z kodem QR do kuchni w 3D. Gdy oferta nie ma działającego linku, utworzy się przy pobraniu (ustawienia z „Link dla klienta”). Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
+            Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój — z kodem QR do podglądu 3D. Gdy oferta nie ma działającego linku, utworzy się przy pobraniu (ustawienia z „Link dla klienta”). Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
           </p>
           <OfertaPdfPrzyciski
             id={offer.id}
@@ -665,6 +670,8 @@ export default function PanelApp() {
             linkUrl={linkUrl}
             zapewnijLink={zapewnijLink}
             ujecie={ujecie}
+            modele={models}
+            projekt={offer.projekt}
           />
           <p className="lede">
             <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj układ w kreatorze</a>
@@ -940,76 +947,82 @@ export default function PanelApp() {
                 <p className="lede">Gotowe kuchnie zastępują kuchnię demo. Szafki z biblioteki wstawisz w kreatorze.</p>
               </div>
             ) : null}
-            <div>
-              <div className="mat-label">
-                Fronty <span>{frontInfo(palettes, offer.front, katalog)?.name ?? offer.front}</span>
+            {grupy.front ? (
+              <div>
+                <div className="mat-label">
+                  Fronty <span>{frontInfo(palettes, offer.front, katalog)?.name ?? offer.front}</span>
+                </div>
+                <div className="swatches" role="radiogroup" aria-label="Fronty">
+                  {plyty.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className="sw"
+                      role="radio"
+                      aria-checked={offer.front === f.id}
+                      aria-label={f.name}
+                      data-tip={`${f.name}${f.delta ? ` · ${f.delta > 0 ? "+" : ""}${formatPln(f.delta)}` : ""}`}
+                      onClick={() => setMaterial("front", f.id)}
+                    >
+                      <span style={{ background: f.color }} />
+                    </button>
+                  ))}
+                  {ralFronts.length ? <i className="sw-sep" aria-hidden /> : null}
+                  {ralFronts.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className="sw"
+                      role="radio"
+                      aria-checked={offer.front === f.id}
+                      aria-label={f.name}
+                      data-tip={`${f.name}${f.delta ? ` · +${formatPln(f.delta)}` : ""}`}
+                      onClick={() => setMaterial("front", f.id)}
+                    >
+                      <span style={{ background: f.color }} />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="swatches" role="radiogroup" aria-label="Fronty">
-                {plyty.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    className="sw"
-                    role="radio"
-                    aria-checked={offer.front === f.id}
-                    aria-label={f.name}
-                    data-tip={`${f.name}${f.delta ? ` · ${f.delta > 0 ? "+" : ""}${formatPln(f.delta)}` : ""}`}
-                    onClick={() => setMaterial("front", f.id)}
-                  >
-                    <span style={{ background: f.color }} />
-                  </button>
-                ))}
-                {ralFronts.length ? <i className="sw-sep" aria-hidden /> : null}
-                {ralFronts.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    className="sw"
-                    role="radio"
-                    aria-checked={offer.front === f.id}
-                    aria-label={f.name}
-                    data-tip={`${f.name}${f.delta ? ` · +${formatPln(f.delta)}` : ""}`}
-                    onClick={() => setMaterial("front", f.id)}
-                  >
-                    <span style={{ background: f.color }} />
-                  </button>
-                ))}
+            ) : null}
+            {grupy.blat ? (
+              <div>
+                <div className="mat-label">Blat</div>
+                <Seg
+                  label="Blat"
+                  value={offer.countertop}
+                  onChange={(id) => setMaterial("countertop", id)}
+                  options={blatyOferty.map((c) => ({
+                    value: c.id,
+                    label: (
+                      <>
+                        {c.name}
+                        {c.delta !== 0 && <span className="delta">{`${c.delta > 0 ? "+" : ""}${formatPln(c.delta)}`}</span>}
+                      </>
+                    ),
+                  }))}
+                />
               </div>
-            </div>
-            <div>
-              <div className="mat-label">Blat</div>
-              <Seg
-                label="Blat"
-                value={offer.countertop}
-                onChange={(id) => setMaterial("countertop", id)}
-                options={blatyOferty.map((c) => ({
-                  value: c.id,
-                  label: (
-                    <>
-                      {c.name}
-                      {c.delta !== 0 && <span className="delta">{`${c.delta > 0 ? "+" : ""}${formatPln(c.delta)}`}</span>}
-                    </>
-                  ),
-                }))}
-              />
-            </div>
-            <div>
-              <div className="mat-label">Okucia</div>
-              <Seg
-                label="Okucia"
-                value={offer.hardware}
-                onChange={(id) => setMaterial("hardware", id)}
-                options={okuciaOferty.map((h) => ({
-                  value: h.id,
-                  label: (
-                    <>
-                      {h.name}
-                      {h.delta !== 0 && <span className="delta">{`${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}`}</span>}
-                    </>
-                  ),
-                }))}
-              />
-            </div>
+            ) : null}
+            {grupy.okucia ? (
+              <div>
+                <div className="mat-label">Okucia</div>
+                <Seg
+                  label="Okucia"
+                  value={offer.hardware}
+                  onChange={(id) => setMaterial("hardware", id)}
+                  options={okuciaOferty.map((h) => ({
+                    value: h.id,
+                    label: (
+                      <>
+                        {h.name}
+                        {h.delta !== 0 && <span className="delta">{`${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}`}</span>}
+                      </>
+                    ),
+                  }))}
+                />
+              </div>
+            ) : null}
           </div>
 
           {offer.comment ? (
@@ -1235,7 +1248,8 @@ function NewOfferDialog({
   onCreate,
 }: {
   instant: boolean;
-  nextId: string;
+  /** Numer nowej oferty – przedrostek zależy od tego, co projektujemy. */
+  nextId: (typ: TypProjektu) => string;
   models: ModelMeta[];
   palettes: Palette[];
   onClose: () => void;
@@ -1269,6 +1283,8 @@ function NewOfferDialog({
   });
   const katalogNowej = useKatalog();
   const nCtx = { palettes, katalog: katalogNowej };
+  // Wybrany model: tylko materiały, które ma oznaczone (bez modelu – kuchnia demo, wszystkie).
+  const nowaGrupy = grupyMaterialow({ model: form.modelId ? (models.find((m) => m.id === form.modelId) ?? null) : null });
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => requestAnimationFrame(() => setOpen(true)));
@@ -1365,7 +1381,7 @@ function NewOfferDialog({
     }
     const person = isCompany ? form.contactPerson.trim() : client;
     onCreate({
-      id: nextId,
+      id: nextId(projekt),
       title,
       client,
       clientType: type,
@@ -1422,7 +1438,7 @@ function NewOfferDialog({
         <div className="m-pad">
           <div className="m-top">
             <h2 id="new-title" style={{ fontSize: 15 }}>
-              Nowa oferta{krok !== "typ" ? ` · ${TYP_PROJEKTU[projekt].label}` : ""} <span className="mono faint">{nextId}</span>
+              Nowa oferta{krok !== "typ" ? ` · ${TYP_PROJEKTU[projekt].label}` : ""} <span className="mono faint">{nextId(projekt)}</span>
             </h2>
             <button type="button" className="icon-btn" aria-label="Zamknij" onClick={close}>
               <CloseIcon />
@@ -1599,6 +1615,7 @@ function NewOfferDialog({
               <p className="lede">Gotowe kuchnie (prosta, L, z wyspą, aneks) albo własny GLB. Moduły szafek są w kreatorze.</p>
             </div>
           ) : null}
+          {nowaGrupy.front ? (
           <div className="field">
             <span className="lab">Fronty</span>
             <div className="swatches" role="radiogroup" aria-label="Fronty">
@@ -1609,14 +1626,19 @@ function NewOfferDialog({
               ))}
             </div>
           </div>
-          <div className="field">
-            <span className="lab">Blat</span>
-            <Seg label="Blat" value={form.countertop} onChange={set("countertop")} options={opcjeMaterialu("countertop", nCtx, form.countertop).map((c) => ({ value: c.id, label: c.name }))} />
-          </div>
-          <div className="field">
-            <span className="lab">Okucia</span>
-            <Seg label="Okucia" value={form.hardware} onChange={set("hardware")} options={opcjeMaterialu("hardware", nCtx, form.hardware).map((h) => ({ value: h.id, label: h.name }))} />
-          </div>
+          ) : null}
+          {nowaGrupy.blat ? (
+            <div className="field">
+              <span className="lab">Blat</span>
+              <Seg label="Blat" value={form.countertop} onChange={set("countertop")} options={opcjeMaterialu("countertop", nCtx, form.countertop).map((c) => ({ value: c.id, label: c.name }))} />
+            </div>
+          ) : null}
+          {nowaGrupy.okucia ? (
+            <div className="field">
+              <span className="lab">Okucia</span>
+              <Seg label="Okucia" value={form.hardware} onChange={set("hardware")} options={opcjeMaterialu("hardware", nCtx, form.hardware).map((h) => ({ value: h.id, label: h.name }))} />
+            </div>
+          ) : null}
           {error ? <p className="err">{error}</p> : null}
           </div>
           )}

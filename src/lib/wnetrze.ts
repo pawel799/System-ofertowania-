@@ -258,6 +258,17 @@ export const PRESETY_WNETRZA: readonly PresetWnetrza[] = [
   { id: "umywalka-drzwi", nazwa: "Drzwi", opis: "Dostęp do syfonu", dla: ["umywalka"], zbuduj: (m) => ({ front: "drzwi", kolumny: [rowno(S(m.h), "polka", 1)] }) },
 ];
 
+/**
+ * Co można włożyć do środka: drążek tylko w szafie (komoda, szafka kuchenna, RTV czy łazienka go nie mają),
+ * szuflada nie w szafce wiszącej. Reszta – półki i szuflady.
+ */
+export function typyPrzestrzeniDla(el: { rodzaj?: string; strefa?: string }): readonly TypPrzestrzeni[] {
+  const k = kategoriaWnetrza(el);
+  if (k === "szafa" || k === "przesuwna") return TYPY_PRZESTRZENI;
+  if (k === "gorna") return ["polka"];
+  return ["polka", "szuflada"];
+}
+
 export const presetyDla = (el: { rodzaj?: string; strefa?: string }) => {
   const k = kategoriaWnetrza(el);
   return k ? PRESETY_WNETRZA.filter((p) => p.dla.includes(k)) : [];
@@ -335,6 +346,11 @@ export function sprawdzWnetrze(el: ElementWnetrza, wn: Wnetrze): Ocena {
   const kw = szerokoscKolumny(el.w, n);
   const swH = swiatloH(el.h);
   if (kw < GRANICE.kolumnaMin) bledy.push(`Kolumna wychodzi ${cm(kw)} – min. ${GRANICE.kolumnaMin} cm. Zmniejsz liczbę kolumn albo poszerz moduł.`);
+  const dozwolone = typyPrzestrzeniDla(el);
+  for (const typ of TYPY_PRZESTRZENI) {
+    if (dozwolone.includes(typ) || !wn.kolumny.some((k) => k.sekcje.some((s) => s.typ === typ))) continue;
+    bledy.push(typ === "drazek" ? "Drążek jest tylko w szafie – tu daj półkę albo szufladę." : "Szafka wisząca nie ma szuflad – daj półkę.");
+  }
   if (wn.front === "przesuwne") {
     if (el.w < GRANICE.przesuwneW) bledy.push(`Drzwi przesuwne mają sens od ${GRANICE.przesuwneW} cm szerokości (dwa skrzydła).`);
     if (el.d < GRANICE.przesuwneD) bledy.push(`Drzwi przesuwne zabierają ok. 10 cm głębokości – szafa musi mieć min. ${GRANICE.przesuwneD} cm.`);

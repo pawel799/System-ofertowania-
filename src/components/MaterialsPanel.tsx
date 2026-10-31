@@ -7,7 +7,8 @@ import { usePalettes } from "./paletteStore";
 import { findMaterial, opcjeMaterialu, type Material } from "./katalogFirmy";
 import { useKatalogStan } from "./katalogStore";
 import { formatPln, totalPrice } from "./pricing";
-import { CENA_ZAKRES } from "@/lib/plans";
+import { CENA_ZAKRES, CENA_ZAKRES_MEBLE } from "@/lib/plans";
+import { WSZYSTKIE_GRUPY, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import RequestDialog, { openRequest } from "./RequestDialog";
 
 type Option = { id: string; name: string; delta: number };
@@ -71,8 +72,14 @@ export default function MaterialsPanel({
   base,
   showPrice = true,
   code,
+  grupy = WSZYSTKIE_GRUPY,
+  agd = true,
 }: {
   className?: string;
+  /** Które materiały oferta ma (opcjeProjektu.ts): szafa bez blatu, regał bez uchwytów… Te same co w kreatorze. */
+  grupy?: GrupyMaterialow;
+  /** W projekcie są urządzenia AGD – dopisek „Bez AGD…” przy cenie. */
+  agd?: boolean;
   /** Numer oferty – trafia do zgłoszenia wyceny/pomiaru. */
   code?: string;
   /** Cena bazowa zabudowy; domyślnie cennik demo (BASE_PRICE). */
@@ -96,12 +103,17 @@ export default function MaterialsPanel({
 
   const brak = (id: string): Material => ({ id, name: "—", delta: 0, zrodlo: "katalog" });
   const selectedFront = findMaterial("front", front, ctx) ?? plyty[0] ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
-  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot });
+  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy });
   const selectedCountertop = findMaterial("countertop", countertop, ctx) ?? blaty[0] ?? brak(countertop);
   const selectedHardware = findMaterial("hardware", hardware, ctx) ?? okucia[0] ?? brak(hardware);
-  const summary = `front ${selectedFront.name}, blat ${selectedCountertop.name}, okucia ${selectedHardware.name}${
-    showPrice ? `, szacunek ${formatPln(total)} netto` : ""
-  }`;
+  const summary = [
+    grupy.front ? `front ${selectedFront.name}` : null,
+    grupy.blat ? `blat ${selectedCountertop.name}` : null,
+    grupy.okucia ? `okucia ${selectedHardware.name}` : null,
+    showPrice ? `szacunek ${formatPln(total)} netto` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
@@ -114,41 +126,19 @@ export default function MaterialsPanel({
       <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
         <div className="flex flex-wrap items-end gap-x-6 gap-y-4 desk:gap-x-8">
-          <fieldset>
-            <legend className={`mb-2 flex items-baseline gap-2 ${GROUP_LABEL}`}>
-              Fronty
-              <span className="text-sm normal-case tracking-normal text-stone-900">
-                {selectedFront.name}
-                {showPrice && selectedFront.delta ? (
-                  <span className="ml-1.5 text-xs tabular-nums text-stone-500">+{formatPln(selectedFront.delta)}</span>
-                ) : null}
-              </span>
-            </legend>
-            <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Fronty">
-              {plyty.map((swatch) => {
-                const selected = swatch.id === front;
-                return (
-                  <button
-                    key={swatch.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    aria-label={`Front: ${swatch.name}${showPrice && swatch.delta ? `, dopłata ${formatPln(swatch.delta)}` : ""}`}
-                    title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
-                    onClick={() => setFront(swatch.id)}
-                    className={`h-9 w-9 rounded-full border transition ${
-                      selected
-                        ? "border-stone-900 ring-2 ring-stone-900/30 ring-offset-2 ring-offset-white"
-                        : "border-black/20 hover:border-black/50"
-                    }`}
-                    style={{ backgroundColor: swatch.color }}
-                  />
-                );
-              })}
-            </div>
-            {ralFronts.length ? (
-              <div className="mt-2.5 flex max-w-md flex-wrap gap-2" role="radiogroup" aria-label="Kolory RAL">
-                {ralFronts.map((swatch) => {
+          {grupy.front ? (
+            <fieldset>
+              <legend className={`mb-2 flex items-baseline gap-2 ${GROUP_LABEL}`}>
+                Fronty
+                <span className="text-sm normal-case tracking-normal text-stone-900">
+                  {selectedFront.name}
+                  {showPrice && selectedFront.delta ? (
+                    <span className="ml-1.5 text-xs tabular-nums text-stone-500">+{formatPln(selectedFront.delta)}</span>
+                  ) : null}
+                </span>
+              </legend>
+              <div className="flex flex-wrap gap-2.5" role="radiogroup" aria-label="Fronty">
+                {plyty.map((swatch) => {
                   const selected = swatch.id === front;
                   return (
                     <button
@@ -156,10 +146,10 @@ export default function MaterialsPanel({
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      aria-label={swatch.name}
+                      aria-label={`Front: ${swatch.name}${showPrice && swatch.delta ? `, dopłata ${formatPln(swatch.delta)}` : ""}`}
                       title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
                       onClick={() => setFront(swatch.id)}
-                      className={`h-7 w-7 rounded-full border transition ${
+                      className={`h-9 w-9 rounded-full border transition ${
                         selected
                           ? "border-stone-900 ring-2 ring-stone-900/30 ring-offset-2 ring-offset-white"
                           : "border-black/20 hover:border-black/50"
@@ -169,24 +159,52 @@ export default function MaterialsPanel({
                   );
                 })}
               </div>
-            ) : null}
-          </fieldset>
+              {ralFronts.length ? (
+                <div className="mt-2.5 flex max-w-md flex-wrap gap-2" role="radiogroup" aria-label="Kolory RAL">
+                  {ralFronts.map((swatch) => {
+                    const selected = swatch.id === front;
+                    return (
+                      <button
+                        key={swatch.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        aria-label={swatch.name}
+                        title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
+                        onClick={() => setFront(swatch.id)}
+                        className={`h-7 w-7 rounded-full border transition ${
+                          selected
+                            ? "border-stone-900 ring-2 ring-stone-900/30 ring-offset-2 ring-offset-white"
+                            : "border-black/20 hover:border-black/50"
+                        }`}
+                        style={{ backgroundColor: swatch.color }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : null}
+            </fieldset>
+          ) : null}
 
-          <OptionGroup
-            title="Blat"
-            options={blaty}
-            value={countertop}
-            onChange={setCountertop}
-            showDelta={showPrice}
-          />
+          {grupy.blat ? (
+            <OptionGroup
+              title="Blat"
+              options={blaty}
+              value={countertop}
+              onChange={setCountertop}
+              showDelta={showPrice}
+            />
+          ) : null}
 
-          <OptionGroup
-            title="Okucia"
-            options={okucia}
-            value={hardware}
-            onChange={setHardware}
-            showDelta={showPrice}
-          />
+          {grupy.okucia ? (
+            <OptionGroup
+              title="Okucia"
+              options={okucia}
+              value={hardware}
+              onChange={setHardware}
+              showDelta={showPrice}
+            />
+          ) : null}
         </div>
 
         {/* Telefon: cena i przycisk przyklejone do dołu ekranu. */}
@@ -200,7 +218,7 @@ export default function MaterialsPanel({
               {showPrice ? formatPln(total) : "Po pomiarze"}
             </p>
             <p className="text-[11px] text-stone-500">
-              {CENA_ZAKRES}
+              {agd ? CENA_ZAKRES : CENA_ZAKRES_MEBLE}
             </p>
           </div>
           <button

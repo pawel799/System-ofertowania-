@@ -34,6 +34,7 @@ import {
   zmienWymiar,
   type ElementKuchni,
   type Obrot,
+  type Strefa,
   type PlanKuchni,
   type Sciana,
 } from "@/lib/kuchnia";
@@ -51,6 +52,7 @@ import { etykietaKroku, KROKI, KrokOtoczenie, KrokPomieszczenie, KrokWyposazenie
 import { KreatorSamouczek, samouczekWidziany } from "./KreatorSamouczek";
 import { AGD_LABEL, wywiadDomyslny, type Wywiad } from "@/lib/wywiad";
 import { ulozPropozycje } from "@/lib/propozycja";
+import { grupyMaterialow } from "@/lib/opcjeProjektu";
 import {
   ApiError,
   assetsApi,
@@ -178,7 +180,7 @@ export default function KreatorApp() {
         // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
         if (!samouczekWidziany()) setSamouczek(true);
-        if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nową kuchnię." });
+        if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nowy projekt." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
         const kat = { palettes: pakiety, katalog: katalogFirmy };
         setFrontId(opcjeMaterialu("front", kat)[0]?.id ?? FRONTS[0].id);
@@ -230,12 +232,23 @@ export default function KreatorApp() {
   ]);
   const suma = bazaKuchni(plan, cennik);
   const katalog = useKatalog();
-  const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes, { katalog });
   const kCtx = { palettes, katalog };
   const modeleSceny = useMemo(
     () => models.filter((m) => plan.elementy.some((e) => e.modelId === m.id)).map(toPublicModel),
     [models, plan.elementy],
   );
+  // Te same grupy materiałów co na stronie klienta (opcjeProjektu.ts): szafa bez blatu, regał bez uchwytów…
+  const grupy = useMemo(() => grupyMaterialow({ plan, modele: modeleSceny }), [plan, modeleSceny]);
+  const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes, { katalog, grupy });
+  // Legenda rzutu: tylko strefy, które są w projekcie; poza kuchnią bez „słupka” i „szafki dolnej”.
+  const legenda = useMemo(() => {
+    const opisy: [Strefa, string][] =
+      typ === "kuchnia"
+        ? [["dolna", "szafka dolna"], ["gorna", "szafka górna"], ["wysoka", "słupek"], ["polka", "półka"], ["blat", "na blacie"]]
+        : [["dolna", "mebel stojący"], ["gorna", "mebel wiszący"], ["wysoka", "mebel wysoki (szafa, regał)"], ["polka", "półka"], ["blat", "na blacie"]];
+    const obecne = new Set(plan.elementy.map((e) => e.strefa));
+    return obecne.size ? opisy.filter(([st]) => obecne.has(st)) : opisy.filter(([st]) => typ === "kuchnia" || st !== "blat");
+  }, [plan.elementy, typ]);
   const linkOrigin = domain?.active && domain.domain ? `https://${domain.domain.hostname}` : origin;
   const linkUrl = offer?.link ? `${linkOrigin}/oferta/${offer.link.slug}` : null;
 
@@ -385,7 +398,7 @@ export default function KreatorApp() {
     }
     const imie = client.trim().split(/\s+/)[0] || "";
     return {
-      id: nextOfferId(istniejace),
+      id: nextOfferId(istniejace, typ),
       ...wspolne,
       greet: imie || null,
       status: "szkic",
@@ -667,21 +680,11 @@ export default function KreatorApp() {
                 />
                 </div>
                 <p className="kr-legend">
-                  <span>
-                    <i data-zone="dolna" /> szafka dolna
-                  </span>
-                  <span>
-                    <i data-zone="gorna" /> szafka górna
-                  </span>
-                  <span>
-                    <i data-zone="wysoka" /> słupek
-                  </span>
-                  <span>
-                    <i data-zone="polka" /> półka
-                  </span>
-                  <span>
-                    <i data-zone="blat" /> na blacie
-                  </span>
+                  {legenda.map(([strefa, opis]) => (
+                    <span key={strefa}>
+                      <i data-zone={strefa} /> {opis}
+                    </span>
+                  ))}
                   <span>
                     <i data-zone="front" /> strona frontu
                   </span>
@@ -792,26 +795,33 @@ export default function KreatorApp() {
                 <div className="kr-krok" data-krok="materialy">
                   <h2>Materiały</h2>
                   <p className="lede">Na start oferty. Klient i tak zmieni je w podglądzie 3D – cena przeliczy się z dopłatami.</p>
-                  <div className="field">
-                    <span className="lab">Fronty</span>
-                    <div className="swatches" role="radiogroup" aria-label="Fronty">
-                      {opcjeMaterialu("front", kCtx, front).map((f) => (
-                        <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
-                          <span style={{ background: f.color }} />
-                        </button>
-                      ))}
+                  {!grupy.front && !grupy.blat && !grupy.okucia ? (
+                    <p className="kr-hint">Elementy tego projektu nie mają frontów, blatu ani uchwytów do wyboru.</p>
+                  ) : null}
+                  {grupy.front ? (
+                    <div className="field">
+                      <span className="lab">Fronty</span>
+                      <div className="swatches" role="radiogroup" aria-label="Fronty">
+                        {opcjeMaterialu("front", kCtx, front).map((f) => (
+                          <button key={f.id} type="button" className="sw" role="radio" aria-checked={front === f.id} aria-label={f.name} data-tip={f.name} onClick={() => setFrontId(f.id)}>
+                            <span style={{ background: f.color }} />
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  {typ === "kuchnia" || typ === "inne" ? (
+                  ) : null}
+                  {grupy.blat ? (
                     <div className="field">
                       <span className="lab">Blat</span>
                       <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} />
                     </div>
                   ) : null}
-                  <div className="field">
-                    <span className="lab">Okucia</span>
-                    <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
-                  </div>
+                  {grupy.okucia ? (
+                    <div className="field">
+                      <span className="lab">Okucia</span>
+                      <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
+                    </div>
+                  ) : null}
                 </div>
               ) : (
                 <div className="kr-krok" data-krok="oferta">
@@ -869,6 +879,8 @@ export default function KreatorApp() {
                       linkUrl={linkUrl}
                       zapewnijLink={zapewnijLink}
                       ujecie={ujecie}
+                      modele={modeleSceny}
+                      projekt={typ}
                     />
                   </section>
 

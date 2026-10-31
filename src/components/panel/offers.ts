@@ -281,13 +281,17 @@ export function dayPlus(days: number) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
-export function nextOfferId(offers: Offer[]) {
+/** Przedrostek numeru oferty według tego, co projektujemy (szafa nie dostaje „KUCH-…”). */
+const PRZEDROSTEK: Record<TypProjektu, string> = { kuchnia: "KUCH", szafa: "SZAF", komoda: "MEBL", lazienka: "LAZ", inne: "MEBL" };
+
+/** Kolejny numer w roku – jedna numeracja dla wszystkich przedrostków (KUCH-2026/3, SZAF-2026/4…). */
+export function nextOfferId(offers: Offer[], typ: TypProjektu = "kuchnia") {
   const year = new Date().getFullYear();
   const max = offers.reduce((m, o) => {
-    const match = /^KUCH-(\d{4})\/(\d+)$/.exec(o.id);
+    const match = /^[A-Z]{2,5}-(\d{4})\/(\d+)$/.exec(o.id);
     return match && Number(match[1]) === year ? Math.max(m, Number(match[2])) : m;
   }, 0);
-  return `KUCH-${year}/${max + 1}`;
+  return `${PRZEDROSTEK[typ]}-${year}/${max + 1}`;
 }
 
 const BASE62 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";

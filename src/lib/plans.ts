@@ -117,6 +117,8 @@ export const MODEL_SERVICE = `Przygotowanie modelu 3D przez nas: ${MODEL_SERVICE
 
 /** Co obejmuje cena, którą widzi klient (strona oferty, mail, FAQ). */
 export const CENA_ZAKRES = "Bez AGD i montażu – montaż wyceniamy po pomiarze.";
+/** Szafa, komoda, regał – bez urządzeń w projekcie nie piszemy o AGD. */
+export const CENA_ZAKRES_MEBLE = "Bez montażu – montaż wyceniamy po pomiarze.";
 
 /** 1490 -> "1 490 zł" (twarda spacja; toLocaleString w pl nie grupuje liczb czterocyfrowych). */
 export const formatZl = (n: number) => `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0")}\u00a0zł`;

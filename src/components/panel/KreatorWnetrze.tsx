@@ -24,7 +24,7 @@ import {
   sprawdzWnetrze,
   swiatloH,
   szerokoscKolumny,
-  TYPY_PRZESTRZENI,
+  typyPrzestrzeniDla,
   wnetrzeDomyslne,
   zPresetu,
   type Kolumna,
@@ -51,7 +51,7 @@ export function naWymiar(el: ElementOkna): ElementOkna | null {
   else if (/umywalk|łazienk/.test(nazwa) && el.strefa === "dolna") rodzaj = "umywalka";
   else if (g === "szafy" || /szafa|garderob|słupek łazienk/.test(nazwa)) rodzaj = "szafa";
   else if (g === "komody" || /komod|nocna|kontener/.test(nazwa)) rodzaj = el.strefa === "gorna" ? "szafka" : "komoda";
-  else if (el.rodzaj === "szafka" || el.rodzaj === "szuflady" || el.rodzaj === "zlew" || el.rodzaj === "narozna") rodzaj = el.rodzaj;
+  else if (el.rodzaj && (MEBLE.has(el.rodzaj) || el.rodzaj === "szafka" || el.rodzaj === "szuflady" || el.rodzaj === "zlew" || el.rodzaj === "narozna")) rodzaj = el.rodzaj;
   if (!rodzaj) return null;
   if (rodzaj === "szafa" || rodzaj === "szafa-przesuwna" || rodzaj === "regal") strefa = "wysoka";
   if (rodzaj === "komoda" || rodzaj === "rtv" || rodzaj === "umywalka") strefa = "dolna";
@@ -159,6 +159,8 @@ export function KreatorWnetrze({
   const kategoria = kategoriaWnetrza(el);
   const szafa = kategoria === "szafa" || kategoria === "przesuwna";
   const rodzaj = rodzajElementu(el);
+  // Drążek tylko w szafie, szuflada nie w szafce wiszącej (wnetrze.ts → typyPrzestrzeniDla).
+  const typyPrzestrzeni = typyPrzestrzeniDla(el);
 
   const ustawWnetrze = (next: Wnetrze) => setEl((e) => ({ ...e, wnetrze: next }));
   const ustawWymiar = (key: "w" | "h" | "d", v: number) => {
@@ -322,7 +324,7 @@ export function KreatorWnetrze({
                                 value={sek.typ}
                                 onChange={(e) => zmienKolumne(c, (kk) => ({ ...kk, sekcje: kk.sekcje.map((s, i) => (i === j ? { ...s, typ: e.target.value as TypPrzestrzeni } : s)) }))}
                               >
-                                {TYPY_PRZESTRZENI.map((t) => (
+                                {(typyPrzestrzeni.includes(sek.typ) ? typyPrzestrzeni : [...typyPrzestrzeni, sek.typ]).map((t) => (
                                   <option key={t} value={t}>
                                     {PRZESTRZEN_LABEL[t]}
                                   </option>
@@ -340,7 +342,7 @@ export function KreatorWnetrze({
                           );
                         })}
                         <div className="actions">
-                          {TYPY_PRZESTRZENI.map((t) => (
+                          {typyPrzestrzeni.map((t) => (
                             <button key={t} type="button" className="btn btn-ghost" onClick={() => dodajPrzestrzen(c, t)} disabled={k.sekcje.length >= GRANICE.sekcjeMax}>
                               + {PRZESTRZEN_LABEL[t]}
                             </button>

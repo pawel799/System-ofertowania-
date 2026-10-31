@@ -30,3 +30,28 @@ export const GRUPY_TYPU: Record<TypProjektu, { presety: readonly GrupaPresetu[];
   lazienka: { presety: ["lazienka"], biblioteka: ["szafki"] },
   inne: { presety: ["szafy", "komody", "regaly", "lazienka", "dolne", "gorne", "polki", "slupki", "agd"], biblioteka: ["szafy", "szafki", "komody", "dolne", "gorne", "slupki", "blaty", "agd", "dodatki"] },
 };
+
+/**
+ * Jak nazywać projekt w tekstach dla klienta (strona, mail, PDF) – żeby szafa nie była „kuchnią”.
+ * Komoda, łazienka i „inne” to po prostu projekt / meble.
+ */
+export type SlowaProjektu = {
+  /** „Kuchnia w 3D”, „Szafa w 3D”, „Projekt w 3D”. */
+  nazwa: string;
+  /** „Twoja kuchnia”, „Twój projekt”. */
+  twoj: string;
+  /** Biernik: „zobacz kuchnię”, „zobacz projekt”. */
+  biernik: string;
+  /** „projekt Twojej kuchni”, „projekt Twoich mebli”. */
+  czego: string;
+  /** „obróć ją / go”. */
+  zaimek: "ją" | "go";
+  /** „Pozycje kuchni”, „Pozycje projektu”. */
+  pozycje: string;
+};
+
+export function slowaProjektu(typ: TypProjektu | undefined): SlowaProjektu {
+  if (!typ || typ === "kuchnia") return { nazwa: "Kuchnia", twoj: "Twoja kuchnia", biernik: "kuchnię", czego: "Twojej kuchni", zaimek: "ją", pozycje: "Pozycje kuchni" };
+  if (typ === "szafa") return { nazwa: "Szafa", twoj: "Twoja szafa", biernik: "szafę", czego: "Twojej szafy", zaimek: "ją", pozycje: "Pozycje projektu" };
+  return { nazwa: "Projekt", twoj: "Twój projekt", biernik: "projekt", czego: "Twoich mebli", zaimek: "go", pozycje: "Pozycje projektu" };
+}

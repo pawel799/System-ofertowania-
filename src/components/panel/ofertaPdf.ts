@@ -9,6 +9,8 @@ import { findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../ka
 import { opisWnetrza } from "@/lib/wnetrze";
 import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik } from "@/lib/modul";
+import { grupyMaterialow, maAgd, opisGrup, type GrupyMaterialow } from "@/lib/opcjeProjektu";
+import { slowaProjektu, type SlowaProjektu, type TypProjektu } from "@/lib/projekt";
 
 export type PdfDane = {
   id: string;
@@ -36,6 +38,12 @@ export type PdfDane = {
   data: string;
   zdjecie: string | null;
   cennikUwaga: string | null;
+  /** Materiały, które projekt ma (opcjeProjektu.ts) – reszty nie ma w PDF ani w cenie. */
+  grupy: GrupyMaterialow;
+  /** „Kuchnia w 3D” / „Szafa w 3D” / „Projekt w 3D”. */
+  slowa: SlowaProjektu;
+  /** Są urządzenia AGD – dopisek, że nie są wliczone. */
+  agd: boolean;
 };
 
 const esc = (s: string) =>
@@ -69,7 +77,11 @@ export function danePdf(args: {
   link3dWazny?: string | null;
   link3dPin?: boolean;
   zdjecie: string | null;
+  /** Modele użyte w planie (oznaczenia ról: front, blat, uchwyt). */
+  modele?: readonly { id: string; tags: Record<string, "front" | "blat" | "uchwyt"> }[];
+  projekt?: TypProjektu;
 }): PdfDane {
+  const grupy = grupyMaterialow({ plan: args.plan, modele: args.modele ?? [] });
   // Snapshot oferty → katalog firmy / RAL → zestaw wbudowany (nigdy gołe id w PDF).
   const mctx = { palettes: args.palettes, katalog: args.katalog, snapshot: args.snapshot };
   const frontSw = findMaterial("front", args.front, mctx);
@@ -87,9 +99,9 @@ export function danePdf(args: {
     cena: cenaElementu(e, args.cennik),
   }));
   const sumaPozycji = bazaKuchni(args.plan, args.cennik);
-  const dopFront = frontSw?.delta ?? 0;
-  const dopBlat = blat?.delta ?? 0;
-  const dopOkucia = okucia?.delta ?? 0;
+  const dopFront = grupy.front ? (frontSw?.delta ?? 0) : 0;
+  const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
+  const dopOkucia = grupy.okucia ? (okucia?.delta ?? 0) : 0;
   return {
     id: args.id,
     title: args.title,
@@ -113,6 +125,9 @@ export function danePdf(args: {
     data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
     zdjecie: args.zdjecie && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(args.zdjecie) ? args.zdjecie : null,
     cennikUwaga: args.cennikUwaga,
+    grupy,
+    slowa: slowaProjektu(args.projekt),
+    agd: maAgd(args.plan),
   };
 }
 
@@ -121,6 +136,28 @@ function wierszDop(nazwa: string, kwota: number) {
   const znak = kwota > 0 ? "dopłata" : "opust";
   return `<tr><td>${esc(nazwa)} <span class="muted">(${znak})</span></td><td></td><td class="num">${esc(pln(kwota))}</td></tr>`;
 }
+
+/** „Fronty: … · Blat: … · Okucia: …” – tylko materiały, które projekt ma. */
+function materialyTekst(d: PdfDane, sep: string) {
+  return [
+    d.grupy.front ? `Fronty: ${d.frontNazwa}` : null,
+    d.grupy.blat ? `Blat: ${d.blatNazwa}` : null,
+    d.grupy.okucia ? `Okucia: ${d.okuciaNazwa}` : null,
+  ]
+    .filter(Boolean)
+    .join(sep);
+}
+
+function materialyHtml(d: PdfDane) {
+  const czesci = [
+    d.grupy.front ? `<b>Fronty:</b> ${esc(d.frontNazwa)}` : null,
+    d.grupy.blat ? `<b>Blat:</b> ${esc(d.blatNazwa)}` : null,
+    d.grupy.okucia ? `<b>Okucia:</b> ${esc(d.okuciaNazwa)}` : null,
+  ].filter(Boolean);
+  return czesci.length ? `<p>${czesci.join(" · ")}</p>` : "";
+}
+
+const NOTA_AGD = "Urządzenia AGD (płyty, okapy, zlewozmywak, bateria, lodówka i mikrofalówka) nie są wliczone.";
 
 export function pdfHtml(d: PdfDane) {
   const uklad = UKLAD_KUCHNI_LABEL[d.plan.uklad];
@@ -138,14 +175,14 @@ export function pdfHtml(d: PdfDane) {
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
   const zdjecie = d.zdjecie ? `<img class="shot" alt="Podgląd zabudowy" src="${d.zdjecie}" />` : "";
   const link = d.link3d
-    ? `<p class="link">Kuchnia w 3D (interaktywna, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
+    ? `<p class="link">${esc(d.slowa.nazwa)} w 3D (interaktywna, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
     : `<p class="link">Podgląd 3D wysyłany jest osobno, linkiem z panelu.</p>`;
   const qr = d.link3d
     ? `<section class="qr">
   ${qrSvg(d.link3d)}
   <div>
-    <p class="eyebrow">Kuchnia w 3D</p>
-    <p><b>Zeskanuj kod telefonem</b> – otworzysz tę kuchnię w 3D, obrócisz ją i zmienisz fronty, blat i uchwyty.</p>
+    <p class="eyebrow">${esc(d.slowa.nazwa)} w 3D</p>
+    <p><b>Zeskanuj kod telefonem</b> – otworzysz ${esc(d.slowa.biernik)} w 3D, obrócisz ${d.slowa.zaimek}${opisGrup(d.grupy) ? ` i zmienisz ${esc(opisGrup(d.grupy))}` : ""}.</p>
     <p class="muted">${esc(d.link3d.replace(/^https?:\/\//, ""))}${d.link3dWazny ? ` · ważny do ${esc(d.link3dWazny)}` : ""}${d.link3dPin ? " · PIN otrzymasz osobno" : ""}</p>
   </div>
 </section>`
@@ -194,7 +231,7 @@ export function pdfHtml(d: PdfDane) {
   <p><b>Dla:</b> ${esc(d.client || "—")}${d.contact ? ` · ${esc(d.contact)}` : ""}</p>
   <p><b>Data:</b> ${esc(d.data)}</p>
   <p><b>Układ:</b> ${esc(uklad)}. ${esc(sciany)}.${esc(pokoj)}</p>
-  <p><b>Fronty:</b> ${esc(d.frontNazwa)} · <b>Blat:</b> ${esc(d.blatNazwa)} · <b>Okucia:</b> ${esc(d.okuciaNazwa)}</p>
+  ${materialyHtml(d)}
 </section>
 ${qr}
 ${zdjecie}
@@ -202,14 +239,14 @@ ${zdjecie}
   <thead><tr><th>Pozycja</th><th class="num">Wymiary (szer. × wys. × gł.)</th><th class="num">Netto</th></tr></thead>
   <tbody>
     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
-    <tr><td>Zabudowa — szafki</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
+    <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
     ${wierszDop(`Fronty: ${d.frontNazwa}`, d.dopFront)}
     ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
     ${wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
     <tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>
   </tbody>
 </table>
-<p class="note">Kwoty netto, bez podatku VAT. Cena szafek wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów. Urządzenia AGD (płyty, okapy, zlewozmywak, bateria, lodówka i mikrofalówka) nie są wliczone. Dopłaty za front, blat i okucia są takie jak na stronie podglądu 3D.</p>
+<p class="note">Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
 ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
 ${link}
 <footer>
@@ -231,12 +268,12 @@ export function pdfTekst(d: PdfDane) {
     "",
     `Przesyłamy ofertę handlową ${d.id}: ${d.title}.`,
     `Układ: ${UKLAD_KUCHNI_LABEL[d.plan.uklad]}.`,
-    `Fronty: ${d.frontNazwa}. Blat: ${d.blatNazwa}. Okucia: ${d.okuciaNazwa}.`,
+    ...(materialyTekst(d, ". ") ? [`${materialyTekst(d, ". ")}.`] : []),
     "",
     "Pozycje (netto):",
     ...(linie.length ? linie : ["(brak pozycji)"]),
     "",
-    `Zabudowa — szafki: ${plnSp(d.sumaPozycji)}`,
+    `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}: ${plnSp(d.sumaPozycji)}`,
     ...(d.dopFront ? [`Fronty: ${plnSp(d.dopFront)}`] : []),
     ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
     ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
@@ -244,10 +281,10 @@ export function pdfTekst(d: PdfDane) {
     "",
     "Plik PDF (układ do druku) zapiszesz przyciskiem „Pobierz PDF” w panelu: w oknie drukowania wybierz „Zapisz jako PDF” i dołącz go do tej wiadomości.",
     ...(d.link3d
-      ? [`Kuchnię w 3D otworzysz z kodu QR w pliku PDF albo tutaj: ${d.link3d}${d.link3dWazny ? ` (link ważny do ${d.link3dWazny})` : ""}.`]
+      ? [`${d.slowa.biernik.charAt(0).toUpperCase()}${d.slowa.biernik.slice(1)} w 3D otworzysz z kodu QR w pliku PDF albo tutaj: ${d.link3d}${d.link3dWazny ? ` (link ważny do ${d.link3dWazny})` : ""}.`]
       : ["Podgląd interaktywny 3D wysyłamy osobno."]),
     "",
-    "Kwoty netto, bez urządzeń AGD. To oferta handlowa, bez rozkroju płyt.",
+    d.agd ? "Kwoty netto, bez urządzeń AGD. To oferta handlowa, bez rozkroju płyt." : "Kwoty netto. To oferta handlowa, bez rozkroju płyt.",
     "Pozdrawiamy",
     d.firma,
   ].join("\n");
@@ -266,7 +303,7 @@ export function qrSvg(text: string) {
   let d = "";
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
   const size = n + 2 * m;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" role="img" aria-label="Kod QR do kuchni w 3D"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" role="img" aria-label="Kod QR do podglądu 3D"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
 }
 
 /** Okno PDF otwierane od razu po kliknięciu (inaczej przeglądarka je zablokuje); treść dochodzi po utworzeniu linku. */

@@ -495,6 +495,7 @@ export function publicView(o: Offer) {
     ...(link.showPrice ? { base: o.base } : {}),
     expires: link.expires,
     ...(o.kuchnia ? { kuchnia: o.kuchnia } : {}),
+    ...(o.projekt ? { projekt: o.projekt } : {}),
     // Snapshot nazw i dopłat; przy ukrytej cenie bez kwot.
     ...(o.materialy ? { materialy: link.showPrice ? o.materialy : ukryjDoplaty(o.materialy) } : {}),
   };

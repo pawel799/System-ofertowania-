@@ -57,7 +57,7 @@ export function RotateHint() {
         <path d="M19.5 8.5a6 6 0 0 1 1 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         <path d="m21.6 13.2-1.1 1.9-1.9-1.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <p className="flex-1 leading-snug">Obróć telefon, żeby lepiej zobaczyć kuchnię</p>
+      <p className="flex-1 leading-snug">Obróć telefon, żeby lepiej zobaczyć projekt w 3D</p>
       <button type="button" onClick={close} aria-label="Zamknij podpowiedź" className="flex-none rounded-full p-2 text-stone-400 hover:text-stone-100">
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" aria-hidden>
           <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

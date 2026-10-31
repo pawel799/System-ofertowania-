@@ -1,3 +1,4 @@
+import type { TypProjektu } from "@/lib/projekt";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { KatalogPozycja, MaterialySnapshot } from "../katalogFirmy";
 import type { ModulCennik, ModulItem } from "@/lib/modul";
@@ -248,6 +249,8 @@ export type PublicOffer = {
   kuchnia?: PlanKuchni;
   /** Modele wstawione w kreatorze (nie cały katalog firmy). */
   modele?: PublicModel[];
+  /** Co projektujemy (kuchnia, szafa…); brak = kuchnia. Teksty na stronie klienta. */
+  projekt?: TypProjektu;
   /** Pakiety RAL studia (fronty do wyboru). */
   palettes?: Palette[];
   /** Katalog materiałów firmy (aktywne pozycje i wybrane w ofercie). */

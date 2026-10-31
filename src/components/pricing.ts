@@ -1,5 +1,6 @@
 import { deltaMaterialu, type KatalogPozycja, type MaterialySnapshot } from "./katalogFirmy";
 import type { Palette } from "./palettes";
+import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)
@@ -25,18 +26,20 @@ export function formatPln(value: number) {
  * Kwota netto: cena bazowa + dopłaty za front, blat i okucia.
  * palettes: pakiety RAL („ral:…”); katalog: pozycje katalogu firmy („cat:…”);
  * snapshot: dopłaty zapisane w ofercie – mają pierwszeństwo, żeby link klienta nie zmieniał ceny po edycji katalogu.
+ * grupy: które materiały oferta w ogóle ma (opcjeProjektu.ts) – np. szafa bez blatu nie dolicza dopłaty za blat.
  */
 export function totalPrice(
   selection: { front: string; countertop: string; hardware: string },
   base: number = BASE_PRICE,
   palettes: Palette[] = [],
-  extra: { katalog?: readonly KatalogPozycja[]; snapshot?: MaterialySnapshot | null } = {},
+  extra: { katalog?: readonly KatalogPozycja[]; snapshot?: MaterialySnapshot | null; grupy?: GrupyMaterialow } = {},
 ) {
   const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot };
+  const g = extra.grupy;
   return (
     base +
-    deltaMaterialu("front", selection.front, ctx) +
-    deltaMaterialu("countertop", selection.countertop, ctx) +
-    deltaMaterialu("hardware", selection.hardware, ctx)
+    (!g || g.front ? deltaMaterialu("front", selection.front, ctx) : 0) +
+    (!g || g.blat ? deltaMaterialu("countertop", selection.countertop, ctx) : 0) +
+    (!g || g.okucia ? deltaMaterialu("hardware", selection.hardware, ctx) : 0)
   );
 }

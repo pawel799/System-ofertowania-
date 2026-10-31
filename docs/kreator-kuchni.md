@@ -55,6 +55,16 @@ Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze –
 
 Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
 
+## Opcje materiałów: kuchnia i reszta domu
+
+Fronty, blat i okucia pokazujemy tylko wtedy, gdy projekt je ma – liczy to jedna funkcja `grupyMaterialow` (`src/lib/opcjeProjektu.ts`) dla kreatora (krok „Materiały”), panelu ofert, strony klienta, PDF i maila, więc wszędzie są te same opcje:
+
+- **blat** – kuchenna szafka dolna, AGD pod blatem i na blacie, element „Blat” albo model 3D z oznaczonym blatem (szafa, komoda, regał, RTV, szafka pod umywalkę na wymiar – bez blatu),
+- **okucia** – element z drzwiami albo szufladami, model z oznaczonymi uchwytami (otwarty regał – bez),
+- **fronty** – element z frontem albo model z oznaczonym frontem.
+
+Ukryta grupa nie dolicza dopłaty. Jeden wgrany model: z jego oznaczeń; kuchnia demo: wszystko. Teksty dla klienta zależą od rodzaju projektu (`slowaProjektu` w `src/lib/projekt.ts`): „Pozycje projektu”, „Zobacz szafę w 3D”, przy cenie „Bez montażu…” (o AGD tylko, gdy w projekcie są urządzenia). Numer oferty: KUCH-, SZAF-, MEBL- albo LAZ- (wspólna numeracja w roku). We wnętrzu drążek jest tylko w szafie, szafka wisząca nie ma szuflad (`typyPrzestrzeniDla`).
+
 ## 3D: drzwi i szuflady, tło
 
 - **Otwórz drzwi i szuflady** (kreator nad podglądem 3D, strona klienta przy „Uwagi do projektu”) otwiera wszystkie fronty; dwuklik na meblu w 3D – tylko ten. Moduły na wymiar: drzwi na zawiasach, szuflady ze skrzynką, drzwi przesuwne, w środku półki i drążki. Modele GLB (biblioteka i wgrane pliki z nazwami `Front_drzwi*`, `Front_szuflada*`, `Front_klapa*`, `Front_panel*`, `Front_zmywarka*`): zawiasy przy bliższym boku, klapy do góry, szuflady z dorobioną skrzynką, uchwyty jadą razem z frontem (`src/components/kuchnia/ruchomeGlb.ts`).
@@ -113,7 +123,7 @@ Model użyty w kreatorze nie da się usunąć, dopóki jest w jakiejś ofercie (
 
 Druga paczka: `seed/modele-szafy-komody-100/` (100 GLB, `katalog.json`, `id-map.json`). Id: `ms` + numer `001`–`100` + id z katalogu bez podkreśleń (np. `ms001szafa2d100`). Nie pokrywa się z `mk01`–`mk50`. Wszystkie mają `uzycie: "modul"`.
 
-W katalogu kreatora są trzy grupy: Szafy, Szafki, Komody. Strefa `wysoka` jest dla szaf i innych mebli od podłogi o wysokości od 145 cm (słupek nie nachodzi na szafkę górną). Wiszące, nadstawka i szafka z lustrem mają strefę `gorna`. Komody, RTV, szafki na buty i łazienkowe z umywalką są `dolne`. Szafa narożna ma rodzaj `narozna`, umywalka `zlew`, komoda z szufladami `szuflady`.
+W katalogu kreatora są trzy grupy: Szafy, Szafki, Komody. Strefa `wysoka` jest dla szaf i innych mebli od podłogi o wysokości od 145 cm (słupek nie nachodzi na szafkę górną). Wiszące, nadstawka i szafka z lustrem mają strefę `gorna`. Komody, RTV, szafki na buty i łazienkowe z umywalką są `dolne`. Rodzaj jak mebel na wymiar: szafy `szafa` (przesuwne i wnękowa `szafa-przesuwna`), komody, szafki nocne, na buty, biurowe i kontenerek `komoda`, RTV `rtv`, regały, witryny i kredens `regal`, szafki z umywalką `umywalka`, słupek łazienkowy, szafka na dokumenty i gospodarcza `szafa`. Wiszące i szafka z lustrem zostają `szafka`. Dzięki temu meble nie dostają kuchennych opcji (blat, „zamień na szuflady kuchenne”).
 
 Sprawdzenie plików, bez sieci (ma wypisać 100/100; kuchnia osobno zostaje 50):
 

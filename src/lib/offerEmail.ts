@@ -1,7 +1,9 @@
 import { FIRMA } from "@/content/firma";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "@/components/catalog";
 import { formatPln, totalPrice } from "@/components/pricing";
-import { CENA_ZAKRES } from "@/lib/plans";
+import { CENA_ZAKRES, CENA_ZAKRES_MEBLE } from "@/lib/plans";
+import { opisGrup, WSZYSTKIE_GRUPY, type GrupyMaterialow } from "@/lib/opcjeProjektu";
+import { slowaProjektu, type TypProjektu } from "@/lib/projekt";
 import { findMaterial, type KontekstMaterialow } from "@/components/katalogFirmy";
 import type { Palette } from "@/components/palettes";
 
@@ -34,6 +36,11 @@ export type OfferEmailData = {
   showPrice?: boolean;
   /** Pakiety RAL, katalog firmy i snapshot oferty (bez nich – zestaw wbudowany). */
   materialy?: KontekstMaterialow;
+  /** Co projektujemy (teksty) i które materiały oferta ma (opcjeProjektu.ts). Brak = kuchnia, wszystkie. */
+  projekt?: TypProjektu;
+  grupy?: GrupyMaterialow;
+  /** W projekcie są urządzenia AGD (dopisek przy cenie). Brak = tak. */
+  agd?: boolean;
   studio: { name: string; phone?: string; email?: string; /** Logo firmy (adres albo data URL); brak = sama nazwa. */ logo?: string | null };
 };
 
@@ -57,9 +64,13 @@ export function renderOfferEmail(d: OfferEmailData) {
   const front = findMaterial("front", d.front, m) ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
   const countertop = findMaterial("countertop", d.countertop, m) ?? { ...COUNTERTOPS[0], zrodlo: "wbudowany" as const };
   const hardware = findMaterial("hardware", d.hardware, m) ?? { ...HARDWARE[0], zrodlo: "wbudowany" as const };
+  const grupy = d.grupy ?? WSZYSTKIE_GRUPY;
+  const slowa = slowaProjektu(d.projekt);
+  const zmien = opisGrup(grupy);
   const price = totalPrice({ front: d.front, countertop: d.countertop, hardware: d.hardware }, d.base, (m.palettes ?? []) as Palette[], {
     katalog: m.katalog,
     snapshot: m.snapshot,
+    grupy,
   });
   const url = `${d.origin}${d.offerPath}`;
   const showPrice = d.showPrice ?? true;
@@ -75,7 +86,7 @@ export function renderOfferEmail(d: OfferEmailData) {
               </td>
             </tr>`;
 
-  const preheader = `Twoja kuchnia w 3D: obróć ją, zmień fronty i blat${showPrice ? ", cena przeliczy się sama" : ""}.`;
+  const preheader = `${slowa.twoj} w 3D: obróć ${slowa.zaimek}${zmien ? `, zmień ${zmien}` : ""}${showPrice ? ", cena przeliczy się sama" : ""}.`;
 
   return `<!doctype html>
 <html lang="pl" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -110,13 +121,13 @@ export function renderOfferEmail(d: OfferEmailData) {
           <td class="card" bgcolor="#ffffff" style="background:#ffffff;border-radius:16px;padding:40px 40px 36px;border:1px solid #e7e5e4;">
             <p style="margin:0;font:12px/1.4 Helvetica,Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#78716c;">Oferta ${esc(d.code)}</p>
             <h1 style="margin:10px 0 0;font:600 26px/1.2 Helvetica,Arial,sans-serif;color:#1c1917;">${esc(d.title)}</h1>
-            <p style="margin:18px 0 0;font:16px/1.6 Helvetica,Arial,sans-serif;color:#44403c;">Dzień dobry, ${esc(d.greeting)}!<br>Przygotowaliśmy projekt Twojej kuchni. Możesz ją obejrzeć w&nbsp;3D, obrócić, zmienić fronty, blat i&nbsp;uchwyty${showPrice ? ", a&nbsp;cena przeliczy się od razu" : ""}.</p>
+            <p style="margin:18px 0 0;font:16px/1.6 Helvetica,Arial,sans-serif;color:#44403c;">Dzień dobry, ${esc(d.greeting)}!<br>Przygotowaliśmy projekt ${esc(slowa.czego)}. Możesz ${slowa.zaimek} obejrzeć w&nbsp;3D, obrócić${zmien ? `, zmienić ${esc(zmien)}` : ""}${showPrice ? ", a&nbsp;cena przeliczy się od razu" : ""}.</p>
 
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;">
               ${row("Układ", d.layout)}
-              ${row("Fronty", front.name, front.color ?? "#d6d3d1")}
-              ${row("Blat", countertop.name, COUNTERTOP_COLOR[countertop.id] ?? countertop.color ?? "#e7e5e4")}
-              ${row("Uchwyty", hardware.name, HANDLE_COLOR[hardware.id] ?? hardware.color ?? "#e7e5e4")}
+              ${grupy.front ? row("Fronty", front.name, front.color ?? "#d6d3d1") : ""}
+              ${grupy.blat ? row("Blat", countertop.name, COUNTERTOP_COLOR[countertop.id] ?? countertop.color ?? "#e7e5e4") : ""}
+              ${grupy.okucia ? row("Uchwyty", hardware.name, HANDLE_COLOR[hardware.id] ?? hardware.color ?? "#e7e5e4") : ""}
               <tr><td colspan="2" style="border-top:1px solid #e7e5e4;font-size:0;line-height:0;">&nbsp;</td></tr>
             </table>
 
@@ -124,7 +135,7 @@ export function renderOfferEmail(d: OfferEmailData) {
               showPrice
                 ? `<p style="margin:20px 0 0;font:12px/1.4 Helvetica,Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:#78716c;">Szacunek netto</p>
             <p class="price" style="margin:4px 0 0;font:600 34px/1.1 Helvetica,Arial,sans-serif;color:#1c1917;">${formatPln(price)}</p>
-            <p style="margin:6px 0 0;font:13px/1.5 Helvetica,Arial,sans-serif;color:#78716c;">${CENA_ZAKRES}</p>`
+            <p style="margin:6px 0 0;font:13px/1.5 Helvetica,Arial,sans-serif;color:#78716c;">${d.agd === false ? CENA_ZAKRES_MEBLE : CENA_ZAKRES}</p>`
                 : ""
             }
 
@@ -133,11 +144,11 @@ export function renderOfferEmail(d: OfferEmailData) {
                 <td align="center" bgcolor="#1c1917" style="border-radius:999px;background:#1c1917;">
                   <!--[if mso]>
                   <v:roundrect href="${url}" style="height:50px;v-text-anchor:middle;width:260px;" arcsize="50%" stroke="f" fillcolor="#1c1917">
-                    <w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;">Zobacz kuchnię w 3D</center>
+                    <w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;">Zobacz ${slowa.biernik} w 3D</center>
                   </v:roundrect>
                   <![endif]-->
                   <!--[if !mso]><!-->
-                  <a href="${url}" style="display:inline-block;padding:15px 30px;font:600 16px/20px Helvetica,Arial,sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">Zobacz kuchnię w 3D &rarr;</a>
+                  <a href="${url}" style="display:inline-block;padding:15px 30px;font:600 16px/20px Helvetica,Arial,sans-serif;color:#ffffff;text-decoration:none;border-radius:999px;">Zobacz ${slowa.biernik} w 3D &rarr;</a>
                   <!--<![endif]-->
                 </td>
               </tr>

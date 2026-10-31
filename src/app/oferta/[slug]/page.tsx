@@ -12,7 +12,7 @@ import ClientOffer from "@/components/panel/ClientOffer";
  */
 export const metadata: Metadata = {
   title: "Oferta",
-  description: "Twoja kuchnia w 3D: materiały do wyboru i wycena.",
+  description: "Projekt mebli w 3D: materiały do wyboru i wycena.",
   robots: { index: false, follow: false },
 };
 

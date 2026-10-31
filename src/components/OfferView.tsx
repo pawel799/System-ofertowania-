@@ -9,6 +9,8 @@ import { DragHint } from "./ViewerHints";
 import { PelnyEkranWarstwa, PrzyciskPelnegoEkranu } from "./PelnyEkran";
 import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
 import type { PlanKuchni } from "@/lib/kuchnia";
+import { grupyMaterialow, maAgd } from "@/lib/opcjeProjektu";
+import type { TypProjektu } from "@/lib/projekt";
 import type { PublicModel } from "./modelRoles";
 
 /*
@@ -25,6 +27,7 @@ export default function OfferView({
   model,
   kuchnia,
   modele,
+  projekt,
 }: {
   /** Numer oferty, np. "KUCH-2026/12". */
   code: string;
@@ -42,7 +45,13 @@ export default function OfferView({
   kuchnia?: PlanKuchni | null;
   /** Modele firmowe użyte jako elementy kreatora. */
   modele?: PublicModel[] | null;
+  /** Co projektujemy (brak = kuchnia). */
+  projekt?: TypProjektu;
 }) {
+  // Te same grupy materiałów co w kreatorze: szafa bez blatu, otwarty regał bez uchwytów…
+  const zPlanu = !!kuchnia?.elementy.length;
+  const grupy = grupyMaterialow({ plan: zPlanu ? kuchnia : null, model: zPlanu ? null : model, modele });
+  const agd = zPlanu ? maAgd(kuchnia) : !projekt || projekt === "kuchnia";
   return (
     // Telefon (pion): scena 3D ~58svh na górze, pod nią tytuł i konfigurator w zwykłym przewijaniu,
     // cena i przycisk przyklejone na dole. Komputer: scena na całym ekranie, nakładka na wierzchu.
@@ -93,7 +102,7 @@ export default function OfferView({
         </div>
 
         {/* Pasek wyboru materiałów na dole, jak pasek zadań. */}
-        <MaterialsPanel className="shrink-0" base={base} showPrice={showPrice} code={code} />
+        <MaterialsPanel className="shrink-0" base={base} showPrice={showPrice} code={code} grupy={grupy} agd={agd} />
       </div>
     </main>
   );

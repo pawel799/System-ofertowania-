@@ -11,7 +11,7 @@ const Scena = dynamic(() => import("./KuchniaScena"), {
   ssr: false,
   loading: () => (
     <div className="absolute inset-0 grid place-items-center bg-[#141311] text-xs uppercase tracking-[0.2em] text-stone-400">
-      Wczytywanie kuchni…
+      Wczytywanie podglądu 3D…
     </div>
   ),
 });

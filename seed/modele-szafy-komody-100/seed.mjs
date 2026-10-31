@@ -63,6 +63,12 @@ const RODZAJE = new Set([
   "lodowka-zabudowa",
   "polka",
   "blat",
+  "szafa",
+  "szafa-przesuwna",
+  "komoda",
+  "regal",
+  "rtv",
+  "umywalka",
 ]);
 const GRUPY = new Set(["szafy", "szafki", "komody"]);
 /** Ten sam obrys co MODEL_LIMITS w src/lib/kuchnia.ts — kreator przyjmuje model GLB w tych widełkach. */

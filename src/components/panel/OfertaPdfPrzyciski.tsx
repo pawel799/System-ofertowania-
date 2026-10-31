@@ -1,5 +1,6 @@
 "use client";
 
+import { slowaProjektu, type TypProjektu } from "@/lib/projekt";
 import { useRef } from "react";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Palette } from "../palettes";
@@ -35,6 +36,8 @@ export function OfertaPdfPrzyciski({
   linkUrl,
   zapewnijLink,
   ujecie,
+  modele,
+  projekt,
 }: {
   id: string;
   title: string;
@@ -51,6 +54,9 @@ export function OfertaPdfPrzyciski({
   /** Zwraca aktywny link 3D (tworzy go, gdy go nie ma albo wygasł); null = PDF bez kodu QR. */
   zapewnijLink?: () => Promise<LinkDoPdf | null>;
   ujecie?: { current: KuchniaUjecie | null };
+  /** Modele w planie (oznaczenia ról) – PDF pokazuje tylko materiały, które projekt ma. */
+  modele?: readonly { id: string; tags: Record<string, "front" | "blat" | "uchwyt"> }[];
+  projekt?: TypProjektu;
 }) {
   const brand = useBrand();
   const { cennik, blad } = useCennik();
@@ -60,7 +66,7 @@ export function OfertaPdfPrzyciski({
   const zloz = (zeZdjeciem: boolean, link: LinkDoPdf | null) =>
     danePdf({
       id: link?.id ?? id,
-      title: title.trim() || "Kuchnia",
+      title: title.trim() || slowaProjektu(projekt).nazwa,
       client: client.trim(),
       contact: contact.trim(),
       firma: brand.name,
@@ -78,6 +84,8 @@ export function OfertaPdfPrzyciski({
       link3dWazny: link?.wazny ?? null,
       link3dPin: link?.pin ?? false,
       zdjecie: zeZdjeciem ? (ujecie?.current?.jpeg() ?? null) : null,
+      modele,
+      projekt,
     });
 
   /** Link do kodu QR; błąd nie blokuje PDF – wtedy plik wychodzi bez kodu. */

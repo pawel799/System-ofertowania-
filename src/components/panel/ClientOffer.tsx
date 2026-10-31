@@ -13,6 +13,7 @@ import { ApiError, publicApi, type BrandSettings, type PublicOffer } from "./off
 import { setBrandCache, useBrand } from "@/lib/brand";
 import { FIRMA } from "@/content/firma";
 import { setRequestLink } from "@/lib/zapytania";
+import { slowaProjektu } from "@/lib/projekt";
 
 /*
  * Strona, którą klient dostaje z panelu: /oferta/<link>.
@@ -114,7 +115,7 @@ export default function ClientOffer() {
             <>
               {offer.comments ? <ClientComments slug={slug} pin={okPin} /> : null}
               {offer.moduly?.length ? (
-                <ModulyDialog mode="oferta" moduly={offer.moduly} etykieta={offer.kuchnia ? `Pozycje kuchni (${offer.moduly.length})` : undefined} />
+                <ModulyDialog mode="oferta" moduly={offer.moduly} etykieta={offer.kuchnia ? `${slowaProjektu(offer.projekt).pozycje} (${offer.moduly.length})` : undefined} />
               ) : null}
             </>
           ) : undefined
@@ -122,6 +123,7 @@ export default function ClientOffer() {
         model={offer.model ?? null}
         kuchnia={offer.kuchnia}
         modele={offer.modele}
+        projekt={offer.projekt}
       />
     );
   }
