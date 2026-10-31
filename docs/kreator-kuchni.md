@@ -55,6 +55,10 @@ Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze –
 
 Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
 
+## Obrót mebla o dowolny kąt
+
+We właściwościach zaznaczonego mebla (krok „Meble”) jest pole **Obrót** (0–359°) i przyciski ↻/↺ 15°, „Prosto” i „Obróć 90°”. Zapis: `rot` (najbliższy kierunek ściany 0/90/180/270 – ściany, rzędy, „Dociągnij”) + `kat` (reszta, −45…45°, `zKata` w `src/lib/kuchnia.ts`). Rzut rysuje mebel obrócony, 3D obraca bryłę i wymiary, PDF dopisuje „pod kątem 30°”. Kolizje i przyciąganie liczą się z prostokąta obejmującego obrócony mebel (`rect`), więc nic nie wejdzie w jego narożnik. Mebel stojący przy ścianie zostaje przy niej po obrocie i nie wchodzi w ścianę.
+
 ## Płyty korpusów, dodatki i cena końcowa
 
 Ustawienia → Cennik modułów:

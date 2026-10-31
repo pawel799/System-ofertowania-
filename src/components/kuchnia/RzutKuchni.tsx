@@ -6,6 +6,7 @@ import {
   nachodzi,
   przyciagnij,
   rect,
+  rectBazowy,
   nazwaNaRzucie,
   skrotElementu,
   STREFA_LABEL,
@@ -61,8 +62,11 @@ function punkt(svg: SVGSVGElement, e: { clientX: number; clientY: number }) {
   return { x: p.x, y: p.y };
 }
 
+/** Obrót na rzucie (SVG, oś y w dół): kąt rośnie przeciwnie do wskazówek zegara, jak w 3D. */
+const obrotRzutu = (e: ElementKuchni) => (e.kat ? `rotate(${-e.kat} ${e.x} ${e.z})` : undefined);
+
 function krawedzFrontu(e: ElementKuchni) {
-  const r = rect(e);
+  const r = rectBazowy(e);
   if (e.rot === 0) return { x1: r.x0, y1: r.z1, x2: r.x1, y2: r.z1 };
   if (e.rot === 180) return { x1: r.x0, y1: r.z0, x2: r.x1, y2: r.z0 };
   if (e.rot === 90) return { x1: r.x1, y1: r.z0, x2: r.x1, y2: r.z1 };
@@ -123,7 +127,7 @@ function Wymiar({
 }
 
 function wymiaryZaznaczenia(e: ElementKuchni) {
-  const r = rect(e);
+  const r = rectBazowy(e);
   const front = krawedzFrontu(e);
   const cx = (r.x0 + r.x1) / 2;
   const cz = (r.z0 + r.z1) / 2;
@@ -281,7 +285,8 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         </>
       )}
       {rysowane.map((e) => {
-        const r = rect(e);
+        // Rysujemy obrys bez dokładnego kąta i obracamy całą grupę (mebel pod dowolnym kątem).
+        const r = rectBazowy(e);
         const front = krawedzFrontu(e);
         const nachodziTeraz = podglad?.id === e.id && podgladNachodzi;
         const szer = Math.max(1, r.x1 - r.x0);
@@ -295,7 +300,7 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         };
         const detale = wymiary && zaznaczona ? wymiaryZaznaczenia(e) : null;
         return (
-          <g key={e.id}>
+          <g key={e.id} transform={obrotRzutu(e)}>
             <rect
               className="kr-piece"
               data-zone={e.strefa}
@@ -412,11 +417,11 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       })}
       {rysowane.map((e) => {
         if (wymiary && zaznaczony === e.id) return null;
-        const r = rect(e);
+        const r = rectBazowy(e);
         const napis = napisNaRzucie(e, r);
         if (!napis) return null;
         return (
-          <text key={`t-${e.id}`} className="kr-label" data-zone={e.strefa} x={(r.x0 + r.x1) / 2} y={napis.y} textAnchor="middle" dominantBaseline="central">
+          <text key={`t-${e.id}`} className="kr-label" data-zone={e.strefa} x={(r.x0 + r.x1) / 2} y={napis.y} textAnchor="middle" dominantBaseline="central" transform={obrotRzutu(e)}>
             {napis.tekst}
           </text>
         );

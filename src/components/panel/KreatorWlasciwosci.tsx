@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  katElementu,
   dlugoscRzedu,
   limityElementu,
   RODZAJ_LABEL,
@@ -64,6 +65,56 @@ export function PoleCm({
   );
 }
 
+/** Kąt obrotu mebla: pole 0–359° i szybkie ±15°; „Prosto” wraca do najbliższego kierunku ściany. */
+function PoleKata({ kat, onKat }: { kat: number; onKat: (stopnie: number) => void }) {
+  const [tekst, setTekst] = useState(String(kat));
+  useEffect(() => setTekst(String(kat)), [kat]);
+  const zatwierdz = () => {
+    const n = Math.round(Number(tekst.replace(",", ".")));
+    if (!Number.isFinite(n) || tekst.trim() === "") return setTekst(String(kat));
+    const v = ((n % 360) + 360) % 360;
+    setTekst(String(v));
+    if (v !== kat) onKat(v);
+  };
+  const krzywo = kat % 90 !== 0;
+  return (
+    <div className="kr-kat">
+      <label htmlFor="k-kat">
+        Obrót
+        <span className="kr-kat-pole">
+          <input
+            id="k-kat"
+            className="input"
+            inputMode="numeric"
+            autoComplete="off"
+            value={tekst}
+            onChange={(e) => setTekst(e.target.value.replace(/[^\d-]/g, "").slice(0, 4))}
+            onBlur={zatwierdz}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+            }}
+          />
+          °
+        </span>
+      </label>
+      <div className="kr-kat-przyciski" role="group" aria-label="Obrót mebla">
+        <button type="button" className="btn btn-ghost" aria-label="Obróć o 15° w prawo" onClick={() => onKat((kat + 345) % 360)}>
+          ↻ 15°
+        </button>
+        <button type="button" className="btn btn-ghost" aria-label="Obróć o 15° w lewo" onClick={() => onKat((kat + 15) % 360)}>
+          ↺ 15°
+        </button>
+        {krzywo ? (
+          <button type="button" className="btn btn-plain" onClick={() => onKat(Math.round(kat / 90) * 90 % 360)}>
+            Prosto
+          </button>
+        ) : null}
+      </div>
+      <span className="kr-hint">Dowolny kąt 0–359° (np. mebel w narożniku albo wyspa). Na rzucie kolizje liczą się z obrysu wokół mebla.</span>
+    </div>
+  );
+}
+
 export function KreatorWlasciwosci({
   plan,
   element,
@@ -72,6 +123,7 @@ export function KreatorWlasciwosci({
   onNazwa,
   onWymiar,
   onObrot,
+  onKat,
   onUsun,
   onKopiuj,
   onDociagnij,
@@ -85,6 +137,8 @@ export function KreatorWlasciwosci({
   onNazwa: (nazwa: string) => void;
   onWymiar: (key: "w" | "h" | "d", value: number) => boolean | void;
   onObrot: () => void;
+  /** Dowolny kąt [°, 0–359] – mebel pod kątem (np. narożnik pokoju, wyspa). */
+  onKat?: (stopnie: number) => void;
   onUsun: () => void;
   onKopiuj: () => void;
   onDociagnij: () => void;
@@ -140,6 +194,7 @@ export function KreatorWlasciwosci({
           </button>
         </p>
       ) : null}
+      {onKat ? <PoleKata key={element.id} kat={katElementu(element)} onKat={onKat} /> : null}
       <div className="actions">
         <button type="button" className="btn btn-ghost" onClick={onObrot}>
           Obróć 90°

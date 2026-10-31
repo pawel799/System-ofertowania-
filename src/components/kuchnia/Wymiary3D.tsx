@@ -1,7 +1,7 @@
 "use client";
 
 import { Html, Line } from "@react-three/drei";
-import { rect, zasiegNaScianie, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { rectBazowy, zasiegNaScianie, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { yElementu } from "./uklad3d";
 
 type Pkt = [number, number, number];
@@ -43,8 +43,23 @@ function cm(n: number) {
   return `${Math.round(n)} cm`;
 }
 
+/** Wymiary mebla obróconego o dowolny kąt: te same linie co dla rot, obrócone wokół środka (oś y, jak bryła). */
 function wymiaryModulu(el: ElementKuchni, plan: PlanKuchni): { a: Pkt; b: Pkt; tekst: string }[] {
-  const r = rect(el);
+  const linie = wymiaryBazowe(el, plan);
+  if (!el.kat) return linie;
+  const k = (el.kat * Math.PI) / 180;
+  const cx = el.x / 100;
+  const cz = el.z / 100;
+  const obroc = ([x, y, z]: Pkt): Pkt => {
+    const dx = x - cx;
+    const dz = z - cz;
+    return [cx + dx * Math.cos(k) + dz * Math.sin(k), y, cz - dx * Math.sin(k) + dz * Math.cos(k)];
+  };
+  return linie.map((l) => ({ ...l, a: obroc(l.a), b: obroc(l.b) }));
+}
+
+function wymiaryBazowe(el: ElementKuchni, plan: PlanKuchni): { a: Pkt; b: Pkt; tekst: string }[] {
+  const r = rectBazowy(el);
   const y0 = yElementu(el, plan);
   const y1 = y0 + el.h / 100;
   const x0 = r.x0 / 100;

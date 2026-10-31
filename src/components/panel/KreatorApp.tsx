@@ -35,6 +35,8 @@ import {
   type ElementKuchni,
   type Obrot,
   type Strefa,
+  zKata,
+  rect,
   type PlanKuchni,
   type Sciana,
 } from "@/lib/kuchnia";
@@ -782,6 +784,22 @@ export default function KreatorApp() {
                     onWymiar={(key, value) => (element ? ustawWymiar(element.id, key, value) : false)}
                     onObrot={() => {
                       if (element) aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }));
+                    }}
+                    onKat={(stopnie) => {
+                      if (!element) return;
+                      aktualizujElement(element.id, (el) => {
+                        const { kat: _stary, ...bez } = el;
+                        void _stary;
+                        const obrocony = { ...bez, ...zKata(stopnie) };
+                        // Mebel przy ścianie zostaje przy niej (ten sam odstęp obrysu), a obrys nigdy nie wchodzi w ścianę A ani B (L).
+                        const r0 = rect(el);
+                        const r = rect(obrocony);
+                        const przyA = r0.z0 < 24;
+                        const przyB = plan.uklad === "L" && r0.x0 < 24;
+                        const z = przyA ? obrocony.z + Math.round(Math.max(0, r0.z0) - r.z0) : r.z0 < 0 ? obrocony.z - Math.floor(r.z0) : obrocony.z;
+                        const x = przyB ? obrocony.x + Math.round(Math.max(0, r0.x0) - r.x0) : plan.uklad === "L" && r.x0 < 0 ? obrocony.x - Math.floor(r.x0) : obrocony.x;
+                        return { ...obrocony, x, z };
+                      });
                     }}
                     onUsun={() => {
                       if (!element) return;

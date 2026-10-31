@@ -508,6 +508,14 @@
 .pnl .kat-probka { width: 28px; height: 28px; border-radius: 7px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); align-self: center; }
 .pnl .set-row[data-off] { opacity: 0.6; }
 
+/* Kreator → właściwości: obrót mebla o dowolny kąt */
+.pnl .kr-kat { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px; margin-top: 4px; }
+.pnl .kr-kat label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; }
+.pnl .kr-kat-pole { display: flex; align-items: center; gap: 4px; }
+.pnl .kr-kat-pole .input { width: 64px; }
+.pnl .kr-kat-przyciski { display: flex; gap: 6px; }
+.pnl .kr-kat .kr-hint { flex-basis: 100%; }
+
 /* Kreator → Materiały: dodatki do ceny i rozbicie ceny końcowej */
 .pnl .kr-dodatki-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .pnl .kr-dodatki-lista li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--g3); }

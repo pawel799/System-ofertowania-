@@ -91,7 +91,10 @@ export type ElementKuchni = {
   d: number;
   x: number;
   z: number;
+  /** Kierunek frontu (ściana, rząd, dociąganie): 0, 90, 180 albo 270°. */
   rot: Obrot;
+  /** Dokładny obrót ponad rot [°], od −45 do 45 – mebel ustawiony pod dowolnym kątem (pełny kąt = rot + kat). */
+  kat?: number;
   /** Półki, szuflady, drążki i rodzaj frontu (tylko moduły na wymiar). Brak = układ domyślny (wnetrzeDomyslne). */
   wnetrze?: Wnetrze;
 };
@@ -419,11 +422,42 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
 
 export type Rect = { x0: number; z0: number; x1: number; z1: number };
 
-/** Obrys w rzucie. Sąsiednie szafki stykające się krawędzią nie nachodzą. */
-export function rect(e: { x: number; z: number; w: number; d: number; rot: number }): Rect {
+/** Obrys bez dokładnego kąta (tylko rot) – tak rysujemy mebel na rzucie, zanim obrócimy go o kat. */
+export function rectBazowy(e: { x: number; z: number; w: number; d: number; rot: number }): Rect {
   const wzdluzX = e.rot % 180 === 0 ? e.w : e.d;
   const wzdluzZ = e.rot % 180 === 0 ? e.d : e.w;
   return { x0: e.x - wzdluzX / 2, z0: e.z - wzdluzZ / 2, x1: e.x + wzdluzX / 2, z1: e.z + wzdluzZ / 2 };
+}
+
+/**
+ * Obrys w rzucie (kolizje, przyciąganie, ściany). Sąsiednie szafki stykające się krawędzią nie nachodzą.
+ * Mebel obrócony o dowolny kąt: prostokąt, który go obejmuje (bezpiecznie – nic nie wejdzie w jego narożnik).
+ */
+export function rect(e: { x: number; z: number; w: number; d: number; rot: number; kat?: number }): Rect {
+  const b = rectBazowy(e);
+  if (!e.kat) return b;
+  const k = (e.kat * Math.PI) / 180;
+  const bx = b.x1 - b.x0;
+  const bz = b.z1 - b.z0;
+  const wx = Math.abs(bx * Math.cos(k)) + Math.abs(bz * Math.sin(k));
+  const wz = Math.abs(bx * Math.sin(k)) + Math.abs(bz * Math.cos(k));
+  return { x0: e.x - wx / 2, z0: e.z - wz / 2, x1: e.x + wx / 2, z1: e.z + wz / 2 };
+}
+
+/** Pełny kąt elementu [°, 0–359]: rot + kat. */
+export const katElementu = (e: { rot: number; kat?: number }) => (((e.rot + (e.kat ?? 0)) % 360) + 360) % 360;
+
+/**
+ * Dowolny kąt [°] → rot (najbliższy kierunek ściany: 0/90/180/270) + kat (reszta, −45…45).
+ * Dzięki temu ściany, rzędy i „Dociągnij” liczą jak dotąd, a mebel stoi pod zadanym kątem.
+ */
+export function zKata(stopnie: number): { rot: Obrot; kat?: number } {
+  const a = ((Math.round(stopnie) % 360) + 360) % 360;
+  const rot = ((Math.round(a / 90) * 90) % 360) as Obrot;
+  let kat = a - rot;
+  if (kat > 180) kat -= 360;
+  if (kat <= -180) kat += 360;
+  return kat ? { rot, kat } : { rot };
 }
 
 export function nachodzi(a: Rect, b: Rect) {
@@ -951,6 +985,11 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     }
     const rot = e.rot;
     if (typeof rot !== "number" || !OBROTY.includes(rot as Obrot)) blad(`Element ${i + 1}: obrót musi być 0, 90, 180 albo 270°.`);
+    let kat: number | undefined;
+    if (e.kat !== undefined && e.kat !== null) {
+      if (typeof e.kat !== "number" || !Number.isFinite(e.kat) || e.kat < -45 || e.kat > 45) blad(`Element ${i + 1}: dokładny kąt od −45 do 45°.`);
+      kat = Math.round(e.kat as number) || undefined;
+    }
     const nazwa = tekst(e.nazwa, `nazwa elementu ${i + 1}`, 80);
     const strefa = jedno(e.strefa, STREFY, `strefa elementu ${i + 1}`);
     const rodzaj: RodzajElementu =
@@ -983,6 +1022,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       x: cm(e.x, `pozycja x elementu ${i + 1}`, POLOZENIE.min, POLOZENIE.max),
       z: cm(e.z, `pozycja z elementu ${i + 1}`, POLOZENIE.min, POLOZENIE.max),
       rot: rot as Obrot,
+      ...(kat ? { kat } : {}),
       ...(wnetrze ? { wnetrze } : {}),
     };
   });

@@ -186,7 +186,7 @@ function ElementWidok({
   return (
     <group
       position={[el.x / 100, y, el.z / 100]}
-      rotation={[0, (el.rot * Math.PI) / 180, 0]}
+      rotation={[0, ((el.rot + (el.kat ?? 0)) * Math.PI) / 180, 0]}
       onClick={(e) => {
         e.stopPropagation();
         onWybierz?.(el.id);
