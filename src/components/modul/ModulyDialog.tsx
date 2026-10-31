@@ -14,7 +14,7 @@ import { formatPln } from "../pricing";
 const ModulView = dynamic(() => import("./ModulView"), { ssr: false, loading: () => <p className="p-6 text-sm text-stone-500">Wczytywanie…</p> });
 
 type Props =
-  | { mode: "oferta"; moduly: (ModulItem & { cena?: number })[]; etykieta?: string }
+  | { mode: "oferta"; moduly: (ModulItem & { cena?: number })[]; etykieta?: string; /** Dodatki do ceny (transport, montaż…) – w sumie. */ dodatki?: { nazwa: string; kwota: number }[] }
   | { mode: "konfigurator"; cennik?: ModulCennik; footer?: (dims: { w: number; h: number; d: number }) => ReactNode };
 
 export default function ModulyDialog(props: Props) {
@@ -29,7 +29,11 @@ export default function ModulyDialog(props: Props) {
 
   if (props.mode === "oferta" && !props.moduly.length) return null;
   const label = props.mode === "oferta" ? props.etykieta ?? `Szafki na wymiar (${props.moduly.length})` : "Szafka na wymiar";
-  const suma = props.mode === "oferta" && props.moduly.every((m) => m.cena !== undefined) ? props.moduly.reduce((s, m) => s + (m.cena ?? 0), 0) : undefined;
+  const dodatki = props.mode === "oferta" ? (props.dodatki ?? []) : [];
+  const suma =
+    props.mode === "oferta" && props.moduly.every((m) => m.cena !== undefined)
+      ? props.moduly.reduce((s, m) => s + (m.cena ?? 0), 0) + dodatki.reduce((s, d) => s + d.kwota, 0)
+      : undefined;
 
   return (
     <>
@@ -55,6 +59,11 @@ export default function ModulyDialog(props: Props) {
                     {m.nazwa}
                     {m.cena !== undefined ? ` · ${formatPln(m.cena)}` : ""}
                   </button>
+                ))}
+                {dodatki.map((d, i) => (
+                  <span key={`d${i}`} className="rounded-full border border-dashed border-stone-300 px-3 py-1 text-stone-600">
+                    {d.nazwa} · {formatPln(d.kwota)}
+                  </span>
                 ))}
                 {suma !== undefined ? <span className="ml-2 font-medium">Razem: {formatPln(suma)}</span> : null}
               </div>

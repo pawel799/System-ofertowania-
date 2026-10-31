@@ -9,8 +9,9 @@
  *   obrót 0: front w +z, plecy przy ścianie A (z = 0),
  *   obrót 90: front w +x, plecy przy ścianie B (x = 0).
  */
-import { DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, type ModulCennik, type ModulItem } from "./modul";
-import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, type Wnetrze } from "./wnetrze";
+import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
+import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
+import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 
 export type UkladKuchni = "ciag" | "L";
@@ -106,6 +107,10 @@ export type PlanKuchni = {
   elementy: ElementKuchni[];
   /** Odpowiedzi z kreatora krok po kroku (wysokość, okna, drzwi, woda, AGD, potrzeby). */
   wywiad?: Wywiad;
+  /** Płyta korpusów z cennika (ModulCennik.plyty). Brak = domyślna. */
+  plyta?: string;
+  /** Dodatki do ceny: pozycje z cennika i własne pozycje oferty (dodatki.ts). */
+  dodatki?: DodatekOferty[];
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -840,15 +845,44 @@ export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
   return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
 }
 
-/** Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze. */
+/** Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze i płytą oferty. */
 export function pozycjeKuchniZCena(plan: PlanKuchni, cennik: ModulCennik) {
-  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaElementu(e, cennik) ?? 0 }));
+  const c = cennikZPlyta(cennik, plan.plyta);
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaElementu(e, c) ?? 0 }));
 }
 
-/** Suma netto zabudowy (bez AGD). Przy niepustej kuchni minimum 1 zł (pole base oferty musi być > 0). */
+/** Suma mebli (bez AGD i dodatków) z płytą wybraną w ofercie. */
+export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
+  const c = cennikZPlyta(cennik, plan.plyta);
+  return plan.elementy.reduce((s, e) => s + (cenaElementu(e, c) ?? 0), 0);
+}
+
+/**
+ * Metry bieżące zabudowy [m] (dla dodatków „za mb”, np. montaż): szerokość mebli stojących
+ * albo – gdy jest ich mniej – wiszących. AGD wolnostojące i elementy na blacie się nie liczą.
+ */
+export function metryBiezace(plan: PlanKuchni) {
+  const suma = (strefy: Strefa[]) => plan.elementy.filter((e) => strefy.includes(e.strefa) && wycenianyElement(e) && rodzajElementu(e) !== "blat").reduce((s, e) => s + e.w, 0);
+  return Math.round(Math.max(suma(["dolna", "wysoka"]), suma(["gorna"])) ) / 100;
+}
+
+/** Płyta korpusów w projekcie [m²]: korpusy (jak wzór ceny) + półki, przegrody i skrzynki szuflad z wnętrza. */
+export function plytaProjektu(plan: PlanKuchni) {
+  let m2 = 0;
+  for (const e of plan.elementy) {
+    if (!wycenianyElement(e)) continue;
+    m2 += modulPowierzchnie(e).plyta;
+    if (e.wnetrze) m2 += zliczWnetrze(e, e.wnetrze).plytaM2;
+  }
+  return Math.round(m2 * 100) / 100;
+}
+
+/** Suma netto oferty bez dopłat za materiały: meble + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
-  return Math.max(1, plan.elementy.reduce((s, e) => s + (cenaElementu(e, cennik) ?? 0), 0));
+  const meble = sumaMebli(plan, cennik);
+  const dodatki = wycenDodatki(plan.dodatki, cennik, { meble, mb: metryBiezace(plan) }).reduce((s, d) => s + d.kwota, 0);
+  return Math.max(1, meble + dodatki);
 }
 
 export function wystajePozaSciany(plan: PlanKuchni) {
@@ -960,7 +994,25 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       blad(e instanceof Error ? e.message : "Wywiad ma zły format.");
     }
   }
-  const plan: PlanKuchni = { uklad, scianaA, scianaB, pomieszczenie, elementy, ...(wywiad ? { wywiad } : {}) };
+  const plyta = typeof o.plyta === "string" && /^[A-Za-z0-9-]{1,24}$/.test(o.plyta) ? o.plyta : undefined;
+  let dodatki: DodatekOferty[] | undefined;
+  if (o.dodatki !== undefined && o.dodatki !== null) {
+    try {
+      dodatki = parseDodatki(o.dodatki);
+    } catch (e) {
+      blad(e instanceof Error ? e.message : "Dodatki mają zły format.");
+    }
+  }
+  const plan: PlanKuchni = {
+    uklad,
+    scianaA,
+    scianaB,
+    pomieszczenie,
+    elementy,
+    ...(wywiad ? { wywiad } : {}),
+    ...(plyta ? { plyta } : {}),
+    ...(dodatki?.length ? { dodatki } : {}),
+  };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);
   return plan;

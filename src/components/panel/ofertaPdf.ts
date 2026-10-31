@@ -7,8 +7,9 @@ import qrcode from "qrcode-generator";
 import type { Palette } from "../palettes";
 import { findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { opisWnetrza } from "@/lib/wnetrze";
-import { bazaKuchni, cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
-import type { ModulCennik } from "@/lib/modul";
+import { cenaElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
+import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
+import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { grupyMaterialow, maAgd, opisGrup, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { slowaProjektu, type SlowaProjektu, type TypProjektu } from "@/lib/projekt";
 
@@ -25,7 +26,12 @@ export type PdfDane = {
   okuciaNazwa: string;
   /** cena null = urządzenie AGD, nie wchodzi do sumy. */
   pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number | null }[];
+  /** Suma mebli (pozycje z ceną). */
   sumaPozycji: number;
+  /** Dodatki do ceny (transport, montaż, rabat…) z kwotą – cenaKoncowa. */
+  dodatki: { nazwa: string; opis?: string; kwota: number }[];
+  /** Płyta korpusów oferty, np. „Egger 18 mm (18 mm)”; null = brak listy płyt w cenniku. */
+  plytaNazwa: string | null;
   dopFront: number;
   dopBlat: number;
   dopOkucia: number;
@@ -89,6 +95,7 @@ export function danePdf(args: {
   const okucia = findMaterial("hardware", args.hardware, mctx);
   const zGruboscia = (m: { name: string; thicknessMm?: number } | undefined, id: string) =>
     m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
+  const cennikPlyty = cennikZPlyta(args.cennik, args.plan.plyta);
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
@@ -96,9 +103,11 @@ export function danePdf(args: {
     w: e.w,
     h: e.h,
     d: e.d,
-    cena: cenaElementu(e, args.cennik),
+    cena: cenaElementu(e, cennikPlyty),
   }));
-  const sumaPozycji = bazaKuchni(args.plan, args.cennik);
+  // Meble, dodatki i płyta – ta sama funkcja co cena w kreatorze i na serwerze (cenaKoncowa).
+  const cena = cenaKoncowa({ plan: args.plan, cennik: args.cennik, zl: pln });
+  const sumaPozycji = cena.meble;
   const dopFront = grupy.front ? (frontSw?.delta ?? 0) : 0;
   const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
   const dopOkucia = grupy.okucia ? (okucia?.delta ?? 0) : 0;
@@ -118,7 +127,9 @@ export function danePdf(args: {
     dopFront,
     dopBlat,
     dopOkucia,
-    razem: sumaPozycji + dopFront + dopBlat + dopOkucia,
+    dodatki: cena.skladniki.filter((x) => x.rodzaj === "dodatek").map((x) => ({ nazwa: x.nazwa, opis: x.opis, kwota: x.kwota })),
+    plytaNazwa: cena.plyta ? `${cena.plyta.nazwa}` : null,
+    razem: cena.baza + dopFront + dopBlat + dopOkucia,
     link3d: args.link3d,
     link3dWazny: args.link3d ? (args.link3dWazny ?? null) : null,
     link3dPin: !!args.link3d && !!args.link3dPin,
@@ -239,7 +250,8 @@ ${zdjecie}
   <thead><tr><th>Pozycja</th><th class="num">Wymiary (szer. × wys. × gł.)</th><th class="num">Netto</th></tr></thead>
   <tbody>
     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
-    <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
+    <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
+    ${d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
     ${wierszDop(`Fronty: ${d.frontNazwa}`, d.dopFront)}
     ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
     ${wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
@@ -273,7 +285,8 @@ export function pdfTekst(d: PdfDane) {
     "Pozycje (netto):",
     ...(linie.length ? linie : ["(brak pozycji)"]),
     "",
-    `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}: ${plnSp(d.sumaPozycji)}`,
+    `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
+    ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
     ...(d.dopFront ? [`Fronty: ${plnSp(d.dopFront)}`] : []),
     ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
     ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),

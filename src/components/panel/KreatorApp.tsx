@@ -11,7 +11,7 @@ import { setPalettes as setPaletteStore } from "../paletteStore";
 import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
 import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import type { Palette } from "../palettes";
-import { formatPln, totalPrice } from "../pricing";
+import { formatPln } from "../pricing";
 import { GRUPY_BIBLIOTEKI, podzielModele, type GrupaBiblioteki } from "@/lib/bibliotekaModeli";
 import { GRUPY_TYPU, parseTypProjektu, TYP_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
@@ -53,6 +53,10 @@ import { KreatorSamouczek, samouczekWidziany } from "./KreatorSamouczek";
 import { AGD_LABEL, wywiadDomyslny, type Wywiad } from "@/lib/wywiad";
 import { ulozPropozycje } from "@/lib/propozycja";
 import { grupyMaterialow } from "@/lib/opcjeProjektu";
+import { dodatkiDomyslne, type DodatekOferty } from "@/lib/dodatki";
+import { cennikZPlyta } from "@/lib/modul";
+import { useCenaKoncowa } from "./useCenaKoncowa";
+import { KreatorCena } from "./KreatorCena";
 import {
   ApiError,
   assetsApi,
@@ -102,6 +106,9 @@ export default function KreatorApp() {
   const [contact, setContact] = useState("");
   const [title, setTitle] = useState("");
   const [front, setFrontId] = useState(FRONTS[0].id);
+  // Płyta korpusów i dodatki do ceny (cennik → płyty, własne pozycje). null = nowa oferta, dodatki domyślne po wczytaniu cennika.
+  const [plytaId, setPlytaId] = useState<string | undefined>(undefined);
+  const [dodatki, setDodatki] = useState<DodatekOferty[] | null>(null);
   const [countertop, setCountertopId] = useState(COUNTERTOPS[0].id);
   const [hardware, setHardwareId] = useState(HARDWARE[0].id);
   const [sciana, setSciana] = useState<Sciana>("A");
@@ -131,7 +138,7 @@ export default function KreatorApp() {
   const otworzNowy = useCallback((el: ElementOkna) => setOkno({ tryb: "nowy", el }), []);
   const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
-  const { cennik, blad: cennikBlad } = useCennik();
+  const { cennik, blad: cennikBlad, gotowy: cennikGotowy } = useCennik();
   const ujecie = useRef<KuchniaUjecie | null>(null);
   const ustawUjecie = useCallback((u: KuchniaUjecie | null) => {
     ujecie.current = u;
@@ -147,6 +154,8 @@ export default function KreatorApp() {
     setCountertopId(o.countertop);
     setHardwareId(o.hardware);
     setTyp(o.projekt ?? "kuchnia");
+    setPlytaId(o.kuchnia?.plyta);
+    setDodatki(o.kuchnia?.dodatki ?? []);
     // Zapisana oferta: projekt już jest – zaczynamy od mebli.
     setKrok("meble");
   }, []);
@@ -230,7 +239,11 @@ export default function KreatorApp() {
     ...(plan.elementy.length ? (["wyposazenie", "meble"] as Krok[]) : []),
     ...(offer ? (["materialy", "oferta"] as Krok[]) : []),
   ]);
-  const suma = bazaKuchni(plan, cennik);
+  // Plan z płytą i dodatkami – to idzie do ceny, PDF i na serwer.
+  const planCeny = useMemo<PlanKuchni>(
+    () => ({ ...plan, ...(plytaId ? { plyta: plytaId } : {}), ...(dodatki?.length ? { dodatki } : {}) }),
+    [plan, plytaId, dodatki],
+  );
   const katalog = useKatalog();
   const kCtx = { palettes, katalog };
   const modeleSceny = useMemo(
@@ -239,7 +252,14 @@ export default function KreatorApp() {
   );
   // Te same grupy materiałów co na stronie klienta (opcjeProjektu.ts): szafa bez blatu, regał bez uchwytów…
   const grupy = useMemo(() => grupyMaterialow({ plan, modele: modeleSceny }), [plan, modeleSceny]);
-  const razem = totalPrice({ front, countertop, hardware }, suma || 0, palettes, { katalog, grupy });
+  // Nowa oferta: pozycje cennika oznaczone „zawsze” wchodzą same (raz, po wczytaniu cennika).
+  useEffect(() => {
+    if (dodatki === null && cennikGotowy && !offer) setDodatki(dodatkiDomyslne(cennik));
+  }, [dodatki, cennikGotowy, offer, cennik]);
+  // Cennik z ceną płyty wybranej w ofercie – ceny pozycji w katalogu, oknie elementu i właściwościach.
+  const cennikOferty = useMemo(() => cennikZPlyta(cennik, plytaId), [cennik, plytaId]);
+  const cena = useCenaKoncowa({ plan: planCeny, cennik, wybor: { front, countertop, hardware }, grupy, materialy: kCtx });
+  const razem = cena.razem;
   // Legenda rzutu: tylko strefy, które są w projekcie; poza kuchnią bez „słupka” i „szafki dolnej”.
   const legenda = useMemo(() => {
     const opisy: [Strefa, string][] =
@@ -419,7 +439,7 @@ export default function KreatorApp() {
     let parsed: PlanKuchni;
     try {
       parsed = parseKuchnia({
-        ...plan,
+        ...planCeny,
         elementy: plan.elementy.map((e) => ({ ...e, nazwa: e.nazwa.trim() || "Szafka" })),
       });
     } catch (e) {
@@ -638,7 +658,7 @@ export default function KreatorApp() {
                         <b>{p.nazwa}</b>
                         <span className="mono">
                           {p.w}×{p.h}×{p.d} cm
-                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennik)) : "AGD, poza ceną"}` : ""}
+                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennikOferty)) : "AGD, poza ceną"}` : ""}
                         </span>
                       </button>
                     ))}
@@ -648,7 +668,7 @@ export default function KreatorApp() {
               <BibliotekaModeli
                 models={models}
                 fraza={szukaj.trim().toLowerCase()}
-                cennik={cennik}
+                cennik={cennikOferty}
                 onDodaj={otworzNowy}
                 grupy={wszystkieGrupy ? null : GRUPY_TYPU[typ].biblioteka}
               />
@@ -753,7 +773,7 @@ export default function KreatorApp() {
                   <KreatorWlasciwosci
                     plan={plan}
                     element={element}
-                    cena={element ? cenaElementu(element, cennik) : null}
+                    cena={element ? cenaElementu(element, cennikOferty) : null}
                     agd={element ? !wycenianyElement(element) : false}
                     onNazwa={(nazwa) => {
                       if (!element) return;
@@ -822,6 +842,7 @@ export default function KreatorApp() {
                       <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
                     </div>
                   ) : null}
+                  <KreatorCena cennik={cennik} plytaId={plytaId} setPlytaId={setPlytaId} dodatki={dodatki ?? []} setDodatki={setDodatki} cena={cena} />
                 </div>
               ) : (
                 <div className="kr-krok" data-krok="oferta">
@@ -871,7 +892,7 @@ export default function KreatorApp() {
                       title={title}
                       client={client}
                       contact={contact}
-                      plan={plan}
+                      plan={planCeny}
                       front={front}
                       countertop={countertop}
                       hardware={hardware}
@@ -910,10 +931,15 @@ export default function KreatorApp() {
             </div>
             <div className="kr-sum kr-side-foot" data-tour="dalej">
               <p>
-                Zabudowa netto <b>{plan.elementy.length ? formatPln(suma) : "—"}</b>
+                Meble netto <b>{plan.elementy.length ? formatPln(cena.meble) : "—"}</b>
               </p>
+              {cena.dodatki ? (
+                <p>
+                  Dodatki <b>{formatPln(cena.dodatki)}</b>
+                </p>
+              ) : null}
               <p>
-                Razem z dopłatami za materiały <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
+                Razem{cena.dodatki ? " z dodatkami" : ""} i materiałami <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
               </p>
               {cennikBlad ? <p className="lede">Cennik firmy się nie wczytał — kwota orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika.</p> : null}
               <div className="kr-nav">
@@ -939,7 +965,7 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
-      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennik} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
+      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennikOferty} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
       {okno && gotowe && !auth
         ? (() => {
             const edytowany = okno.tryb === "edycja" ? plan.elementy.find((e) => e.id === okno.id) : null;
@@ -950,7 +976,7 @@ export default function KreatorApp() {
                 key={okno.tryb === "nowy" ? `n-${start.nazwa}-${start.modelId ?? ""}` : `e-${okno.id}`}
                 tryb={okno.tryb}
                 el={start}
-                cennik={cennik}
+                cennik={cennikOferty}
                 onAnuluj={() => setOkno(null)}
                 onZapisz={(nowy) => {
                   if (okno.tryb === "nowy") {

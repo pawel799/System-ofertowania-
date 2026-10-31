@@ -55,6 +55,15 @@ Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze –
 
 Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
 
+## Płyty korpusów, dodatki i cena końcowa
+
+Ustawienia → Cennik modułów:
+
+- **Płyty korpusów** – nazwa, grubość (mm), format arkusza (mm) i cena za arkusz; cena za m² liczy się sama (z odpadem przy rozkroju, %). Jedna jest domyślna – jej cena za m² trafia do `plytaM2`, więc widżet na stronie i oferty bez wyboru liczą jak dotąd. Stary cennik bez listy pokazuje jedną „Płytę 18 mm” odtworzoną z `plytaM2`.
+- **Własne pozycje w cenie** – transport, montaż, LED, rabat…: kwota za ryczałt (kpl.), sztukę, metr bieżący zabudowy albo % ceny mebli (ujemna = rabat). „Zawsze” – pozycja wchodzi sama do każdej nowej oferty.
+
+W kreatorze (krok „Materiały”) wybierasz płytę oferty, dodajesz pozycje z cennika albo własne pozycje tylko tej oferty i widzisz **rozbicie ceny końcowej**: meble (z płytą i ile jej idzie – m² i arkusze, orientacyjnie), każdy dodatek, dopłaty za materiały, razem. Liczy to jedna funkcja `cenaKoncowa` (`src/lib/cenaKoncowa.ts`, w React hook `useCenaKoncowa`), z której korzystają też PDF i serwer (`bazaKuchni` = meble + dodatki → pole `base` oferty). Zapis: `kuchnia.plyta` i `kuchnia.dodatki` (`src/lib/dodatki.ts`, walidacja w `parseKuchnia`). Klient widzi dodatki przy „Pozycje kuchni / projektu”, a cena na stronie zawiera je w sumie. Pozycja z cennika liczy się zawsze z aktualnego cennika; usunięta z cennika przestaje się liczyć (kreator pokazuje ją wyszarzoną).
+
 ## Opcje materiałów: kuchnia i reszta domu
 
 Fronty, blat i okucia pokazujemy tylko wtedy, gdy projekt je ma – liczy to jedna funkcja `grupyMaterialow` (`src/lib/opcjeProjektu.ts`) dla kreatora (krok „Materiały”), panelu ofert, strony klienta, PDF i maila, więc wszędzie są te same opcje:

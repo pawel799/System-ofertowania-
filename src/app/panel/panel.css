@@ -507,6 +507,43 @@
 /* Ustawienia → Katalog materiałów */
 .pnl .kat-probka { width: 28px; height: 28px; border-radius: 7px; flex: none; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); align-self: center; }
 .pnl .set-row[data-off] { opacity: 0.6; }
+
+/* Kreator → Materiały: dodatki do ceny i rozbicie ceny końcowej */
+.pnl .kr-dodatki-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pnl .kr-dodatki-lista li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 28px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--g3); }
+.pnl .kr-dodatki-lista li:first-child { border-top: 0; }
+.pnl .kr-dodatki-lista li[data-brak] { opacity: 0.6; }
+.pnl .kr-dodatki-nazwa { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.pnl .kr-dodatki-nazwa b { font-weight: 550; font-size: 13px; overflow-wrap: anywhere; }
+.pnl .kr-dodatki-ilosc { display: flex; align-items: center; gap: 4px; }
+.pnl .kr-dodatki-ilosc .input { width: 64px; min-width: 0; }
+.pnl .kr-dodatki-kwota { font-size: 12.5px; white-space: nowrap; }
+.pnl .kr-dodatki-dodaj { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.pnl .kr-dodatki-dodaj select { flex: 1 1 160px; min-width: 0; }
+.pnl .kr-dodatki-wlasna { display: grid; grid-template-columns: minmax(0, 1fr) 90px; gap: 6px; margin-top: 8px; padding: 10px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); }
+.pnl .kr-dodatki-wlasna > :first-child, .pnl .kr-dodatki-wlasna .actions, .pnl .kr-dodatki-wlasna .kr-hint { grid-column: 1 / -1; }
+.pnl .kr-dodatki-wlasna .actions { justify-content: flex-end; margin: 0; }
+.pnl .kr-rozbicie { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pnl .kr-rozbicie td { padding: 5px 0; border-top: 1px solid var(--g3); vertical-align: top; }
+.pnl .kr-rozbicie td.mono { text-align: right; white-space: nowrap; padding-left: 10px; }
+.pnl .kr-rozbicie-razem td { font-weight: 650; border-top: 1px solid var(--text); }
+
+/* Ustawienia → Cennik modułów: płyty korpusów i własne pozycje */
+.pnl .cn-tabela { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.pnl .cn-wiersz { display: grid; grid-template-columns: 56px minmax(120px, 1.4fr) 76px minmax(150px, 1.2fr) 100px 76px 32px; gap: 6px; align-items: center; }
+.pnl .cn-pozycje .cn-wiersz { grid-template-columns: minmax(140px, 1.6fr) 110px minmax(120px, 1fr) 56px 32px; }
+.pnl .cn-naglowek { font-size: 11.5px; color: var(--text-3); }
+.pnl .cn-wiersz .input { min-width: 0; }
+.pnl .cn-format { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-3); }
+.pnl .cn-format .input { color: var(--text); font-size: 13px; }
+.pnl .cn-m2 { font-size: 12.5px; text-align: right; }
+.pnl .cn-stopka { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; justify-content: space-between; margin-top: 12px; }
+.pnl .cn-odpad { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; max-width: 180px; }
+@media (max-width: 760px) {
+  .pnl .cn-naglowek { display: none; }
+  .pnl .cn-wiersz, .pnl .cn-pozycje .cn-wiersz { grid-template-columns: 1fr 1fr; padding: 8px 0; border-top: 1px solid var(--g3); }
+  .pnl .cn-wiersz > :first-child { grid-column: 1 / -1; }
+}
 .pnl .set-row .kat-probka + .set-row-main { flex: 1 1 220px; }
 
 /* Panel → Nowa oferta: najpierw co projektujemy, potem jak (kreator albo gotowy model) */

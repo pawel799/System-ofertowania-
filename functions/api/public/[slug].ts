@@ -10,6 +10,7 @@ import { handle, json, publicView } from "../../_lib/offers";
 import { publicBrand, resolvePublic } from "../../_lib/public";
 import { getCennik, pricedModuly } from "../../_lib/modul";
 import { listKatalog, publicznyKatalog } from "../../_lib/katalog";
+import { cenaKoncowa } from "../../../src/lib/cenaKoncowa";
 
 export const onRequestGet = handle(async (ctx) => {
   const { kv, offer } = await resolvePublic(ctx);
@@ -40,6 +41,14 @@ export const onRequestGet = handle(async (ctx) => {
       brand: await publicBrand(kv),
       // Cena zabudowy z kreatora zawsze z aktualnego cennika (nie ze zrzutu przy zapisie).
       ...(zKreatora && showPrice && cennik ? { base: bazaKuchni(offer.kuchnia!, cennik) } : {}),
+      // Dodatki do ceny (transport, montaż, rabat…) – są już w base; klient widzi je przy pozycjach.
+      ...(zKreatora && showPrice && cennik && offer.kuchnia!.dodatki?.length
+        ? {
+            dodatki: cenaKoncowa({ plan: offer.kuchnia!, cennik })
+              .skladniki.filter((x) => x.rodzaj === "dodatek")
+              .map((x) => ({ nazwa: x.nazwa, kwota: x.kwota })),
+          }
+        : {}),
       // Moduły na wymiar; ceny z cennika firmy (liczone tutaj), tylko gdy oferta pokazuje cenę.
       // Kreator: cena pozycji z dopłatą za wnętrze (półki, szuflady, drążki) – ta sama co w sumie.
       moduly: pozycje.length

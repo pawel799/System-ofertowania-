@@ -249,6 +249,8 @@ export type PublicOffer = {
   kuchnia?: PlanKuchni;
   /** Modele wstawione w kreatorze (nie cały katalog firmy). */
   modele?: PublicModel[];
+  /** Dodatki do ceny (są już w base) – tylko przy widocznej cenie. */
+  dodatki?: { nazwa: string; kwota: number }[];
   /** Co projektujemy (kuchnia, szafa…); brak = kuchnia. Teksty na stronie klienta. */
   projekt?: TypProjektu;
   /** Pakiety RAL studia (fronty do wyboru). */
