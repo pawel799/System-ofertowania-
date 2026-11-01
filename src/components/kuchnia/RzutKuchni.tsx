@@ -15,7 +15,7 @@ import {
   type PlanKuchni,
   type Strefa,
 } from "@/lib/kuchnia";
-import { punktNaScianie, scianyPokoju } from "@/lib/sciany";
+import { punktNaScianie, scianyPokoju, wGranicachPokoju } from "@/lib/sciany";
 import { meblaWOtworze, otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
 import type { Otwor } from "@/lib/wywiad";
 
@@ -424,7 +424,9 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                   const suroweX = Math.max(-100, Math.min(1500, Math.round(q.x + drag.dx)));
                   const suroweZ = Math.max(-100, Math.min(1500, Math.round(q.y + drag.dz)));
                   const oryginal = planRef.current.elementy.find((el) => el.id === drag.id);
-                  const przy = oryginal ? przyciagnij(planRef.current, oryginal, suroweX, suroweZ) : { x: suroweX, z: suroweZ };
+                  const przyc = oryginal ? przyciagnij(planRef.current, oryginal, suroweX, suroweZ) : { x: suroweX, z: suroweZ };
+                  // Mebel nie wychodzi za ściany pokoju (A, a z wymiarami pokoju także B, C, D).
+                  const przy = oryginal ? wGranicachPokoju(planRef.current, rect({ ...oryginal, ...przyc }), przyc.x, przyc.z) : przyc;
                   const nastepne = { id: drag.id, x: przy.x, z: przy.z };
                   ostatnie.current = nastepne;
                   setPodglad(nastepne);

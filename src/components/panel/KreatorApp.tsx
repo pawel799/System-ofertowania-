@@ -247,6 +247,14 @@ export default function KreatorApp() {
   // Okno albo drzwi przeciągnięte na rzucie / w 3D (już sprawdzone – sprawdzOtwor w src/lib/otwory.ts).
   const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), []);
   const bladOtworu = useCallback((powod: string) => toast("Tu nie można przesunąć", { type: "err", desc: powod }), []);
+  // Przeciąganie mebli w 3D (tylko kreator): nowe miejsce już sprawdzone w scenie.
+  const edycjaMebli = useMemo(
+    () => ({
+      onPrzesun: (id: string, x: number, z: number) => setPlan((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) })),
+      onKolizja: (powod: string) => toast("Tu nie można postawić mebla", { type: "err", desc: powod }),
+    }),
+    [],
+  );
   const indeksKroku = KROKI.indexOf(krok);
   const gotoweKroki = new Set<Krok>([
     ...(plan.wywiad ? (["pomieszczenie", "otoczenie"] as Krok[]) : []),
@@ -755,6 +763,7 @@ export default function KreatorApp() {
                 <KuchniaTlo
                   plan={plan}
                   edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu }}
+                  edycjaMebli={edycjaMebli}
                   modele={modeleSceny}
                   zaznaczony={zaznaczony}
                   onWybierz={setZaznaczony}

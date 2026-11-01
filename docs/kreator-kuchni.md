@@ -67,6 +67,10 @@ Okna i drzwi mogą stać na każdej ścianie (A, B, C, D – `wywiad.otwory[].sc
 
 Zabezpieczenia (`sprawdzOtwor` w `src/lib/otwory.ts`): otwór mieści się na ścianie, min. 10 cm od innego otworu, w drzwiach nie stoi żaden mebel (także szafka górna), okna nie zasłania słupek, szafka górna ani szafka wyższa niż parapet. Podgląd na czerwono, a puszczony w złym miejscu otwór wraca z komunikatem. W kroku „Okna i instalacje” błędy są pod każdym otworem. Mebla przeciąganego na rzucie nie da się postawić w drzwiach ani przed oknem (`meblaWOtworze`).
 
+## Przesuwanie mebli w 3D (tylko kreator)
+
+W kreatorze mebel przeciąga się także w podglądzie 3D (strona klienta – nie). Mebel jedzie po poziomej płaszczyźnie swojego spodu, przyciąga się do ścian i sąsiadów (`przyciagnij`, Shift – bez przyciągania), nie wychodzi za ściany pokoju (`wGranicachPokoju`), a obrys świeci na czerwono, gdy nachodzi na inny mebel albo stanąłby w drzwiach / przed oknem – puszczony wtedy wraca z komunikatem. Kamera stoi, gdy trzymasz mebel; krótki klik dalej tylko zaznacza. To samo ograniczenie ścian działa przy przeciąganiu na rzucie.
+
 ## Kolory mebli: fronty, boki, środek – każdy mebel osobno
 
 Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.

@@ -1,10 +1,13 @@
 "use client";
 
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { PerspectiveCamera, Vector3 } from "three";
-import { rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { meblaWOtworze } from "@/lib/otwory";
+import { wGranicachPokoju } from "@/lib/sciany";
+import { Plane, Raycaster, Vector2 } from "three";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
 import { useCountertop } from "../countertopStore";
 import { useFront } from "../frontStore";
@@ -43,7 +46,114 @@ type Props = {
   wymiary?: boolean;
   /** Kreator: przeciąganie okien i drzwi po ścianach (Sciany.tsx). */
   edycjaOtworow?: EdycjaOtworow;
+  /** Kreator (tylko wykonawca): przeciąganie mebli po podłodze w 3D, z przyciąganiem i zabezpieczeniami. */
+  edycjaMebli?: EdycjaMebli;
+  /** Podgląd przesuwanego mebla (x, z na żywo) – np. do wymiarów obok sceny. */
+  onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
 };
+
+export type EdycjaMebli = {
+  onPrzesun: (id: string, x: number, z: number) => void;
+  /** Ruch odrzucony – komunikat (nachodzi na inny mebel, drzwi, okno). */
+  onKolizja: (powod: string) => void;
+};
+
+type PodgladMebla = { id: string; x: number; z: number; zly: string | null };
+
+/** Dlaczego mebel nie może stać w tym miejscu (null = może). */
+function powodKolizji(plan: PlanKuchni, oryginal: ElementKuchni, kand: ElementKuchni): string | null {
+  const r = rect(kand);
+  const inny = plan.elementy.find((e) => e.id !== kand.id && konfliktElementow(kand, e) && nachodzi(r, rect(e)));
+  if (inny) return `Nachodzi na „${inny.nazwa}”.`;
+  const wOtworze = meblaWOtworze(plan, kand);
+  if (wOtworze && !meblaWOtworze(plan, oryginal)) return wOtworze;
+  return null;
+}
+
+/**
+ * Przeciąganie mebla w 3D: punkt pod kursorem na poziomej płaszczyźnie spodu mebla, przyciąganie do ścian i sąsiadów
+ * (przyciagnij), podgląd na żywo; puszczony w złym miejscu wraca. Krótki klik (do 4 px) zostaje zaznaczeniem.
+ */
+function usePrzeciaganieMebla(plan: PlanKuchni, edycja: EdycjaMebli | undefined, onPodglad?: (p: PodgladMebla | null) => void) {
+  const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const [podglad, setPodglad] = useState<PodgladMebla | null>(null);
+  const planRef = useRef(plan);
+  planRef.current = plan;
+  const sprzatanie = useRef<(() => void) | null>(null);
+  useEffect(() => () => sprzatanie.current?.(), []);
+  const ustaw = (p: PodgladMebla | null) => {
+    setPodglad(p);
+    onPodglad?.(p);
+    invalidate();
+  };
+
+  const zacznij = (e: ThreeEvent<PointerEvent>, el: ElementKuchni) => {
+    if (!edycja || e.button !== 0) return;
+    const y = yElementu(el, planRef.current);
+    const plaszczyzna = new Plane(new Vector3(0, 1, 0), -y);
+    const ray = new Raycaster();
+    const ndc = new Vector2();
+    const naPodlodze = (cx: number, cy: number) => {
+      const r = gl.domElement.getBoundingClientRect();
+      ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.ray.intersectPlane(plaszczyzna, new Vector3());
+    };
+    const p0 = naPodlodze(e.nativeEvent.clientX, e.nativeEvent.clientY);
+    if (!p0) return;
+    const dx = el.x - p0.x * 100;
+    const dz = el.z - p0.z * 100;
+    const sx = e.nativeEvent.clientX;
+    const sy = e.nativeEvent.clientY;
+    // Kamera stoi, dopóki trzymamy mebel (inaczej pierwsze piksele ruchu obracałyby widok).
+    if (controls) controls.enabled = false;
+    let ruch = false;
+    let teraz: PodgladMebla | null = null;
+    const move = (pe: PointerEvent) => {
+      if (!ruch && Math.hypot(pe.clientX - sx, pe.clientY - sy) < 4) return;
+      if (!ruch) {
+        ruch = true;
+        document.body.style.cursor = "grabbing";
+      }
+      const p = naPodlodze(pe.clientX, pe.clientY);
+      if (!p) return;
+      const pl = planRef.current;
+      const oryginal = pl.elementy.find((x) => x.id === el.id);
+      if (!oryginal) return;
+      const surowe = { x: Math.max(-100, Math.min(1500, Math.round(p.x * 100 + dx))), z: Math.max(-100, Math.min(1500, Math.round(p.z * 100 + dz))) };
+      const przyc = pe.shiftKey ? surowe : przyciagnij(pl, oryginal, surowe.x, surowe.z);
+      // Mebel nie wychodzi za ściany pokoju.
+      const przy = wGranicachPokoju(pl, rect({ ...oryginal, x: przyc.x, z: przyc.z }), przyc.x, przyc.z);
+      teraz = { id: el.id, x: przy.x, z: przy.z, zly: powodKolizji(pl, oryginal, { ...oryginal, x: przy.x, z: przy.z }) };
+      ustaw(teraz);
+    };
+    const up = () => {
+      sprzatanie.current?.();
+      sprzatanie.current = null;
+      if (controls) controls.enabled = true;
+      if (!ruch) return;
+      document.body.style.cursor = "";
+      ustaw(null);
+      const oryginal = planRef.current.elementy.find((x) => x.id === el.id);
+      if (!teraz || !oryginal || (teraz.x === oryginal.x && teraz.z === oryginal.z)) return;
+      if (teraz.zly) edycja.onKolizja(teraz.zly);
+      else edycja.onPrzesun(el.id, teraz.x, teraz.z);
+    };
+    sprzatanie.current?.();
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    sprzatanie.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  };
+  return { podglad, zacznij };
+}
 
 function zakres(plan: PlanKuchni) {
   let x0 = 0;
@@ -195,6 +305,8 @@ function ElementWidok({
   korpus,
   srodek,
   ids,
+  onChwyt,
+  zly = false,
 }: {
   el: ElementKuchni;
   plan: PlanKuchni;
@@ -210,6 +322,10 @@ function ElementWidok({
   korpus: { color: string; roughness: number };
   srodek: { color: string; roughness: number };
   ids: { front: string; korpus: string };
+  /** Kreator: przeciąganie mebla w 3D. */
+  onChwyt?: (e: ThreeEvent<PointerEvent>, el: ElementKuchni) => void;
+  /** Podgląd przesuwanego mebla w złym miejscu – obrys na czerwono. */
+  zly?: boolean;
 }) {
   const y = yElementu(el, plan);
   const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} />;
@@ -226,8 +342,16 @@ function ElementWidok({
         e.stopPropagation();
         przelaczElement(el.id);
       }}
+      onPointerDown={
+        onChwyt
+          ? (e) => {
+              e.stopPropagation();
+              onChwyt(e, el);
+            }
+          : undefined
+      }
     >
-      <Obrys aktywny={zaznaczony}>
+      <Obrys aktywny={zaznaczony || zly} kolor={zly ? "#e5484d" : undefined}>
         {model ? (
           <BladModelu fallback={szafka}>
             <Suspense fallback={szafka}>
@@ -254,7 +378,13 @@ function Otwory({ plan }: { plan: PlanKuchni }) {
   );
 }
 
-function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, edycjaOtworow, tlo }: Props & { tlo: TloSceny }) {
+function Wnetrze({ plan: planWejscie, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, edycjaOtworow, edycjaMebli, onPodgladMebla, tlo }: Props & { tlo: TloSceny }) {
+  const { podglad: przesuwany, zacznij: chwyc } = usePrzeciaganieMebla(planWejscie, edycjaMebli, onPodgladMebla);
+  // Podgląd przeciągania: mebel rysowany w nowym miejscu (wymiary i ściany liczą się z niego na żywo).
+  const plan = useMemo(
+    () => (przesuwany ? { ...planWejscie, elementy: planWejscie.elementy.map((e) => (e.id === przesuwany.id ? { ...e, x: przesuwany.x, z: przesuwany.z } : e)) } : planWejscie),
+    [planWejscie, przesuwany],
+  );
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
@@ -314,6 +444,8 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
               korpus={wygladProbki(kol.korpus)}
               srodek={wygladProbki(kol.srodek)}
               ids={{ front: kol.front, korpus: kol.korpus }}
+              onChwyt={edycjaMebli ? chwyc : undefined}
+              zly={przesuwany?.id === el.id && !!przesuwany.zly}
             />
           );
         })}

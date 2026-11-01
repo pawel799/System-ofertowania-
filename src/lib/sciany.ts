@@ -111,3 +111,22 @@ export function nazwaKoloruSciany(kolor: string | null | undefined) {
   if (!kolor) return "Domyślny";
   return KOLORY_SCIAN.find((k) => k.kolor.toLowerCase() === kolor.toLowerCase())?.nazwa ?? kolor;
 }
+
+/**
+ * Położenie mebla w granicach pokoju: obrys (prostokąt w rzucie, cm) nie wychodzi za ściany, które są w projekcie
+ * (A zawsze; B w L albo z wymiarami pokoju; C i D z wymiarami pokoju). Zwraca przesunięcie środka.
+ */
+export function wGranicachPokoju(plan: PlanScian, r: { x0: number; z0: number; x1: number; z1: number }, x: number, z: number) {
+  const sciany = scianyPokoju(plan);
+  const jest = (id: ScianaPokoju) => sciany.find((s) => s.id === id);
+  let nx = x;
+  let nz = z;
+  if (r.z0 < 0) nz += -r.z0;
+  const B = jest("B");
+  if (B && r.x0 < 0) nx += -r.x0;
+  const C = jest("C");
+  if (C && r.z1 + (nz - z) > C.z) nz -= r.z1 + (nz - z) - C.z;
+  const D = jest("D");
+  if (D && r.x1 + (nx - x) > D.x) nx -= r.x1 + (nx - x) - D.x;
+  return { x: Math.round(nx), z: Math.round(nz) };
+}
