@@ -1,6 +1,6 @@
 "use client";
 
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { PerspectiveCamera, Vector3 } from "three";
@@ -16,7 +16,8 @@ import { usePalettes } from "../paletteStore";
 import { useKatalog } from "../katalogStore";
 import AgdBryla from "./AgdBryla";
 import { yElementu } from "./uklad3d";
-import Wymiary3D from "./Wymiary3D";
+import Wymiary3D, { type Wybor3D } from "./Wymiary3D";
+import type { Otwor } from "@/lib/wywiad";
 import { tloDlaKoloru, type TloSceny } from "../tloSceny";
 import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 import { useRuch } from "./MebelParametryczny";
@@ -378,13 +379,52 @@ function Otwory({ plan }: { plan: PlanKuchni }) {
   );
 }
 
-function Wnetrze({ plan: planWejscie, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, edycjaOtworow, edycjaMebli, onPodgladMebla, tlo }: Props & { tlo: TloSceny }) {
+type WyborInny = Exclude<Wybor3D, { typ: "element" }> | null;
+
+function Wnetrze({
+  plan: planWejscie,
+  modele = [],
+  zaznaczony,
+  onWybierz,
+  zdjecie,
+  onUjecie,
+  wymiary,
+  edycjaOtworow,
+  edycjaMebli,
+  onPodgladMebla,
+  tlo,
+  wyborInny,
+  setWyborInny,
+}: Props & { tlo: TloSceny; wyborInny: WyborInny; setWyborInny: (w: WyborInny) => void }) {
   const { podglad: przesuwany, zacznij: chwyc } = usePrzeciaganieMebla(planWejscie, edycjaMebli, onPodgladMebla);
+  // Wykonawca (kreator): zaznaczenie okna, drzwi albo ściany w 3D – pokazuje ich wymiary na żywo.
+  const wykonawca = !!edycjaMebli || !!edycjaOtworow;
+  const [podgladOtworu, setPodgladOtworu] = useState<{ i: number; o: Otwor } | null>(null);
+  useEffect(() => {
+    if (zaznaczony) setWyborInny(null);
+  }, [zaznaczony, setWyborInny]);
+  const wybierzElement = useCallback(
+    (id: string) => {
+      setWyborInny(null);
+      onWybierz?.(id);
+    },
+    [onWybierz, setWyborInny],
+  );
   // Podgląd przeciągania: mebel rysowany w nowym miejscu (wymiary i ściany liczą się z niego na żywo).
   const plan = useMemo(
     () => (przesuwany ? { ...planWejscie, elementy: planWejscie.elementy.map((e) => (e.id === przesuwany.id ? { ...e, x: przesuwany.x, z: przesuwany.z } : e)) } : planWejscie),
     [planWejscie, przesuwany],
   );
+  // Wymiary liczą się też z przeciąganego okna / drzwi (podgląd z Sciany.tsx).
+  const planWymiarow = useMemo(
+    () =>
+      podgladOtworu && plan.wywiad
+        ? { ...plan, wywiad: { ...plan.wywiad, otwory: plan.wywiad.otwory.map((o, i) => (i === podgladOtworu.i ? podgladOtworu.o : o)) } }
+        : plan,
+    [plan, podgladOtworu],
+  );
+  // Przeciągany mebel ma swoje wymiary na żywo, nawet gdy nie jest zaznaczony.
+  const wybor3d: Wybor3D = przesuwany ? { typ: "element", id: przesuwany.id } : (wyborInny ?? (zaznaczony ? { typ: "element", id: zaznaczony } : null));
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
@@ -417,12 +457,21 @@ function Wnetrze({ plan: planWejscie, modele = [], zaznaczony, onWybierz, zdjeci
       <ambientLight intensity={0.45} />
       <directionalLight position={[4, 6, 3]} intensity={1.7} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 3, -2]} intensity={0.35} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} receiveShadow onClick={wykonawca ? () => setWyborInny(null) : undefined}>
         <planeGeometry args={[Math.max(1.2, x1 - x0 + 1.4), Math.max(1.2, z1 - z0 + 1.4)]} />
         <meshStandardMaterial color={tlo.podloga} roughness={0.95} />
       </mesh>
       {/* Ściany pokoju z otworami na okna i drzwi, w kolorze z planu albo wybranym (Sciany.tsx). */}
-      <Sciany plan={plan} kolorDomyslny={tlo.sciana} edycja={edycjaOtworow} />
+      <Sciany
+        plan={plan}
+        kolorDomyslny={tlo.sciana}
+        edycja={edycjaOtworow}
+        onWybierz={wykonawca ? (w) => setWyborInny(w) : undefined}
+        onPodglad={(p) => {
+          setPodgladOtworu(p);
+          if (p) setWyborInny({ typ: "otwor", i: p.i });
+        }}
+      />
       <Otwory plan={plan} />
       <Suspense fallback={null}>
         {plan.elementy.map((el) => {
@@ -439,7 +488,7 @@ function Wnetrze({ plan: planWejscie, modele = [], zaznaczony, onWybierz, zdjeci
               chropowatosc={fr.roughness}
               blat={blat}
               uchwyt={uchwyt}
-              onWybierz={onWybierz}
+              onWybierz={wybierzElement}
               otwarte={otwarty(otwarcie, el.id)}
               korpus={wygladProbki(kol.korpus)}
               srodek={wygladProbki(kol.srodek)}
@@ -450,7 +499,7 @@ function Wnetrze({ plan: planWejscie, modele = [], zaznaczony, onWybierz, zdjeci
           );
         })}
       </Suspense>
-      {wymiary ? <Wymiary3D plan={plan} zaznaczony={zaznaczony} /> : null}
+      {wymiary || (wykonawca && wybor3d) ? <Wymiary3D plan={planWymiarow} wybor={wybor3d} przeglad={!!wymiary} /> : null}
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={12} blur={2.4} far={2} />
       <Kamera plan={plan} />
       <Ujecie aktywne={!!zdjecie} onUjecie={onUjecie} />
@@ -471,6 +520,8 @@ function useTloKuchni(): TloSceny {
 
 export default function KuchniaScena(props: Props) {
   const tlo = useTloKuchni();
+  // Zaznaczone okno, drzwi albo ściana (wykonawca) – klik w puste miejsce sceny czyści.
+  const [wyborInny, setWyborInny] = useState<WyborInny>(null);
   return (
     <div className="absolute inset-0 h-full w-full" data-tlo={tlo.jasne ? "jasne" : "ciemne"} style={{ background: tlo.tlo }}>
       <Canvas
@@ -479,8 +530,11 @@ export default function KuchniaScena(props: Props) {
         dpr={[1, 1.5]}
         camera={{ position: [2.4, 1.8, 3.2], fov: 42 }}
         gl={{ antialias: true, preserveDrawingBuffer: !!props.zdjecie }}
+        onPointerMissed={(e) => {
+          if (e.type === "click") setWyborInny(null);
+        }}
       >
-        <Wnetrze {...props} tlo={tlo} />
+        <Wnetrze {...props} tlo={tlo} wyborInny={wyborInny} setWyborInny={setWyborInny} />
       </Canvas>
     </div>
   );

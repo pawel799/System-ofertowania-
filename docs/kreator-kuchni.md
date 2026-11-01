@@ -71,6 +71,16 @@ Zabezpieczenia (`sprawdzOtwor` w `src/lib/otwory.ts`): otwór mieści się na ś
 
 W kreatorze mebel przeciąga się także w podglądzie 3D (strona klienta – nie). Mebel jedzie po poziomej płaszczyźnie swojego spodu, przyciąga się do ścian i sąsiadów (`przyciagnij`, Shift – bez przyciągania), nie wychodzi za ściany pokoju (`wGranicachPokoju`), a obrys świeci na czerwono, gdy nachodzi na inny mebel albo stanąłby w drzwiach / przed oknem – puszczony wtedy wraca z komunikatem. Kamera stoi, gdy trzymasz mebel; krótki klik dalej tylko zaznacza. To samo ograniczenie ścian działa przy przeciąganiu na rzucie.
 
+## Wymiary w 3D na żywo (wykonawca)
+
+Hook `useLinieWymiarow` (`Wymiary3D.tsx`) liczy linie wymiarowe z bieżącego planu – także z podglądu przeciągania, więc liczby zmieniają się na żywo. W kreatorze klik w 3D zaznacza:
+
+- **mebel** – szerokość, głębokość, wysokość i odległości od końców ścian, przy których stoi („← 128 cm”, „192 cm →”),
+- **okno / drzwi** – szerokość, wysokość, parapet, odległość od narożnika i do końca ściany,
+- **ścianę** – długość i wysokość.
+
+Wymiary zaznaczenia są widoczne zawsze (także przy „Ukryj wymiary”); przycisk „Pokaż wymiary” dodaje przegląd ścian, pokoju i ciągów. Klik w puste miejsce czyści zaznaczenie. Puszczenie po przeciąganiu nie zaznacza ściany (R3F `delta`).
+
 ## Kolory mebli: fronty, boki, środek – każdy mebel osobno
 
 Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.

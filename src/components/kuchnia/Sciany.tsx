@@ -28,12 +28,16 @@ export type EdycjaOtworow = {
 type Podglad = { i: number; o: Otwor; bledy: string[] };
 
 /** Przeciąganie otworu: promień spod kursora → najbliższa ściana zwrócona do kamery → położenie na niej. */
-function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow) {
+function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow, onPodglad?: (p: { i: number; o: Otwor } | null) => void) {
   const camera = useThree((s) => s.camera);
   const gl = useThree((s) => s.gl);
   const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
   const invalidate = useThree((s) => s.invalidate);
-  const [podglad, setPodglad] = useState<Podglad | null>(null);
+  const [podglad, ustawPodglad] = useState<Podglad | null>(null);
+  const setPodglad = (p: Podglad | null) => {
+    ustawPodglad(p);
+    onPodglad?.(p ? { i: p.i, o: p.o } : null);
+  };
   const planRef = useRef(plan);
   planRef.current = plan;
   const sprzatanie = useRef<(() => void) | null>(null);
@@ -97,9 +101,23 @@ function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow) {
   return { podglad, zacznij };
 }
 
-export default function Sciany({ plan, kolorDomyslny, edycja }: { plan: PlanKuchni; kolorDomyslny: string; edycja?: EdycjaOtworow }) {
+export default function Sciany({
+  plan,
+  kolorDomyslny,
+  edycja,
+  onWybierz,
+  onPodglad,
+}: {
+  plan: PlanKuchni;
+  kolorDomyslny: string;
+  edycja?: EdycjaOtworow;
+  /** Wykonawca: klik w ścianę albo otwór – zaznaczenie (wymiary na żywo, Wymiary3D.tsx). */
+  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju }) => void;
+  /** Przeciągany otwór (do wymiarów na żywo); null po puszczeniu. */
+  onPodglad?: (p: { i: number; o: Otwor } | null) => void;
+}) {
   const { widoczne, kolor } = useSciany();
-  const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja);
+  const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja, onPodglad);
   const H = wysokoscPokoju(plan);
   const sciany = scianyPokoju(plan);
   const otwory = (plan.wywiad?.otwory ?? []).map((o, i) => (podglad?.i === i ? podglad.o : o));
@@ -126,7 +144,23 @@ export default function Sciany({ plan, kolorDomyslny, edycja }: { plan: PlanKuch
         return (
           <group key={s.id} name={`sciana-${s.id}`}>
             {segmenty.map((g, i) => (
-              <mesh key={i} position={poz((g.a + g.b) / 2, (g.y0 + g.y1) / 2)} rotation={[0, OBROT[s.id], 0]} material={material} receiveShadow>
+              <mesh
+                key={i}
+                position={poz((g.a + g.b) / 2, (g.y0 + g.y1) / 2)}
+                rotation={[0, OBROT[s.id], 0]}
+                material={material}
+                receiveShadow
+                onClick={
+                  onWybierz
+                    ? (e) => {
+                        // Puszczenie po przeciąganiu (mebla, otworu, obrotu kamery) to nie klik.
+                        if (e.delta > 4) return;
+                        e.stopPropagation();
+                        onWybierz({ typ: "sciana", id: s.id });
+                      }
+                    : undefined
+                }
+              >
                 <planeGeometry args={[(g.b - g.a) / 100, (g.y1 - g.y0) / 100]} />
               </mesh>
             ))}
@@ -143,6 +177,15 @@ export default function Sciany({ plan, kolorDomyslny, edycja }: { plan: PlanKuch
                     rotation={[0, OBROT[s.id], 0]}
                     material={czerwony ? zly : o.rodzaj === "okno" ? szyba : skrzydlo}
                     onPointerDown={edycja ? (e) => zacznij(e, i) : undefined}
+                    onClick={
+                      onWybierz
+                        ? (e) => {
+                            if (e.delta > 4) return;
+                            e.stopPropagation();
+                            onWybierz({ typ: "otwor", i });
+                          }
+                        : undefined
+                    }
                     onPointerOver={edycja ? () => (document.body.style.cursor = "grab") : undefined}
                     onPointerOut={edycja ? () => (document.body.style.cursor = "") : undefined}
                   >
