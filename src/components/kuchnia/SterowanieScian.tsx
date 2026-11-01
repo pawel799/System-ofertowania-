@@ -55,7 +55,7 @@ export default function SterowanieScian({
         Kolor ścian
       </button>
       {otwarte ? (
-        <div role="dialog" aria-label="Kolor ścian" className={klasaPanelu} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 236 }}>
+        <div role="dialog" aria-label="Kolor ścian" data-wyspa className={klasaPanelu} style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 20, width: 236 }}>
           <p style={{ margin: "0 0 8px", fontSize: 12 }}>Kolor ścian: {nazwaKoloruSciany(kolor)}</p>
           <div role="radiogroup" aria-label="Kolory ścian" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             <button

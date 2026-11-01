@@ -122,8 +122,8 @@ export function PelnyEkranWarstwa() {
     const bylo = meta?.content ?? null;
     main?.setAttribute("data-pelny", "");
     document.documentElement.style.overflow = "hidden";
-    document.documentElement.style.background = "#0c0b0a";
-    document.body.style.background = "#0c0b0a";
+    document.documentElement.style.background = "var(--strona-tlo)";
+    document.body.style.background = "var(--strona-tlo)";
     if (meta && bylo && !/viewport-fit/.test(bylo)) meta.content = `${bylo}, viewport-fit=cover`;
     window.scrollTo(0, 0);
     window.history.pushState({ ...(window.history.state ?? {}), opPelny: true }, "");

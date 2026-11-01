@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { HOME } from "@/content/strona-glowna";
 import Logo from "../Logo";
 import { btn } from "../styles";
+import PrzelacznikMotywu from "../../motyw/PrzelacznikMotywu";
 
 /*
  * Pasek strony głównej: schowany, dopóki widać hero (tam są już logo i przyciski),
@@ -46,7 +47,7 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-[#0c0b0a]/85 px-6 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md transition-[transform,opacity,visibility] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none md:px-10 ${
+      className={`fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-tlo/85 px-6 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md transition-[transform,opacity,visibility] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none md:px-10 ${
         shown ? "visible translate-y-0 opacity-100" : "invisible -translate-y-full opacity-0"
       }`}
     >
@@ -67,6 +68,7 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
           ))}
         </nav>
         <div className="flex items-center gap-2">
+          <PrzelacznikMotywu className={`${btn("ghost", "sm")} w-9 !px-0`} />
           <Link href="/panel" className={`${btn("ghost", "sm")} hidden sm:inline-flex`}>
             Wejdź do panelu
           </Link>

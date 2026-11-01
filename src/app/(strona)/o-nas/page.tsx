@@ -23,7 +23,7 @@ export default function ONasPage() {
 
       <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 md:grid-cols-3">
         {POINTS.map((p) => (
-          <section key={p.title} className="bg-[#0c0b0a] p-6 md:p-8">
+          <section key={p.title} className="bg-tlo p-6 md:p-8">
             <h2 className="text-lg text-stone-50">{p.title}</h2>
             <p className="mt-3 text-sm leading-relaxed text-stone-400">{p.text}</p>
           </section>

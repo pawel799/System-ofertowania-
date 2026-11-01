@@ -1,5 +1,6 @@
 "use client";
 
+import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { COUNTERTOPS } from "../catalog";
 import { FRONTS } from "../frontStore";
@@ -650,6 +651,7 @@ export default function KreatorApp() {
           Zapisz ofertę
         </button>
         <LogoutButton />
+        <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
       {!gotowe ? <p className="lede kr-wait">Wczytywanie kreatora…</p> : null}

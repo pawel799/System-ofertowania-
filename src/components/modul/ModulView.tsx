@@ -6,6 +6,7 @@ import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-
 import Szafka from "./Szafka";
 import { MODUL_LIMITS, modulCena, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
+import { useMotyw } from "@/lib/motyw";
 
 type Param = { key: "szerokosc" | "wysokosc" | "glebokosc"; label: string; min: number; max: number };
 const PARAMS: Param[] = [
@@ -31,6 +32,7 @@ export type ModulViewProps = {
 };
 
 export default function ModulView({ initial, cennik, price, readOnly, embedded, title, footer }: ModulViewProps = {}) {
+  const ciemny = useMotyw() === "ciemny";
   const [v, setV] = useState({ szerokosc: initial?.w ?? 60, wysokosc: initial?.h ?? 72, glebokosc: initial?.d ?? 56 });
   const dims = { w: v.szerokosc, h: v.wysokosc, d: v.glebokosc };
   const cena = cennik ? modulCena(dims, cennik) : price;
@@ -38,10 +40,10 @@ export default function ModulView({ initial, cennik, price, readOnly, embedded, 
     setV((s) => ({ ...s, [k]: Number.isFinite(n) ? Math.min(p.max, Math.max(p.min, n)) : s[k] }));
 
   return (
-    <div className={`flex ${embedded ? "h-full" : "h-[100dvh]"} flex-col bg-stone-100 text-stone-900 md:flex-row`}>
+    <div data-strona="jasna" className={`flex ${embedded ? "h-full" : "h-[100dvh]"} flex-col bg-stone-100 text-stone-900 md:flex-row`}>
       <div className="relative min-h-0 flex-1">
         <Canvas shadows dpr={[1, 2]} camera={{ position: [1.1, 0.9, 1.5], fov: 40 }}>
-          <color attach="background" args={["#efece7"]} />
+          <color attach="background" args={[ciemny ? "#141311" : "#efece7"]} />
           <ambientLight intensity={0.35} />
           <directionalLight position={[2, 3, 2]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
           <Suspense fallback={null}>

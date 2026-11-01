@@ -1,5 +1,6 @@
 "use client";
 
+import { useJasnaStrona } from "@/lib/motyw";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, useGLTF } from "@react-three/drei";
@@ -69,6 +70,7 @@ export default function HeroScene({ offscreen = false, onReady }: { offscreen?: 
   // Ruch wyłączony przy prefers-reduced-motion, gdy karta jest w tle i gdy hero jest poza ekranem.
   const [still, setStill] = useState(false);
   const [visible, setVisible] = useState(true);
+  const jasny = useJasnaStrona();
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     const sync = () => setStill(mq.matches);
@@ -89,7 +91,7 @@ export default function HeroScene({ offscreen = false, onReady }: { offscreen?: 
       gl={{ antialias: true, toneMappingExposure: 1.15 }}
       camera={{ position: CAMERA_START.toArray(), fov: 50, near: 0.25, far: 25 }}
     >
-      <color attach="background" args={["#0c0b0a"]} />
+      <color attach="background" args={[jasny ? "#f7f5f2" : "#0c0b0a"]} />
       <directionalLight position={[3.4, 5, 3.6]} intensity={2.2} color="#fff4e6" />
       <Suspense fallback={null}>
         <Kitchen still={still} onReady={onReady} />

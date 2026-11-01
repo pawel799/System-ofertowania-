@@ -32,6 +32,9 @@ export function luminancja(hex: string | undefined | null): number | null {
   return 0.2126 * kanal((n >> 16) & 255) + 0.7152 * kanal((n >> 8) & 255) + 0.0722 * kanal(n & 255);
 }
 
+/** Jasny motyw (src/lib/motyw.ts): scena zawsze na jasnym „studiu”. */
+export const tloMotywu = (tlo: TloSceny, jasnyMotyw: boolean): TloSceny => (jasnyMotyw ? TLO_JASNE : tlo);
+
 /** Tło dla modelu o danym (dominującym) kolorze. Brak koloru = ciemne tło jak dotąd. */
 export function tloDlaKoloru(hex: string | undefined | null): TloSceny {
   const l = luminancja(hex);

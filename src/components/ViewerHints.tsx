@@ -50,7 +50,7 @@ export function RotateHint() {
   };
   return (
     // Tylko wąski ekran w pionie; w poziomie i na komputerze ukryte.
-    <div className="pointer-events-auto absolute inset-x-4 bottom-4 z-[6] hidden items-center gap-3 rounded-xl border border-white/15 bg-[#0c0b0a]/90 py-2.5 pl-3.5 pr-1.5 text-sm text-stone-100 max-md:portrait:flex">
+    <div className="pointer-events-auto absolute inset-x-4 bottom-4 z-[6] hidden items-center gap-3 rounded-xl border border-white/15 bg-tlo/90 py-2.5 pl-3.5 pr-1.5 text-sm text-stone-100 max-md:portrait:flex">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden className="h-6 w-6 flex-none text-stone-300">
         <rect x="7" y="3" width="10" height="16" rx="1.8" stroke="currentColor" strokeWidth="1.4" />
         <path d="M11 16.5h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

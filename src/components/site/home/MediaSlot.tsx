@@ -7,7 +7,7 @@ import LoopVideo from "./LoopVideo";
  */
 export default function MediaSlot({ media, className = "" }: { media: Media; className?: string }) {
   const ratio = media.ratio ?? "16 / 10";
-  const frame = `relative overflow-hidden rounded-2xl border border-white/10 bg-[#141210] ${className}`;
+  const frame = `relative overflow-hidden rounded-2xl border border-white/10 bg-tlo2 ${className}`;
 
   if (media.video) {
     return (

@@ -4,6 +4,7 @@
  * Ekrany pomocnicze panelu przy pracy z API: wczytywanie, błąd, pusta lista
  * i okno logowania (konto firmy albo kod administratora). Te same klasy co reszta panelu (panel.css).
  */
+import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
 import { initials, loadBrand, useBrand } from "@/lib/brand";
@@ -124,6 +125,7 @@ export function PanelState({
             <span>Nowa</span>
           </button>
         ) : null}
+        <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
       <div style={{ display: "grid", placeItems: "center", minHeight: "60vh", padding: 24, visibility: mode === "loading" && !slow ? "hidden" : undefined }}>
         <div className="surface" role="status" aria-live="polite" style={{ padding: "28px 32px", maxWidth: 440, textAlign: "center" }}>

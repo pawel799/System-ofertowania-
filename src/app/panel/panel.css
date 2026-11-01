@@ -7,7 +7,7 @@
 .pnl {
   --bg: #f6f6f7; --panel: #ffffff; --g2: #f2f2f4; --g3: #eaeaed; --g4: #dedee3;
   --ring: rgba(16, 16, 24, 0.08); --ring-2: rgba(16, 16, 24, 0.14);
-  --text: #16161b; --text-2: #5e5f69; --text-3: #8d8e98;
+  --text: #16161b; --text-2: #5e5f69; --text-3: #62636c; --on-red: #ffffff;
   --ink: #16161b; --ink-text: #ffffff;
   --accent: #3f63e0; --teal: #0f8f84; --amber: #c27100; --green: #1e8a4c; --red: #d23b33;
   --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(16, 16, 24, 0.04);
@@ -29,11 +29,12 @@
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
+/* Ciemny panel: według systemu albo wybrany przełącznikiem motywu (src/lib/motyw.ts); jasny wybór wygrywa z systemem. */
 @media (prefers-color-scheme: dark) {
-  .pnl {
+  html:not([data-motyw="jasny"]) .pnl {
     --bg: #09090b; --panel: #111114; --g2: #18181c; --g3: #202026; --g4: #2a2a31;
     --ring: rgba(255, 255, 255, 0.08); --ring-2: rgba(255, 255, 255, 0.15);
-    --text: #ededf0; --text-2: #a1a2ac; --text-3: #6f707a;
+    --text: #ededf0; --text-2: #a1a2ac; --text-3: #8a8b95; --on-red: #111114;
     --ink: #ededf0; --ink-text: #111114;
     --accent: #7c98ff; --teal: #3cc3b5; --amber: #f2a93b; --green: #4cc57e; --red: #ff6a61;
     --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -41,6 +42,17 @@
     --sh-lg: 0 0 0 1px var(--ring-2), 0 24px 56px -12px rgba(0, 0, 0, 0.7);
     color-scheme: dark;
   }
+}
+html[data-motyw="ciemny"] .pnl {
+  --bg: #09090b; --panel: #111114; --g2: #18181c; --g3: #202026; --g4: #2a2a31;
+  --ring: rgba(255, 255, 255, 0.08); --ring-2: rgba(255, 255, 255, 0.15);
+  --text: #ededf0; --text-2: #a1a2ac; --text-3: #8a8b95; --on-red: #111114;
+  --ink: #ededf0; --ink-text: #111114;
+  --accent: #7c98ff; --teal: #3cc3b5; --amber: #f2a93b; --green: #4cc57e; --red: #ff6a61;
+  --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --sh-md: 0 0 0 1px var(--ring), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+  --sh-lg: 0 0 0 1px var(--ring-2), 0 24px 56px -12px rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
 }
 .pnl *, .pnl *::before, .pnl *::after { box-sizing: border-box; }
 .pnl button { cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
@@ -214,7 +226,7 @@
 .pnl .revoke-row .btn { flex: none; }
 .pnl .revoke-row .faint { font-size: 12px; }
 .pnl .hold { position: relative; overflow: hidden; color: var(--red); }
-.pnl .hold .fill { position: absolute; inset: 0; background: var(--red); color: #fff; display: inline-flex; align-items: center; justify-content: center; clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out); }
+.pnl .hold .fill { position: absolute; inset: 0; background: var(--red); color: var(--on-red); display: inline-flex; align-items: center; justify-content: center; clip-path: inset(0 100% 0 0); transition: clip-path 200ms var(--ease-out); }
 .pnl .hold[data-holding] .fill { clip-path: inset(0 0 0 0); transition: clip-path 2s linear; }
 .pnl .hold[data-holding] { transform: scale(0.97); }
 .pnl .danger-row { margin-top: 12px; }

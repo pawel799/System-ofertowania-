@@ -10,7 +10,8 @@ import { useHardware } from "./hardwareStore";
 import { applyRoles, type PublicModel } from "./modelRoles";
 import { usePalettes } from "./paletteStore";
 import { useKatalog } from "./katalogStore";
-import { sredniKolorModelu, tloDlaKoloru } from "./tloSceny";
+import { sredniKolorModelu, tloDlaKoloru, tloMotywu } from "./tloSceny";
+import { useJasnaStrona } from "@/lib/motyw";
 import { przygotujRuchome, ustawOtwarcie } from "./kuchnia/ruchomeGlb";
 import { useRuch } from "./kuchnia/MebelParametryczny";
 import { useOtwarcie } from "./kuchnia/otwarcieStore";
@@ -132,7 +133,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
 
 export default function CustomModelScene({ model, embedded = false }: { model: PublicModel; embedded?: boolean }) {
   const [kolor, setKolor] = useState<string | null>(null);
-  const tlo = tloDlaKoloru(kolor);
+  const tlo = tloMotywu(tloDlaKoloru(kolor), useJasnaStrona());
   const tloKolor = tlo.jasne ? tlo.tlo : "#0c0b0a";
   return (
     <div className="absolute inset-0 h-full w-full" data-embedded={embedded ? "" : undefined} data-tlo={tlo.jasne ? "jasne" : "ciemne"} style={{ background: tloKolor }}>

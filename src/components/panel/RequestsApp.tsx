@@ -1,5 +1,6 @@
 "use client";
 
+import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, forgetLogin, hasLogin, requestsApi, type Zgloszenie } from "./offerApi";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
@@ -90,6 +91,7 @@ export default function RequestsApp() {
         <a className="btn btn-ghost" href="/panel">
           Oferty
         </a>
+        <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
       <main className="surface set-main">

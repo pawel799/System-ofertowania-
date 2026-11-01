@@ -141,6 +141,7 @@ export default function RequestDialog({ code, summary: base }: { code?: string; 
         if (e.target === dialog.current) closeRequest();
       }}
       aria-labelledby={`${uid}-t`}
+      data-wyspa
       className="pointer-events-auto w-[min(92vw,28rem)] rounded-2xl bg-white p-0 text-stone-900 shadow-2xl backdrop:bg-black/60"
     >
       <div className="p-6 md:p-7">

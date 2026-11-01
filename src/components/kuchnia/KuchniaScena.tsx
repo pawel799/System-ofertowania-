@@ -18,7 +18,8 @@ import AgdBryla from "./AgdBryla";
 import { yElementu } from "./uklad3d";
 import Wymiary3D, { type Wybor3D } from "./Wymiary3D";
 import type { Otwor, PunktInstalacji } from "@/lib/wywiad";
-import { tloDlaKoloru, type TloSceny } from "../tloSceny";
+import { tloDlaKoloru, tloMotywu, type TloSceny } from "../tloSceny";
+import { useJasnaStrona } from "@/lib/motyw";
 import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 import { useRuch } from "./MebelParametryczny";
 import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
@@ -660,7 +661,8 @@ function useTloKuchni(): TloSceny {
   const hardware = useHardware();
   const palettes = usePalettes();
   const katalogMat = useKatalog();
-  return tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalogMat).color ?? null);
+  const jasnyMotyw = useJasnaStrona();
+  return tloMotywu(tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalogMat).color ?? null), jasnyMotyw);
 }
 
 export default function KuchniaScena(props: Props) {

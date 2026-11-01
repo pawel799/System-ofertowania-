@@ -1,5 +1,6 @@
 "use client";
 
+import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { KatalogTab } from "./KatalogTab";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
@@ -112,6 +113,7 @@ export default function SettingsApp() {
         <a className="btn btn-ghost" href="/panel">
           Oferty
         </a>
+        <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
       <main className="surface set-main">

@@ -1,5 +1,6 @@
 "use client";
 
+import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
@@ -747,6 +748,7 @@ export default function PanelApp() {
           </svg>
           <span>Nowa</span>
         </button>
+        <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
       <div className="shell">

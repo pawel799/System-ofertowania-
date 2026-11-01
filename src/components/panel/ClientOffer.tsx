@@ -133,7 +133,7 @@ export default function ClientOffer() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0c0b0a] px-6 text-stone-100">
+    <main data-strona="ciemna" className="flex min-h-screen items-center justify-center bg-tlo px-6 text-stone-100">
       <div className="w-full max-w-sm text-center">
         {brandKnown ? (
           brand.logo ? (

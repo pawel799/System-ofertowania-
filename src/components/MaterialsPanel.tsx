@@ -137,6 +137,7 @@ export default function MaterialsPanel({
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem
     <aside
       id="wycena"
+      data-wyspa
       className={`pointer-events-auto relative border-t border-black/10 bg-white text-stone-900 desk:max-h-none desk:overflow-visible ${className}`}
     >
       <h2 className="sr-only">Materiały</h2>

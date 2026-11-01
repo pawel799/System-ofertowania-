@@ -8,16 +8,164 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  html:not([data-motyw="jasny"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
   }
+}
+html[data-motyw="ciemny"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
 }
+
+/*
+ * Motyw jasny / ciemny (src/lib/motyw.ts). Paleta strony i oferty idzie przez zmienne (tailwind.config.ts).
+ * - Domyślnie (i w motywie ciemnym) – standardowe kolory: strona ciemna, wyspy (pasek materiałów, okna) jasne.
+ * - Jasny motyw: na ciemnych stronach (data-strona="ciemna") skala jest odwrócona (jasne tło, ciemny tekst),
+ *   a jasne wyspy (data-wyspa) wracają do zwykłych kolorów. Strona jasna z natury (data-strona="jasna",
+ *   kalkulator modułów) w ciemnym motywie dostaje skalę odwróconą.
+ */
+:root,
+[data-wyspa],
+html[data-motyw="jasny"] [data-strona="jasna"] {
+  --k-white: 255 255 255;
+  --k-black: 0 0 0;
+  --k-tlo: 12 11 10;
+  --k-tlo2: 20 19 17;
+  --k-stone-50: 250 250 249;
+  --k-stone-100: 245 245 244;
+  --k-stone-200: 231 229 228;
+  --k-stone-300: 214 211 209;
+  --k-stone-400: 168 162 158;
+  --k-stone-500: 120 113 108;
+  --k-stone-600: 87 83 78;
+  --k-stone-700: 68 64 60;
+  --k-stone-800: 41 37 36;
+  --k-stone-900: 28 25 23;
+  --k-stone-950: 12 10 9;
+  --k-neutral-50: 250 250 250;
+  --k-neutral-100: 245 245 245;
+  --k-neutral-200: 229 229 229;
+  --k-neutral-300: 212 212 212;
+  --k-neutral-400: 163 163 163;
+  --k-neutral-500: 115 115 115;
+  --k-neutral-600: 82 82 82;
+  --k-neutral-700: 64 64 64;
+  --k-neutral-800: 38 38 38;
+  --k-neutral-900: 23 23 23;
+  --k-neutral-950: 10 10 10;
+  --k-red-50: 254 242 242;
+  --k-red-100: 254 226 226;
+  --k-red-200: 254 202 202;
+  --k-red-300: 252 165 165;
+  --k-red-400: 248 113 113;
+  --k-red-500: 239 68 68;
+  --k-red-600: 220 38 38;
+  --k-red-700: 185 28 28;
+  --k-red-800: 153 27 27;
+  --k-red-900: 127 29 29;
+  --k-red-950: 69 10 10;
+}
+html[data-motyw="jasny"] [data-strona="ciemna"],
+html[data-motyw="ciemny"] [data-strona="jasna"] {
+  --k-white: 28 25 23;
+  --k-black: 255 255 255;
+  --k-tlo: 247 245 242;
+  --k-tlo2: 236 233 228;
+  --k-stone-50: 12 10 9;
+  --k-stone-100: 28 25 23;
+  --k-stone-200: 41 37 36;
+  --k-stone-300: 68 64 60;
+  --k-stone-400: 72 68 64;
+  --k-stone-500: 87 83 78;
+  --k-stone-600: 168 162 158;
+  --k-stone-700: 214 211 209;
+  --k-stone-800: 231 229 228;
+  --k-stone-900: 245 245 244;
+  --k-stone-950: 250 250 249;
+  --k-neutral-50: 10 10 10;
+  --k-neutral-100: 23 23 23;
+  --k-neutral-200: 38 38 38;
+  --k-neutral-300: 64 64 64;
+  --k-neutral-400: 82 82 82;
+  --k-neutral-500: 82 82 82;
+  --k-neutral-600: 163 163 163;
+  --k-neutral-700: 212 212 212;
+  --k-neutral-800: 229 229 229;
+  --k-neutral-900: 245 245 245;
+  --k-neutral-950: 250 250 250;
+  --k-red-50: 69 10 10;
+  --k-red-100: 127 29 29;
+  --k-red-200: 153 27 27;
+  --k-red-300: 185 28 28;
+  --k-red-400: 220 38 38;
+  --k-red-500: 220 38 38;
+  --k-red-600: 248 113 113;
+  --k-red-700: 252 165 165;
+  --k-red-800: 254 202 202;
+  --k-red-900: 254 226 226;
+  --k-red-950: 254 242 242;
+}
+html[data-motyw="jasny"] [data-strona="ciemna"] [data-wyspa],
+html[data-motyw="ciemny"] [data-strona="jasna"] [data-wyspa] {
+  --k-white: 255 255 255;
+  --k-black: 0 0 0;
+  --k-tlo: 12 11 10;
+  --k-tlo2: 20 19 17;
+  --k-stone-50: 250 250 249;
+  --k-stone-100: 245 245 244;
+  --k-stone-200: 231 229 228;
+  --k-stone-300: 214 211 209;
+  --k-stone-400: 168 162 158;
+  --k-stone-500: 120 113 108;
+  --k-stone-600: 87 83 78;
+  --k-stone-700: 68 64 60;
+  --k-stone-800: 41 37 36;
+  --k-stone-900: 28 25 23;
+  --k-stone-950: 12 10 9;
+  --k-neutral-50: 250 250 250;
+  --k-neutral-100: 245 245 245;
+  --k-neutral-200: 229 229 229;
+  --k-neutral-300: 212 212 212;
+  --k-neutral-400: 163 163 163;
+  --k-neutral-500: 115 115 115;
+  --k-neutral-600: 82 82 82;
+  --k-neutral-700: 64 64 64;
+  --k-neutral-800: 38 38 38;
+  --k-neutral-900: 23 23 23;
+  --k-neutral-950: 10 10 10;
+  --k-red-50: 254 242 242;
+  --k-red-100: 254 226 226;
+  --k-red-200: 254 202 202;
+  --k-red-300: 252 165 165;
+  --k-red-400: 248 113 113;
+  --k-red-500: 239 68 68;
+  --k-red-600: 220 38 38;
+  --k-red-700: 185 28 28;
+  --k-red-800: 153 27 27;
+  --k-red-900: 127 29 29;
+  --k-red-950: 69 10 10;
+}
+/*
+ * Kontrast (WCAG AA 4,5:1): szary tekst stone-500 na ciemnej stronie jest za ciemny (#78716c na #0c0b0a = 4,1),
+ * więc na ciemnych stronach dostaje jaśniejszy odcień; jasne wyspy (pasek materiałów, okna) zostają przy zwykłym.
+ */
+[data-strona="ciemna"],
+html[data-motyw="ciemny"] [data-strona="jasna"] {
+  --k-stone-500: 143 137 132;
+}
+html[data-motyw="jasny"] [data-strona="ciemna"] {
+  --k-stone-500: 87 83 78;
+}
+/* Tło html/body stron (żeby przy przewijaniu nie prześwitywał inny kolor). */
+html { --strona-tlo: #0c0b0a; }
+html[data-motyw="jasny"] { --strona-tlo: #f7f5f2; color-scheme: light; }
+html[data-motyw="ciemny"] { color-scheme: dark; }
 
 @layer utilities {
   .text-balance {
@@ -62,12 +210,12 @@ main[data-oferta][data-pelny] > .oferta-nakladka { display: none !important; }
  * Jasne tło sceny (ciemne fronty, tloSceny.ts): napisy i przyciski nad sceną dostają ciemne podłoże i cień,
  * żeby były czytelne na jasnym „studiu”. Ciemne tło – bez zmian.
  */
-main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul p,
-main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul h1 {
+html:not([data-motyw="jasny"]) main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul p,
+html:not([data-motyw="jasny"]) main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul h1 {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 18px rgba(0, 0, 0, 0.35);
 }
-main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul p { color: #f5f5f4; }
-main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul .mt-5 > * {
+html:not([data-motyw="jasny"]) main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul p { color: #f5f5f4; }
+html:not([data-motyw="jasny"]) main[data-oferta]:has([data-tlo="jasne"]) .oferta-tytul .mt-5 > * {
   background-color: rgba(12, 11, 10, 0.72);
   border-color: rgba(255, 255, 255, 0.28);
   -webkit-backdrop-filter: blur(6px);

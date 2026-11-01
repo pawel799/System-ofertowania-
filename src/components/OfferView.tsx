@@ -12,6 +12,7 @@ import { PelnyEkranWarstwa, PrzyciskPelnegoEkranu } from "./PelnyEkran";
 import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
 import SterowanieScian from "./kuchnia/SterowanieScian";
 import PrzyciskRysunku from "./rysunek/PrzyciskRysunku";
+import PrzelacznikMotywu from "./motyw/PrzelacznikMotywu";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { grupyMaterialow, maAgd } from "@/lib/opcjeProjektu";
 import type { TypProjektu } from "@/lib/projekt";
@@ -66,7 +67,7 @@ export default function OfferView({
   return (
     // Telefon (pion): scena 3D ~58svh na górze, pod nią tytuł i konfigurator w zwykłym przewijaniu,
     // cena i przycisk przyklejone na dole. Komputer: scena na całym ekranie, nakładka na wierzchu.
-    <main data-oferta className="relative min-h-[100svh] w-full bg-[#0c0b0a] pb-24 text-stone-100 desk:h-screen desk:overflow-hidden desk:pb-0">
+    <main data-oferta data-strona="ciemna" className="relative min-h-[100svh] w-full bg-tlo pb-24 text-stone-100 desk:h-screen desk:overflow-hidden desk:pb-0">
       {/* Scena 3D (obracanie palcem/myszą, przybliżanie). */}
       <div className="oferta-scena relative h-[58svh] w-full [@media(orientation:landscape)_and_(max-height:500px)]:h-[82svh] desk:fixed desk:inset-0 desk:h-auto">
         {plan?.elementy.length ? (
@@ -88,10 +89,13 @@ export default function OfferView({
           className="absolute inset-0 hidden bg-gradient-to-t from-black/75 via-black/0 to-black/55 desk:block"
         />
 
-        <header className="oferta-naglowek absolute inset-x-0 top-0 flex -translate-y-[58svh] [@media(orientation:landscape)_and_(max-height:500px)]:-translate-y-[82svh] items-center justify-between gap-4 bg-[#0c0b0a]/70 px-4 py-3 text-[11px] uppercase tracking-[0.25em] text-stone-300 desk:relative desk:translate-y-0 desk:bg-transparent desk:px-10 desk:py-6">
+        <header className="oferta-naglowek absolute inset-x-0 top-0 flex -translate-y-[58svh] [@media(orientation:landscape)_and_(max-height:500px)]:-translate-y-[82svh] items-center justify-between gap-4 bg-tlo/70 px-4 py-3 text-[11px] uppercase tracking-[0.25em] text-stone-300 desk:relative desk:translate-y-0 desk:bg-transparent desk:px-10 desk:py-6">
           <BrandMark />
           <span className="oferta-kod hidden tabular-nums text-stone-300 sm:inline">{code}</span>
-          <MeasureButton className="pointer-events-auto rounded-full border border-white/25 px-4 py-2 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
+          <span className="flex items-center gap-2">
+            <PrzelacznikMotywu className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border border-white/25 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
+            <MeasureButton className="pointer-events-auto rounded-full border border-white/25 px-4 py-2 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
+          </span>
         </header>
 
         <div className="oferta-tytul relative flex min-h-0 flex-1 items-end px-5 pb-6 pt-6 desk:px-10 desk:pb-10 desk:pt-0">

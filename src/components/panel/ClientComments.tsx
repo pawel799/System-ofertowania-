@@ -104,7 +104,7 @@ function CommentDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-[#0c0b0a]/80 px-6 backdrop-blur-md" onClick={onClose}>
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-tlo/80 px-6 backdrop-blur-md" onClick={onClose}>
       <form
         role="dialog"
         aria-modal="true"

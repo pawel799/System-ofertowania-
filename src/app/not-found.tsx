@@ -9,8 +9,8 @@ export const metadata: Metadata = { title: "Nie ma takiej strony · OP RZUT" };
 /* Strona 404 (w statycznym eksporcie trafia do out/404.html, Cloudflare Pages podaje ją sam). */
 export default function NotFound() {
   return (
-    <div className="flex min-h-[100svh] flex-col bg-[#0c0b0a] text-stone-200">
-      <style>{`html,body{background:#0c0b0a}`}</style>
+    <div data-strona="ciemna" className="flex min-h-[100svh] flex-col bg-tlo text-stone-200">
+      <style>{`html,body{background:var(--strona-tlo)}`}</style>
       <SiteHeader />
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col justify-center px-6 py-24 md:px-10">
         <p className="text-[11px] uppercase tracking-[0.25em] text-stone-500">Błąd 404</p>

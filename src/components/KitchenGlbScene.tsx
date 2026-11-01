@@ -39,7 +39,8 @@ import { useCountertop } from "./countertopStore";
 import { useHardware } from "./hardwareStore";
 import { usePalettes } from "./paletteStore";
 import { useKatalog } from "./katalogStore";
-import { tloDlaKoloru } from "./tloSceny";
+import { tloDlaKoloru, tloMotywu } from "./tloSceny";
+import { useJasnaStrona } from "@/lib/motyw";
 
 const MODEL_URL = "/models/kitchen-opt.glb";
 
@@ -350,7 +351,8 @@ export default function KitchenGlbScene({
   const hardware = useHardware();
   const palettes = usePalettes();
   const katalog = useKatalog();
-  const tlo = tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalog).color ?? null);
+  const jasnyMotyw = useJasnaStrona();
+  const tlo = tloMotywu(tloDlaKoloru(lookFor("front", { front, countertop, hardware }, palettes, katalog).color ?? null), jasnyMotyw);
   const tloKolor = tlo.jasne ? tlo.tlo : "#0c0b0a";
 
   return (

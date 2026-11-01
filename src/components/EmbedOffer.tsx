@@ -74,7 +74,7 @@ export default function EmbedOffer() {
     );
   }
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#0c0b0a] px-6 text-center text-stone-400">
+    <main data-strona="ciemna" className="flex min-h-screen items-center justify-center bg-tlo px-6 text-center text-stone-400">
       {state.k === "loading" ? <p className="text-sm">Wczytywanie kuchni 3D…</p> : <p className="text-sm">Ta kuchnia 3D nie jest teraz dostępna.</p>}
     </main>
   );

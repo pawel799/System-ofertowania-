@@ -9,6 +9,7 @@ import MediaSlot from "@/components/site/home/MediaSlot";
 import { nr, Section, SectionHead } from "@/components/site/home/Section";
 import StepsShowcase from "@/components/site/home/StepsShowcase";
 import { btn } from "@/components/site/styles";
+import PrzelacznikMotywu from "@/components/motyw/PrzelacznikMotywu";
 
 export const metadata: Metadata = {
   title: BRAND_NAME,
@@ -24,10 +25,10 @@ export default function HomePage() {
   const { meble, steps, demo, features, audience, pricing, faq, finalCta } = HOME;
 
   return (
-    <div className="bg-[#0c0b0a] text-stone-200">
+    <div data-strona="ciemna" className="bg-tlo text-stone-200">
       {/* Ciemne tło także dla html/body: inaczej przy szybkim przewijaniu (zanim przeglądarka
           domaluje kafelki) i przy „odbiciu” na końcu strony prześwituje białe body. */}
-      <style>{`html,body{background:#0c0b0a}`}</style>
+      <style>{`html,body{background:var(--strona-tlo)}`}</style>
       <HomeHeader heroId="start" />
 
       <main>
@@ -40,6 +41,8 @@ export default function HomePage() {
             <HeroBackground />
           </div>
           <div aria-hidden className="absolute inset-0 -z-10 bg-black/80" />
+          {/* Motyw jasny / ciemny – pasek u góry pokazuje się dopiero po przewinięciu. */}
+          <PrzelacznikMotywu className={`${btn("ghost", "sm")} absolute right-6 top-[calc(1.25rem+env(safe-area-inset-top,0px))] w-9 !px-0 md:right-10`} />
 
           <div className="flex flex-col items-center px-6 text-center">
             <Logo size="lg" />

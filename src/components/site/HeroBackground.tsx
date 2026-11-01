@@ -51,7 +51,7 @@ export default function HeroBackground() {
   }, []);
 
   return (
-    <div ref={box} className="relative h-full w-full bg-[#0c0b0a]">
+    <div ref={box} className="relative h-full w-full bg-tlo">
       {/* eslint-disable-next-line @next/next/no-img-element -- statyczny eksport: zwykły <img> */}
       <img src="/strona/hero-poster.webp" alt="" className="absolute inset-0 h-full w-full object-cover" />
       {webgl ? (
