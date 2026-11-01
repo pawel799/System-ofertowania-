@@ -3,7 +3,7 @@
 import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
-import { PerspectiveCamera, Vector3 } from "three";
+import { Box3, PerspectiveCamera, Vector3, type Object3D } from "three";
 import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaWOtworze } from "@/lib/otwory";
 import { wGranicachPokoju } from "@/lib/sciany";
@@ -27,7 +27,9 @@ import { useKoloryProjektu } from "../koloryStore";
 import Sciany, { type EdycjaOtworow } from "./Sciany";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 
-export type KuchniaUjecie = { jpeg: () => string | null };
+/** Zdjęcia do PDF oferty: kilka ujęć całości i każdy mebel osobno (klucz: id elementu). */
+export type ZdjeciaOferty = { widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> };
+export type KuchniaUjecie = { jpeg: () => string | null; zdjecia?: () => ZdjeciaOferty | null };
 
 const BLAT: Record<string, string> = {
   "kwarcyt-calacatta": "#ece8e1",
@@ -208,11 +210,135 @@ function Kamera({ plan }: { plan: PlanKuchni }) {
   return null;
 }
 
-function Ujecie({ aktywne, onUjecie }: { aktywne: boolean; onUjecie?: (u: KuchniaUjecie | null) => void }) {
+/** Kadr z płótna 3D: przycięty do proporcji i zmniejszony (lżejszy PDF). */
+function kadr(zrodlo: HTMLCanvasElement, proporcja: number, maxW: number) {
+  const W = zrodlo.width;
+  const H = zrodlo.height;
+  let w = W;
+  let h = Math.round(W / proporcja);
+  if (h > H) {
+    h = H;
+    w = Math.round(H * proporcja);
+  }
+  const skala = Math.min(1, maxW / w);
+  const c = document.createElement("canvas");
+  c.width = Math.round(w * skala);
+  c.height = Math.round(h * skala);
+  const ctx = c.getContext("2d");
+  if (!ctx) return zrodlo.toDataURL("image/jpeg", 0.8);
+  ctx.drawImage(zrodlo, (W - w) / 2, (H - h) / 2, w, h, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.82);
+}
+
+/**
+ * Zdjęcia sceny: jpeg() – bieżący widok; zdjecia() – ujęcia do PDF (z przodu, z boku, z góry) i każdy mebel osobno
+ * (pozostałe meble, ściany i wymiary ukryte na czas zdjęcia, kamera na wprost frontu). Po zdjęciach wszystko wraca.
+ */
+function Ujecie({ aktywne, onUjecie, plan }: { aktywne: boolean; onUjecie?: (u: KuchniaUjecie | null) => void; plan: PlanKuchni }) {
   const gl = useThree((s) => s.gl);
   const advance = useThree((s) => s.advance);
+  const scene = useThree((s) => s.scene);
+  const camera = useThree((s) => s.camera) as PerspectiveCamera;
+  const controls = useThree((s) => s.controls) as { target: Vector3; update: () => void } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const planRef = useRef(plan);
+  planRef.current = plan;
   useEffect(() => {
     if (!aktywne || !onUjecie) return;
+    const zdjecia = (): ZdjeciaOferty | null => {
+      const p = planRef.current;
+      if (!p.elementy.length) return null;
+      const pozycja = camera.position.clone();
+      const kwaternion = camera.quaternion.clone();
+      const cel = controls?.target.clone() ?? null;
+      const ukryte: Object3D[] = [];
+      const ukryj = (o: Object3D | undefined) => {
+        if (o && o.visible) {
+          o.visible = false;
+          ukryte.push(o);
+        }
+      };
+      const vHalf = (camera.fov * Math.PI) / 360;
+      const aspekt = gl.domElement.width / Math.max(1, gl.domElement.height);
+      const proporcja = 4 / 3;
+      // Kąty widzenia w kadrze 4:3 (kadr wycina środek płótna): pionowy hv i poziomy hh.
+      const hh = aspekt >= proporcja ? Math.atan(Math.tan(vHalf) * proporcja) : Math.atan(Math.tan(vHalf) * aspekt);
+      const hv = aspekt >= proporcja ? vHalf : Math.atan(Math.tan(hh) / proporcja);
+      const half = Math.min(hv, hh);
+      /** Odległość, z której pudełko (szer. × wys. widziane z kamery, gł. w stronę kamery) mieści się w kadrze. */
+      const odl = (szer: number, wys: number, glab: number) => Math.max(szer / 2 / Math.tan(hh), wys / 2 / Math.tan(hv)) * 1.12 + glab / 2;
+      const zrob = (poz: Vector3, patrz: Vector3, maxW: number) => {
+        camera.position.copy(poz);
+        camera.lookAt(patrz);
+        camera.updateMatrixWorld();
+        gl.render(scene, camera);
+        return kadr(gl.domElement, proporcja, maxW);
+      };
+      try {
+        const meble = new Box3();
+        const grupy = new Map<string, Object3D>();
+        for (const e of p.elementy) {
+          const g = scene.getObjectByName(`el-${e.id}`);
+          if (!g) continue;
+          grupy.set(e.id, g);
+          meble.expandByObject(g);
+        }
+        if (meble.isEmpty()) return null;
+        const srodek = meble.getCenter(new Vector3());
+        const r = meble.getSize(new Vector3());
+        const skos = Math.hypot(r.x, r.z);
+        ukryj(scene.getObjectByName("wymiary"));
+        const widoki: ZdjeciaOferty["widoki"] = [];
+        // Z przodu (na ścianę A), skos z lewej i z prawej (kamera lekko z góry), z góry bez ścian.
+        const dPrzod = odl(r.x, r.y, r.z);
+        widoki.push({ nazwa: "Z przodu", jpeg: zrob(new Vector3(srodek.x, srodek.y + dPrzod * 0.12, srodek.z + dPrzod), srodek, 1100) });
+        const dSkos = odl(skos, r.y * 1.3, skos * 0.5);
+        widoki.push({ nazwa: "Z lewej", jpeg: zrob(new Vector3(srodek.x - dSkos * 0.62, srodek.y + dSkos * 0.38, srodek.z + dSkos * 0.68), srodek, 1100) });
+        widoki.push({ nazwa: "Z prawej", jpeg: zrob(new Vector3(srodek.x + dSkos * 0.62, srodek.y + dSkos * 0.38, srodek.z + dSkos * 0.68), srodek, 1100) });
+        ukryj(scene.getObjectByName("sciany"));
+        ukryj(scene.getObjectByName("woda"));
+        const dGora = odl(r.x, r.z, r.y);
+        widoki.push({ nazwa: "Z góry", jpeg: zrob(new Vector3(srodek.x, srodek.y + dGora, srodek.z + dGora * 0.06), srodek, 1100) });
+        // Każdy mebel osobno: reszta i ściany ukryte, kamera na wprost frontu, lekko z góry i z boku.
+        const elementy: Record<string, string> = {};
+        for (const e of p.elementy) {
+          const g = grupy.get(e.id);
+          if (!g) continue;
+          const inne: Object3D[] = [];
+          grupy.forEach((o, id) => {
+            if (id !== e.id && o.visible) {
+              o.visible = false;
+              inne.push(o);
+            }
+          });
+          const box = new Box3().setFromObject(g);
+          const c = box.getCenter(new Vector3());
+          const r = Math.max(box.getSize(new Vector3()).length() * 0.5, 0.2);
+          const d = (r / Math.sin(Math.max(0.2, half))) * 1.02;
+          const kat = ((e.rot + (e.kat ?? 0)) * Math.PI) / 180;
+          const fx = Math.sin(kat);
+          const fz = Math.cos(kat);
+          // Lekko z boku: 20° w prawo od osi frontu.
+          const bok = 0.36;
+          const poz = new Vector3(c.x + (fx + fz * bok) * d * 0.93, c.y + d * 0.28, c.z + (fz - fx * bok) * d * 0.93);
+          elementy[e.id] = zrob(poz, c, 560);
+          inne.forEach((o) => (o.visible = true));
+        }
+        return { widoki, elementy };
+      } catch {
+        return null;
+      } finally {
+        ukryte.forEach((o) => (o.visible = true));
+        camera.position.copy(pozycja);
+        camera.quaternion.copy(kwaternion);
+        camera.updateMatrixWorld();
+        if (controls && cel) {
+          controls.target.copy(cel);
+          controls.update();
+        }
+        invalidate();
+      }
+    };
     onUjecie({
       jpeg: () => {
         try {
@@ -222,9 +348,10 @@ function Ujecie({ aktywne, onUjecie }: { aktywne: boolean; onUjecie?: (u: Kuchni
           return null;
         }
       },
+      zdjecia,
     });
     return () => onUjecie(null);
-  }, [aktywne, advance, gl, onUjecie]);
+  }, [aktywne, advance, gl, onUjecie, scene, camera, controls, invalidate]);
   return null;
 }
 
@@ -336,6 +463,7 @@ function ElementWidok({
   const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={ids.uchwytKolor} />;
   return (
     <group
+      name={`el-${el.id}`}
       position={[el.x / 100, y, el.z / 100]}
       rotation={[0, ((el.rot + (el.kat ?? 0)) * Math.PI) / 180, 0]}
       onClick={(e) => {
@@ -376,7 +504,7 @@ function Otwory({ plan }: { plan: PlanKuchni }) {
   const wy = plan.wywiad;
   if (!wy?.woda) return null;
   return (
-    <mesh position={wy.woda.sciana === "A" ? [wy.woda.od / 100, 0.5, 0.02] : [0.02, 0.5, wy.woda.od / 100]}>
+    <mesh name="woda" position={wy.woda.sciana === "A" ? [wy.woda.od / 100, 0.5, 0.02] : [0.02, 0.5, wy.woda.od / 100]}>
       <sphereGeometry args={[0.025, 16, 12]} />
       <meshStandardMaterial color="#2f7fd1" roughness={0.3} />
     </mesh>
@@ -519,7 +647,7 @@ function Wnetrze({
       {wymiary || (wykonawca && wybor3d) ? <Wymiary3D plan={planWymiarow} wybor={wybor3d} przeglad={!!wymiary} /> : null}
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={12} blur={2.4} far={2} />
       <Kamera plan={plan} />
-      <Ujecie aktywne={!!zdjecie} onUjecie={onUjecie} />
+      <Ujecie aktywne={!!zdjecie} onUjecie={onUjecie} plan={plan} />
       <OrbitControls makeDefault maxPolarAngle={Math.PI / 2 - 0.04} minDistance={0.6} maxDistance={14} />
     </>
   );

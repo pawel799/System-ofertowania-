@@ -85,6 +85,16 @@ Rysunek liczy się z planu oferty – nic się nie zapisuje, zawsze jest aktualn
 
 Gdzie jest: na końcu PDF oferty (osobne strony), przycisk **„Rysunek techniczny”** obok „Pobierz PDF” (kreator i lista ofert – okno do druku / zapisu jako PDF) i ten sam przycisk na stronie klienta.
 
+## PDF oferty: zdjęcia z 3D i rysunki mebli
+
+Przy „Pobierz PDF” scena 3D robi zdjęcia (`KuchniaUjecie.zdjecia` w `KuchniaScena.tsx`), a widok wraca potem dokładnie tam, gdzie był:
+
+- **Wizualizacja 3D** – 4 ujęcia całości: z przodu, z lewej, z prawej (kamera lekko z góry) i z góry (bez ścian); kadr 4:3 dopasowany do mebli, nie do pokoju;
+- **Elementy – zdjęcia i rysunki** – karta każdej pozycji: numer, nazwa, wymiary i cena, zdjęcie samego mebla (pozostałe meble i ściany ukryte na czas zdjęcia, kamera na wprost frontu) i rysunek CAD (`svgElementu`: widok z przodu z podziałem drzwi / szuflad i symbolem otwierania, widok z boku, wymiary; płyta i zlew – widok z góry);
+- dalej rysunek techniczny (rzut i widoki ścian).
+
+Zdjęcia są JPEG zmniejszone do ok. 1100 px (całość) i 560 px (meble), więc PDF zostaje lekki. Bez sceny 3D (np. oferta z jednym modelem) PDF wychodzi jak dotąd.
+
 ## Przesuwanie mebli w 3D (tylko kreator)
 
 W kreatorze mebel przeciąga się także w podglądzie 3D (strona klienta – nie). Mebel jedzie po poziomej płaszczyźnie swojego spodu, przyciąga się do ścian i sąsiadów (`przyciagnij`, Shift – bez przyciągania), nie wychodzi za ściany pokoju (`wGranicachPokoju`), a obrys świeci na czerwono, gdy nachodzi na inny mebel albo stanąłby w drzwiach / przed oknem – puszczony wtedy wraca z komunikatem. Kamera stoi, gdy trzymasz mebel; krótki klik dalej tylko zaznacza. To samo ograniczenie ścian działa przy przeciąganiu na rzucie.

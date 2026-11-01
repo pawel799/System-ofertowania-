@@ -85,6 +85,8 @@ export function OfertaPdfPrzyciski({
       link3dWazny: link?.wazny ?? null,
       link3dPin: link?.pin ?? false,
       zdjecie: zeZdjeciem ? (ujecie?.current?.jpeg() ?? null) : null,
+      // Ujęcia 3D (całość z kilku stron, każdy mebel osobno) – po bieżącym widoku, kamera wraca na miejsce.
+      zdjecia: zeZdjeciem ? (ujecie?.current?.zdjecia?.() ?? null) : null,
       modele,
       projekt,
     });

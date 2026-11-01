@@ -8,7 +8,7 @@ import type { Palette } from "../palettes";
 import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
-import { RT_CSS, rysunekTechnicznyHtml } from "../rysunek/rysunekTechniczny";
+import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
 import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
@@ -47,6 +47,10 @@ export type PdfDane = {
   link3dPin: boolean;
   data: string;
   zdjecie: string | null;
+  /** Zdjęcia z widoku 3D: ujęcia całości (z przodu, z boku, z góry). */
+  widoki: { nazwa: string; jpeg: string }[];
+  /** Zdjęcie każdego mebla osobno (jak pozycje; null = brak). */
+  zdjeciaElementow: (string | null)[];
   cennikUwaga: string | null;
   /** Materiały, które projekt ma (opcjeProjektu.ts) – reszty nie ma w PDF ani w cenie. */
   grupy: GrupyMaterialow;
@@ -90,6 +94,8 @@ export function danePdf(args: {
   link3dWazny?: string | null;
   link3dPin?: boolean;
   zdjecie: string | null;
+  /** Ujęcia 3D do PDF (KuchniaUjecie.zdjecia) – brak = tylko zdjecie. */
+  zdjecia?: { widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> } | null;
   /** Modele użyte w planie (oznaczenia ról: front, blat, uchwyt). */
   modele?: readonly { id: string; tags: Record<string, string> }[];
   projekt?: TypProjektu;
@@ -153,6 +159,8 @@ export function danePdf(args: {
     link3dPin: !!args.link3d && !!args.link3dPin,
     data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
     zdjecie: obraz(args.zdjecie),
+    widoki: (args.zdjecia?.widoki ?? []).flatMap((w) => (obraz(w.jpeg) ? [{ nazwa: w.nazwa, jpeg: w.jpeg }] : [])),
+    zdjeciaElementow: args.plan.elementy.map((e) => obraz(args.zdjecia?.elementy[e.id] ?? null)),
     cennikUwaga: args.cennikUwaga,
     grupy,
     slowa: slowaProjektu(args.projekt),
@@ -203,7 +211,21 @@ export function pdfHtml(d: PdfDane) {
     .join("");
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
   const zdjecie = d.zdjecie ? `<img class="shot" alt="Podgląd zabudowy" src="${d.zdjecie}" />` : "";
-  // Rysunek techniczny (rzut, widoki ścian) – zawsze z bieżącego planu.
+  // Zdjęcia z 3D (kilka ujęć), karty mebli (zdjęcie + rysunek z wymiarami) i rysunek techniczny – zawsze z bieżącego planu.
+  const widoki = d.widoki.length
+    ? `<section class="widoki"><h2>Wizualizacja 3D</h2><div class="widoki-siatka">${d.widoki
+        .map((w) => `<figure><img alt="${esc(w.nazwa)}" src="${w.jpeg}" /><figcaption>${esc(w.nazwa)}</figcaption></figure>`)
+        .join("")}</div></section>`
+    : "";
+  const karty = d.plan.elementy.length
+    ? `<section class="karty"><h2>Elementy – zdjęcia i rysunki</h2><div class="karty-siatka">${d.plan.elementy
+        .map((e, i) => {
+          const p = d.pozycje[i];
+          const foto = d.zdjeciaElementow[i];
+          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p ? ` · ${p.cena === null ? "AGD, poza ceną" : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
+        })
+        .join("")}</div></section>`
+    : "";
   const rysunek = d.plan.elementy.length ? rysunekTechnicznyHtml(d.plan, { firma: d.firma, id: d.id, tytul: d.title, data: d.data }) : "";
   const link = d.link3d
     ? `<p class="link">${esc(d.slowa.nazwa)} w 3D (interaktywna, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
@@ -247,6 +269,19 @@ export function pdfHtml(d: PdfDane) {
   .qr p { margin: 2px 0; }
   .qr .muted { word-break: break-all; font-size: 11.5px; }
   footer { margin-top: 18px; font-size: 11px; color: #78716c; }
+  h2 { font-size: 15px; margin: 0 0 8px; }
+  .widoki, .karty { break-before: page; page-break-before: always; }
+  .widoki-siatka { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .widoki figure { margin: 0; break-inside: avoid; }
+  .widoki img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #141311; }
+  .widoki figcaption { font-size: 11px; color: #57534e; margin-top: 2px; }
+  .karty-siatka { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .karta { border: 1px solid #e7e5e4; border-radius: 6px; padding: 6px 8px; break-inside: avoid; page-break-inside: avoid; }
+  .karta h3 { font-size: 12.5px; margin: 0; }
+  .karta p { margin: 0 0 4px; font-size: 11px; }
+  .karta-obrazy { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-items: center; }
+  .karta-obrazy img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #141311; border-radius: 3px; }
+  .karta-cad svg { display: block; width: 100%; height: auto; max-height: 52mm; }
 ${RT_CSS}
 </style>
 </head>
@@ -286,6 +321,8 @@ ${link}
 <footer>
   Dokument jest ofertą handlową. Nie zawiera rozkroju płyt, nestingu ani listy formatek do cięcia.
 </footer>
+${widoki}
+${karty}
 ${rysunek}
 <script>window.addEventListener("load", () => setTimeout(() => window.print(), 200));</script>
 </body>
