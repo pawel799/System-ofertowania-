@@ -7,7 +7,8 @@
  */
 import { UKLAD_KUCHNI_LABEL, type PlanKuchni, type Sciana, type UkladKuchni } from "@/lib/kuchnia";
 import { parseTypProjektu, TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
-import { AGD_IDS, AGD_LABEL, MEBEL_LABEL, MEBLE_SALONU, POTRZEBA_LABEL, POTRZEBY, type Otwor, type Wywiad } from "@/lib/wywiad";
+import { AGD_IDS, AGD_LABEL, MAX_PUNKTOW, MEBEL_LABEL, MEBLE_SALONU, POTRZEBA_LABEL, POTRZEBY, PUNKT_INFO, RODZAJE_PUNKTOW, type Otwor, type PunktInstalacji, type RodzajPunktu, type Wywiad } from "@/lib/wywiad";
+import { propozycjaPunktow, sprawdzPunkt, uwagiPunktu, wolneMiejscePunktu } from "@/lib/punkty";
 import { PoleCm } from "./KreatorWlasciwosci";
 import { scianyPokoju, SCIANA_LABEL } from "@/lib/sciany";
 import { sprawdzOtwor, wolneMiejsceOtworu } from "@/lib/otwory";
@@ -128,6 +129,14 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
           : { rodzaj, sciana: sciany.some((s) => s.id === "C") ? "C" : L ? "B" : "A", od: 0, szer: 90 };
       return { ...w, otwory: [...w.otwory, wolneMiejsceOtworu({ ...plan, wywiad: w }, wzor)].slice(0, 12) };
     });
+  // Gniazdka i punkty instalacji: nowy w wolnym miejscu na ścianie A na typowej wysokości.
+  const punkty = wywiad.punkty ?? [];
+  const ustawPunkt = (i: number, zmiana: Partial<PunktInstalacji>) => setWywiad((w) => ({ ...w, punkty: (w.punkty ?? []).map((p, j) => (j === i ? { ...p, ...zmiana } : p)) }));
+  const dodajPunkt = (rodzaj: RodzajPunktu) =>
+    setWywiad((w) => ({
+      ...w,
+      punkty: [...(w.punkty ?? []), wolneMiejscePunktu({ ...plan, wywiad: w }, { rodzaj, sciana: "A", od: 30, wys: PUNKT_INFO[rodzaj].wys })].slice(0, MAX_PUNKTOW),
+    }));
   return (
     <div className="kr-krok" data-krok="otoczenie">
       <h2>Okna, drzwi i instalacje</h2>
@@ -175,6 +184,65 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
             + Drzwi
           </button>
         </div>
+      </div>
+      <div className="kr-otwory" data-punkty>
+        <span className="lab">Gniazdka i instalacje</span>
+        <p className="kr-hint">Przeciągnij na rzucie albo w 3D (w 3D także w górę i w dół). Wymiary do osi puszki: od narożnika ściany i nad podłogą.</p>
+        {punkty.map((p, i) => {
+          const info = PUNKT_INFO[p.rodzaj];
+          const bledy = sprawdzPunkt({ ...plan, wywiad }, i, p);
+          const uwagi = bledy.length ? [] : uwagiPunktu({ ...plan, wywiad }, p);
+          return (
+            <fieldset key={i} className="kr-otwor" data-punkt={p.rodzaj}>
+              <legend>
+                {info.nazwa} · {i + 1}
+              </legend>
+              {sciany.length > 1 ? (
+                <Seg
+                  label={`${info.krotka} ${i + 1}: ściana`}
+                  value={p.sciana}
+                  onChange={(v: PunktInstalacji["sciana"]) => ustawPunkt(i, { sciana: v })}
+                  options={sciany.map((s) => ({ value: s.id as PunktInstalacji["sciana"], label: SCIANA_LABEL[s.id].replace(" (naprzeciw ", " · nap. ").replace(")", "") }))}
+                />
+              ) : null}
+              <div className="kr-dims">
+                <PoleCm id={`k-pk-od-${i}`} label="Oś od narożnika" value={p.od} min={0} max={2000} onCommit={(n) => ustawPunkt(i, { od: n })} />
+                <PoleCm id={`k-pk-wys-${i}`} label="Wysokość osi" value={p.wys} min={0} max={450} onCommit={(n) => ustawPunkt(i, { wys: n })} />
+              </div>
+              {bledy.length ? (
+                <ul className="kr-wn-bledy" role="alert">
+                  {bledy.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {uwagi.length ? (
+                <ul className="kr-wn-ostrz">
+                  {uwagi.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              ) : null}
+              <button type="button" className="btn btn-plain" onClick={() => setWywiad((w) => ({ ...w, punkty: (w.punkty ?? []).filter((_, j) => j !== i) }))}>
+                Usuń
+              </button>
+            </fieldset>
+          );
+        })}
+        <div className="actions">
+          {RODZAJE_PUNKTOW.map((r) => (
+            <button key={r} type="button" className="btn btn-ghost" onClick={() => dodajPunkt(r)} disabled={punkty.length >= MAX_PUNKTOW} title={PUNKT_INFO[r].nazwa}>
+              + {PUNKT_INFO[r].krotka}
+            </button>
+          ))}
+        </div>
+        {plan.elementy.length ? (
+          <div className="actions">
+            <button type="button" className="btn btn-plain" onClick={() => setWywiad((w) => ({ ...w, punkty: propozycjaPunktow({ ...plan, wywiad: w }) }))}>
+              Zaproponuj gniazdka do mebli i AGD
+            </button>
+          </div>
+        ) : null}
       </div>
       {typ === "kuchnia" || typ === "lazienka" || typ === "inne" ? (
         <div className="kr-card">

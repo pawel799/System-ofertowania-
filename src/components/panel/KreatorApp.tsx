@@ -52,7 +52,7 @@ import { KreatorBiblioteka } from "./KreatorBiblioteka";
 import { KreatorWnetrze, type ElementOkna } from "./KreatorWnetrze";
 import { etykietaKroku, KROKI, KrokOtoczenie, KrokPomieszczenie, KrokWyposazenie, PasekKrokow, type Krok } from "./KreatorKroki";
 import { KreatorSamouczek, samouczekWidziany } from "./KreatorSamouczek";
-import { AGD_LABEL, wywiadDomyslny, type Otwor, type Wywiad } from "@/lib/wywiad";
+import { AGD_LABEL, wywiadDomyslny, type Otwor, type PunktInstalacji, type Wywiad } from "@/lib/wywiad";
 import { ulozPropozycje } from "@/lib/propozycja";
 import { grupyMaterialow } from "@/lib/opcjeProjektu";
 import { dodatkiDomyslne, type DodatekOferty } from "@/lib/dodatki";
@@ -247,6 +247,10 @@ export default function KreatorApp() {
   // Okno albo drzwi przeciągnięte na rzucie / w 3D (już sprawdzone – sprawdzOtwor w src/lib/otwory.ts).
   const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), []);
   const bladOtworu = useCallback((powod: string) => toast("Tu nie można przesunąć", { type: "err", desc: powod }), []);
+  const przesunPunkt = useCallback(
+    (i: number, pk: PunktInstalacji) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, punkty: (p.wywiad.punkty ?? []).map((x, j) => (j === i ? pk : x)) } } : p)),
+    [],
+  );
   // Przeciąganie mebli w 3D (tylko kreator): nowe miejsce już sprawdzone w scenie.
   const edycjaMebli = useMemo(
     () => ({
@@ -740,6 +744,7 @@ export default function KreatorApp() {
                   onOtworz={(id) => setOkno({ tryb: "edycja", id })}
                   onOtwor={przesunOtwor}
                   onBladOtworu={bladOtworu}
+                  onPunkt={przesunPunkt}
                 />
                 </div>
                 <p className="kr-legend">
@@ -765,7 +770,7 @@ export default function KreatorApp() {
                 </div>
                 <KuchniaTlo
                   plan={plan}
-                  edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu }}
+                  edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu, onPunkt: przesunPunkt }}
                   edycjaMebli={edycjaMebli}
                   modele={modeleSceny}
                   zaznaczony={zaznaczony}

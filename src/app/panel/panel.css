@@ -665,6 +665,11 @@
 .pnl .kr-okno[data-bad] line:not(.kr-otwor-uchwyt), .pnl .kr-drzwi[data-bad] line:not(.kr-otwor-uchwyt) { stroke: var(--red); }
 .pnl .kr-okno text, .pnl .kr-drzwi text { font-size: 7.5px; fill: var(--text-2); pointer-events: none; }
 .pnl .kr-woda circle { fill: #2f7fd1; stroke: #f7f1e6; stroke-width: 1; }
+.pnl .kr-punkt circle { fill: #fff; stroke: #c27a1a; stroke-width: 1; }
+.pnl .kr-punkt[data-rodzaj="gaz"] circle { stroke: #c9a20f; }
+.pnl .kr-punkt[data-rodzaj="kratka"] circle { stroke: var(--text-3); }
+.pnl .kr-punkt text { font-size: 4.2px; font-weight: 600; fill: #8a5410; pointer-events: none; }
+.pnl .kr-punkt[data-bad] circle { fill: #f3c9c6; stroke: var(--red); }
 .pnl .kr-card .kr-check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
 .pnl .kr-tylko-sm { display: none; }
 @media (max-width: 640px) { .pnl .kr-tylko-sm { display: inline; font-weight: 600; } }

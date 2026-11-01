@@ -7,6 +7,7 @@ import qrcode from "qrcode-generator";
 import type { Palette } from "../palettes";
 import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { opisWnetrza } from "@/lib/wnetrze";
+import { opisPunktow } from "@/lib/punkty";
 import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
@@ -254,7 +255,8 @@ export function pdfHtml(d: PdfDane) {
 <section class="meta">
   <p><b>Dla:</b> ${esc(d.client || "—")}${d.contact ? ` · ${esc(d.contact)}` : ""}</p>
   <p><b>Data:</b> ${esc(d.data)}</p>
-  <p><b>Układ:</b> ${esc(uklad)}. ${esc(sciany)}.${esc(pokoj)}</p>
+  <p><b>Układ:</b> ${esc(uklad)}. ${esc(sciany)}.${esc(pokoj)}</p>${d.plan.wywiad?.punkty?.length ? `
+  <p><b>Gniazdka i instalacje:</b> ${esc(opisPunktow(d.plan.wywiad.punkty))}.</p>` : ""}
   ${materialyHtml(d)}
 </section>
 ${qr}

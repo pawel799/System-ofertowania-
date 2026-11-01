@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Html, Line } from "@react-three/drei";
 import { rect, rectBazowy, zasiegNaScianie, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type ScianaPokoju } from "@/lib/sciany";
+import { PUNKT_INFO } from "@/lib/wywiad";
 import { yElementu } from "./uklad3d";
 
 type Pkt = [number, number, number];
@@ -101,7 +102,7 @@ function wymiaryBazowe(el: ElementKuchni, plan: PlanKuchni): { a: Pkt; b: Pkt; t
 }
 
 /** Co jest zaznaczone w 3D: mebel, okno / drzwi (indeks w wywiad.otwory) albo ściana. */
-export type Wybor3D = { typ: "element"; id: string } | { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | null;
+export type Wybor3D = { typ: "element"; id: string } | { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number } | null;
 
 type Linia = { a: Pkt; b: Pkt; tekst: string; k: string; akcent?: boolean };
 
@@ -141,6 +142,21 @@ function wymiaryOtworu(plan: PlanKuchni, i: number): Linia[] {
   if (o.od > 1) out.push({ a: pkt(0, 12), b: pkt(o.od, 12), tekst: `← ${cm(o.od)}`, k: "o-od", akcent: true });
   const reszta = s.dlugosc - o.od - o.szer;
   if (reszta > 1) out.push({ a: pkt(o.od + o.szer, 12), b: pkt(s.dlugosc, 12), tekst: `${cm(reszta)} →`, k: "o-do", akcent: true });
+  return out;
+}
+
+/** Gniazdko / punkt instalacji: wysokość osi nad podłogą i odległości osi od końców ściany (jak na rysunku elektryka). */
+function wymiaryPunktu(plan: PlanKuchni, i: number): Linia[] {
+  const p = plan.wywiad?.punkty?.[i];
+  const s = p ? scianaPoId(plan, p.sciana as ScianaPokoju) : null;
+  if (!p || !s) return [];
+  const { szer, h } = PUNKT_INFO[p.rodzaj];
+  const n = 0.04;
+  const pkt = (t: number, y: number): Pkt => [(s.x + s.dx * t) / 100 + s.nx * n, y / 100, (s.z + s.dz * t) / 100 + s.nz * n];
+  const y = p.wys - h / 2 - 6;
+  const out: Linia[] = [{ a: pkt(p.od + szer / 2 + 6, 0), b: pkt(p.od + szer / 2 + 6, p.wys), tekst: `wys. ${cm(p.wys)}`, k: "p-wys", akcent: true }];
+  if (p.od > 1) out.push({ a: pkt(0, y), b: pkt(p.od, y), tekst: `← ${cm(p.od)}`, k: "p-od", akcent: true });
+  if (s.dlugosc - p.od > 1) out.push({ a: pkt(p.od, y), b: pkt(s.dlugosc, y), tekst: `${cm(s.dlugosc - p.od)} →`, k: "p-do", akcent: true });
   return out;
 }
 
@@ -195,6 +211,7 @@ export function useLinieWymiarow(plan: PlanKuchni, wybor: Wybor3D, przeglad: boo
     }
     if (wybor?.typ === "otwor") linie.push(...wymiaryOtworu(plan, wybor.i));
     if (wybor?.typ === "sciana") linie.push(...wymiaryScian(plan, wybor.id));
+    if (wybor?.typ === "punkt") linie.push(...wymiaryPunktu(plan, wybor.i));
     return linie;
   }, [plan, wybor, przeglad]);
 }

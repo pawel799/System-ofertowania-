@@ -67,6 +67,14 @@ Okna i drzwi mogą stać na każdej ścianie (A, B, C, D – `wywiad.otwory[].sc
 
 Zabezpieczenia (`sprawdzOtwor` w `src/lib/otwory.ts`): otwór mieści się na ścianie, min. 10 cm od innego otworu, w drzwiach nie stoi żaden mebel (także szafka górna), okna nie zasłania słupek, szafka górna ani szafka wyższa niż parapet. Podgląd na czerwono, a puszczony w złym miejscu otwór wraca z komunikatem. W kroku „Okna i instalacje” błędy są pod każdym otworem. Mebla przeciąganego na rzucie nie da się postawić w drzwiach ani przed oknem (`meblaWOtworze`).
 
+## Gniazdka i instalacje (z modelami 3D)
+
+W kroku „Okna i instalacje” dodaje się punkty na ścianach (`wywiad.punkty`, typy i wymiary: `PUNKT_INFO` w `src/lib/wywiad.ts`): gniazdko, gniazdko podwójne, gniazdo siłowe 400 V (płyta indukcyjna), włącznik, punkt świetlny (kinkiet), gniazdo RTV / internet, zawór gazu i kratkę wentylacyjną. Każdy ma ścianę, oś od narożnika i wysokość osi nad podłogą (tak wymiaruje elektryk); nowy staje w wolnym miejscu na typowej wysokości. „Zaproponuj gniazdka do mebli i AGD” dopisuje: siłę 400 V pod płytą indukcyjną, zawór pod płytą gazową, gniazdka za zmywarką, piekarnikiem, lodówką i mikrofalą, nad okapem i podwójne nad blatem co ok. 120 cm (nie przy zlewie, nie nad płytą).
+
+Przesuwanie: na rzucie (kółko z symbolem przy ścianie) i w 3D (model na ścianie – wzdłuż i w pionie), także na inną ścianę; Shift = co 1 cm. Zabezpieczenia (`sprawdzPunkt` w `src/lib/punkty.ts`): nie poza ścianą, nie pod podłogą ani nad sufitem, nie w oknie ani w drzwiach, nie na innym punkcie – podgląd na czerwono, puszczony wraca z komunikatem. Uwagi (`uwagiPunktu`, na pomarańczowo): gniazdko bliżej niż 60 cm od zlewu / przyłącza wody, nad płytą grzewczą, punkt zasłonięty meblem (kratki nie wolno zasłaniać, zawór gazu i gniazdka AGD – otwór w plecach szafki).
+
+Modele 3D są proceduralne (`PunktyInstalacji.tsx`): gniazdko typu E z bolcem, czerwone gniazdo CEE 400 V, klawisz włącznika, kinkiet ze świecącym kloszem, RTV z gniazdem antenowym i LAN, zawór z żółtą dźwignią, kratka z żaluzjami. Widać je u wykonawcy i u klienta, znikają razem ze ścianą (od zewnątrz i przy „Ukryj ściany”). Klik w punkt w 3D pokazuje wysokość osi i odległości od końców ściany (na żywo przy przeciąganiu). PDF dopisuje listę: „Gniazdka i instalacje: 2× Gniazdko 230 V, 1× Gniazdo siłowe 400 V…”.
+
 ## Przesuwanie mebli w 3D (tylko kreator)
 
 W kreatorze mebel przeciąga się także w podglądzie 3D (strona klienta – nie). Mebel jedzie po poziomej płaszczyźnie swojego spodu, przyciąga się do ścian i sąsiadów (`przyciagnij`, Shift – bez przyciągania), nie wychodzi za ściany pokoju (`wGranicachPokoju`), a obrys świeci na czerwono, gdy nachodzi na inny mebel albo stanąłby w drzwiach / przed oknem – puszczony wtedy wraca z komunikatem. Kamera stoi, gdy trzymasz mebel; krótki klik dalej tylko zaznacza. To samo ograniczenie ścian działa przy przeciąganiu na rzucie.

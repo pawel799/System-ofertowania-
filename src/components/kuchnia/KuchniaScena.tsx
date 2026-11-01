@@ -17,7 +17,7 @@ import { useKatalog } from "../katalogStore";
 import AgdBryla from "./AgdBryla";
 import { yElementu } from "./uklad3d";
 import Wymiary3D, { type Wybor3D } from "./Wymiary3D";
-import type { Otwor } from "@/lib/wywiad";
+import type { Otwor, PunktInstalacji } from "@/lib/wywiad";
 import { tloDlaKoloru, type TloSceny } from "../tloSceny";
 import { dopasuj, Obrys, useUchwytModelu } from "./obrys";
 import { useRuch } from "./MebelParametryczny";
@@ -404,6 +404,7 @@ function Wnetrze({
   // Wykonawca (kreator): zaznaczenie okna, drzwi albo ściany w 3D – pokazuje ich wymiary na żywo.
   const wykonawca = !!edycjaMebli || !!edycjaOtworow;
   const [podgladOtworu, setPodgladOtworu] = useState<{ i: number; o: Otwor } | null>(null);
+  const [podgladPunktu, setPodgladPunktu] = useState<{ i: number; p: PunktInstalacji } | null>(null);
   useEffect(() => {
     if (zaznaczony) setWyborInny(null);
   }, [zaznaczony, setWyborInny]);
@@ -420,13 +421,18 @@ function Wnetrze({
     [planWejscie, przesuwany],
   );
   // Wymiary liczą się też z przeciąganego okna / drzwi (podgląd z Sciany.tsx).
-  const planWymiarow = useMemo(
-    () =>
-      podgladOtworu && plan.wywiad
-        ? { ...plan, wywiad: { ...plan.wywiad, otwory: plan.wywiad.otwory.map((o, i) => (i === podgladOtworu.i ? podgladOtworu.o : o)) } }
-        : plan,
-    [plan, podgladOtworu],
-  );
+  const planWymiarow = useMemo(() => {
+    if (!plan.wywiad || (!podgladOtworu && !podgladPunktu)) return plan;
+    const w = plan.wywiad;
+    return {
+      ...plan,
+      wywiad: {
+        ...w,
+        otwory: podgladOtworu ? w.otwory.map((o, i) => (i === podgladOtworu.i ? podgladOtworu.o : o)) : w.otwory,
+        punkty: podgladPunktu ? (w.punkty ?? []).map((p, i) => (i === podgladPunktu.i ? podgladPunktu.p : p)) : w.punkty,
+      },
+    };
+  }, [plan, podgladOtworu, podgladPunktu]);
   // Przeciągany mebel ma swoje wymiary na żywo, nawet gdy nie jest zaznaczony.
   const wybor3d: Wybor3D = przesuwany ? { typ: "element", id: przesuwany.id } : (wyborInny ?? (zaznaczony ? { typ: "element", id: zaznaczony } : null));
   const front = useFront();
@@ -474,6 +480,10 @@ function Wnetrze({
         onPodglad={(p) => {
           setPodgladOtworu(p);
           if (p) setWyborInny({ typ: "otwor", i: p.i });
+        }}
+        onPodgladPunktu={(p) => {
+          setPodgladPunktu(p);
+          if (p) setWyborInny({ typ: "punkt", i: p.i });
         }}
       />
       <Otwory plan={plan} />

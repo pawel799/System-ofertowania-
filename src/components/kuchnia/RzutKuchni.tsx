@@ -17,6 +17,8 @@ import {
 } from "@/lib/kuchnia";
 import { punktNaScianie, scianyPokoju, wGranicachPokoju } from "@/lib/sciany";
 import { meblaWOtworze, otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
+import { punktWPunkcie, sprawdzPunkt } from "@/lib/punkty";
+import { PUNKT_INFO, type PunktInstalacji, type RodzajPunktu } from "@/lib/wywiad";
 import type { Otwor } from "@/lib/wywiad";
 
 type Props = {
@@ -33,6 +35,8 @@ type Props = {
   onOtwor?: (i: number, o: Otwor) => void;
   /** Otwór nie może tam stać (komunikat z sprawdzOtwor). */
   onBladOtworu?: (powod: string) => void;
+  /** Przesunięcie gniazdka / punktu instalacji po ścianach (błąd – onBladOtworu). */
+  onPunkt?: (i: number, p: PunktInstalacji) => void;
 };
 
 type Ciagniecie = { id: string; pointer: number; dx: number; dz: number };
@@ -192,7 +196,35 @@ function OtworRzut({
   );
 }
 
-export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu }: Props) {
+/** Skrót na rzucie (symbol w kółku przy ścianie). */
+const SYMBOL_PUNKTU: Record<RodzajPunktu, string> = { gniazdko: "G", "gniazdko-2": "2G", sila: "400", wlacznik: "W", swiatlo: "Ś", rtv: "TV", gaz: "gaz", kratka: "K" };
+
+/** Gniazdko / punkt instalacji na rzucie: kółko z symbolem tuż przy ścianie, od strony pokoju. */
+function PunktRzut({ plan, p, zly, onPointerDown }: { plan: PlanKuchni; p: PunktInstalacji; zly?: boolean; onPointerDown?: (ev: ReactPointerEvent<SVGGElement>) => void }) {
+  const s = scianyPokoju(plan).find((w) => w.id === p.sciana);
+  if (!s) return null;
+  const q = punktNaScianie(s, p.od);
+  const cx = q.x + s.nx * 5;
+  const cy = q.z + s.nz * 5;
+  return (
+    <g
+      className="kr-punkt"
+      data-rodzaj={p.rodzaj}
+      data-na-scianie={p.sciana}
+      data-bad={zly ? "" : undefined}
+      onPointerDown={onPointerDown}
+      style={onPointerDown ? { cursor: "grab", touchAction: "none" } : undefined}
+    >
+      <title>{`${PUNKT_INFO[p.rodzaj].nazwa} · ${p.wys} cm nad podłogą`}</title>
+      <circle cx={cx} cy={cy} r={4.2} />
+      <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central">
+        {SYMBOL_PUNKTU[p.rodzaj]}
+      </text>
+    </g>
+  );
+}
+
+export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu, onPunkt }: Props) {
   // Podwójne kliknięcie liczymy sami: przechwycenie wskaźnika (przeciąganie) zjada zdarzenie dblclick.
   const ostatnieKlikniecie = useRef<{ id: string; t: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -214,6 +246,8 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
   const zacznijOtwor = (ev: ReactPointerEvent<SVGGElement>, i: number) => {
     if (ev.button !== 0) return;
     ev.stopPropagation();
+    ev.preventDefault();
+    window.getSelection()?.removeAllRanges();
     const svg = svgRef.current;
     if (!svg) return;
     const start = otwory[i];
@@ -237,6 +271,50 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       if (teraz.o.od === start.od && teraz.o.sciana === start.sciana) return;
       if (teraz.bledy.length) cbOtwor.current.onBladOtworu?.(teraz.bledy[0]);
       else cbOtwor.current.onOtwor?.(i, teraz.o);
+    };
+    sluchacze.current?.();
+    sluchacze.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+  // Przeciąganie gniazdka / punktu po ścianach (wysokość bez zmian – ustawia się w kroku „Okna i instalacje” albo w 3D).
+  const punkty = plan.wywiad?.punkty ?? [];
+  const [podgladPunktu, setPodgladPunktu] = useState<{ i: number; p: PunktInstalacji; bledy: string[] } | null>(null);
+  const cbPunkt = useRef({ onPunkt, onBladOtworu });
+  cbPunkt.current = { onPunkt, onBladOtworu };
+  const zacznijPunkt = (ev: ReactPointerEvent<SVGGElement>, i: number) => {
+    if (ev.button !== 0) return;
+    ev.stopPropagation();
+    // Bez tego zaznaczony tekst (np. podpis otworu) zaczyna natywne przeciąganie i przeglądarka anuluje wskaźnik.
+    ev.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    const svg = svgRef.current;
+    const start = punkty[i];
+    if (!svg || !start) return;
+    let teraz = { i, p: start, bledy: [] as string[] };
+    setPodgladPunktu(teraz);
+    svg.setPointerCapture(ev.pointerId);
+    const move = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      const q = punkt(svg, pe);
+      const p = punktWPunkcie(planRef.current, start, q.x, q.y, pe.shiftKey ? 1 : 5);
+      teraz = { i, p, bledy: sprawdzPunkt(planRef.current, i, p) };
+      setPodgladPunktu(teraz);
+    };
+    const up = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      sluchacze.current?.();
+      sluchacze.current = null;
+      if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
+      setPodgladPunktu(null);
+      if (teraz.p.od === start.od && teraz.p.sciana === start.sciana) return;
+      if (teraz.bledy.length) cbPunkt.current.onBladOtworu?.(teraz.bledy[0]);
+      else cbPunkt.current.onPunkt?.(i, teraz.p);
     };
     sluchacze.current?.();
     sluchacze.current = () => {
@@ -416,6 +494,8 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                 const drag: Ciagniecie = { id: e.id, pointer: ev.pointerId, dx: e.x - p.x, dz: e.z - p.y };
                 ostatnie.current = start;
                 setPodglad(start);
+                // Zaznaczony tekst zacząłby natywne przeciąganie (pointercancel w połowie ruchu).
+                window.getSelection()?.removeAllRanges();
                 svg.setPointerCapture(ev.pointerId);
                 onWybierz(e.id);
                 const move = (pe: PointerEvent) => {
@@ -517,6 +597,16 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
           </text>
         );
       })}
+      {/* Gniazdka i punkty instalacji na wierzchu (przy ścianie, pod szafkami też trzeba je chwycić). */}
+      {punkty.map((p, i) => (
+        <PunktRzut
+          key={`p${i}`}
+          plan={plan}
+          p={podgladPunktu?.i === i ? podgladPunktu.p : p}
+          zly={podgladPunktu?.i === i && podgladPunktu.bledy.length > 0}
+          onPointerDown={onPunkt ? (ev) => zacznijPunkt(ev, i) : undefined}
+        />
+      ))}
     </svg>
   );
 }

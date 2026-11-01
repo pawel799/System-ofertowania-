@@ -17,7 +17,7 @@ const ODSTEP = 10;
 const nazwaOtworu = (o: Otwor) => (o.rodzaj === "okno" ? "Okno" : "Drzwi");
 
 /** Pionowy zasięg mebla [cm od podłogi] – w przybliżeniu jak w 3D. */
-function wysokoscMebla(e: ElementKuchni): { y0: number; y1: number } | null {
+export function wysokoscMebla(e: ElementKuchni): { y0: number; y1: number } | null {
   const r = rodzajElementu(e);
   if (e.strefa === "gorna") return { y0: DOL_GORNYCH, y1: DOL_GORNYCH + e.h };
   if (e.strefa === "polka") return { y0: DOL_GORNYCH, y1: DOL_GORNYCH + 72 };

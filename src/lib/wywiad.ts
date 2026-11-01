@@ -26,6 +26,33 @@ export type Otwor = {
   parapet?: number;
 };
 
+/** Gniazdka i inne punkty instalacji na ścianach (logika: src/lib/punkty.ts, modele 3D: components/kuchnia/PunktyInstalacji.tsx). */
+export type RodzajPunktu = "gniazdko" | "gniazdko-2" | "sila" | "wlacznik" | "swiatlo" | "rtv" | "gaz" | "kratka";
+
+export type PunktInstalacji = {
+  rodzaj: RodzajPunktu;
+  sciana: Sciana | "C" | "D";
+  /** Środek punktu od narożnika (początku ściany) [cm]. */
+  od: number;
+  /** Środek punktu nad podłogą [cm]. */
+  wys: number;
+};
+
+/** Nazwa, wymiar puszki / maskownicy [cm] i typowa wysokość montażu [cm]. */
+export const PUNKT_INFO: Record<RodzajPunktu, { nazwa: string; krotka: string; szer: number; h: number; wys: number; elektryczny: boolean }> = {
+  gniazdko: { nazwa: "Gniazdko 230 V", krotka: "Gniazdko", szer: 8, h: 8, wys: 110, elektryczny: true },
+  "gniazdko-2": { nazwa: "Gniazdko podwójne 230 V", krotka: "Podwójne gniazdko", szer: 15, h: 8, wys: 110, elektryczny: true },
+  sila: { nazwa: "Gniazdo siłowe 400 V (płyta indukcyjna)", krotka: "Siła 400 V", szer: 10, h: 10, wys: 50, elektryczny: true },
+  wlacznik: { nazwa: "Włącznik światła", krotka: "Włącznik", szer: 8, h: 8, wys: 120, elektryczny: true },
+  swiatlo: { nazwa: "Punkt świetlny (kinkiet)", krotka: "Światło", szer: 12, h: 12, wys: 210, elektryczny: true },
+  rtv: { nazwa: "Gniazdo RTV / internet", krotka: "RTV / LAN", szer: 8, h: 8, wys: 30, elektryczny: true },
+  gaz: { nazwa: "Zawór gazu", krotka: "Gaz", szer: 8, h: 12, wys: 50, elektryczny: false },
+  kratka: { nazwa: "Kratka wentylacyjna", krotka: "Kratka", szer: 15, h: 15, wys: 230, elektryczny: false },
+};
+export const RODZAJE_PUNKTOW = Object.keys(PUNKT_INFO) as RodzajPunktu[];
+/** Najwięcej punktów instalacji w projekcie. */
+export const MAX_PUNKTOW = 40;
+
 export type Agd = "zmywarka-60" | "zmywarka-45" | "piekarnik-slupek" | "piekarnik-dolny" | "lodowka-zabudowa" | "lodowka-wolnostojaca" | "plyta" | "okap" | "mikrofalowka";
 export type Potrzeba = "dlugie" | "koszule" | "skladane" | "szuflady" | "buty";
 export type MebelSalonu = "komoda" | "rtv" | "regal" | "nocne";
@@ -36,6 +63,8 @@ export type Wywiad = {
   otwory: Otwor[];
   woda: { sciana: Sciana; od: number } | null;
   gaz: boolean;
+  /** Gniazdka, włączniki, gaz, kratki… (starsze oferty – brak). */
+  punkty?: PunktInstalacji[];
   agd: Agd[];
   gorne: "72" | "90" | "sufit";
   drzwiSzafy: "przesuwne" | "uchylne";
@@ -127,12 +156,25 @@ export function parseWywiad(v: unknown): Wywiad {
     const w = o.woda as Record<string, unknown>;
     woda = { sciana: sciana(w.sciana), od: liczba(w.od, "woda – od narożnika", 0, 2000) };
   }
+  if (o.punkty !== undefined && (!Array.isArray(o.punkty) || o.punkty.length > MAX_PUNKTOW)) zle(`do ${MAX_PUNKTOW} gniazdek i punktów instalacji.`);
+  const punkty = ((o.punkty as unknown[] | undefined) ?? []).map((x, i) => {
+    if (!x || typeof x !== "object") zle(`punkt ${i + 1}: zły format.`);
+    const pk = x as Record<string, unknown>;
+    const rodzaj = typeof pk.rodzaj === "string" && (RODZAJE_PUNKTOW as readonly string[]).includes(pk.rodzaj) ? (pk.rodzaj as RodzajPunktu) : zle(`punkt ${i + 1}: nieznany rodzaj.`);
+    return {
+      rodzaj,
+      sciana: pk.sciana === "C" || pk.sciana === "D" ? pk.sciana : sciana(pk.sciana),
+      od: liczba(pk.od, `punkt ${i + 1} – od narożnika`, 0, 2000),
+      wys: liczba(pk.wys, `punkt ${i + 1} – wysokość`, 0, 450),
+    } as PunktInstalacji;
+  });
   const gorne = o.gorne === "90" || o.gorne === "sufit" ? o.gorne : "72";
   return {
     wysokosc: liczba(o.wysokosc, "wysokość pomieszczenia", 180, 450),
     otwory,
     woda,
     gaz: o.gaz === true,
+    ...(punkty.length ? { punkty } : {}),
     agd: lista(o.agd, AGD_IDS, "AGD"),
     gorne,
     drzwiSzafy: o.drzwiSzafy === "uchylne" ? "uchylne" : "przesuwne",

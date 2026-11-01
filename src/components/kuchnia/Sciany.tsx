@@ -16,6 +16,8 @@ import { otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Otwor } from "@/lib/wywiad";
 import { useSciany } from "./scianyStore";
+import PunktyInstalacji, { type EdycjaPunktow } from "./PunktyInstalacji";
+import type { PunktInstalacji } from "@/lib/wywiad";
 
 /** Kąt obrotu płaszczyzny (normalna +z) tak, żeby patrzyła do wnętrza pokoju. */
 const OBROT: Record<ScianaPokoju, number> = { A: 0, B: Math.PI / 2, C: Math.PI, D: -Math.PI / 2 };
@@ -23,6 +25,8 @@ const OBROT: Record<ScianaPokoju, number> = { A: 0, B: Math.PI / 2, C: Math.PI, 
 export type EdycjaOtworow = {
   onOtwor: (i: number, o: Otwor) => void;
   onBlad: (powod: string) => void;
+  /** Gniazdka i inne punkty instalacji (PunktyInstalacji.tsx). */
+  onPunkt?: EdycjaPunktow["onPunkt"];
 };
 
 type Podglad = { i: number; o: Otwor; bledy: string[] };
@@ -107,14 +111,17 @@ export default function Sciany({
   edycja,
   onWybierz,
   onPodglad,
+  onPodgladPunktu,
 }: {
   plan: PlanKuchni;
   kolorDomyslny: string;
   edycja?: EdycjaOtworow;
-  /** Wykonawca: klik w ścianę albo otwór – zaznaczenie (wymiary na żywo, Wymiary3D.tsx). */
-  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju }) => void;
+  /** Wykonawca: klik w ścianę, otwór albo gniazdko – zaznaczenie (wymiary na żywo, Wymiary3D.tsx). */
+  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number }) => void;
   /** Przeciągany otwór (do wymiarów na żywo); null po puszczeniu. */
   onPodglad?: (p: { i: number; o: Otwor } | null) => void;
+  /** Przeciągany punkt instalacji; null po puszczeniu. */
+  onPodgladPunktu?: (p: { i: number; p: PunktInstalacji } | null) => void;
 }) {
   const { widoczne, kolor } = useSciany();
   const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja, onPodglad);
@@ -202,6 +209,12 @@ export default function Sciany({
           </group>
         );
       })}
+      <PunktyInstalacji
+        plan={plan}
+        edycja={edycja?.onPunkt ? { onPunkt: edycja.onPunkt, onBlad: edycja.onBlad } : undefined}
+        onWybierz={onWybierz ? (i) => onWybierz({ typ: "punkt", i }) : undefined}
+        onPodglad={onPodgladPunktu}
+      />
     </group>
   );
 }
