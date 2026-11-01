@@ -22,6 +22,7 @@ import { HARDWARE, setHardware } from "../hardwareStore";
 import { formatPln, totalPrice } from "../pricing";
 import { grupyMaterialow } from "@/lib/opcjeProjektu";
 import { setKoloryProjektu } from "../koloryStore";
+import { zresetujSciany } from "../kuchnia/scianyStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { getKatalog, setKatalog, useKatalog } from "../katalogStore";
 import { findCountertop, findFront, findHardware, opcjeMaterialu, type KatalogPozycja, type Material } from "../katalogFirmy";
@@ -212,7 +213,8 @@ export default function PanelApp() {
     setCountertop(offer.countertop);
     setHardware(offer.hardware);
     setKoloryProjektu(offer.kuchnia?.kolory);
-  }, [offer?.front, offer?.countertop, offer?.hardware, offer?.kuchnia?.kolory]); // eslint-disable-line react-hooks/exhaustive-deps
+    zresetujSciany(offer.kuchnia?.sciany?.kolor);
+  }, [offer?.front, offer?.countertop, offer?.hardware, offer?.kuchnia?.kolory, offer?.kuchnia?.sciany?.kolor]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Wiadomość odświeża się sama, dopóki ktoś jej nie poprawił ręcznie.
   useEffect(() => {

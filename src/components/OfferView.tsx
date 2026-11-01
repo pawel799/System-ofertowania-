@@ -10,6 +10,7 @@ import { MeasureButton } from "./RequestDialog";
 import { DragHint } from "./ViewerHints";
 import { PelnyEkranWarstwa, PrzyciskPelnegoEkranu } from "./PelnyEkran";
 import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
+import SterowanieScian from "./kuchnia/SterowanieScian";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { grupyMaterialow, maAgd } from "@/lib/opcjeProjektu";
 import type { TypProjektu } from "@/lib/projekt";
@@ -104,6 +105,13 @@ export default function OfferView({
                 {actions}
                 {/* Drzwi i szuflady w 3D: klient zagląda do środka (półki, szuflady, drążki). */}
                 <PrzyciskOtwarcia className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 aria-pressed:bg-white/15" />
+                {/* Ściany pokoju (projekt z kreatora): ukryj / pokaż i kolor – jak w kreatorze. */}
+                {plan?.elementy.length ? (
+                  <SterowanieScian
+                    className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 aria-pressed:bg-white/15"
+                    klasaPanelu="rounded-xl bg-white p-3 text-stone-900 shadow-xl"
+                  />
+                ) : null}
               </div>
             ) : null}
           </section>

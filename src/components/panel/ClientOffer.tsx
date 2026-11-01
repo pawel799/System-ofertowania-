@@ -10,6 +10,7 @@ import { setHardware } from "../hardwareStore";
 import { setPalettes } from "../paletteStore";
 import { setKatalog, setSnapshotMaterialow } from "../katalogStore";
 import { setKoloryProjektu } from "../koloryStore";
+import { zresetujSciany } from "../kuchnia/scianyStore";
 import { ApiError, publicApi, type BrandSettings, type PublicOffer } from "./offerApi";
 import { setBrandCache, useBrand } from "@/lib/brand";
 import { FIRMA } from "@/content/firma";
@@ -101,6 +102,7 @@ export default function ClientOffer() {
     setCountertop(state.offer.countertop);
     setHardware(state.offer.hardware);
     setKoloryProjektu(state.offer.kuchnia?.kolory);
+    zresetujSciany(state.offer.kuchnia?.sciany?.kolor);
   }, [state]);
 
   if (state.k === "ready") {

@@ -612,6 +612,9 @@
 }
 .pnl .kr-wn-skrot { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-2); flex-wrap: wrap; }
 .pnl .kr-wn-skrot .btn { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
+.pnl .kr-narzedzia3d { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100% - 20px); }
+.pnl .kr-narzedzia3d .kr-otworz { position: static; }
+.pnl .kr-sciany-panel { padding: 12px; border-radius: 10px; background: var(--panel); color: var(--text); box-shadow: var(--sh-lg, 0 12px 40px rgba(0, 0, 0, 0.25)); }
 .pnl .kr-otworz { position: absolute; top: 10px; right: 10px; z-index: 3; min-height: 30px; padding: 4px 12px; font-size: 12.5px; background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(6px); }
 .pnl .kr-otworz[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--ink); font-weight: 600; }
 

@@ -60,6 +60,8 @@ import { cennikZPlyta } from "@/lib/modul";
 import { useCenaKoncowa } from "./useCenaKoncowa";
 import { KreatorCena } from "./KreatorCena";
 import { KreatorKolory } from "./KreatorKolory";
+import SterowanieScian from "../kuchnia/SterowanieScian";
+import { useSciany, zresetujSciany } from "../kuchnia/scianyStore";
 import { setKoloryProjektu, useKoloryProjektu } from "../koloryStore";
 import {
   ApiError,
@@ -161,6 +163,7 @@ export default function KreatorApp() {
     setTyp(o.projekt ?? "kuchnia");
     setPlytaId(o.kuchnia?.plyta);
     setKoloryProjektu(o.kuchnia?.kolory);
+    zresetujSciany(o.kuchnia?.sciany?.kolor);
     setDodatki(o.kuchnia?.dodatki ?? []);
     // Zapisana oferta: projekt już jest – zaczynamy od mebli.
     setKrok("meble");
@@ -195,6 +198,7 @@ export default function KreatorApp() {
         // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
         setKoloryProjektu(null);
+        zresetujSciany(null);
         if (!samouczekWidziany()) setSamouczek(true);
         if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nowy projekt." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
@@ -248,6 +252,8 @@ export default function KreatorApp() {
   ]);
   // Wspólne kolory boków i środka (kolory.ts) – w magazynie, jak front; scena 3D czyta je stamtąd.
   const koloryProjektu = useKoloryProjektu();
+  // Kolor ścian w 3D (scianyStore) – zapisuje się w planie, klient widzi go na linku.
+  const { kolor: kolorScian } = useSciany();
   // Plan z płytą, dodatkami i kolorami – to idzie do ceny, PDF i na serwer.
   const planCeny = useMemo<PlanKuchni>(
     () => ({
@@ -255,8 +261,9 @@ export default function KreatorApp() {
       ...(plytaId ? { plyta: plytaId } : {}),
       ...(dodatki?.length ? { dodatki } : {}),
       ...(koloryProjektu.korpus || koloryProjektu.srodek ? { kolory: koloryProjektu } : {}),
+      ...(kolorScian ? { sciany: { kolor: kolorScian } } : {}),
     }),
-    [plan, plytaId, dodatki, koloryProjektu],
+    [plan, plytaId, dodatki, koloryProjektu, kolorScian],
   );
   const katalog = useKatalog();
   const kCtx = { palettes, katalog };
@@ -734,7 +741,10 @@ export default function KreatorApp() {
             )}
             {(!waski || zakladka === "3d") && (
               <div className="kr-view3d" data-tour="widok3d">
-                <PrzyciskOtwarcia className="btn btn-ghost kr-otworz" />
+                <div className="kr-narzedzia3d">
+                  <PrzyciskOtwarcia className="btn btn-ghost kr-otworz" />
+                  <SterowanieScian className="btn btn-ghost kr-otworz" klasaPanelu="kr-sciany-panel" wlasnyKolor />
+                </div>
                 <KuchniaTlo
                   plan={plan}
                   modele={modeleSceny}

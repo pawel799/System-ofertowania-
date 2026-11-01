@@ -55,6 +55,12 @@ Zabezpieczenia (`sprawdzWnetrze` w `src/lib/wnetrze.ts`, te same na serwerze –
 
 Cena: wymiary jak dotąd + płyta dodatkowych półek, przegród i skrzynek szuflad + szuflady i drążki z cennika (Ustawienia → Cennik modułów: „Szuflada we wnętrzu”, „Drążek w szafie”). Element bez zapisanego wnętrza kosztuje tyle co wcześniej. PDF dopisuje wnętrze przy pozycji.
 
+## Ściany w 3D
+
+Scena 3D (kreator, panel, strona klienta) rysuje ściany pokoju (`src/lib/sciany.ts`, `Sciany.tsx`): A zawsze, B w układzie L albo przy wymiarach pokoju, C i D (naprzeciw A i B) przy wymiarach pokoju z kroku „Pomiar”. Wysokość z pomiaru (domyślnie 260 cm). Okna i drzwi są prawdziwymi otworami (szyba, skrzydło drzwi, parapet). Każda ściana jest widoczna tylko od środka – ściana między kamerą a meblami znika sama.
+
+Nad sceną: **Ukryj / Pokaż ściany** (jak „Otwórz drzwi i szuflady”) i **Kolor ścian** (8 farb + w kreatorze własny kolor). Kolor z kreatora zapisuje się w ofercie (`kuchnia.sciany.kolor`, #rrggbb, walidacja w `parseKuchnia`), klient może go zmienić u siebie.
+
 ## Kolory mebli: fronty, boki, środek – każdy mebel osobno
 
 Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.
