@@ -11,6 +11,7 @@ import { DragHint } from "./ViewerHints";
 import { PelnyEkranWarstwa, PrzyciskPelnegoEkranu } from "./PelnyEkran";
 import PrzyciskOtwarcia from "./kuchnia/PrzyciskOtwarcia";
 import SterowanieScian from "./kuchnia/SterowanieScian";
+import PrzyciskRysunku from "./rysunek/PrzyciskRysunku";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { grupyMaterialow, maAgd } from "@/lib/opcjeProjektu";
 import type { TypProjektu } from "@/lib/projekt";
@@ -110,6 +111,15 @@ export default function OfferView({
                   <SterowanieScian
                     className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 aria-pressed:bg-white/15"
                     klasaPanelu="rounded-xl bg-white p-3 text-stone-900 shadow-xl"
+                  />
+                ) : null}
+                {/* Rysunek techniczny z wymiarami (rzut i widoki ścian) – generowany z projektu. */}
+                {kuchnia?.elementy.length ? (
+                  <PrzyciskRysunku
+                    plan={kuchnia}
+                    kod={code}
+                    tytul={typeof title === "string" ? title : ""}
+                    className="rounded-full border border-white/25 px-5 py-2.5 text-sm text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
                   />
                 ) : null}
               </div>

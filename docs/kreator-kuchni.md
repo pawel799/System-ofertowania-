@@ -75,6 +75,16 @@ Przesuwanie: na rzucie (kółko z symbolem przy ścianie) i w 3D (model na ścia
 
 Modele 3D są proceduralne (`PunktyInstalacji.tsx`): gniazdko typu E z bolcem, czerwone gniazdo CEE 400 V, klawisz włącznika, kinkiet ze świecącym kloszem, RTV z gniazdem antenowym i LAN, zawór z żółtą dźwignią, kratka z żaluzjami. Widać je u wykonawcy i u klienta, znikają razem ze ścianą (od zewnątrz i przy „Ukryj ściany”). Klik w punkt w 3D pokazuje wysokość osi i odległości od końców ściany (na żywo przy przeciąganiu). PDF dopisuje listę: „Gniazdka i instalacje: 2× Gniazdko 230 V, 1× Gniazdo siłowe 400 V…”.
 
+## Rysunek techniczny (automatycznie do każdej oferty)
+
+Rysunek liczy się z planu oferty – nic się nie zapisuje, zawsze jest aktualny (`src/components/rysunek/rysunekTechniczny.ts`, czysty SVG):
+
+- **rzut z góry** – mury z otworami (okna, drzwi z łukiem), meble (dolne i słupki pełne z krawędzią frontu, górne przerywane, półki kropkowane), numery mebli = numery pozycji w ofercie, gniazdka i woda, wymiary ścian i łańcuchy szafek przy każdej ścianie;
+- **widok każdej ściany od środka pokoju** (ściany z meblami, otworami albo gniazdkami; B i C w lustrze, jak widzi je stojący w kuchni) – meble z podziałem frontów (drzwi z symbolem otwierania, szuflady, przesuwne, wnęki), blat, okna, drzwi, gniazdka z wysokością; łańcuch szafek dolnych i górnych, długość ściany, poziomy (blat, dół i góra szafek górnych, okna, sufit);
+- tabelka: firma, numer i tytuł oferty, data, „wymiary w cm, bez skali, do weryfikacji pomiarem”.
+
+Gdzie jest: na końcu PDF oferty (osobne strony), przycisk **„Rysunek techniczny”** obok „Pobierz PDF” (kreator i lista ofert – okno do druku / zapisu jako PDF) i ten sam przycisk na stronie klienta.
+
 ## Przesuwanie mebli w 3D (tylko kreator)
 
 W kreatorze mebel przeciąga się także w podglądzie 3D (strona klienta – nie). Mebel jedzie po poziomej płaszczyźnie swojego spodu, przyciąga się do ścian i sąsiadów (`przyciagnij`, Shift – bez przyciągania), nie wychodzi za ściany pokoju (`wGranicachPokoju`), a obrys świeci na czerwono, gdy nachodzi na inny mebel albo stanąłby w drzwiach / przed oknem – puszczony wtedy wraca z komunikatem. Kamera stoi, gdy trzymasz mebel; krótki klik dalej tylko zaznacza. To samo ograniczenie ścian działa przy przeciąganiu na rzucie.

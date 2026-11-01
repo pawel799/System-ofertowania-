@@ -8,6 +8,7 @@ import type { Palette } from "../palettes";
 import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapshot } from "../katalogFirmy";
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
+import { RT_CSS, rysunekTechnicznyHtml } from "../rysunek/rysunekTechniczny";
 import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
@@ -64,6 +65,9 @@ export function pln(n: number) {
     .replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
   return `${n < 0 ? "−" : ""}${digits}\u00a0zł`;
 }
+
+/** Tylko obraz JPEG/PNG w data URL (nic innego nie trafia do HTML PDF). */
+const obraz = (u: string | null | undefined) => (u && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(u) ? u : null);
 
 export function danePdf(args: {
   id: string;
@@ -148,7 +152,7 @@ export function danePdf(args: {
     link3dWazny: args.link3d ? (args.link3dWazny ?? null) : null,
     link3dPin: !!args.link3d && !!args.link3dPin,
     data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
-    zdjecie: args.zdjecie && /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(args.zdjecie) ? args.zdjecie : null,
+    zdjecie: obraz(args.zdjecie),
     cennikUwaga: args.cennikUwaga,
     grupy,
     slowa: slowaProjektu(args.projekt),
@@ -199,6 +203,8 @@ export function pdfHtml(d: PdfDane) {
     .join("");
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
   const zdjecie = d.zdjecie ? `<img class="shot" alt="Podgląd zabudowy" src="${d.zdjecie}" />` : "";
+  // Rysunek techniczny (rzut, widoki ścian) – zawsze z bieżącego planu.
+  const rysunek = d.plan.elementy.length ? rysunekTechnicznyHtml(d.plan, { firma: d.firma, id: d.id, tytul: d.title, data: d.data }) : "";
   const link = d.link3d
     ? `<p class="link">${esc(d.slowa.nazwa)} w 3D (interaktywna, nie jest częścią tej wyceny w pliku):<br />${esc(d.link3d)}</p>`
     : `<p class="link">Podgląd 3D wysyłany jest osobno, linkiem z panelu.</p>`;
@@ -241,6 +247,7 @@ export function pdfHtml(d: PdfDane) {
   .qr p { margin: 2px 0; }
   .qr .muted { word-break: break-all; font-size: 11.5px; }
   footer { margin-top: 18px; font-size: 11px; color: #78716c; }
+${RT_CSS}
 </style>
 </head>
 <body>
@@ -279,6 +286,7 @@ ${link}
 <footer>
   Dokument jest ofertą handlową. Nie zawiera rozkroju płyt, nestingu ani listy formatek do cięcia.
 </footer>
+${rysunek}
 <script>window.addEventListener("load", () => setTimeout(() => window.print(), 200));</script>
 </body>
 </html>`;

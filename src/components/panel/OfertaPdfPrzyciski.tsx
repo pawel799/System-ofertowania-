@@ -11,6 +11,7 @@ import { useCennik } from "./useCennik";
 import { useKatalog } from "../katalogStore";
 import type { MaterialySnapshot } from "../katalogFirmy";
 import { danePdf, oknoPdf, pdfHtml, pdfTekst, wpiszPdf } from "./ofertaPdf";
+import { rysunekTechnicznyDokument } from "../rysunek/rysunekTechniczny";
 
 /** Link 3D do kodu QR w PDF (zawsze aktywny – w razie potrzeby utworzony przy generowaniu). */
 export type LinkDoPdf = { id: string; url: string; wazny: string | null; pin: boolean };
@@ -143,6 +144,17 @@ export function OfertaPdfPrzyciski({
     window.location.href = href;
   };
 
+  /** Rysunek techniczny (rzut, widoki ścian z wymiarami) w osobnym oknie – druk albo zapis do PDF. Jest też w PDF oferty. */
+  const rysunek = () => {
+    const w = oknoPdf();
+    if (!w) {
+      toast("Przeglądarka zablokowała okno", { type: "err", desc: "Zezwól na wyskakujące okna dla tej strony." });
+      return;
+    }
+    const data = new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
+    wpiszPdf(w, rysunekTechnicznyDokument(plan, { firma: brand.name, id, tytul: title.trim() || slowaProjektu(projekt).nazwa, data }));
+  };
+
   return (
     <div className="actions">
       <button type="button" className="btn btn-ink" onClick={() => void pobierz()}>
@@ -151,6 +163,11 @@ export function OfertaPdfPrzyciski({
       <button type="button" className="btn btn-ghost" onClick={() => void wyslij()}>
         Wyślij ofertę PDF
       </button>
+      {plan.elementy.length ? (
+        <button type="button" className="btn btn-ghost" onClick={rysunek}>
+          Rysunek techniczny
+        </button>
+      ) : null}
     </div>
   );
 }
