@@ -25,7 +25,7 @@ import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
 import { otwarty, przelaczElement, useOtwarcie } from "./otwarcieStore";
 import { useKoloryProjektu } from "../koloryStore";
 import Sciany, { type EdycjaOtworow } from "./Sciany";
-import { koloryMebla } from "@/lib/kolory";
+import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
 
@@ -236,6 +236,7 @@ function ModelBryla({
   otwarte = false,
   kolorFrontu,
   kolorKorpusu,
+  kolorUchwytu,
 }: {
   model: PublicModel;
   w: number;
@@ -245,6 +246,8 @@ function ModelBryla({
   /** Kolory tego mebla (kolory.ts): front i boki; brak = wybór z paska materiałów. */
   kolorFrontu?: string;
   kolorKorpusu?: string;
+  /** Okucia tego mebla (id); brak = okucia oferty. */
+  kolorUchwytu?: string;
 }) {
   const { scene } = useGLTF(model.url, true, true);
   // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
@@ -268,7 +271,8 @@ function ModelBryla({
   const frontWspolny = useFront();
   const front = kolorFrontu ?? frontWspolny;
   const countertop = useCountertop();
-  const hardware = useHardware();
+  const hardwareWspolny = useHardware();
+  const hardware = kolorUchwytu ?? hardwareWspolny;
   const palettes = usePalettes();
   const katalogMat = useKatalog();
   useEffect(() => {
@@ -322,14 +326,14 @@ function ElementWidok({
   /** Boki i środek (kolory.ts) – wygląd z próbki; ids do modeli GLB. */
   korpus: { color: string; roughness: number };
   srodek: { color: string; roughness: number };
-  ids: { front: string; korpus: string };
+  ids: { front: string; korpus: string; uchwyt: string; uchwytKolor?: string };
   /** Kreator: przeciąganie mebla w 3D. */
   onChwyt?: (e: ThreeEvent<PointerEvent>, el: ElementKuchni) => void;
   /** Podgląd przesuwanego mebla w złym miejscu – obrys na czerwono. */
   zly?: boolean;
 }) {
   const y = yElementu(el, plan);
-  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} />;
+  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={ids.uchwytKolor} />;
   return (
     <group
       position={[el.x / 100, y, el.z / 100]}
@@ -356,7 +360,7 @@ function ElementWidok({
         {model ? (
           <BladModelu fallback={szafka}>
             <Suspense fallback={szafka}>
-              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} kolorFrontu={ids.front} kolorKorpusu={ids.korpus} />
+              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} kolorFrontu={ids.front} kolorKorpusu={ids.korpus} kolorUchwytu={ids.uchwyt} />
             </Suspense>
           </BladModelu>
         ) : (
@@ -476,6 +480,9 @@ function Wnetrze({
       <Suspense fallback={null}>
         {plan.elementy.map((el) => {
           const kol = koloryMebla(el, front, projektKolory);
+          // Okucia tego mebla (okno elementu) – widoczność i kolor uchwytu.
+          const uId = uchwytMebla(el, hardware);
+          const uLook = uId !== hardware ? lookFor("uchwyt", { ...wybor, hardware: uId }, palettes, katalogMat) : null;
           const fr = kol.front === front ? { color: kolor, roughness: wyglad.roughness } : wygladProbki(kol.front);
           return (
             <ElementWidok
@@ -487,12 +494,12 @@ function Wnetrze({
               kolor={fr.color}
               chropowatosc={fr.roughness}
               blat={blat}
-              uchwyt={uchwyt}
+              uchwyt={uLook ? !uLook.hidden : uchwyt}
               onWybierz={wybierzElement}
               otwarte={otwarty(otwarcie, el.id)}
               korpus={wygladProbki(kol.korpus)}
               srodek={wygladProbki(kol.srodek)}
-              ids={{ front: kol.front, korpus: kol.korpus }}
+              ids={{ front: kol.front, korpus: kol.korpus, uchwyt: uId, uchwytKolor: uLook?.color }}
               onChwyt={edycjaMebli ? chwyc : undefined}
               zly={przesuwany?.id === el.id && !!przesuwany.zly}
             />

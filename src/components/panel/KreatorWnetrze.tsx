@@ -7,7 +7,7 @@
  * blokuje zapis, gdy coś nie ma sensu (np. drążek w szafie 40 cm, półka 120 cm bez przegrody).
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { cenaElementu, limityElementu, MEBLE, RODZAJ_LABEL, rodzajElementu, wycenianyElement, type NowyElement, type RodzajElementu, type Strefa } from "@/lib/kuchnia";
+import { cenaElementu, limityElementu, MEBLE, RODZAJ_LABEL, rodzajElementu, wycenianyElement, type ElementKuchni, type NowyElement, type RodzajElementu, type Strefa } from "@/lib/kuchnia";
 import { wpisPoId } from "@/lib/bibliotekaModeli";
 import type { ModulCennik } from "@/lib/modul";
 import {
@@ -34,6 +34,11 @@ import {
 } from "@/lib/wnetrze";
 import { formatPln } from "../pricing";
 import { PoleCm } from "./KreatorWlasciwosci";
+import { KoloryElementu } from "./KoloryElementu";
+import type { KoloryMebla, KoloryProjektu } from "@/lib/kolory";
+import { grupyElementu } from "@/lib/opcjeProjektu";
+import type { KontekstMaterialow } from "../katalogFirmy";
+import type { PublicModel } from "../modelRoles";
 import { useOknoPrzewijane } from "./useOknoPrzewijane";
 
 export type ElementOkna = NowyElement;
@@ -123,18 +128,31 @@ export function SchematWnetrza({ el, wn, rozmiar = 200, podpisy = false }: { el:
   );
 }
 
+/** Wygląd w oknie elementu: kolory i okucia tego mebla (KoloryElementu) i „dla wszystkich mebli”. */
+export type WygladOkna = {
+  ctx: KontekstMaterialow;
+  front: string;
+  hardware: string;
+  projekt: KoloryProjektu;
+  modele: readonly PublicModel[];
+  /** Te kolory i okucia dla całego projektu (kolory wspólne; własne kolory innych mebli znikają). */
+  onDlaWszystkich: (k: KoloryMebla) => void;
+};
+
 export function KreatorWnetrze({
   tryb,
   el: start,
   cennik,
   onZapisz,
   onAnuluj,
+  wyglad,
 }: {
   tryb: "nowy" | "edycja";
   el: ElementOkna;
   cennik: ModulCennik | null;
   onZapisz: (el: ElementOkna) => void;
   onAnuluj: () => void;
+  wyglad?: WygladOkna;
 }) {
   const [el, setEl] = useState<ElementOkna>(() => {
     if (start.zrodlo === "modul" && maWnetrze(start) && !start.wnetrze) return { ...start, wnetrze: wnetrzeDomyslne(start) ?? undefined };
@@ -240,6 +258,34 @@ export function KreatorWnetrze({
               <PoleCm id="wn-h" label="Wysokość" value={el.h} min={lim.h.min} max={lim.h.max} onCommit={(v) => ustawWymiar("h", v)} />
               <PoleCm id="wn-d" label="Głębokość" value={el.d} min={lim.d.min} max={lim.d.max} onCommit={(v) => ustawWymiar("d", v)} />
             </div>
+
+            {wyglad ? (
+              <details className="kr-wn-wyglad" open>
+                <summary>Kolory i materiały {tryb === "nowy" ? "– wybierz przed dodaniem" : "tego mebla"}</summary>
+                <KoloryElementu
+                  kolory={el.kolory}
+                  onChange={(k) =>
+                    setEl((e) => {
+                      const { kolory: _stare, ...bez } = e;
+                      void _stare;
+                      return k ? { ...bez, kolory: k } : bez;
+                    })
+                  }
+                  front={wyglad.front}
+                  hardware={wyglad.hardware}
+                  projekt={wyglad.projekt}
+                  grupy={grupyElementu({ id: "okno", x: 0, z: 0, rot: 0, ...el } as ElementKuchni, new Map(wyglad.modele.map((m) => [m.id, m])))}
+                  ctx={wyglad.ctx}
+                />
+                {el.kolory ? (
+                  <div className="actions">
+                    <button type="button" className="btn btn-ghost" onClick={() => el.kolory && wyglad.onDlaWszystkich(el.kolory)}>
+                      Ustaw te kolory dla wszystkich mebli
+                    </button>
+                  </div>
+                ) : null}
+              </details>
+            ) : null}
 
             {zWnetrzem && wn ? (
               <>

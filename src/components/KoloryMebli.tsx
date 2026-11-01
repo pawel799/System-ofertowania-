@@ -31,7 +31,8 @@ export function opisKoloruKlienta(plan: PlanKuchni, front: string, projekt: Kolo
   for (const e of plan.elementy) {
     if (!e.kolory) continue;
     const k = koloryMebla(e, front, projekt);
-    czesci.push(`${e.nazwa}: fronty ${n(k.front)}, boki ${n(k.korpus)}, środek ${n(k.srodek)}`);
+    const u = e.kolory.uchwyt ? `, okucia ${findMaterial("hardware", e.kolory.uchwyt, ctx)?.name ?? e.kolory.uchwyt}` : "";
+    czesci.push(`${e.nazwa}: fronty ${n(k.front)}, boki ${n(k.korpus)}, środek ${n(k.srodek)}${u}`);
   }
   return czesci.join("; ");
 }
@@ -49,6 +50,7 @@ export default function KoloryMebli({
   modele,
   ctx,
   showPrice,
+  hardware,
 }: {
   plan: PlanKuchni;
   onPlan: (p: PlanKuchni) => void;
@@ -62,6 +64,8 @@ export default function KoloryMebli({
   modele: readonly PublicModel[];
   ctx: KontekstMaterialow;
   showPrice: boolean;
+  /** Okucia oferty – zaznaczony mebel może mieć inne. */
+  hardware: string;
 }) {
   const mapa = new Map(modele.map((m) => [m.id, m]));
   const kolorowe = meblaKolorowe(plan, modele);
@@ -71,8 +75,9 @@ export default function KoloryMebli({
   const teraz = el ? koloryMebla(el, front, projekt) : koloryMebla({}, front, projekt);
   const wybrane = (c: CzescMebla) => (el ? el.kolory?.[c] : c === "front" ? front : projekt[c]);
 
-  const ustaw = (c: CzescMebla, id: string | undefined) => {
+  const ustaw = (c: CzescMebla | "uchwyt", id: string | undefined) => {
     if (!el) {
+      if (c === "uchwyt") return;
       if (c === "front") {
         if (id) setFront(id);
       } else setProjekt({ ...projekt, [c]: id });
@@ -166,6 +171,32 @@ export default function KoloryMebli({
             </div>
           );
         })}
+        {el && g.okucia ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="w-full text-xs text-stone-600 desk:w-auto desk:min-w-[11.5rem]">
+              Uchwyty (okucia)
+              <span className="ml-1.5 text-stone-900">{findMaterial("hardware", el.kolory?.uchwyt ?? hardware, ctx)?.name}</span>
+            </span>
+            <div className="flex max-w-xl flex-wrap gap-2" role="radiogroup" aria-label={`Uchwyty (okucia) – ${el.nazwa}`}>
+              {[{ id: "", name: "Jak reszta", delta: 0 }, ...opcjeMaterialu("hardware", ctx, el.kolory?.uchwyt ?? hardware)].map((h) => {
+                const zazn = (el.kolory?.uchwyt ?? "") === h.id;
+                return (
+                  <button
+                    key={h.id || "dom"}
+                    type="button"
+                    role="radio"
+                    aria-checked={zazn}
+                    onClick={() => ustaw("uchwyt", h.id || undefined)}
+                    className={`h-7 rounded-full border px-2.5 text-xs transition ${zazn ? "border-stone-900 bg-stone-900 text-white" : "border-black/20 text-stone-700 hover:border-black/50"}`}
+                  >
+                    {h.name}
+                    {showPrice && h.delta ? ` ${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}` : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </div>
     </fieldset>
   );

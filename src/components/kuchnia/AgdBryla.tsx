@@ -17,6 +17,8 @@ type Props = {
   /** Kolor boków i obudowy oraz środka mebla (kolory.ts); brak = drewno jak dotąd. */
   korpus?: { color: string; roughness: number };
   srodek?: { color: string; roughness: number };
+  /** Kolor uchwytów tego mebla (okucia wybrane w oknie elementu); brak = ciemny metal. */
+  kolorUchwytu?: string;
 };
 
 const STAL = "#d5d8dc";
@@ -325,7 +327,7 @@ function Polka({ el }: { el: ElementKuchni }) {
 
 
 export default function AgdBryla(props: Props) {
-  const { el, kolor, chropowatosc, blat, uchwyt, otwarte, korpus, srodek } = props;
+  const { el, kolor, chropowatosc, blat, uchwyt, otwarte, korpus, srodek, kolorUchwytu } = props;
   const rodzaj = rodzajElementu(el);
   if (rodzaj === "blat") {
     return (
@@ -359,7 +361,7 @@ export default function AgdBryla(props: Props) {
         <Zmywarka {...props} />
       ) : (
         // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
-        <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} />
+        <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
       )}
       {blatNaDole ? <Blat el={el} kolor={blat} /> : null}
       {rodzaj === "zlew" ? <ZlewNaSzafce el={el} /> : null}

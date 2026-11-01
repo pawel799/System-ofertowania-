@@ -752,6 +752,8 @@ export type NowyElement = {
   zrodlo: ZrodloElementu;
   modelId?: string;
   wnetrze?: Wnetrze;
+  /** Kolory i okucia tego mebla wybrane przed dodaniem (okno elementu). */
+  kolory?: KoloryMebla;
 };
 
 const ALFABET = "0123456789abcdefghijklmnopqrstuvwxyz";
@@ -787,6 +789,7 @@ export function dodajElement(plan: PlanKuchni, bazowy: NowyElement, sciana: Scia
     d: bazowy.d,
     ...pos,
     ...(bazowy.wnetrze && bazowy.zrodlo === "modul" ? { wnetrze: bazowy.wnetrze } : {}),
+    ...(bazowy.kolory && Object.keys(bazowy.kolory).length ? { kolory: bazowy.kolory } : {}),
   };
   return dopasujSciany({ ...plan, elementy: [...plan.elementy, el] });
 }

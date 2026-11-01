@@ -158,6 +158,7 @@ export default function MaterialsPanel({
               modele={modele}
               ctx={ctx}
               showPrice={showPrice}
+              hardware={hardware}
             />
           ) : grupy.front ? (
             <fieldset>

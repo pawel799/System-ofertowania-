@@ -10,7 +10,7 @@ import { opisWnetrza } from "@/lib/wnetrze";
 import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
-import { doplataKolorow, koloryMebla } from "@/lib/kolory";
+import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
 import { opisKolorow } from "./useCenaKoncowa";
 import { grupyMaterialow, maAgd, opisGrup, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { slowaProjektu, type SlowaProjektu, type TypProjektu } from "@/lib/projekt";
@@ -102,7 +102,8 @@ export function danePdf(args: {
   const opisKoloruMebla = (e: (typeof args.plan.elementy)[number]) => {
     if (!e.kolory) return "";
     const k = koloryMebla(e, args.front, args.plan.kolory);
-    return ` · fronty ${nazwaKoloru(k.front)}, boki ${nazwaKoloru(k.korpus)}, środek ${nazwaKoloru(k.srodek)}`;
+    const u = e.kolory.uchwyt ? `, okucia ${findMaterial("hardware", uchwytMebla(e, args.hardware), mctx)?.name ?? e.kolory.uchwyt}` : "";
+    return ` · fronty ${nazwaKoloru(k.front)}, boki ${nazwaKoloru(k.korpus)}, środek ${nazwaKoloru(k.srodek)}${u}`;
   };
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
@@ -122,7 +123,7 @@ export function danePdf(args: {
   const dopFront = kolorowe ? kolory.kwota : 0;
   const nazwaKoloru = (id: string) => findMaterial("front", id, mctx)?.name ?? id;
   const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
-  const dopOkucia = grupy.okucia ? (okucia?.delta ?? 0) : 0;
+  const dopOkucia = grupy.okucia ? doplataUchwytow(args.plan.elementy, args.hardware, (id) => deltaMaterialu("hardware", id, mctx)) : 0;
   return {
     id: args.id,
     title: args.title,

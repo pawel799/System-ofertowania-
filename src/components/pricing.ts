@@ -1,7 +1,7 @@
 import { deltaMaterialu, type KatalogPozycja, type MaterialySnapshot } from "./katalogFirmy";
 import type { Palette } from "./palettes";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
-import { doplataKolorow, type KoloryProjektu } from "@/lib/kolory";
+import { doplataKolorow, doplataUchwytow, type KoloryProjektu } from "@/lib/kolory";
 import type { PlanKuchni } from "@/lib/kuchnia";
 
 /*
@@ -53,6 +53,10 @@ export function totalPrice(
     base +
     (kolorowe ? zaKolor : 0) +
     (!g || g.blat ? deltaMaterialu("countertop", selection.countertop, ctx) : 0) +
-    (!g || g.okucia ? deltaMaterialu("hardware", selection.hardware, ctx) : 0)
+    (!g || g.okucia
+      ? extra.plan?.elementy.length
+        ? doplataUchwytow(extra.plan.elementy, selection.hardware, (id) => deltaMaterialu("hardware", id, ctx))
+        : deltaMaterialu("hardware", selection.hardware, ctx)
+      : 0)
   );
 }

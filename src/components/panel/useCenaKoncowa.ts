@@ -11,7 +11,7 @@ import type { PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik } from "@/lib/modul";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { deltaMaterialu, findMaterial, type KontekstMaterialow } from "../katalogFirmy";
-import { doplataKolorow, type KoloryProjektu } from "@/lib/kolory";
+import { doplataKolorow, doplataUchwytow, type KoloryProjektu } from "@/lib/kolory";
 import { formatPln } from "../pricing";
 
 export type WyborMaterialow = { front: string; countertop: string; hardware: string };
@@ -39,7 +39,13 @@ export function doplatyMaterialow(wybor: WyborMaterialow, grupy: GrupyMaterialow
     }
   } else if (grupy.front) dodaj("front", "Fronty", findMaterial("front", wybor.front, ctx));
   if (grupy.blat) dodaj("blat", "Blat", findMaterial("countertop", wybor.countertop, ctx));
-  if (grupy.okucia) dodaj("okucia", "Okucia", findMaterial("hardware", wybor.hardware, ctx));
+  if (grupy.okucia) {
+    const rozne = !!plan?.elementy.some((e) => e.kolory?.uchwyt && e.kolory.uchwyt !== wybor.hardware);
+    if (rozne && plan) {
+      const kwota = doplataUchwytow(plan.elementy, wybor.hardware, (id) => deltaMaterialu("hardware", id, ctx));
+      if (kwota) out.push({ klucz: "okucia", nazwa: "Okucia (różne w meblach)", kwota });
+    } else dodaj("okucia", "Okucia", findMaterial("hardware", wybor.hardware, ctx));
+  }
   return out;
 }
 

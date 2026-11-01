@@ -10,6 +10,7 @@ import { CZESC_LABEL, koloryMebla, type CzescMebla, type KoloryProjektu } from "
 import { grupyElementu, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { opcjeMaterialu, type KontekstMaterialow } from "../katalogFirmy";
 import type { PublicModel } from "../modelRoles";
+import { KoloryElementu } from "./KoloryElementu";
 
 export function KreatorKolory({
   plan,
@@ -23,6 +24,7 @@ export function KreatorKolory({
   grupy,
   modele,
   ctx,
+  hardware,
 }: {
   plan: PlanKuchni;
   setPlan: (fn: (p: PlanKuchni) => PlanKuchni) => void;
@@ -35,6 +37,8 @@ export function KreatorKolory({
   grupy: GrupyMaterialow;
   modele: readonly PublicModel[];
   ctx: KontekstMaterialow;
+  /** Okucia oferty – „Jak pozostałe meble” w uchwytach zaznaczonego mebla. */
+  hardware: string;
 }) {
   const mapa = new Map(modele.map((m) => [m.id, m]));
   const kolorowe = plan.elementy.filter((e) => {
@@ -91,7 +95,29 @@ export function KreatorKolory({
         </select>
         <p className="kr-hint">{el ? "Zmieniasz tylko ten mebel. Kliknij inny na rzucie albo w 3D." : "Kliknij mebel na rzucie albo w 3D, żeby dać mu inne kolory niż reszcie."}</p>
       </div>
-      {czesci.map((c) => {
+      {el ? (
+        // Zaznaczony mebel: ten sam wybór co w oknie elementu (fronty, boki, środek, uchwyty).
+        <KoloryElementu
+          kolory={el.kolory}
+          onChange={(k) =>
+            setPlan((p) => ({
+              ...p,
+              elementy: p.elementy.map((e) => {
+                if (e.id !== el.id) return e;
+                const { kolory: _stare, ...bez } = e;
+                void _stare;
+                return k ? { ...bez, kolory: k } : bez;
+              }),
+            }))
+          }
+          front={front}
+          hardware={hardware}
+          projekt={projekt}
+          grupy={g}
+          ctx={ctx}
+        />
+      ) : null}
+      {(el ? [] : czesci).map((c) => {
         // Fronty: płyty i RAL; boki i środek: płyty (RAL tylko, gdy już wybrany) – tak samo jak u klienta.
         const wszystkie = opcjeMaterialu("front", ctx, wybrane(c) ?? teraz[c]);
         const opcje = c === "front" ? wszystkie : wszystkie.filter((f) => f.zrodlo !== "ral" || f.id === wybrane(c));

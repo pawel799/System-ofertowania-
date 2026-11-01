@@ -24,8 +24,11 @@ export const CZESC_LABEL: Record<CzescMebla, string> = {
 };
 export const CZESC_KROTKO: Record<CzescMebla, string> = { front: "fronty", korpus: "boki", srodek: "środek" };
 
-/** Kolory wybrane dla mebla albo dla całego projektu; brak pola = dziedziczy (boki jak fronty, środek jak boki). */
-export type KoloryMebla = { front?: string; korpus?: string; srodek?: string };
+/**
+ * Kolory wybrane dla mebla albo dla całego projektu; brak pola = dziedziczy (boki jak fronty, środek jak boki).
+ * uchwyt – okucia tylko tego mebla (id z listy okuć); brak = okucia oferty.
+ */
+export type KoloryMebla = { front?: string; korpus?: string; srodek?: string; uchwyt?: string };
 /** Wspólne dla projektu (front jest w ofercie, tu boki i środek). */
 export type KoloryProjektu = { korpus?: string; srodek?: string };
 
@@ -47,11 +50,32 @@ type ElementKolorow = {
  * Kolory jednego mebla po dziedziczeniu: własny wybór → wspólny projektu → „jak fronty” (boki) / „jak boki” (środek).
  * Boki „jak fronty” idą za frontem tego mebla, więc mebel z innym frontem ma też inne boki, dopóki ktoś ich nie ustawi.
  */
-export function koloryMebla(el: { kolory?: KoloryMebla }, front: string, projekt?: KoloryProjektu | null): Required<KoloryMebla> {
+export function koloryMebla(el: { kolory?: KoloryMebla }, front: string, projekt?: KoloryProjektu | null): Required<Omit<KoloryMebla, "uchwyt">> {
   const f = el.kolory?.front ?? front;
   const k = el.kolory?.korpus ?? projekt?.korpus ?? f;
   const s = el.kolory?.srodek ?? projekt?.srodek ?? k;
   return { front: f, korpus: k, srodek: s };
+}
+
+/** Okucia mebla: własne albo okucia oferty. */
+export const uchwytMebla = (el: { kolory?: KoloryMebla }, hardware: string) => el.kolory?.uchwyt ?? hardware;
+
+/**
+ * Dopłata za okucia, gdy meble mają różne: dopłata × udział frontów (m²) mebli z tymi okuciami.
+ * Wszystkie meble z okuciami oferty = dokładnie jej dopłata (jak dotąd).
+ */
+export function doplataUchwytow(elementy: readonly ElementKolorow[], hardware: string, dopłata: (id: string) => number) {
+  const m2 = new Map<string, number>();
+  let suma = 0;
+  for (const el of elementy) {
+    const f = czesciMebla(el).front;
+    if (!f) continue;
+    const u = uchwytMebla(el, hardware);
+    m2.set(u, (m2.get(u) ?? 0) + f);
+    suma += f;
+  }
+  if (!suma) return Math.round(dopłata(hardware));
+  return Math.round(Array.from(m2).reduce((s, [id, v]) => s + (dopłata(id) * v) / suma, 0));
 }
 
 /** AGD i elementy bez korpusu meblowego. */
@@ -118,9 +142,9 @@ export function parseKoloryMebla(v: unknown, gdzie: string): KoloryMebla | undef
   if (typeof v !== "object" || Array.isArray(v)) throw new Error(`${gdzie}: kolory mają zły format.`);
   const o = v as Record<string, unknown>;
   const out: KoloryMebla = {};
-  for (const c of CZESCI) {
+  for (const c of [...CZESCI, "uchwyt"] as const) {
     if (o[c] === undefined || o[c] === null) continue;
-    if (typeof o[c] !== "string" || !REF_RE.test(o[c] as string)) throw new Error(`${gdzie}: zły kolor (${CZESC_KROTKO[c]}).`);
+    if (typeof o[c] !== "string" || !REF_RE.test(o[c] as string)) throw new Error(`${gdzie}: zły kolor (${c === "uchwyt" ? "okucia" : CZESC_KROTKO[c]}).`);
     out[c] = o[c] as string;
   }
   return Object.keys(out).length ? out : undefined;

@@ -90,6 +90,12 @@ Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty
 - Klient na linku robi to samo: wybór z listy albo klik w 3D; jego kolory nie zapisują się w ofercie, ale idą w zgłoszeniu „Poproś o wycenę” (do 1000 znaków).
 - Dopłata za kolor liczy się **według powierzchni**: dopłata próbki × udział jej m² we wszystkich kolorowanych m² (front: szer. × wys., boki: 2 × wys. × gł. + 2 × szer. × gł., środek: półki i przegrody). Cały projekt w jednym kolorze = pełna dopłata, jak dotąd. Rozbicie ceny i PDF pokazują „Kolory: Grafit 62%, Dąb naturalny 38%”, a przy meblu z własnymi kolorami: „fronty …, boki …, środek …”.
 
+### Kolory i okucia w oknie elementu
+
+Okno elementu (katalog, biblioteka, dwuklik na meblu) ma sekcję **„Kolory i materiały”**: fronty, boki i obudowa, środek oraz **Uchwyty (okucia)** – tylko części, które mebel ma. Przy dodawaniu („wybierz przed dodaniem”) kolor trafia od razu do nowego mebla (`element.kolory`), przy zmianach – do tego mebla. „Jak pozostałe meble” = bez własnego wyboru. „Ustaw te kolory dla wszystkich mebli” robi z wyboru kolory wspólne oferty (front, okucia, `kuchnia.kolory`) i czyści własne kolory mebli. W kroku „Materiały” po zaznaczeniu mebla widać te same cztery wiersze, a klient na linku ma przy wybranym meblu wiersz „Uchwyty (okucia)”.
+
+Okucia mebla (`kolory.uchwyt`, `uchwytMebla`) zmieniają kolor uchwytów w 3D i dopłatę: dopłata okuć liczy się według powierzchni frontów (`doplataUchwytow`) – wszystkie meble z okuciami oferty = cena jak dotąd. Rozbicie ceny pokazuje wtedy „Okucia (różne w meblach)”, PDF dopisuje okucia przy meblu.
+
 ## Obrót mebla o dowolny kąt
 
 We właściwościach zaznaczonego mebla (krok „Meble”) jest pole **Obrót** (0–359°) i przyciski ↻/↺ 15°, „Prosto” i „Obróć 90°”. Zapis: `rot` (najbliższy kierunek ściany 0/90/180/270 – ściany, rzędy, „Dociągnij”) + `kat` (reszta, −45…45°, `zKata` w `src/lib/kuchnia.ts`). Rzut rysuje mebel obrócony, 3D obraca bryłę i wymiary, PDF dopisuje „pod kątem 30°”. Kolizje i przyciąganie liczą się z prostokąta obejmującego obrócony mebel (`rect`), więc nic nie wejdzie w jego narożnik. Mebel stojący przy ścianie zostaje przy niej po obrocie i nie wchodzi w ścianę.

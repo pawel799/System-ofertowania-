@@ -353,6 +353,9 @@ export default function KreatorApp() {
         const out: ElementKuchni = { ...e, nazwa: nowy.nazwa.trim() || e.nazwa };
         if (nowy.wnetrze && nowy.zrodlo === "modul") out.wnetrze = nowy.wnetrze;
         else delete out.wnetrze;
+        // Kolory i okucia z okna elementu (puste = jak pozostałe meble).
+        if (nowy.kolory && Object.keys(nowy.kolory).length) out.kolory = nowy.kolory;
+        else delete out.kolory;
         return out;
       }),
     };
@@ -861,6 +864,7 @@ export default function KreatorApp() {
                         zrodlo: element.zrodlo,
                         modelId: element.modelId,
                         wnetrze: element.wnetrze,
+                        kolory: element.kolory,
                       });
                     }}
                     onDociagnij={() => {
@@ -891,6 +895,7 @@ export default function KreatorApp() {
                     grupy={grupy}
                     modele={modeleSceny}
                     ctx={kCtx}
+                    hardware={hardware}
                   />
                   {grupy.blat ? (
                     <div className="field">
@@ -1039,6 +1044,22 @@ export default function KreatorApp() {
                 tryb={okno.tryb}
                 el={start}
                 cennik={cennikOferty}
+                wyglad={{
+                  ctx: kCtx,
+                  front,
+                  hardware,
+                  projekt: koloryProjektu,
+                  modele: models.map(toPublicModel),
+                  onDlaWszystkich: (k) => {
+                    // „Dla całości”: kolory wspólne projektu, a własne kolory pozostałych mebli znikają.
+                    if (k.front) setFrontId(k.front);
+                    if (k.uchwyt) setHardwareId(k.uchwyt);
+                    setKoloryProjektu({ korpus: k.korpus ?? koloryProjektu.korpus, srodek: k.srodek ?? koloryProjektu.srodek });
+                    setPlan((p) => ({ ...p, elementy: p.elementy.map((e) => (({ kolory: _k, ...r }) => (void _k, r))(e)) }));
+                    if (okno?.tryb === "edycja") setOkno(null);
+                    toast("Kolory ustawione dla wszystkich mebli");
+                  },
+                }}
                 onAnuluj={() => setOkno(null)}
                 onZapisz={(nowy) => {
                   if (okno.tryb === "nowy") {
