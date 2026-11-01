@@ -654,6 +654,8 @@
 .pnl .kr-okno line { stroke: #4f8fd6; stroke-width: 5; opacity: 0.85; }
 .pnl .kr-drzwi line { stroke: var(--g2); stroke-width: 5; }
 .pnl .kr-drzwi path { fill: none; stroke: var(--text-3); stroke-width: 0.6; stroke-dasharray: 2 1.5; }
+.pnl .kr-okno .kr-otwor-uchwyt, .pnl .kr-drzwi .kr-otwor-uchwyt { stroke: transparent; stroke-width: 16; opacity: 1; }
+.pnl .kr-okno[data-bad] line:not(.kr-otwor-uchwyt), .pnl .kr-drzwi[data-bad] line:not(.kr-otwor-uchwyt) { stroke: var(--red); }
 .pnl .kr-okno text, .pnl .kr-drzwi text { font-size: 7.5px; fill: var(--text-2); pointer-events: none; }
 .pnl .kr-woda circle { fill: #2f7fd1; stroke: #f7f1e6; stroke-width: 1; }
 .pnl .kr-card .kr-check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }

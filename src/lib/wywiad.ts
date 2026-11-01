@@ -17,7 +17,8 @@ type Sciana = "A" | "B";
 
 export type Otwor = {
   rodzaj: "okno" | "drzwi";
-  sciana: Sciana;
+  /** A, B – ściany zabudowy; C, D – naprzeciw nich (gdy podano wymiary pokoju, src/lib/sciany.ts). */
+  sciana: Sciana | "C" | "D";
   /** Od narożnika (początku ściany) do krawędzi otworu [cm]. */
   od: number;
   szer: number;
@@ -115,7 +116,7 @@ export function parseWywiad(v: unknown): Wywiad {
     const rodzaj = ot.rodzaj === "okno" || ot.rodzaj === "drzwi" ? ot.rodzaj : zle(`otwór ${i + 1}: okno albo drzwi.`);
     return {
       rodzaj,
-      sciana: sciana(ot.sciana),
+      sciana: ot.sciana === "C" || ot.sciana === "D" ? ot.sciana : sciana(ot.sciana),
       od: liczba(ot.od, `otwór ${i + 1} – od narożnika`, 0, 2000),
       szer: liczba(ot.szer, `otwór ${i + 1} – szerokość`, 30, 600),
       ...(rodzaj === "okno" && ot.parapet !== undefined && ot.parapet !== null ? { parapet: liczba(ot.parapet, `okno ${i + 1} – parapet`, 0, 250) } : {}),

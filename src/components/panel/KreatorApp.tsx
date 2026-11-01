@@ -52,7 +52,7 @@ import { KreatorBiblioteka } from "./KreatorBiblioteka";
 import { KreatorWnetrze, type ElementOkna } from "./KreatorWnetrze";
 import { etykietaKroku, KROKI, KrokOtoczenie, KrokPomieszczenie, KrokWyposazenie, PasekKrokow, type Krok } from "./KreatorKroki";
 import { KreatorSamouczek, samouczekWidziany } from "./KreatorSamouczek";
-import { AGD_LABEL, wywiadDomyslny, type Wywiad } from "@/lib/wywiad";
+import { AGD_LABEL, wywiadDomyslny, type Otwor, type Wywiad } from "@/lib/wywiad";
 import { ulozPropozycje } from "@/lib/propozycja";
 import { grupyMaterialow } from "@/lib/opcjeProjektu";
 import { dodatkiDomyslne, type DodatekOferty } from "@/lib/dodatki";
@@ -244,6 +244,9 @@ export default function KreatorApp() {
   const element = plan.elementy.find((e) => e.id === zaznaczony) ?? null;
   const wywiad: Wywiad = plan.wywiad ?? wywiadDomyslny(typ);
   const setWywiad = (fn: (w: Wywiad) => Wywiad) => setPlan((p) => ({ ...p, wywiad: fn(p.wywiad ?? wywiadDomyslny(typ)) }));
+  // Okno albo drzwi przeciągnięte na rzucie / w 3D (już sprawdzone – sprawdzOtwor w src/lib/otwory.ts).
+  const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), []);
+  const bladOtworu = useCallback((powod: string) => toast("Tu nie można przesunąć", { type: "err", desc: powod }), []);
   const indeksKroku = KROKI.indexOf(krok);
   const gotoweKroki = new Set<Krok>([
     ...(plan.wywiad ? (["pomieszczenie", "otoczenie"] as Krok[]) : []),
@@ -720,8 +723,12 @@ export default function KreatorApp() {
                   wymiary={wymiary}
                   onWybierz={setZaznaczony}
                   onPrzesun={(id, x, z) => zmien((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) }))}
-                  onKolizja={() => toast("Elementy nachodzą na siebie", { type: "err", desc: "Zostawiam poprzednie miejsce." })}
+                  onKolizja={(powod) =>
+                    toast(powod ? "Tu nie można postawić mebla" : "Elementy nachodzą na siebie", { type: "err", desc: powod ?? "Zostawiam poprzednie miejsce." })
+                  }
                   onOtworz={(id) => setOkno({ tryb: "edycja", id })}
+                  onOtwor={przesunOtwor}
+                  onBladOtworu={bladOtworu}
                 />
                 </div>
                 <p className="kr-legend">
@@ -747,6 +754,7 @@ export default function KreatorApp() {
                 </div>
                 <KuchniaTlo
                   plan={plan}
+                  edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu }}
                   modele={modeleSceny}
                   zaznaczony={zaznaczony}
                   onWybierz={setZaznaczony}

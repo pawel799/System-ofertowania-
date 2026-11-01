@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import {
   konfliktElementow,
   nachodzi,
@@ -15,6 +15,9 @@ import {
   type PlanKuchni,
   type Strefa,
 } from "@/lib/kuchnia";
+import { punktNaScianie, scianyPokoju } from "@/lib/sciany";
+import { meblaWOtworze, otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
+import type { Otwor } from "@/lib/wywiad";
 
 type Props = {
   plan: PlanKuchni;
@@ -22,9 +25,14 @@ type Props = {
   wymiary: boolean;
   onWybierz: (id: string | null) => void;
   onPrzesun: (id: string, x: number, z: number) => void;
-  onKolizja: () => void;
+  /** Ruch odrzucony: nachodzi na inny mebel albo staje w drzwiach / zasłania okno (komunikat). */
+  onKolizja: (powod?: string) => void;
   /** Podwójne kliknięcie (albo Enter) na elemencie – okno wymiarów i wnętrza. */
   onOtworz?: (id: string) => void;
+  /** Przesunięcie okna albo drzwi (przeciąganie po ścianach); bez – otwory tylko do oglądania. */
+  onOtwor?: (i: number, o: Otwor) => void;
+  /** Otwór nie może tam stać (komunikat z sprawdzOtwor). */
+  onBladOtworu?: (powod: string) => void;
 };
 
 type Ciagniecie = { id: string; pointer: number; dx: number; dz: number };
@@ -142,7 +150,49 @@ function wymiaryZaznaczenia(e: ElementKuchni) {
   return { front, nx, nz, bok, bx, bz, r, cx, cz };
 }
 
-export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz }: Props) {
+/** Okno albo drzwi na rzucie: odcinek na ścianie, skrzydło drzwi z łukiem do wnętrza, podpis. */
+function OtworRzut({
+  plan,
+  o,
+  zly,
+  onPointerDown,
+}: {
+  plan: PlanKuchni;
+  o: Otwor;
+  zly?: boolean;
+  onPointerDown?: (ev: ReactPointerEvent<SVGGElement>) => void;
+}) {
+  const s = scianyPokoju(plan).find((w) => w.id === o.sciana);
+  if (!s) return null;
+  const p1 = punktNaScianie(s, o.od);
+  const p2 = punktNaScianie(s, o.od + o.szer);
+  const srodek = punktNaScianie(s, o.od + o.szer / 2);
+  // Podpis po zewnętrznej stronie ściany.
+  const tx = srodek.x - s.nx * 9;
+  const tz = srodek.z - s.nz * 9;
+  const pion = s.dz !== 0;
+  const lisc = { x: p1.x + s.nx * o.szer, z: p1.z + s.nz * o.szer };
+  // Łuk od wolnego końca skrzydła (p2) do otwartego skrzydła; kierunek zależy od ściany.
+  const zgodnie = (s.dx * s.nz - s.dz * s.nx) > 0 ? 0 : 1;
+  return (
+    <g
+      className={o.rodzaj === "okno" ? "kr-okno" : "kr-drzwi"}
+      data-bad={zly ? "" : undefined}
+      data-sciana={o.sciana}
+      onPointerDown={onPointerDown}
+      style={onPointerDown ? { cursor: "grab", touchAction: "none" } : undefined}
+    >
+      <line x1={p1.x} y1={p1.z} x2={p2.x} y2={p2.z} />
+      {onPointerDown ? <line className="kr-otwor-uchwyt" x1={p1.x} y1={p1.z} x2={p2.x} y2={p2.z} /> : null}
+      {o.rodzaj === "drzwi" ? <path d={`M${p1.x} ${p1.z} L${lisc.x} ${lisc.z} M${p2.x} ${p2.z} A${o.szer} ${o.szer} 0 0 ${zgodnie} ${lisc.x} ${lisc.z}`} /> : null}
+      <text x={tx} y={tz} textAnchor="middle" dominantBaseline="central" transform={pion ? `rotate(-90 ${tx} ${tz})` : undefined}>
+        {o.rodzaj === "okno" ? `okno ${o.szer}` : `drzwi ${o.szer}`}
+      </text>
+    </g>
+  );
+}
+
+export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu }: Props) {
   // Podwójne kliknięcie liczymy sami: przechwycenie wskaźnika (przeciąganie) zjada zdarzenie dblclick.
   const ostatnieKlikniecie = useRef<{ id: string; t: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -156,10 +206,52 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
   const sluchacze = useRef<(() => void) | null>(null);
   useEffect(() => () => sluchacze.current?.(), []);
   const box = widok(plan, wymiary);
+  // Przeciąganie okna / drzwi: podgląd z listą błędów (pusta = można upuścić).
+  const otwory = plan.wywiad?.otwory ?? [];
+  const [podgladOtworu, setPodgladOtworu] = useState<{ i: number; o: Otwor; bledy: string[] } | null>(null);
+  const cbOtwor = useRef({ onOtwor, onBladOtworu });
+  cbOtwor.current = { onOtwor, onBladOtworu };
+  const zacznijOtwor = (ev: ReactPointerEvent<SVGGElement>, i: number) => {
+    if (ev.button !== 0) return;
+    ev.stopPropagation();
+    const svg = svgRef.current;
+    if (!svg) return;
+    const start = otwory[i];
+    let teraz = { i, o: start, bledy: [] as string[] };
+    setPodgladOtworu(teraz);
+    svg.setPointerCapture(ev.pointerId);
+    const move = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      const q = punkt(svg, pe);
+      const o = otworWPunkcie(planRef.current, start, q.x, q.y, pe.shiftKey ? 1 : 5);
+      teraz = { i, o, bledy: sprawdzOtwor(planRef.current, i, o) };
+      setPodgladOtworu(teraz);
+    };
+    const up = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
+      setPodgladOtworu(null);
+      if (teraz.o.od === start.od && teraz.o.sciana === start.sciana) return;
+      if (teraz.bledy.length) cbOtwor.current.onBladOtworu?.(teraz.bledy[0]);
+      else cbOtwor.current.onOtwor?.(i, teraz.o);
+    };
+    sluchacze.current?.();
+    sluchacze.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
   const elementy = plan.elementy.map((e) => (podglad && e.id === podglad.id ? { ...e, x: podglad.x, z: podglad.z } : e));
   const widokPlan: PlanKuchni = { ...plan, elementy };
   const podgladEl = podglad ? elementy.find((e) => e.id === podglad.id) : undefined;
-  const podgladNachodzi = podgladEl ? kolizjaZInnymi(plan, podgladEl) : false;
+  const podgladNachodzi = podgladEl ? kolizjaZInnymi(plan, podgladEl) || (!!meblaWOtworze(plan, podgladEl) && !meblaWOtworze(plan, plan.elementy.find((e) => e.id === podgladEl.id)!)) : false;
   const rysowane = [...elementy].sort((a, b) => KOLEJNOSC[a.strefa] - KOLEJNOSC[b.strefa] || a.x - b.x);
 
   const linie: { x1: number; y1: number; x2: number; y2: number; k: string }[] = [];
@@ -196,27 +288,16 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       ))}
       <line className="kr-wall" x1={0} y1={0} x2={plan.scianaA} y2={0} />
       {plan.uklad === "L" ? <line className="kr-wall" x1={0} y1={0} x2={0} y2={plan.scianaB} /> : null}
-      {/* Z kroku „Okna i instalacje”: okna i drzwi na ścianach, przyłącze wody. */}
-      {(plan.wywiad?.otwory ?? []).map((o, i) => {
-        const A = o.sciana === "A";
-        const x1 = A ? o.od : 0;
-        const y1 = A ? 0 : o.od;
-        const x2 = A ? o.od + o.szer : 0;
-        const y2 = A ? 0 : o.od + o.szer;
-        const tx = A ? o.od + o.szer / 2 : -14;
-        const ty = A ? -6 : o.od + o.szer / 2;
-        return (
-          <g key={`o${i}`} className={o.rodzaj === "okno" ? "kr-okno" : "kr-drzwi"} aria-hidden>
-            <line x1={x1} y1={y1} x2={x2} y2={y2} />
-            {o.rodzaj === "drzwi" ? (
-              <path d={A ? `M${x1} 0 A${o.szer} ${o.szer} 0 0 1 ${x1 + o.szer} ${-o.szer * 0.0001} M${x1} 0 L${x1} ${-Math.min(o.szer, 40)}` : `M0 ${y1} L${-Math.min(o.szer, 40)} ${y1}`} />
-            ) : null}
-            <text x={tx} y={ty} textAnchor="middle" transform={A ? undefined : `rotate(-90 ${tx} ${ty})`}>
-              {o.rodzaj === "okno" ? `okno ${o.szer}` : `drzwi ${o.szer}`}
-            </text>
-          </g>
-        );
-      })}
+      {/* Okna i drzwi na ścianach A–D: przeciągnij, żeby przesunąć (także na inną ścianę); czerwone = nie może tam stać. */}
+      {otwory.map((o, i) => (
+        <OtworRzut
+          key={`o${i}`}
+          plan={plan}
+          o={podgladOtworu?.i === i ? podgladOtworu.o : o}
+          zly={podgladOtworu?.i === i && podgladOtworu.bledy.length > 0}
+          onPointerDown={onOtwor ? (ev) => zacznijOtwor(ev, i) : undefined}
+        />
+      ))}
       {plan.wywiad?.woda ? (
         <g className="kr-woda" aria-hidden>
           <circle cx={plan.wywiad.woda.sciana === "A" ? plan.wywiad.woda.od : 5} cy={plan.wywiad.woda.sciana === "A" ? 5 : plan.wywiad.woda.od} r={3.2} />
@@ -295,7 +376,9 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         const przesun = (dx: number, dz: number) => {
           const przy = przyciagnij(plan, e, e.x + dx, e.z + dz);
           const kandydat = { ...e, x: przy.x, z: przy.z };
+          const wOtworze = meblaWOtworze(plan, kandydat);
           if (kolizjaZInnymi(plan, kandydat)) onKolizja();
+          else if (wOtworze && !meblaWOtworze(plan, e)) onKolizja(wOtworze);
           else if (przy.x !== e.x || przy.z !== e.z) onPrzesun(e.id, przy.x, przy.z);
         };
         const detale = wymiary && zaznaczona ? wymiaryZaznaczenia(e) : null;
@@ -360,6 +443,12 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                   const kandydat = { ...oryginal, x: teraz.x, z: teraz.z };
                   if (kolizjaZInnymi(planRef.current, kandydat)) {
                     cb.current.onKolizja();
+                    return;
+                  }
+                  // Nie stawiamy mebla w drzwiach ani przed oknem (chyba że już tam stał – wtedy tylko go przesuwamy).
+                  const wOtworze = meblaWOtworze(planRef.current, kandydat);
+                  if (wOtworze && !meblaWOtworze(planRef.current, oryginal)) {
+                    cb.current.onKolizja(wOtworze);
                     return;
                   }
                   if (kandydat.x !== oryginal.x || kandydat.z !== oryginal.z) cb.current.onPrzesun(drag.id, kandydat.x, kandydat.z);

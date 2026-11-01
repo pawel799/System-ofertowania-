@@ -61,6 +61,12 @@ Scena 3D (kreator, panel, strona klienta) rysuje ściany pokoju (`src/lib/sciany
 
 Nad sceną: **Ukryj / Pokaż ściany** (jak „Otwórz drzwi i szuflady”) i **Kolor ścian** (8 farb + w kreatorze własny kolor). Kolor z kreatora zapisuje się w ofercie (`kuchnia.sciany.kolor`, #rrggbb, walidacja w `parseKuchnia`), klient może go zmienić u siebie.
 
+## Okna i drzwi: przesuwanie w 2D i 3D
+
+Okna i drzwi mogą stać na każdej ścianie (A, B, C, D – `wywiad.otwory[].sciana`). Przesuwa się je przeciągając: na rzucie (odcinek na ścianie) i w 3D (szyba / skrzydło w ścianie, w kreatorze) – także na inną ścianę; Shift = co 1 cm, bez Shift co 5 cm. Nowy otwór od razu trafia w wolne miejsce (drzwi najpierw na ścianę C).
+
+Zabezpieczenia (`sprawdzOtwor` w `src/lib/otwory.ts`): otwór mieści się na ścianie, min. 10 cm od innego otworu, w drzwiach nie stoi żaden mebel (także szafka górna), okna nie zasłania słupek, szafka górna ani szafka wyższa niż parapet. Podgląd na czerwono, a puszczony w złym miejscu otwór wraca z komunikatem. W kroku „Okna i instalacje” błędy są pod każdym otworem. Mebla przeciąganego na rzucie nie da się postawić w drzwiach ani przed oknem (`meblaWOtworze`).
+
 ## Kolory mebli: fronty, boki, środek – każdy mebel osobno
 
 Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.

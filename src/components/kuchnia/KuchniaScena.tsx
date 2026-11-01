@@ -20,7 +20,7 @@ import { useRuch } from "./MebelParametryczny";
 import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
 import { otwarty, przelaczElement, useOtwarcie } from "./otwarcieStore";
 import { useKoloryProjektu } from "../koloryStore";
-import Sciany from "./Sciany";
+import Sciany, { type EdycjaOtworow } from "./Sciany";
 import { koloryMebla } from "@/lib/kolory";
 
 export type KuchniaUjecie = { jpeg: () => string | null };
@@ -41,6 +41,8 @@ type Props = {
   onUjecie?: (u: KuchniaUjecie | null) => void;
   /** Linie wymiarowe — tylko w kreatorze. */
   wymiary?: boolean;
+  /** Kreator: przeciąganie okien i drzwi po ścianach (Sciany.tsx). */
+  edycjaOtworow?: EdycjaOtworow;
 };
 
 function zakres(plan: PlanKuchni) {
@@ -252,7 +254,7 @@ function Otwory({ plan }: { plan: PlanKuchni }) {
   );
 }
 
-function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, tlo }: Props & { tlo: TloSceny }) {
+function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, wymiary, edycjaOtworow, tlo }: Props & { tlo: TloSceny }) {
   const front = useFront();
   const countertop = useCountertop();
   const hardware = useHardware();
@@ -290,7 +292,7 @@ function Wnetrze({ plan, modele = [], zaznaczony, onWybierz, zdjecie, onUjecie, 
         <meshStandardMaterial color={tlo.podloga} roughness={0.95} />
       </mesh>
       {/* Ściany pokoju z otworami na okna i drzwi, w kolorze z planu albo wybranym (Sciany.tsx). */}
-      <Sciany plan={plan} kolorDomyslny={tlo.sciana} />
+      <Sciany plan={plan} kolorDomyslny={tlo.sciana} edycja={edycjaOtworow} />
       <Otwory plan={plan} />
       <Suspense fallback={null}>
         {plan.elementy.map((el) => {

@@ -9,6 +9,8 @@ import { UKLAD_KUCHNI_LABEL, type PlanKuchni, type Sciana, type UkladKuchni } fr
 import { parseTypProjektu, TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { AGD_IDS, AGD_LABEL, MEBEL_LABEL, MEBLE_SALONU, POTRZEBA_LABEL, POTRZEBY, type Otwor, type Wywiad } from "@/lib/wywiad";
 import { PoleCm } from "./KreatorWlasciwosci";
+import { scianyPokoju, SCIANA_LABEL } from "@/lib/sciany";
+import { sprawdzOtwor, wolneMiejsceOtworu } from "@/lib/otwory";
 import { Seg } from "./ui";
 
 export const KROKI = ["pomieszczenie", "otoczenie", "wyposazenie", "meble", "materialy", "oferta"] as const;
@@ -116,20 +118,20 @@ export function KrokPomieszczenie({
 export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
   const L = plan.uklad === "L";
   const ustawOtwor = (i: number, zmiana: Partial<Otwor>) => setWywiad((w) => ({ ...w, otwory: w.otwory.map((o, j) => (j === i ? { ...o, ...zmiana } : o)) }));
+  const sciany = scianyPokoju(plan);
+  // Nowy otwór od razu w wolnym miejscu (nie w meblach, nie na innym otworze) – drzwi najchętniej naprzeciw zabudowy.
   const dodajOtwor = (rodzaj: Otwor["rodzaj"]) =>
-    setWywiad((w) => ({
-      ...w,
-      otwory: [
-        ...w.otwory,
+    setWywiad((w) => {
+      const wzor: Otwor =
         rodzaj === "okno"
-          ? ({ rodzaj, sciana: "A", od: Math.max(0, Math.round(plan.scianaA / 2 - 60)), szer: 120, parapet: 90 } satisfies Otwor)
-          : ({ rodzaj, sciana: L ? "B" : "A", od: 0, szer: 90 } satisfies Otwor),
-      ].slice(0, 12),
-    }));
+          ? { rodzaj, sciana: "A", od: Math.max(0, Math.round(plan.scianaA / 2 - 60)), szer: 120, parapet: 90 }
+          : { rodzaj, sciana: sciany.some((s) => s.id === "C") ? "C" : L ? "B" : "A", od: 0, szer: 90 };
+      return { ...w, otwory: [...w.otwory, wolneMiejsceOtworu({ ...plan, wywiad: w }, wzor)].slice(0, 12) };
+    });
   return (
     <div className="kr-krok" data-krok="otoczenie">
       <h2>Okna, drzwi i instalacje</h2>
-      <p className="lede">Gdzie są okna i drzwi na ścianach zabudowy? Pod oknem nie będzie szafek górnych ani słupków, w drzwiach – niczego.</p>
+      <p className="lede">Gdzie są okna i drzwi? Przeciągnij je na rzucie albo w 3D – także na ściany C i D, gdy podasz wymiary pokoju. Pod oknem nie będzie szafek górnych ani słupków, w drzwiach – niczego.</p>
       <div className="kr-otwory">
         {wywiad.otwory.length ? null : <p className="kr-hint">Brak okien i drzwi na tych ścianach.</p>}
         {wywiad.otwory.map((o, i) => (
@@ -137,15 +139,12 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
             <legend>
               {o.rodzaj === "okno" ? "Okno" : "Drzwi"} {i + 1}
             </legend>
-            {L ? (
+            {sciany.length > 1 ? (
               <Seg
                 label={`${o.rodzaj === "okno" ? "Okno" : "Drzwi"} ${i + 1}: ściana`}
                 value={o.sciana}
-                onChange={(v: Sciana) => ustawOtwor(i, { sciana: v })}
-                options={[
-                  { value: "A", label: "Ściana A" },
-                  { value: "B", label: "Ściana B" },
-                ]}
+                onChange={(v: Otwor["sciana"]) => ustawOtwor(i, { sciana: v })}
+                options={sciany.map((s) => ({ value: s.id as Otwor["sciana"], label: SCIANA_LABEL[s.id].replace(" (naprzeciw ", " · nap. ").replace(")", "") }))}
               />
             ) : null}
             <div className={o.rodzaj === "okno" ? "kr-dims kr-dims-3" : "kr-dims"}>
@@ -153,6 +152,16 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
               <PoleCm id={`k-ot-szer-${i}`} label="Szerokość" value={o.szer} min={30} max={600} onCommit={(n) => ustawOtwor(i, { szer: n })} />
               {o.rodzaj === "okno" ? <PoleCm id={`k-ot-par-${i}`} label="Parapet od podłogi" value={o.parapet ?? 90} min={0} max={250} onCommit={(n) => ustawOtwor(i, { parapet: n })} /> : null}
             </div>
+            {(() => {
+              const bledy = sprawdzOtwor({ ...plan, wywiad }, i, o);
+              return bledy.length ? (
+                <ul className="kr-wn-bledy" role="alert">
+                  {bledy.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              ) : null;
+            })()}
             <button type="button" className="btn btn-plain" onClick={() => setWywiad((w) => ({ ...w, otwory: w.otwory.filter((_, j) => j !== i) }))}>
               Usuń
             </button>

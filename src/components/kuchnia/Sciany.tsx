@@ -4,34 +4,123 @@
  * Ściany pokoju w 3D: A, B, C, D (src/lib/sciany.ts) z prawdziwymi otworami na okna i drzwi, w wybranym kolorze.
  * Każda ściana jest widoczna tylko od środka pokoju (płaszczyzny jednostronne), więc ściana między kamerą a meblami
  * znika sama – widać wnętrze jak w domku dla lalek. Przycisk „Ukryj ściany” chowa wszystkie (scianyStore.ts).
+ *
+ * Kreator (prop edycja): okno albo drzwi przeciąga się po ścianach – także na inną ścianę. Podgląd na czerwono,
+ * gdy otwór nie może tam stać (sprawdzOtwor: poza ścianą, na innym otworze, w meblach); puszczony – wraca.
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import { scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, type ScianaPokoju } from "@/lib/sciany";
+import { otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
 import type { PlanKuchni } from "@/lib/kuchnia";
+import type { Otwor } from "@/lib/wywiad";
 import { useSciany } from "./scianyStore";
 
 /** Kąt obrotu płaszczyzny (normalna +z) tak, żeby patrzyła do wnętrza pokoju. */
 const OBROT: Record<ScianaPokoju, number> = { A: 0, B: Math.PI / 2, C: Math.PI, D: -Math.PI / 2 };
 
-export default function Sciany({ plan, kolorDomyslny }: { plan: PlanKuchni; kolorDomyslny: string }) {
+export type EdycjaOtworow = {
+  onOtwor: (i: number, o: Otwor) => void;
+  onBlad: (powod: string) => void;
+};
+
+type Podglad = { i: number; o: Otwor; bledy: string[] };
+
+/** Przeciąganie otworu: promień spod kursora → najbliższa ściana zwrócona do kamery → położenie na niej. */
+function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow) {
+  const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const [podglad, setPodglad] = useState<Podglad | null>(null);
+  const planRef = useRef(plan);
+  planRef.current = plan;
+  const sprzatanie = useRef<(() => void) | null>(null);
+  useEffect(() => () => sprzatanie.current?.(), []);
+
+  const zacznij = (e: ThreeEvent<PointerEvent>, i: number) => {
+    if (!edycja || e.button !== 0) return;
+    e.stopPropagation();
+    const start = planRef.current.wywiad?.otwory[i];
+    if (!start) return;
+    if (controls) controls.enabled = false;
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    let teraz: Podglad = { i, o: start, bledy: [] };
+    setPodglad(teraz);
+    const move = (pe: PointerEvent) => {
+      const r = gl.domElement.getBoundingClientRect();
+      ndc.set(((pe.clientX - r.left) / r.width) * 2 - 1, -((pe.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      const p = planRef.current;
+      const H = wysokoscPokoju(p) / 100;
+      let traf: { x: number; z: number; d: number } | null = null;
+      for (const s of scianyPokoju(p)) {
+        const n = new THREE.Vector3(s.nx, 0, s.nz);
+        // Ściana odwrócona tyłem do kamery jest niewidoczna – nie łapiemy na niej.
+        if (ray.ray.direction.dot(n) >= 0) continue;
+        const plaszczyzna = new THREE.Plane().setFromNormalAndCoplanarPoint(n, new THREE.Vector3(s.x / 100, 0, s.z / 100));
+        const pt = ray.ray.intersectPlane(plaszczyzna, new THREE.Vector3());
+        if (!pt || pt.y < -0.2 || pt.y > H + 0.3) continue;
+        const t = (pt.x * 100 - s.x) * s.dx + (pt.z * 100 - s.z) * s.dz;
+        if (t < -40 || t > s.dlugosc + 40) continue;
+        const d = pt.distanceTo(ray.ray.origin);
+        if (!traf || d < traf.d) traf = { x: pt.x * 100, z: pt.z * 100, d };
+      }
+      if (!traf) return;
+      const o = otworWPunkcie(p, start, traf.x, traf.z, pe.shiftKey ? 1 : 5);
+      teraz = { i, o, bledy: sprawdzOtwor(p, i, o) };
+      setPodglad(teraz);
+      invalidate();
+    };
+    const up = () => {
+      sprzatanie.current?.();
+      sprzatanie.current = null;
+      if (controls) controls.enabled = true;
+      setPodglad(null);
+      invalidate();
+      if (teraz.o.od === start.od && teraz.o.sciana === start.sciana) return;
+      if (teraz.bledy.length) edycja.onBlad(teraz.bledy[0]);
+      else edycja.onOtwor(i, teraz.o);
+    };
+    sprzatanie.current?.();
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    sprzatanie.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  };
+  return { podglad, zacznij };
+}
+
+export default function Sciany({ plan, kolorDomyslny, edycja }: { plan: PlanKuchni; kolorDomyslny: string; edycja?: EdycjaOtworow }) {
   const { widoczne, kolor } = useSciany();
+  const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja);
   const H = wysokoscPokoju(plan);
   const sciany = scianyPokoju(plan);
-  const otwory = plan.wywiad?.otwory ?? [];
+  const otwory = (plan.wywiad?.otwory ?? []).map((o, i) => (podglad?.i === i ? podglad.o : o));
   const material = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92, side: THREE.FrontSide }), [kolor, kolorDomyslny]);
   const szyba = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cfe3f5", roughness: 0.12, emissive: "#9ec4ea", emissiveIntensity: 0.3, transparent: true, opacity: 0.55, side: THREE.FrontSide }), []);
   const rama = useMemo(() => new THREE.MeshStandardMaterial({ color: "#eceae6", roughness: 0.5 }), []);
   const skrzydlo = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6f55", roughness: 0.7, side: THREE.FrontSide }), []);
+  const zly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d64545", roughness: 0.6, transparent: true, opacity: 0.8, side: THREE.DoubleSide }), []);
   useEffect(() => () => material.dispose(), [material]);
-  useEffect(() => () => [szyba, rama, skrzydlo].forEach((m) => m.dispose()), [szyba, rama, skrzydlo]);
+  useEffect(() => () => [szyba, rama, skrzydlo, zly].forEach((m) => m.dispose()), [szyba, rama, skrzydlo, zly]);
   if (!widoczne) return null;
 
   return (
     <group name="sciany">
       {sciany.map((s) => {
-        const naScianie = otwory.filter((o) => o.sciana === s.id);
-        const segmenty = segmentySciany(s.dlugosc, H, naScianie);
+        const naScianie = otwory.map((o, i) => ({ o, i })).filter(({ o }) => o.sciana === s.id);
+        const segmenty = segmentySciany(
+          s.dlugosc,
+          H,
+          naScianie.map(({ o }) => o),
+        );
         // Lokalny układ ściany: x wzdłuż ściany (od początku), y w górę; potem przesunięcie i obrót do świata.
         const poz = (a: number, y: number): [number, number, number] => [(s.x + s.dx * a) / 100, y / 100, (s.z + s.dz * a) / 100];
         return (
@@ -41,14 +130,22 @@ export default function Sciany({ plan, kolorDomyslny }: { plan: PlanKuchni; kolo
                 <planeGeometry args={[(g.b - g.a) / 100, (g.y1 - g.y0) / 100]} />
               </mesh>
             ))}
-            {naScianie.map((o, i) => {
+            {naScianie.map(({ o, i }) => {
               const { y0, y1 } = wysokoscOtworu(o, H);
               const srodek = poz(o.od + o.szer / 2, (y0 + y1) / 2);
+              const czerwony = podglad?.i === i && podglad.bledy.length > 0;
               // Szyba i drzwi lekko w głąb ściany (od strony pokoju widać wnękę).
               const cofniecie: [number, number, number] = [srodek[0] - (s.nx * 6) / 100, srodek[1], srodek[2] - (s.nz * 6) / 100];
               return (
-                <group key={`o${i}`}>
-                  <mesh position={cofniecie} rotation={[0, OBROT[s.id], 0]} material={o.rodzaj === "okno" ? szyba : skrzydlo}>
+                <group key={`o${i}`} name={`otwor-${i}`}>
+                  <mesh
+                    position={cofniecie}
+                    rotation={[0, OBROT[s.id], 0]}
+                    material={czerwony ? zly : o.rodzaj === "okno" ? szyba : skrzydlo}
+                    onPointerDown={edycja ? (e) => zacznij(e, i) : undefined}
+                    onPointerOver={edycja ? () => (document.body.style.cursor = "grab") : undefined}
+                    onPointerOut={edycja ? () => (document.body.style.cursor = "") : undefined}
+                  >
                     <planeGeometry args={[o.szer / 100, (y1 - y0) / 100]} />
                   </mesh>
                   {o.rodzaj === "okno" ? (

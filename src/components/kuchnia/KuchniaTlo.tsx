@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "../modelRoles";
 import type { KuchniaUjecie } from "./KuchniaScena";
+import type { EdycjaOtworow } from "./Sciany";
 
 export type { KuchniaUjecie };
 
@@ -27,6 +28,8 @@ export default function KuchniaTlo({
   zdjecie?: boolean;
   onUjecie?: (u: KuchniaUjecie | null) => void;
   wymiary?: boolean;
+  /** Kreator: przeciąganie okien i drzwi po ścianach w 3D. */
+  edycjaOtworow?: EdycjaOtworow;
   className?: string;
 }) {
   return (
