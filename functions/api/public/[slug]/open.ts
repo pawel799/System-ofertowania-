@@ -6,6 +6,7 @@
  */
 import { handle, putOffer, stampNow } from "../../../_lib/offers";
 import { resolvePublic } from "../../../_lib/public";
+import { powiadomFirme, wTle } from "../../../_lib/powiadomienia";
 
 export const onRequestPost = handle(async (ctx) => {
   const { kv, offer } = await resolvePublic(ctx);
@@ -24,5 +25,7 @@ export const onRequestPost = handle(async (ctx) => {
     ].slice(-500),
     updatedAt: new Date().toISOString(),
   });
+  // Pierwsze otwarcie linku – e-mail do firmy (gdy włączone w Ustawieniach → Powiadomienia).
+  if (first) wTle(ctx, powiadomFirme(ctx, kv, offer, "otwarcie", [["Otwarto", stampNow()]]));
   return new Response(null, { status: 204 });
 });

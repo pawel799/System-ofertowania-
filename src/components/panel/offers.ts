@@ -1,6 +1,7 @@
 import type { TypProjektu } from "@/lib/projekt";
 import type { MaterialySnapshot } from "../katalogFirmy";
 import type { PlanKuchni } from "@/lib/kuchnia";
+import type { AkceptacjaOferty, WersjaOferty } from "@/lib/wersje";
 import type { ModulItem } from "@/lib/modul";
 import type { CompanyData } from "./company";
 
@@ -60,6 +61,8 @@ export type OfferLink = {
   showPrice: boolean;
   channel: Channel;
   views: number;
+  /** Przypomnienie e-mail dla klienta 3 dni przed wygaśnięciem; brak = tak. */
+  przypomnij?: boolean;
 };
 
 export type EventKind =
@@ -69,7 +72,11 @@ export type EventKind =
   | "comment"
   | "accept"
   | "revoke"
-  | "edit";
+  | "edit"
+  /** Klient zmienia kolory w podglądzie (serwer). */
+  | "wybor"
+  /** Przypomnienie wysłane klientowi (serwer). */
+  | "remind";
 
 export type OfferEvent = { t: string; k: EventKind; x: string };
 
@@ -112,6 +119,12 @@ export type Offer = {
   /** Ustawiane przez serwer (ISO). */
   createdAt?: string;
   updatedAt?: string;
+  /** Wersje widziane przez klienta (src/lib/wersje.ts) – pisze serwer. */
+  wersje?: WersjaOferty[];
+  /** Akceptacja klienta ze strony oferty – pisze serwer. */
+  akceptacja?: AkceptacjaOferty;
+  /** Kiedy wysłano klientowi przypomnienie (ISO) – pisze serwer. */
+  przypomnienie?: string;
 };
 
 export const STORAGE_KEY = "studio-kuchnie:oferty:v1";

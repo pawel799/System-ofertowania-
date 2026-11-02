@@ -111,6 +111,17 @@ export const panelApi = {
   update: (o: Offer) =>
     call<{ offer: Offer }>("PUT", `/api/offers/${offerKey(o.id)}`, { body: o, headers: auth() }).then((r) => r.offer),
   remove: (id: string) => call<void>("DELETE", `/api/offers/${offerKey(id)}`, { headers: auth() }),
+  /** E-mail do klienta z przypomnieniem o ofercie (link + data ważności). */
+  przypomnij: (id: string) => call<{ offer: Offer }>("POST", `/api/offers/${offerKey(id)}/przypomnij`, { headers: auth() }).then((r) => r.offer),
+};
+
+/* ---------- Powiadomienia e-mail (Ustawienia → Powiadomienia) ---------- */
+
+export type UstawieniaPowiadomien = { otwarcie: boolean; akceptacja: boolean; uwagi: boolean; wybor: boolean; przypomnienia: boolean };
+export type PowiadomieniaView = { powiadomienia: UstawieniaPowiadomien; adresy: string[]; poczta: boolean };
+export const powiadomieniaApi = {
+  get: () => call<PowiadomieniaView>("GET", "/api/settings/powiadomienia", { headers: auth() }),
+  put: (u: UstawieniaPowiadomien) => call<PowiadomieniaView>("PUT", "/api/settings/powiadomienia", { body: u, headers: auth() }),
 };
 
 /* ---------- Modele 3D, pakiety RAL, własna domena (panel) ---------- */
@@ -261,6 +272,11 @@ export type PublicOffer = {
   materialy?: MaterialySnapshot;
   /** Nazwa i logo firmy, która wysłała ofertę. */
   brand?: BrandSettings | null;
+  /** Bieżąca wersja oferty (null = stara oferta bez wersji) i zmiany względem poprzedniej. */
+  wersja?: { nr: number; data: string } | null;
+  zmiany?: string[];
+  /** Akceptacja klienta (której wersji, kiedy, kto). */
+  akceptacja?: { wersja: number; data: string; imie: string } | null;
 };
 
 const pinHeader = (pin?: string): Record<string, string> => (pin ? { "x-offer-pin": pin } : {});
@@ -272,6 +288,15 @@ export const publicApi = {
     ),
   open: (slug: string, pin?: string) =>
     call<void>("POST", `/api/public/${encodeURIComponent(slug)}/open`, { headers: pinHeader(pin) }),
+  /** Akceptacja oferty przez klienta (bieżąca wersja). */
+  akceptuj: (slug: string, body: { imie: string; wersja: number; zgoda: true; wybor?: string; kwota?: number }, pin?: string) =>
+    call<{ akceptacja: { wersja: number; data: string; imie: string } }>("POST", `/api/public/${encodeURIComponent(slug)}/akceptuj`, {
+      body,
+      headers: pinHeader(pin),
+    }),
+  /** Klient zmienia kolory w podglądzie – informacja dla firmy (bez zapisu w ofercie). */
+  wybor: (slug: string, opis: string, pin?: string) =>
+    call<void>("POST", `/api/public/${encodeURIComponent(slug)}/wybor`, { body: { opis }, headers: pinHeader(pin) }),
   /** Uwagi klienta do projektu (+ materiały wybrane w podglądzie). */
   comment: (slug: string, text: string, choice: { front: string; countertop: string; hardware: string }, pin?: string) =>
     call<{ ok: true }>("POST", `/api/public/${encodeURIComponent(slug)}/comment`, {

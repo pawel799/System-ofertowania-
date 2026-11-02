@@ -4,6 +4,8 @@ import ModulyDialog from "../modul/ModulyDialog";
 import { useCallback, useEffect, useRef, useState } from "react";
 import OfferView from "../OfferView";
 import ClientComments from "./ClientComments";
+import AkceptacjaKlienta from "./AkceptacjaKlienta";
+import { useWyborKlienta } from "../wyborKlienta";
 import { setCountertop } from "../countertopStore";
 import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
@@ -105,6 +107,28 @@ export default function ClientOffer() {
     zresetujSciany(state.offer.kuchnia?.sciany?.kolor);
   }, [state]);
 
+  // Klient zmienia kolory / materiały: po 20 s bez zmian informacja dla firmy (serwer ogranicza częstotliwość).
+  const wybor = useWyborKlienta();
+  const pierwszyWybor = useRef<string | null>(null);
+  const gotowaOd = useRef(0);
+  useEffect(() => {
+    if (state.k === "ready" && !gotowaOd.current) gotowaOd.current = Date.now();
+  }, [state.k]);
+  useEffect(() => {
+    if (state.k !== "ready" || !wybor.opis) return;
+    // Pierwsze sekundy po wczytaniu to ustawianie materiałów oferty, nie wybór klienta.
+    if (pierwszyWybor.current === null || Date.now() - gotowaOd.current < 4000) {
+      pierwszyWybor.current = wybor.opis;
+      return;
+    }
+    if (wybor.opis === pierwszyWybor.current) return;
+    const t = window.setTimeout(() => {
+      publicApi.wybor(slug, wybor.opis, okPin).catch(() => {});
+      pierwszyWybor.current = wybor.opis;
+    }, 20_000);
+    return () => window.clearTimeout(t);
+  }, [wybor.opis, state.k, slug, okPin]);
+
   if (state.k === "ready") {
     const { offer } = state;
     return (
@@ -115,14 +139,17 @@ export default function ClientOffer() {
         base={offer.base}
         showPrice={offer.showPrice}
         actions={
-          offer.comments || offer.moduly?.length ? (
+          <>
+            <AkceptacjaKlienta slug={slug} pin={okPin} wersja={offer.wersja ?? null} zmiany={offer.zmiany ?? []} akceptacja={offer.akceptacja ?? null} showPrice={offer.showPrice} />
+            {offer.comments || offer.moduly?.length ? (
             <>
               {offer.comments ? <ClientComments slug={slug} pin={okPin} /> : null}
               {offer.moduly?.length ? (
                 <ModulyDialog mode="oferta" moduly={offer.moduly} dodatki={offer.dodatki} etykieta={offer.kuchnia ? `${slowaProjektu(offer.projekt).pozycje} (${offer.moduly.length})` : undefined} />
               ) : null}
             </>
-          ) : undefined
+            ) : null}
+          </>
         }
         model={offer.model ?? null}
         kuchnia={offer.kuchnia}

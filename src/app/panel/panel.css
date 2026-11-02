@@ -9,7 +9,7 @@
   --ring: rgba(16, 16, 24, 0.08); --ring-2: rgba(16, 16, 24, 0.14);
   --text: #16161b; --text-2: #5e5f69; --text-3: #62636c; --on-red: #ffffff;
   --ink: #16161b; --ink-text: #ffffff;
-  --accent: #3f63e0; --teal: #0f8f84; --amber: #c27100; --green: #1e8a4c; --red: #d23b33;
+  --accent: #3f63e0; --teal: #0f8f84; --amber: #c27100; --green: #1a7a43; --red: #d23b33;
   --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(16, 16, 24, 0.04);
   --sh-md: 0 0 0 1px var(--ring), 0 2px 4px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.07);
   --sh-lg: 0 0 0 1px var(--ring), 0 24px 56px -12px rgba(16, 16, 24, 0.28);
@@ -685,3 +685,13 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-card .kr-check { flex-direction: row; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
 .pnl .kr-tylko-sm { display: none; }
 @media (max-width: 640px) { .pnl .kr-tylko-sm { display: inline; font-weight: 600; } }
+
+/* Wersje oferty i akceptacja klienta (WersjeOferty.tsx) */
+.pnl .wersja-akcept { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; border-radius: 10px; box-shadow: 0 0 0 1px var(--ring); background: var(--g2); margin-bottom: 10px; }
+.pnl .wersja-akcept[data-aktualna] { box-shadow: 0 0 0 1px color-mix(in srgb, var(--green) 45%, transparent); background: color-mix(in srgb, var(--green) 9%, var(--panel)); }
+.pnl .wersja-akcept[data-aktualna] b { color: var(--green); }
+.pnl .wersje { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pnl .wersje > li { display: flex; flex-direction: column; gap: 4px; }
+.pnl .wersja-nag { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pnl .wersja-ok { font-size: 11.5px; color: var(--green); font-weight: 600; }
+.pnl .wersje ul { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 13px; }

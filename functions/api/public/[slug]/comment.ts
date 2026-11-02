@@ -12,6 +12,7 @@ import { listPalettes } from "../../../_lib/assets";
 import { listKatalog } from "../../../_lib/katalog";
 import { handle, HttpError, json, putOffer, readJson, stampNow } from "../../../_lib/offers";
 import { resolvePublic } from "../../../_lib/public";
+import { powiadomFirme, wTle } from "../../../_lib/powiadomienia";
 
 const MAX_PER_HOUR = 10;
 
@@ -59,5 +60,6 @@ export const onRequestPost = handle(async (ctx) => {
     events: [...offer.events, { t: stampNow(), k: "comment" as const, x: `Uwagi klienta: ${snippet}` }].slice(-500),
     updatedAt: new Date().toISOString(),
   });
+  wTle(ctx, powiadomFirme(ctx, kv, offer, "uwagi", [["Uwagi", comment]]));
   return json({ ok: true }, 201);
 });

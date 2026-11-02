@@ -18,6 +18,7 @@ import { validateModuly } from "./modul";
 import { COUNTERTOPS, FRONTS, HARDWARE } from "../../src/components/catalog";
 import { RAL_FRONT_RE } from "../../src/components/palettes";
 import { KAT_REF_RE, type MaterialySnapshot } from "../../src/components/katalogFirmy";
+import { ostatniaWersja, type AkceptacjaOferty, type WersjaOferty } from "../../src/lib/wersje";
 
 /* Minimalne typy runtime'u Cloudflare (bez dodatkowej paczki z typami). */
 export interface KVNamespace {
@@ -58,6 +59,8 @@ export interface Env {
   RESEND_API_KEY?: string;
   NOTIFY_EMAIL?: string;
   NOTIFY_FROM?: string;
+  /** Tylko do testów: inny adres API Resend (atrapa poczty). */
+  RESEND_API_BASE?: string;
   /** Tylko do testów: inny adres API Cloudflare. */
   CF_API_BASE?: string;
   /** Liczba iteracji PBKDF2 dla nowych haseł (domyślnie 100 000 – maksimum w Workers). */
@@ -85,7 +88,7 @@ export const HARDWARE_IDS = HARDWARE.map((h) => h.id);
 const STATUSES = ["szkic", "wyslany", "otwarty", "poprawki", "zaakceptowany"] as const;
 const CHANNELS = ["email", "sms", "messenger"] as const;
 const LAYOUTS = ["I", "L", "U", "wyspa"] as const;
-const EVENT_KINDS = ["create", "send", "open", "comment", "accept", "revoke", "edit"] as const;
+const EVENT_KINDS = ["create", "send", "open", "comment", "accept", "revoke", "edit", "wybor", "remind"] as const;
 
 type Status = (typeof STATUSES)[number];
 
@@ -99,6 +102,8 @@ export type OfferLink = {
   showPrice: boolean;
   channel: (typeof CHANNELS)[number];
   views: number;
+  /** Przypomnienie klientowi (e-mail) 3 dni przed wygaśnięciem linku; brak = tak. */
+  przypomnij?: boolean;
 };
 
 export type CompanyData = {
@@ -162,6 +167,12 @@ export type Offer = {
   events: OfferEvent[];
   createdAt?: string;
   updatedAt?: string;
+  /** Wersje oferty widziane przez klienta (src/lib/wersje.ts) – pisze tylko serwer. */
+  wersje?: WersjaOferty[];
+  /** Akceptacja klienta ze strony oferty – pisze tylko serwer. */
+  akceptacja?: AkceptacjaOferty;
+  /** Kiedy wysłano klientowi przypomnienie o wygasającym linku (ISO) – pisze tylko serwer. */
+  przypomnienie?: string;
 };
 
 /* ---------- Odpowiedzi ---------- */
@@ -345,6 +356,7 @@ function validateLink(v: unknown): OfferLink | null {
     showPrice: bool(l.showPrice, "link.showPrice"),
     channel: oneOf(l.channel, CHANNELS, "link.channel"),
     views: int(l.views, "link.views", 0, 1_000_000),
+    ...(l.przypomnij === false ? { przypomnij: false } : {}),
   };
 }
 
@@ -498,6 +510,17 @@ export function publicView(o: Offer) {
     ...(o.projekt ? { projekt: o.projekt } : {}),
     // Snapshot nazw i dopłat; przy ukrytej cenie bez kwot.
     ...(o.materialy ? { materialy: link.showPrice ? o.materialy : ukryjDoplaty(o.materialy) } : {}),
+    // Wersja oferty i zmiany względem poprzedniej (bez kwot przy ukrytej cenie) oraz akceptacja klienta.
+    ...wersjaDlaKlienta(o, link.showPrice),
+  };
+}
+
+function wersjaDlaKlienta(o: Offer, showPrice: boolean) {
+  const { wersja, zmiany } = ostatniaWersja(o.wersje);
+  return {
+    wersja: wersja ? { nr: wersja.nr, data: wersja.data } : null,
+    zmiany: showPrice ? zmiany : zmiany.filter((z) => !z.startsWith("Cena netto")),
+    akceptacja: o.akceptacja ? { wersja: o.akceptacja.wersja, data: o.akceptacja.data, imie: o.akceptacja.imie } : null,
   };
 }
 

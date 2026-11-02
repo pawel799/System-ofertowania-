@@ -22,7 +22,7 @@ export async function sendMail(
 ): Promise<boolean> {
   if (!env.RESEND_API_KEY || !mail.to.length) return false;
   try {
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch(`${env.RESEND_API_BASE || "https://api.resend.com"}/emails`, {
       method: "POST",
       headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
       body: JSON.stringify({

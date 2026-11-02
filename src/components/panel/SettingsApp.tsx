@@ -8,6 +8,7 @@ import { FINISH_LABEL, FINISHES, type Finish, type Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { RAL_CLASSIC, RAL_GROUP_LABEL, ralByCode, type RalGroup } from "../ral";
 import { AccountTab, AdminFirmsTab, TeamTab, useMe } from "./AccountTabs";
+import { PowiadomieniaTab } from "./PowiadomieniaTab";
 import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
@@ -27,7 +28,7 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "cennik" | "models" | "palettes" | "katalog" | "domain" | "osadzanie" | "konto" | "zespol" | "plan" | "firmy";
+type Tab = "firma" | "cennik" | "models" | "palettes" | "katalog" | "domain" | "osadzanie" | "powiadomienia" | "konto" | "zespol" | "plan" | "firmy";
 const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
   { value: "cennik", label: "Cennik modułów" },
@@ -36,8 +37,9 @@ const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "katalog", label: "Katalog materiałów" },
   { value: "domain", label: "Domena" },
   { value: "osadzanie", label: "Na stronie" },
+  { value: "powiadomienia", label: "Powiadomienia" },
 ];
-const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "katalog", "domain", "osadzanie", "konto", "zespol", "plan", "firmy"];
+const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "katalog", "domain", "osadzanie", "powiadomienia", "konto", "zespol", "plan", "firmy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -135,6 +137,8 @@ export default function SettingsApp() {
             <TeamTab me={me} onAuthError={onAuthError} />
           ) : tab === "osadzanie" ? (
             <EmbedTab onAuthError={onAuthError} />
+          ) : tab === "powiadomienia" ? (
+            <PowiadomieniaTab canEdit={me?.role !== "member"} onAuthError={onAuthError} />
           ) : tab === "plan" ? (
             <PlanTab me={me} onAuthError={onAuthError} />
           ) : tab === "firmy" ? (

@@ -60,6 +60,7 @@ import { assetsApi, offerKey, panelApi, panelAuth, toPublicModel, type DomainVie
 import WyborModeluOferty from "./WyborModeluOferty";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
+import { WersjeOferty } from "./WersjeOferty";
 import {
   CopyButton,
   Counter,
@@ -111,15 +112,17 @@ const EVENT_COLOR: Record<EventKind, string> = {
   accept: "var(--green)",
   revoke: "var(--red)",
   edit: "var(--g4)",
+  wybor: "var(--amber)",
+  remind: "var(--accent)",
 };
 
-type Draft = { channel: Channel; days: number; comments: boolean; pin: boolean; price: boolean };
+type Draft = { channel: Channel; days: number; comments: boolean; pin: boolean; price: boolean; przypomnij: boolean };
 
 function draftFor(o: Offer): Draft {
   const L = o.link;
   return L
-    ? { channel: L.channel, days: L.days, comments: L.comments, pin: !!L.pin, price: L.showPrice }
-    : { channel: o.contact.includes("@") ? "email" : "sms", days: 7, comments: true, pin: false, price: true };
+    ? { channel: L.channel, days: L.days, comments: L.comments, pin: !!L.pin, price: L.showPrice, przypomnij: L.przypomnij !== false }
+    : { channel: o.contact.includes("@") ? "email" : "sms", days: 7, comments: true, pin: false, price: true, przypomnij: true };
 }
 
 /** Front wbudowany, z pakietu RAL albo z katalogu firmy (nazwa i kolor próbki). */
@@ -181,8 +184,11 @@ export default function PanelApp() {
   useEffect(() => setOrigin(window.location.origin), []);
   const store = usePanelOffers(offers, setOffers, (list) => {
     if (!list.length) return;
-    setSelId(list[0].id);
-    setDraft(draftFor(list[0]));
+    // Link z powiadomienia e-mail: /panel?oferta=<KUCH-2026_12> otwiera tę ofertę.
+    const zLinku = new URLSearchParams(window.location.search).get("oferta");
+    const pierwsza = (zLinku && list.find((o) => offerKey(o.id) === zLinku)) || list[0];
+    setSelId(pierwsza.id);
+    setDraft(draftFor(pierwsza));
   });
 
   // Modele, pakiety i domena: tylko z API (w trybie lokalnym ich nie ma).
@@ -364,6 +370,17 @@ export default function PanelApp() {
     });
   };
 
+  /** E-mail do klienta z przypomnieniem (serwer wysyła przez Resend i zapisuje w historii). */
+  const przypomnijTeraz = async () => {
+    try {
+      const saved = await panelApi.przypomnij(offer.id);
+      update(offer.id, (o) => ({ ...o, przypomnienie: saved.przypomnienie, events: saved.events }));
+      toast("Przypomnienie wysłane", { desc: `Do ${offer.contact.trim()}` });
+    } catch (e) {
+      toast("Nie wysłano przypomnienia", { type: "err", desc: e instanceof Error ? e.message : "Spróbuj za chwilę." });
+    }
+  };
+
   const createLink = () => {
     if (!offer.contact.trim()) {
       toast("Brakuje kontaktu", { type: "err", desc: "Wpisz e-mail lub telefon klienta." });
@@ -379,6 +396,7 @@ export default function PanelApp() {
       showPrice: draft.price,
       channel: draft.channel,
       views: 0,
+      ...(draft.przypomnij ? {} : { przypomnij: false }),
     };
     update(offer.id, (o) =>
       withEvent(
@@ -496,7 +514,41 @@ export default function PanelApp() {
               <dd>
                 <Counter value={L.views} />
               </dd>
+              <dt>Przypomnienie</dt>
+              <dd>
+                {offer.przypomnienie
+                  ? `wysłane ${new Date(offer.przypomnienie).toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}`
+                  : L.przypomnij === false
+                    ? "wyłączone"
+                    : offer.contact.includes("@")
+                      ? "3 dni przed końcem"
+                      : "brak e-maila"}
+              </dd>
             </dl>
+            {offer.contact.includes("@") ? (
+              <div className="actions">
+                <button type="button" className="btn btn-ghost" onClick={() => void przypomnijTeraz()}>
+                  Przypomnij klientowi teraz
+                </button>
+                <label className="tg" htmlFor="opt-przyp-link" style={{ flex: 1 }}>
+                  Auto
+                  <input
+                    id="opt-przyp-link"
+                    type="checkbox"
+                    className="switch"
+                    checked={L.przypomnij !== false}
+                    onChange={(e) =>
+                      update(offer.id, (o) => {
+                        if (!o.link) return o;
+                        const { przypomnij: _p, ...reszta } = o.link;
+                        void _p;
+                        return { ...o, link: e.target.checked ? reszta : { ...reszta, przypomnij: false } };
+                      })
+                    }
+                  />
+                </label>
+              </div>
+            ) : null}
             <div className="actions link-actions">
               {(() => {
                 const href = sendHref(offer, L.channel, message);
@@ -594,6 +646,7 @@ export default function PanelApp() {
                   ["comments", "Klient może dodać uwagi"],
                   ["pin", "Zabezpiecz PIN-em"],
                   ["price", "Pokaż cenę"],
+                  ["przypomnij", "Przypomnij klientowi przed wygaśnięciem"],
                 ] as const
               ).map(([key, text]) => (
                 <label className="tg" key={key} htmlFor={`opt-${key}`}>
@@ -1065,6 +1118,8 @@ export default function PanelApp() {
           ) : (
             <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
           )}
+
+          <WersjeOferty offer={offer} />
 
           <section className="sec">
             <h2>Aktywność</h2>

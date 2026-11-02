@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { ustawWyborKlienta } from "./wyborKlienta";
 import { setCountertop, useCountertop } from "./countertopStore";
 import { FRONTS, setFront, useFront } from "./frontStore";
 import { setHardware, useHardware } from "./hardwareStore";
@@ -132,6 +134,8 @@ export default function MaterialsPanel({
   ]
     .filter(Boolean)
     .join(", ");
+  // Wybór klienta (opis + szacunek) dla akceptacji oferty i informacji dla firmy (wyborKlienta.ts).
+  useEffect(() => ustawWyborKlienta({ opis: summary, kwota: showPrice ? total : null }), [summary, total, showPrice]);
 
   return (
     // relative: inaczej gradient nakładki (pozycjonowany) maluje się nad paskiem

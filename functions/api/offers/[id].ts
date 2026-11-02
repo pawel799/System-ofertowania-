@@ -11,6 +11,7 @@ import { checkRefs } from "../../_lib/assets";
 import { checkKatalogRefs, snapshotOferty } from "../../_lib/katalog";
 import { zCenaKuchni } from "../../_lib/kuchnia";
 import { assertCanWrite, firmPlan } from "../../_lib/plan";
+import { zWersjami } from "../../_lib/wersjeOferty";
 
 function keyOf(ctx: Ctx) {
   const key = param(ctx, "id");
@@ -46,11 +47,13 @@ export const onRequestPut = handle(async (ctx) => {
     // Panel mógł mieć starsze dane: nie gubimy otwarć ani uwag zapisanych przez stronę klienta.
     merged.link = { ...merged.link, views: Math.max(merged.link.views, existing.link.views) };
     const seen = new Set(merged.events.map((e) => JSON.stringify(e)));
-    const missing = existing.events.filter((e) => (e.k === "open" || e.k === "comment") && !seen.has(JSON.stringify(e)));
+    // Zdarzenia zapisane przez stronę klienta i serwer (otwarcia, uwagi, akceptacja, wybór kolorów, przypomnienia).
+    const missing = existing.events.filter((e) => ["open", "comment", "accept", "wybor", "remind"].includes(e.k) && !seen.has(JSON.stringify(e)));
     if (missing.length) {
       merged.events = [...merged.events, ...missing];
       if (merged.status === "wyslany") merged.status = "otwarty";
     }
+    if (missing.some((e) => e.k === "accept")) merged.status = "zaakceptowany";
     if (missing.some((e) => e.k === "comment")) {
       merged.comment = existing.comment;
       if (merged.status === "wyslany" || merged.status === "otwarty") merged.status = "poprawki";
@@ -65,7 +68,7 @@ export const onRequestPut = handle(async (ctx) => {
     await kv.delete(`slug:${oldSlug}`); // link cofnięty albo wymieniony: stary przestaje działać
   }
 
-  const saved = { ...merged, createdAt: existing.createdAt, updatedAt: new Date().toISOString() };
+  const saved = { ...zWersjami(merged, existing), createdAt: existing.createdAt, updatedAt: new Date().toISOString() };
   await putOffer(kv, saved);
   return json({ offer: saved });
 });
