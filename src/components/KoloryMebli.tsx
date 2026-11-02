@@ -6,7 +6,7 @@
  * Wybór trafia do zgłoszenia „Poproś o wycenę” (opisKoloruKlienta), cena przelicza się według powierzchni.
  */
 import type { PlanKuchni } from "@/lib/kuchnia";
-import { CZESC_LABEL, koloryMebla, type CzescMebla, type KoloryProjektu } from "@/lib/kolory";
+import { bezWlasnejCzesci, CZESC_LABEL, koloryMebla, type CzescMebla, type KoloryProjektu } from "@/lib/kolory";
 import { grupyElementu, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { findMaterial, opcjeMaterialu, type KontekstMaterialow } from "./katalogFirmy";
 import { formatPln } from "./pricing";
@@ -51,6 +51,7 @@ export default function KoloryMebli({
   ctx,
   showPrice,
   hardware,
+  setHardware: ustawOkucia,
 }: {
   plan: PlanKuchni;
   onPlan: (p: PlanKuchni) => void;
@@ -66,6 +67,8 @@ export default function KoloryMebli({
   showPrice: boolean;
   /** Okucia oferty – zaznaczony mebel może mieć inne. */
   hardware: string;
+  /** Okucia oferty („Wszystkie meble”); bez – wiersz uchwytów tylko dla zaznaczonego mebla. */
+  setHardware?: (id: string) => void;
 }) {
   const mapa = new Map(modele.map((m) => [m.id, m]));
   const kolorowe = meblaKolorowe(plan, modele);
@@ -73,16 +76,29 @@ export default function KoloryMebli({
   const g = el ? grupyElementu(el, mapa) : grupy;
   const czesci = (["front", "korpus", "srodek"] as CzescMebla[]).filter((c) => (c === "front" ? g.front : c === "korpus" ? g.korpus : g.srodek));
   const teraz = el ? koloryMebla(el, front, projekt) : koloryMebla({}, front, projekt);
+  const uchwytTeraz = el?.kolory?.uchwyt ?? hardware;
+  // Uchwyty: dla mebla zawsze, dla wszystkich – gdy pasek oddał tu grupę „Okucia” (setHardware).
+  const pokazUchwyty = !!el || !!ustawOkucia;
+  const setHardware = (id: string) => ustawOkucia?.(id);
   const wybrane = (c: CzescMebla) => (el ? el.kolory?.[c] : c === "front" ? front : projekt[c]);
 
   const ustaw = (c: CzescMebla | "uchwyt", id: string | undefined) => {
     if (!el) {
-      if (c === "uchwyt") return;
+      if (c === "uchwyt") {
+        if (!id) return;
+        setHardware(id);
+        if (plan.elementy.some((e) => e.kolory?.uchwyt !== undefined)) onPlan({ ...plan, elementy: bezWlasnejCzesci(plan.elementy, "uchwyt") });
+        return;
+      }
       if (c === "front") {
         if (id) setFront(id);
       } else setProjekt({ ...projekt, [c]: id });
+      // „Wszystkie meble” zmienia naprawdę wszystkie – także te z własnym kolorem tej części.
+      if (plan.elementy.some((e) => e.kolory?.[c] !== undefined)) onPlan({ ...plan, elementy: bezWlasnejCzesci(plan.elementy, c) });
       return;
     }
+    // Fronty i uchwyty mebla: wybór taki sam jak u reszty = bez własnego (mebel znów idzie za resztą).
+    if ((c === "front" && id === front) || (c === "uchwyt" && id === hardware)) id = undefined;
     onPlan({
       ...plan,
       elementy: plan.elementy.map((e) => {
@@ -96,12 +112,12 @@ export default function KoloryMebli({
     });
   };
   const domyslna = (c: CzescMebla): string | null => {
-    if (el) return c === "front" ? "Jak reszta" : c === "korpus" ? (projekt.korpus ? "Jak reszta" : "Jak fronty") : projekt.srodek ? "Jak reszta" : "Jak boki";
+    if (el) return c === "front" ? null : c === "korpus" ? (projekt.korpus ? "Jak reszta" : "Jak fronty") : projekt.srodek ? "Jak reszta" : "Jak boki";
     return c === "front" ? null : c === "korpus" ? "Jak fronty" : "Jak boki";
   };
 
   return (
-    <fieldset className="min-w-0">
+    <fieldset className="w-full min-w-0">
       <legend className={`mb-2 flex flex-wrap items-center gap-2 ${LABEL}`}>
         Kolory
         {kolorowe.length > 1 ? (
@@ -123,21 +139,23 @@ export default function KoloryMebli({
           </span>
         ) : null}
       </legend>
-      <div className="flex flex-col gap-2">
+      {/* Komputer: miejsce na 4 wiersze (fronty, boki, środek, uchwyty) – pasek nie skacze przy zmianie mebla. */}
+      <div className="flex flex-col gap-2 desk:min-h-[9.25rem]">
         {czesci.map((c) => {
-          const sel = wybrane(c);
+          // Fronty mebla: zaznaczony kolor, który ma (własny albo jak reszta) – ten sam układ co „Wszystkie meble”.
+          const sel = el && c === "front" ? (el.kolory?.front ?? front) : wybrane(c);
           const wszystkie = opcjeMaterialu("front", ctx, sel ?? teraz[c]);
           // Fronty: płyty i RAL; boki i środek: płyty (RAL tylko, gdy już wybrany).
           const opcje = c === "front" ? wszystkie : wszystkie.filter((f) => f.zrodlo !== "ral" || f.id === sel);
           const dom = domyslna(c);
           const nazwa = findMaterial("front", teraz[c], ctx)?.name;
           return (
-            <div key={c} className="flex flex-wrap items-center gap-2">
-              <span className="w-full text-xs text-stone-600 desk:w-auto desk:min-w-[11.5rem]">
+            <div key={c} className="flex flex-col gap-1.5 desk:flex-row desk:items-center desk:gap-3">
+              <span className="flex min-w-0 flex-col text-xs leading-tight text-stone-600 desk:w-48 desk:shrink-0">
                 {CZESC_LABEL[c]}
-                {nazwa ? <span className="ml-1.5 text-stone-900">{nazwa}</span> : null}
+                {nazwa ? <span className="truncate text-stone-900" title={nazwa}>{nazwa}</span> : null}
               </span>
-              <div className="flex max-w-xl flex-wrap gap-2" role="radiogroup" aria-label={el ? `${CZESC_LABEL[c]} – ${el.nazwa}` : CZESC_LABEL[c]}>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" role="radiogroup" aria-label={el ? `${CZESC_LABEL[c]} – ${el.nazwa}` : CZESC_LABEL[c]}>
                 {dom ? (
                   <button
                     type="button"
@@ -171,23 +189,23 @@ export default function KoloryMebli({
             </div>
           );
         })}
-        {el && g.okucia ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="w-full text-xs text-stone-600 desk:w-auto desk:min-w-[11.5rem]">
+        {g.okucia && pokazUchwyty ? (
+          <div className="flex flex-col gap-1.5 desk:flex-row desk:items-center desk:gap-3">
+            <span className="flex min-w-0 flex-col text-xs leading-tight text-stone-600 desk:w-48 desk:shrink-0">
               Uchwyty (okucia)
-              <span className="ml-1.5 text-stone-900">{findMaterial("hardware", el.kolory?.uchwyt ?? hardware, ctx)?.name}</span>
+              <span className="truncate text-stone-900">{findMaterial("hardware", uchwytTeraz, ctx)?.name}</span>
             </span>
-            <div className="flex max-w-xl flex-wrap gap-2" role="radiogroup" aria-label={`Uchwyty (okucia) – ${el.nazwa}`}>
-              {[{ id: "", name: "Jak reszta", delta: 0 }, ...opcjeMaterialu("hardware", ctx, el.kolory?.uchwyt ?? hardware)].map((h) => {
-                const zazn = (el.kolory?.uchwyt ?? "") === h.id;
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2" role="radiogroup" aria-label={el ? `Uchwyty (okucia) – ${el.nazwa}` : "Uchwyty (okucia)"}>
+              {opcjeMaterialu("hardware", ctx, uchwytTeraz).map((h) => {
+                const zazn = uchwytTeraz === h.id;
                 return (
                   <button
-                    key={h.id || "dom"}
+                    key={h.id}
                     type="button"
                     role="radio"
                     aria-checked={zazn}
-                    onClick={() => ustaw("uchwyt", h.id || undefined)}
-                    className={`h-7 rounded-full border px-2.5 text-xs transition ${zazn ? "border-stone-900 bg-stone-900 text-white" : "border-black/20 text-stone-700 hover:border-black/50"}`}
+                    onClick={() => ustaw("uchwyt", h.id)}
+                    className={`h-7 whitespace-nowrap rounded-full border px-2.5 text-xs transition ${zazn ? "border-stone-900 bg-stone-900 text-white" : "border-black/20 text-stone-700 hover:border-black/50"}`}
                   >
                     {h.name}
                     {showPrice && h.delta ? ` ${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}` : ""}

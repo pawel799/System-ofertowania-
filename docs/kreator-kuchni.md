@@ -113,9 +113,10 @@ Wymiary zaznaczenia są widoczne zawsze (także przy „Ukryj wymiary”); przyc
 
 Kolor obejmuje cały mebel, w trzech częściach (`src/lib/kolory.ts`): **Fronty (drzwi i szuflady)**, **Boki i obudowa** (boki, wieńce; w modelach 3D węzeł „Korpus” albo rola „Boki i obudowa” w Ustawienia → Modele 3D) i **Środek (półki i przegrody)** (półki, przegrody, skrzynki szuflad). Domyślnie boki są „jak fronty”, a środek „jak boki”, więc cały mebel ma jeden kolor.
 
-- „Kolory dla: Wszystkie meble” – kolory wspólne (front w ofercie, boki i środek w `kuchnia.kolory`).
+- „Kolory dla: Wszystkie meble” – kolory wspólne (front w ofercie, boki i środek w `kuchnia.kolory`). Zmienia naprawdę wszystkie meble: mebel z własnym kolorem tej części go traci (`bezWlasnejCzesci` w `kolory.ts`), inne jego własne części zostają.
 - Kliknięty mebel (rzut / 3D albo wybór z listy) – własne kolory tylko tego mebla (`element.kolory`). W kroku „Materiały” kliknięcie mebla nie przenosi do kroku „Meble”.
 - Klient na linku robi to samo: wybór z listy albo klik w 3D; jego kolory nie zapisują się w ofercie, ale idą w zgłoszeniu „Poproś o wycenę” (do 1000 znaków).
+- Pasek klienta: blok „Kolory” ma zawsze ten sam układ – wiersze Fronty, Boki i obudowa, Środek, Uchwyty (okucia) (uchwyty przeniesione tu z osobnej grupy „Okucia”), nazwa koloru pod nazwą części, próbki od jednej kolumny. Dla zaznaczonego mebla te same wiersze (bez „Jak reszta” przy frontach i uchwytach – wybór takiego jak u reszty = mebel znów idzie za resztą), więc pasek nie zmienia wysokości. Na komputerze kadr 3D jest liczony nad paskiem (`zasloniete` → `setViewOffset` w `KuchniaScena.tsx`): mebel i jego obrys nie chowają się pod paskiem.
 - Dopłata za kolor liczy się **według powierzchni**: dopłata próbki × udział jej m² we wszystkich kolorowanych m² (front: szer. × wys., boki: 2 × wys. × gł. + 2 × szer. × gł., środek: półki i przegrody). Cały projekt w jednym kolorze = pełna dopłata, jak dotąd. Rozbicie ceny i PDF pokazują „Kolory: Grafit 62%, Dąb naturalny 38%”, a przy meblu z własnymi kolorami: „fronty …, boki …, środek …”.
 
 ### Kolory i okucia w oknie elementu
@@ -145,7 +146,7 @@ Fronty, blat i okucia pokazujemy tylko wtedy, gdy projekt je ma – liczy to jed
 - **okucia** – element z drzwiami albo szufladami, model z oznaczonymi uchwytami (otwarty regał – bez),
 - **fronty** – element z frontem albo model z oznaczonym frontem.
 
-Ukryta grupa nie dolicza dopłaty. Jeden wgrany model: z jego oznaczeń; kuchnia demo: wszystko. Teksty dla klienta zależą od rodzaju projektu (`slowaProjektu` w `src/lib/projekt.ts`): „Pozycje projektu”, „Zobacz szafę w 3D”, przy cenie „Bez montażu…” (o AGD tylko, gdy w projekcie są urządzenia). Numer oferty: KUCH-, SZAF-, MEBL- albo LAZ- (wspólna numeracja w roku). We wnętrzu drążek jest tylko w szafie, szafka wisząca nie ma szuflad (`typyPrzestrzeniDla`).
+Ukryta grupa nie dolicza dopłaty. Jeden wgrany model: z jego oznaczeń; kuchnia demo: wszystko. Teksty dla klienta zależą od rodzaju projektu (`slowaProjektu` w `src/lib/projekt.ts`): przycisk „Pozycje oferty” (każdy rodzaj projektu), „Zobacz szafę w 3D”, przy cenie „Bez montażu…” (o AGD tylko, gdy w projekcie są urządzenia). Numer oferty: KUCH-, SZAF-, MEBL- albo LAZ- (wspólna numeracja w roku). We wnętrzu drążek jest tylko w szafie, szafka wisząca nie ma szuflad (`typyPrzestrzeniDla`).
 
 ## 3D: drzwi i szuflady, tło
 

@@ -6,7 +6,7 @@
  * Zaznaczenie jest wspólne z rzutem i 3D: kliknij mebel, a tu zmienisz tylko jego kolory.
  */
 import type { PlanKuchni } from "@/lib/kuchnia";
-import { CZESC_LABEL, koloryMebla, type CzescMebla, type KoloryProjektu } from "@/lib/kolory";
+import { bezWlasnejCzesci, CZESC_LABEL, koloryMebla, type CzescMebla, type KoloryProjektu } from "@/lib/kolory";
 import { grupyElementu, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { opcjeMaterialu, type KontekstMaterialow } from "../katalogFirmy";
 import type { PublicModel } from "../modelRoles";
@@ -56,6 +56,8 @@ export function KreatorKolory({
       if (c === "front") {
         if (id) setFront(id);
       } else setProjekt({ ...projekt, [c]: id });
+      // Wszystkie meble – także te, które miały własny kolor tej części.
+      if (plan.elementy.some((e) => e.kolory?.[c] !== undefined)) setPlan((p) => ({ ...p, elementy: bezWlasnejCzesci(p.elementy, c) }));
       return;
     }
     setPlan((p) => ({
@@ -93,7 +95,7 @@ export function KreatorKolory({
             </option>
           ))}
         </select>
-        <p className="kr-hint">{el ? "Zmieniasz tylko ten mebel. Kliknij inny na rzucie albo w 3D." : "Kliknij mebel na rzucie albo w 3D, żeby dać mu inne kolory niż reszcie."}</p>
+        <p className="kr-hint">{el ? "Zmieniasz tylko ten mebel. Kliknij inny na rzucie albo w 3D." : "Kolor zmienia wszystkie meble. Kliknij mebel na rzucie albo w 3D, żeby dać mu inne kolory niż reszcie."}</p>
       </div>
       {el ? (
         // Zaznaczony mebel: ten sam wybór co w oknie elementu (fronty, boki, środek, uchwyty).

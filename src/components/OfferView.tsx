@@ -60,6 +60,22 @@ export default function OfferView({
     setPlan(kuchnia ?? null);
     setWybrany(null);
   }, [kuchnia]);
+  // Komputer: scena na cały ekran, pasek materiałów na niej u dołu – kadr 3D idzie nad pasek (nic się pod nim nie chowa).
+  const [zasloniete, setZasloniete] = useState(0);
+  useEffect(() => {
+    const pasek = document.getElementById("wycena");
+    if (!pasek) return;
+    const desk = window.matchMedia("(min-width: 768px) and (min-height: 501px)");
+    const licz = () => setZasloniete(desk.matches ? Math.round(pasek.getBoundingClientRect().height) : 0);
+    const ro = new ResizeObserver(licz);
+    ro.observe(pasek);
+    desk.addEventListener("change", licz);
+    licz();
+    return () => {
+      ro.disconnect();
+      desk.removeEventListener("change", licz);
+    };
+  }, []);
   // Te same grupy materiałów co w kreatorze: szafa bez blatu, otwarty regał bez uchwytów…
   const zPlanu = !!kuchnia?.elementy.length;
   const grupy = grupyMaterialow({ plan: zPlanu ? kuchnia : null, model: zPlanu ? null : model, modele });
@@ -71,7 +87,7 @@ export default function OfferView({
       {/* Scena 3D (obracanie palcem/myszą, przybliżanie). */}
       <div className="oferta-scena relative h-[58svh] w-full [@media(orientation:landscape)_and_(max-height:500px)]:h-[82svh] desk:fixed desk:inset-0 desk:h-auto">
         {plan?.elementy.length ? (
-          <KuchniaTlo plan={plan} modele={modele ?? []} zaznaczony={wybrany} onWybierz={setWybrany} />
+          <KuchniaTlo plan={plan} modele={modele ?? []} zaznaczony={wybrany} onWybierz={setWybrany} zasloniete={zasloniete} />
         ) : model ? (
           <CustomModelBackground model={model} />
         ) : (

@@ -46,12 +46,12 @@ export type SlowaProjektu = {
   czego: string;
   /** „obróć ją / go”. */
   zaimek: "ją" | "go";
-  /** „Pozycje kuchni”, „Pozycje projektu”. */
+  /** Przycisk z listą pozycji na stronie klienta: „Pozycje oferty” (kuchnia, szafa i reszta – także AGD). */
   pozycje: string;
 };
 
 export function slowaProjektu(typ: TypProjektu | undefined): SlowaProjektu {
-  if (!typ || typ === "kuchnia") return { nazwa: "Kuchnia", twoj: "Twoja kuchnia", biernik: "kuchnię", czego: "Twojej kuchni", zaimek: "ją", pozycje: "Pozycje kuchni" };
-  if (typ === "szafa") return { nazwa: "Szafa", twoj: "Twoja szafa", biernik: "szafę", czego: "Twojej szafy", zaimek: "ją", pozycje: "Pozycje projektu" };
-  return { nazwa: "Projekt", twoj: "Twój projekt", biernik: "projekt", czego: "Twoich mebli", zaimek: "go", pozycje: "Pozycje projektu" };
+  if (!typ || typ === "kuchnia") return { nazwa: "Kuchnia", twoj: "Twoja kuchnia", biernik: "kuchnię", czego: "Twojej kuchni", zaimek: "ją", pozycje: "Pozycje oferty" };
+  if (typ === "szafa") return { nazwa: "Szafa", twoj: "Twoja szafa", biernik: "szafę", czego: "Twojej szafy", zaimek: "ją", pozycje: "Pozycje oferty" };
+  return { nazwa: "Projekt", twoj: "Twój projekt", biernik: "projekt", czego: "Twoich mebli", zaimek: "go", pozycje: "Pozycje oferty" };
 }

@@ -54,6 +54,8 @@ type Props = {
   edycjaMebli?: EdycjaMebli;
   /** Podgląd przesuwanego mebla (x, z na żywo) – np. do wymiarów obok sceny. */
   onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
+  /** Ile pikseli od dołu sceny zasłania nakładka (strona klienta na komputerze: pasek materiałów) – kadr nad nią. */
+  zasloniete?: number;
 };
 
 export type EdycjaMebli = {
@@ -180,10 +182,38 @@ function zakres(plan: PlanKuchni) {
   return { x0, x1, z0, z1, y1 };
 }
 
-function Kamera({ plan }: { plan: PlanKuchni }) {
+/**
+ * Część sceny zasłonięta od dołu (pasek materiałów na stronie klienta): środek obrazu przesuwa się nad nią
+ * (setViewOffset – płótno jest dolnym wycinkiem wyższego obrazu), więc mebel nie chowa się pod paskiem.
+ */
+function Zasloniecie({ px }: { px: number }) {
+  const camera = useThree((s) => s.camera) as PerspectiveCamera;
+  const w = useThree((s) => s.size.width);
+  const h = useThree((s) => s.size.height);
+  const invalidate = useThree((s) => s.invalidate);
+  useLayoutEffect(() => {
+    const z = Math.max(0, Math.min(Math.round(px / 8) * 8, Math.round(h * 0.6)));
+    if (z > 0) {
+      camera.aspect = w / (h + z);
+      camera.setViewOffset(w, h + z, 0, z, w, h);
+    } else {
+      camera.aspect = w / Math.max(1, h);
+      camera.clearViewOffset();
+    }
+    camera.updateProjectionMatrix();
+    invalidate();
+  }, [px, w, h, camera, invalidate]);
+  return null;
+}
+
+function Kamera({ plan, zasloniete = 0 }: { plan: PlanKuchni; zasloniete?: number }) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const controls = useThree((s) => s.controls) as { target: Vector3; update: () => void } | null;
-  const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));
+  const w = useThree((s) => s.size.width);
+  const h = useThree((s) => Math.max(1, s.size.height));
+  const aspect = w / h;
+  // Zasłonięty dół (Zasloniecie): kadrujemy tak, żeby wszystko zmieściło się w odsłoniętej części.
+  const z = Math.max(0, Math.min(Math.round(zasloniete / 8) * 8, Math.round(h * 0.6)));
   const invalidate = useThree((s) => s.invalidate);
   const sygnatura = `${plan.uklad}:${plan.scianaA}:${plan.scianaB}:${plan.pomieszczenie?.szer ?? 0}x${plan.pomieszczenie?.dlug ?? 0}:${plan.elementy.map((e) => e.id).join(",")}`;
   useLayoutEffect(() => {
@@ -192,8 +222,9 @@ function Kamera({ plan }: { plan: PlanKuchni }) {
     const cz = (z0 + z1) / 2;
     const target = new Vector3(cx, y1 * 0.38, cz);
     const radius = Math.max(x1 - x0, z1 - z0, y1, 1) * 0.62;
-    const vHalf = (camera.fov * Math.PI) / 360;
-    const half = aspect < 1 ? Math.atan(Math.tan(vHalf) * aspect) : vHalf;
+    const tanV = Math.tan((camera.fov * Math.PI) / 360);
+    const pelna = z > 0 ? h + z : h;
+    const half = Math.atan(Math.min((tanV * (h - z)) / pelna, (tanV * w) / pelna));
     const dist = (radius / Math.sin(Math.max(0.2, half))) * 0.92;
     camera.position.set(cx + dist * 0.62, target.y + dist * 0.48, cz + dist * 0.78);
     camera.near = 0.05;
@@ -207,7 +238,7 @@ function Kamera({ plan }: { plan: PlanKuchni }) {
     invalidate();
     // Kadrowanie tylko po dodaniu albo usunięciu szafki, nie przy każdym przeciągnięciu.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sygnatura, aspect, camera, controls, invalidate]);
+  }, [sygnatura, aspect, z, camera, controls, invalidate]);
   return null;
 }
 
@@ -526,6 +557,7 @@ function Wnetrze({
   edycjaMebli,
   onPodgladMebla,
   tlo,
+  zasloniete,
   wyborInny,
   setWyborInny,
 }: Props & { tlo: TloSceny; wyborInny: WyborInny; setWyborInny: (w: WyborInny) => void }) {
@@ -647,7 +679,8 @@ function Wnetrze({
       </Suspense>
       {wymiary || (wykonawca && wybor3d) ? <Wymiary3D plan={planWymiarow} wybor={wybor3d} przeglad={!!wymiary} /> : null}
       <ContactShadows position={[0, 0.001, 0]} opacity={0.35} scale={12} blur={2.4} far={2} />
-      <Kamera plan={plan} />
+      <Kamera plan={plan} zasloniete={zasloniete} />
+      <Zasloniecie px={zasloniete ?? 0} />
       <Ujecie aktywne={!!zdjecie} onUjecie={onUjecie} plan={plan} />
       <OrbitControls makeDefault maxPolarAngle={Math.PI / 2 - 0.04} minDistance={0.6} maxDistance={14} />
     </>

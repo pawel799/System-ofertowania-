@@ -33,6 +33,8 @@ export default function KuchniaTlo({
   /** Kreator (tylko wykonawca): przeciąganie mebli w 3D. */
   edycjaMebli?: EdycjaMebli;
   onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
+  /** Piksele sceny zasłonięte od dołu przez nakładkę – kadr nad nią. */
+  zasloniete?: number;
   className?: string;
 }) {
   return (

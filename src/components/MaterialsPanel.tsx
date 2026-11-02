@@ -144,7 +144,7 @@ export default function MaterialsPanel({
 
       <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
-        <div className="flex flex-wrap items-end gap-x-6 gap-y-4 desk:gap-x-8">
+        <div className="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-4 desk:flex-1 desk:gap-x-8">
           {zKolorami && plan && onPlan ? (
             <KoloryMebli
               plan={plan}
@@ -160,6 +160,7 @@ export default function MaterialsPanel({
               ctx={ctx}
               showPrice={showPrice}
               hardware={hardware}
+              setHardware={grupy.okucia ? setHardware : undefined}
             />
           ) : grupy.front ? (
             <fieldset>
@@ -231,7 +232,8 @@ export default function MaterialsPanel({
             />
           ) : null}
 
-          {grupy.okucia ? (
+          {/* Przy kolorach mebli uchwyty są w bloku „Kolory” (wspólne albo dla zaznaczonego mebla). */}
+          {grupy.okucia && !zKolorami ? (
             <OptionGroup
               title="Okucia"
               options={okucia}

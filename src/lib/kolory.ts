@@ -58,6 +58,21 @@ export function koloryMebla(el: { kolory?: KoloryMebla }, front: string, projekt
 }
 
 /** Okucia mebla: własne albo okucia oferty. */
+/**
+ * „Kolory dla: Wszystkie meble” – kolor części ustawiony dla wszystkich ma zmienić naprawdę wszystkie meble,
+ * więc meble z własnym kolorem tej części go tracą (pozostałe własne części zostają).
+ */
+export function bezWlasnejCzesci<T extends { kolory?: KoloryMebla }>(elementy: readonly T[], czesc: keyof KoloryMebla): T[] {
+  return elementy.map((e) => {
+    if (!e.kolory || e.kolory[czesc] === undefined) return e;
+    const k = { ...e.kolory };
+    delete k[czesc];
+    const { kolory: _stare, ...bez } = e;
+    void _stare;
+    return (Object.keys(k).length ? { ...bez, kolory: k } : bez) as T;
+  });
+}
+
 export const uchwytMebla = (el: { kolory?: KoloryMebla }, hardware: string) => el.kolory?.uchwyt ?? hardware;
 
 /**
