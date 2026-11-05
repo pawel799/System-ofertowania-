@@ -28,12 +28,19 @@ export function opisKoloruKlienta(plan: PlanKuchni, front: string, projekt: Kolo
   const n = (id: string) => findMaterial("front", id, ctx)?.name ?? id;
   const wspolne = koloryMebla({}, front, projekt);
   const czesci = [`kolory: fronty ${n(wspolne.front)}, boki ${n(wspolne.korpus)}, środek ${n(wspolne.srodek)}`];
+  // Meble z takimi samymi własnymi kolorami razem: „Szuflady 60, Szafka pod zlew 80 i 4 inne: fronty Grafit…”.
+  const grupy = new Map<string, string[]>();
   for (const e of plan.elementy) {
     if (!e.kolory) continue;
     const k = koloryMebla(e, front, projekt);
     const u = e.kolory.uchwyt ? `, okucia ${findMaterial("hardware", e.kolory.uchwyt, ctx)?.name ?? e.kolory.uchwyt}` : "";
-    czesci.push(`${e.nazwa}: fronty ${n(k.front)}, boki ${n(k.korpus)}, środek ${n(k.srodek)}${u}`);
+    const opis = `fronty ${n(k.front)}, boki ${n(k.korpus)}, środek ${n(k.srodek)}${u}`;
+    grupy.set(opis, [...(grupy.get(opis) ?? []), e.nazwa]);
   }
+  grupy.forEach((nazwy, opis) => {
+    const kto = nazwy.length <= 2 ? nazwy.join(", ") : `${nazwy.slice(0, 2).join(", ")} i ${nazwy.length - 2} ${nazwy.length - 2 === 1 ? "inny" : "inne"}`;
+    czesci.push(`${kto}: ${opis}`);
+  });
   return czesci.join("; ");
 }
 

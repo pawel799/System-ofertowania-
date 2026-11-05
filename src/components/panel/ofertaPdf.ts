@@ -109,6 +109,8 @@ export function danePdf(args: {
   const zGruboscia = (m: { name: string; thicknessMm?: number } | undefined, id: string) =>
     m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
   const cennikPlyty = cennikZPlyta(args.cennik, args.plan.plyta);
+  // Przed pozycjami: opis kolorów mebla korzysta z niej przy budowaniu listy (wcześniej TDZ – PDF padał, gdy mebel miał własne kolory).
+  const nazwaKoloru = (id: string) => findMaterial("front", id, mctx)?.name ?? id;
   // Mebel z kolorami innymi niż reszta projektu: „· fronty Grafit, boki Dąb, środek Biały”.
   const opisKoloruMebla = (e: (typeof args.plan.elementy)[number]) => {
     if (!e.kolory) return "";
@@ -132,7 +134,6 @@ export function danePdf(args: {
   const kolory = doplataKolorow(args.plan.elementy, args.front, args.plan.kolory, (id) => deltaMaterialu("front", id, mctx));
   const kolorowe = grupy.front || grupy.korpus || grupy.srodek;
   const dopFront = kolorowe ? kolory.kwota : 0;
-  const nazwaKoloru = (id: string) => findMaterial("front", id, mctx)?.name ?? id;
   const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
   const dopOkucia = grupy.okucia ? doplataUchwytow(args.plan.elementy, args.hardware, (id) => deltaMaterialu("hardware", id, mctx)) : 0;
   return {

@@ -855,6 +855,39 @@ export function wstawPrzyklad(uklad: UkladKuchni): PlanKuchni {
   return doloz(plan, presetPoId("plyta-indukcja-60"), podPlyte.x, podPlyte.z, podPlyte.rot);
 }
 
+/**
+ * Meble kuchni pokazowej (prezentacja dla klientów – src/lib/pokaz.ts dokłada pomieszczenie, okno, drzwi,
+ * gniazdka i kolory): L z zabudową AGD w słupkach, szufladami, zlewem z baterią i płytą indukcyjną.
+ */
+export function mebleKuchniPokazowej(): PlanKuchni {
+  const kolejnosc: [string, Sciana][] = [
+    ["lodowka-zabudowa-60", "A"],
+    ["piekarnik-60", "A"],
+    ["szuflady-60", "A"],
+    ["dolna-60", "A"],
+    ["zlew-80", "A"],
+    ["zmywarka-60", "A"],
+    ["szuflady-60", "B"],
+    ["dolna-60", "B"],
+    ["gorna-60", "A"],
+    ["okap-komin-60", "A"],
+    ["gorna-60", "A"],
+    ["gorna-60", "A"],
+  ];
+  let plan: PlanKuchni = { ...pustyPlan("L"), scianaA: 420, scianaB: 300 };
+  plan = kolejnosc.reduce((acc, [id, sciana]) => dodajElement(acc, presetPoId(id), sciana), plan);
+  const zlew = plan.elementy.find((e) => rodzajElementu(e) === "zlew");
+  if (zlew) {
+    plan = doloz(plan, presetPoId("zlewozmywak-50"), zlew.x, zlew.z, zlew.rot);
+    plan = doloz(plan, presetPoId("bateria"), zlew.x, zlew.z - 18, zlew.rot);
+  }
+  // Płyta na szafce dolnej pod okapem (ściana A).
+  const okap = plan.elementy.find((e) => rodzajElementu(e) === "okap");
+  const podOkapem = okap ? plan.elementy.find((e) => e.strefa === "dolna" && rodzajElementu(e) === "szafka" && Math.abs(e.x - okap.x) < 1 && e.z < 60) : undefined;
+  if (podOkapem) plan = doloz(plan, presetPoId("plyta-indukcja-60"), podOkapem.x, podOkapem.z, podOkapem.rot);
+  return plan;
+}
+
 /** Przykład na start dla mebli spoza kuchni (kuchnia: wstawPrzyklad). */
 export function wstawPrzykladMebli(rodzaj: "szafa" | "komoda" | "lazienka"): PlanKuchni {
   const lista: string[] =

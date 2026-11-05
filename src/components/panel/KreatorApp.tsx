@@ -1,5 +1,6 @@
 "use client";
 
+import { planPokazowy } from "@/lib/pokaz";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { COUNTERTOPS } from "../catalog";
@@ -207,6 +208,16 @@ export default function KreatorApp() {
         setFrontId(opcjeMaterialu("front", kat)[0]?.id ?? FRONTS[0].id);
         setCountertopId(opcjeMaterialu("countertop", kat)[0]?.id ?? COUNTERTOPS[0].id);
         setHardwareId(opcjeMaterialu("hardware", kat)[0]?.id ?? HARDWARE[0].id);
+        // Prezentacja: /panel/kreator?pokaz=1 – gotowa kuchnia pokazowa (src/lib/pokaz.ts), bez samouczka.
+        if (new URLSearchParams(window.location.search).get("pokaz") === "1") {
+          const pokaz = planPokazowy();
+          setTyp("kuchnia");
+          setPlan(pokaz);
+          zresetujSciany(pokaz.sciany?.kolor);
+          setSamouczek(false);
+          setTitle("Kuchnia w L – dąb i grafit");
+          setKrok("meble");
+        }
       }
       setAuth(false);
     } catch (e) {
