@@ -774,6 +774,13 @@ export default function PanelApp() {
           </svg>
           <span className="hide-sm">Zgłoszenia</span>
         </a>
+        <a className="btn btn-plain" href="/panel/rozkroj" data-tip="Formatki z KD Max, PRO100 albo Excela – rozkrój płyt i CSV dla hurtowni">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.4" />
+            <path d="M7 3v10M7 8h7" stroke="currentColor" strokeWidth="1.4" />
+          </svg>
+          <span className="hide-sm">Rozkrój</span>
+        </a>
         <a className="btn btn-ghost" href="/panel/kreator" data-tip="Złóż kuchnię z modułów albo modeli firmy">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M2.5 13.5 8 3l5.5 10.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />

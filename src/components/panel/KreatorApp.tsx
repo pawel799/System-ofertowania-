@@ -11,7 +11,11 @@ import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
-import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
+import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
+import { koloryMebla, uchwytMebla } from "@/lib/kolory";
+import FormatkiOkno from "../produkcja/FormatkiOkno";
+import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
+import { useBrand } from "@/lib/brand";
 import type { Palette } from "../palettes";
 import { formatPln } from "../pricing";
 import { GRUPY_BIBLIOTEKI, podzielModele, type GrupaBiblioteki } from "@/lib/bibliotekaModeli";
@@ -294,6 +298,26 @@ export default function KreatorApp() {
   );
   const katalog = useKatalog();
   const kCtx = { palettes, katalog };
+  const brand = useBrand();
+  const [formatki, setFormatki] = useState(false);
+  const zamknijFormatki = useCallback(() => setFormatki(false), []);
+  // Materiały do formatek: kolory mebli (fronty, boki, środek) i okucia z katalogu firmy – jak w PDF oferty.
+  const zrodloProdukcji = useMemo<ZrodloMaterialow>(() => {
+    const ctx = { palettes, katalog };
+    return {
+      material: (el, czesc) => {
+        const id = koloryMebla(el, front, planCeny.kolory)[czesc];
+        const m = findMaterial("front", id, ctx);
+        const nazwa = m?.name ?? id;
+        return { klucz: id, nazwa, grubosc: m?.thicknessMm ?? 18, sloje: m?.finish === "struktura" || DREWNO_RE.test(nazwa), rodzaj: "plyta" };
+      },
+      uchwyt: (el) => {
+        const m = findMaterial("hardware", uchwytMebla(el, hardware), ctx);
+        return { nazwa: m?.name ?? "uchwyt", bez: !!m?.bezUchwytu };
+      },
+      blat: findMaterial("countertop", countertop, ctx)?.name,
+    };
+  }, [palettes, katalog, front, hardware, countertop, planCeny.kolory]);
   const modeleSceny = useMemo(
     () => models.filter((m) => plan.elementy.some((e) => e.modelId === m.id)).map(toPublicModel),
     [models, plan.elementy],
@@ -991,6 +1015,16 @@ export default function KreatorApp() {
                   </section>
 
                   <section className="kr-card">
+                    <h3>Produkcja</h3>
+                    <p className="lede">Formatki do cięcia z okleiną, okucia, blaty i rozkrój płyt. Wydruk dla warsztatu i plik CSV dla hurtowni.</p>
+                    <div className="actions">
+                      <button type="button" className="btn btn-ghost" onClick={() => setFormatki(true)} disabled={!plan.elementy.length}>
+                        Formatki i rozkrój
+                      </button>
+                    </div>
+                  </section>
+
+                  <section className="kr-card">
                     <h3>Podgląd 3D</h3>
                     <p className="lede">Link jak przy zwykłej ofercie. Klient obraca projekt, otwiera drzwi i szuflady, zmienia materiały.</p>
                     {linkUrl ? (
@@ -1050,6 +1084,14 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
+      {formatki ? (
+        <FormatkiOkno
+          plan={planCeny}
+          zrodlo={zrodloProdukcji}
+          meta={{ firma: brand.name, tytul: title.trim() || "Projekt", kod: offer?.id ?? "SZKIC", data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }) }}
+          onClose={zamknijFormatki}
+        />
+      ) : null}
       {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennikOferty} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
       {okno && gotowe && !auth
         ? (() => {

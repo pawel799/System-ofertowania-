@@ -111,6 +111,9 @@ export function PanelState({
             <a className="btn btn-plain" href="/panel/zgloszenia">
               Zgłoszenia
             </a>
+            <a className="btn btn-plain" href="/panel/rozkroj">
+              Rozkrój
+            </a>
             <a className="btn btn-plain" href="/panel/ustawienia">
               Ustawienia
             </a>

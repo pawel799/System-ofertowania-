@@ -695,3 +695,46 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .wersja-nag { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .pnl .wersja-ok { font-size: 11.5px; color: var(--green); font-weight: 600; }
 .pnl .wersje ul { margin: 0; padding-left: 18px; color: var(--text-2); font-size: 13px; }
+
+/* Produkcja: formatki i rozkrój (okno w kreatorze i /panel/rozkroj) */
+.pnl .modal.pr-okno { width: min(1180px, 100%); height: min(900px, calc(100dvh - 32px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
+.pnl .pr-head { border-bottom: 1px solid var(--g3); }
+.pnl .pr-body { flex: 1; min-height: 0; overflow: hidden; padding: 14px 20px 24px; }
+.pnl .pr-body[data-przewijanie] { overflow: auto; overscroll-behavior: contain; }
+.pnl .pr { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pnl .pr-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnl .pr-zrodlo { display: flex; flex-direction: column; gap: 8px; }
+.pnl .pr-zrodlo .lede { margin: 0; max-width: 80ch; }
+.pnl .pr-tekst { height: auto; min-height: 120px; font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 12.5px; resize: vertical; }
+.pnl .pr-akcje { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnl .pr-akcje label.btn { cursor: pointer; }
+.pnl .pr-uwagi { margin: 0; font-size: 12.5px; }
+.pnl .pr-ust { border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); padding: 8px 12px; }
+.pnl .pr-ust summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.pnl .pr-ust-siatka { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px 14px; padding: 10px 0 4px; }
+.pnl .pr-pole { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); }
+.pnl .pr-wej { position: relative; display: block; }
+.pnl .pr-wej .input { padding-right: 34px; }
+.pnl .pr-wej i { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-style: normal; font-size: 12px; color: var(--text-3); pointer-events: none; }
+.pnl .pr-suma { margin: 0; font-size: 14px; }
+.pnl .pr-tab-wrap { overflow-x: auto; }
+.pnl .pr-tab { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.pnl .pr-tab th { text-align: left; font-weight: 550; font-size: 11.5px; color: var(--text-2); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--g4, var(--g3)); white-space: nowrap; }
+.pnl .pr-tab td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--g3); vertical-align: top; }
+.pnl .pr-tab .n { text-align: right; font-variant-numeric: tabular-nums; }
+.pnl .pr-tab .mono { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 11.5px; white-space: nowrap; }
+.pnl .pr-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.pnl .pr-mat { border-top: 1px solid var(--g3); padding-top: 8px; }
+.pnl .pr-mat > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; padding: 2px 0 8px; }
+.pnl .pr-arkusze { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 10px; }
+.pnl .pr-arkusz { margin: 0; padding: 8px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--g3); }
+.pnl .pr-arkusz figcaption { font-size: 12.5px; font-weight: 550; margin-bottom: 6px; }
+.pnl .pr-arkusz svg { display: block; width: 100%; height: auto; }
+.pnl .ark-tlo { fill: var(--g2); stroke: var(--text-2); stroke-width: 4; }
+.pnl .ark-f { fill: var(--panel); stroke: var(--text); stroke-width: 3; }
+.pnl .ark-nr { fill: var(--text); font-weight: 650; font-family: var(--font-geist), sans-serif; }
+.pnl .ark-wym { fill: var(--text-2); font-family: var(--font-geist), sans-serif; }
+.pnl .pr-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pnl .pr-lista li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--g3); font-size: 12.5px; }
+.pnl .pr-lista b { font-weight: 550; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) { .pnl .pr-body { padding: 12px; } .pnl .modal.pr-okno { height: calc(100dvh - 16px); } }
