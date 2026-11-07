@@ -718,6 +718,35 @@ export default function KreatorApp() {
 
   // Skróty klawiszowe (lista: SKROTY, okno pod „?”). Handler w refie – zawsze widzi bieżący plan i zaznaczenie.
   const [skroty, setSkroty] = useState(false);
+  // Kiosk: pełny ekran tylko ze sceną (kr-stage) i krokami (kr-side); katalog wysuwany z paska. ?kiosk=1 – od startu.
+  const [kiosk, setKiosk] = useState(false);
+  const [katalogKiosk, setKatalogKiosk] = useState(false);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("kiosk") === "1") setKiosk(true);
+    const zmiana = () => {
+      // Wyjście z pełnego ekranu (Esc, gest przeglądarki) kończy też kiosk.
+      if (!document.fullscreenElement) setKiosk((k) => (k && document.documentElement.dataset.kioskApi === "1" ? false : k));
+    };
+    document.addEventListener("fullscreenchange", zmiana);
+    return () => document.removeEventListener("fullscreenchange", zmiana);
+  }, []);
+  const wejdzKiosk = async () => {
+    setKiosk(true);
+    try {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+        document.documentElement.dataset.kioskApi = "1";
+      }
+    } catch {
+      // Bez Fullscreen API (iPhone, ramka) – sam układ kiosku na całym oknie.
+    }
+  };
+  const wyjdzKiosk = () => {
+    setKiosk(false);
+    setKatalogKiosk(false);
+    delete document.documentElement.dataset.kioskApi;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+  };
   const klawisze = useRef<(e: KeyboardEvent) => void>(() => {});
   klawisze.current = (e: KeyboardEvent) => {
     if (e.defaultPrevented || e.isComposing) return;
@@ -744,6 +773,12 @@ export default function KreatorApp() {
       return;
     }
     if (modal) return;
+    if (!mod && !e.altKey && k === "f" && !e.shiftKey) {
+      e.preventDefault();
+      if (kiosk) wyjdzKiosk();
+      else void wejdzKiosk();
+      return;
+    }
     if (!mod && !e.altKey && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
       e.preventDefault();
       setSkroty(true);
@@ -815,7 +850,7 @@ export default function KreatorApp() {
     );
 
   return (
-    <div className="pnl kreator">
+    <div className="pnl kreator" data-kiosk={kiosk ? "" : undefined} data-katalog={kiosk && katalogKiosk ? "" : undefined}>
       <header className="top">
         <a className="btn btn-plain" href="/panel" aria-label="Wróć do ofert">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -847,7 +882,36 @@ export default function KreatorApp() {
             <path d="M4 6.5h1M7.5 6.5h1M11 6.5h1M5 9.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
         </button>
-        <button type="button" className="btn btn-plain" aria-label="Samouczek" title="Samouczek" onClick={() => setSamouczek(true)}>
+        {kiosk ? (
+          <>
+            <button type="button" className="btn btn-ghost" aria-pressed={katalogKiosk} onClick={() => setKatalogKiosk((v) => !v)}>
+              Katalog
+            </button>
+            <button type="button" className="btn btn-plain" aria-pressed={wymiary} onClick={() => setWymiary((v) => !v)}>
+              Wymiary
+            </button>
+            <button type="button" className="btn btn-plain" onClick={() => setKreatorScian(true)}>
+              Ściany
+            </button>
+          </>
+        ) : null}
+        <button
+          type="button"
+          className="btn btn-plain kr-pelny"
+          aria-label={kiosk ? "Wyjdź z pełnego ekranu" : "Pełny ekran"}
+          title={kiosk ? "Wyjdź z pełnego ekranu (F)" : "Pełny ekran – kiosk (F)"}
+          onClick={() => (kiosk ? wyjdzKiosk() : void wejdzKiosk())}
+        >
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            {kiosk ? (
+              <path d="M6 2.5V6H2.5M10 2.5V6h3.5M6 13.5V10H2.5M10 13.5V10h3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            ) : (
+              <path d="M2.5 6V2.5H6M13.5 6V2.5H10M2.5 10v3.5H6M13.5 10v3.5H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+          </svg>
+          <span className="hide-sm">{kiosk ? "Wyjdź" : "Pełny ekran"}</span>
+        </button>
+        <button type="button" className="btn btn-plain kr-bez-kiosku" aria-label="Samouczek" title="Samouczek" onClick={() => setSamouczek(true)}>
           <span className="hide-sm">Samouczek</span>
           <span className="kr-tylko-sm" aria-hidden>
             ?
@@ -856,7 +920,9 @@ export default function KreatorApp() {
         <button type="button" className="btn btn-ink" data-tour="zapisz" disabled={zapisuje || auth} onClick={() => void zapisz()}>
           Zapisz ofertę
         </button>
-        <LogoutButton />
+        <span className="kr-bez-kiosku kr-contents">
+          <LogoutButton />
+        </span>
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
@@ -1539,6 +1605,7 @@ const SKROTY: { klawisze: string[]; opis: string }[] = [
   { klawisze: ["Enter"], opis: "Wymiary i wnętrze zaznaczonego mebla" },
   { klawisze: ["Esc"], opis: "Odznacz mebel / zamknij okno" },
   { klawisze: ["Delete"], opis: "W kreatorze ścian: usuń wybraną ścianę" },
+  { klawisze: ["F"], opis: "Pełny ekran (kiosk) – scena i kroki, funkcje na pasku" },
   { klawisze: ["?"], opis: "Ta lista" },
 ];
 

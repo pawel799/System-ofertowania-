@@ -871,3 +871,20 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-group-head:disabled { cursor: default; opacity: 1; }
 @media (hover: hover) and (pointer: fine) { .pnl .kr-group-head:not(:disabled):hover { background: var(--g2); } }
 .pnl .kr-group-body { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 8px; }
+
+/* ---------- kiosk: pełny ekran ze sceną i krokami, funkcje na pasku ---------- */
+.pnl .kr-contents { display: contents; }
+.pnl.kreator[data-kiosk] { height: 100dvh; overflow: hidden; padding-top: max(8px, env(safe-area-inset-top)); }
+.pnl.kreator[data-kiosk] .kr-bez-kiosku,
+.pnl.kreator[data-kiosk] .top > a[href="/panel"],
+.pnl.kreator[data-kiosk] .top .crumb,
+.pnl.kreator[data-kiosk] .top .sample { display: none; }
+.pnl.kreator[data-kiosk] .kr-body { grid-template-columns: minmax(0, 1fr) clamp(300px, 26vw, 380px); position: relative; }
+.pnl.kreator[data-kiosk] .kr-catalog { display: none; }
+/* Katalog wysuwany z paska nad sceną. */
+.pnl.kreator[data-kiosk][data-katalog] .kr-catalog { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: min(320px, 85vw); z-index: 30; box-shadow: var(--sh-lg); }
+@media (max-width: 980px) {
+  .pnl.kreator[data-kiosk] { overflow: auto; }
+  .pnl.kreator[data-kiosk] .kr-body { grid-template-columns: 1fr; }
+  .pnl.kreator[data-kiosk][data-katalog] .kr-catalog { position: fixed; top: 60px; left: 8px; bottom: 8px; max-height: none; }
+}
