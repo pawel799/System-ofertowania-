@@ -154,3 +154,11 @@ Kategorie katalogu to listy rozwijane (stan zapamiętany w przeglądarce, przy s
 Wyszukiwarka (`src/lib/szukaj.ts`) toleruje brak polskich znaków i błędy (gurne = górne, rz/ż, ch/h), literówki,
 odmianę (szafka = szafki = szafek) i słowa pokrewne (lodówka = chłodziarka, okap = wyciąg, piekarnik = piec).
 Gdy nic nie pasuje, pokazuje „Może chodziło o…”.
+
+## Wygląd pokoju w 3D
+
+Tekstury rysowane w przeglądarce (`src/components/kuchnia/teksturyPokoju.ts`, bez plików do pobrania), UV w metrach:
+- ściany: faktura tynku (mnoży kolor ściany), listwa przypodłogowa przerwana w drzwiach, widoczna grubość na wolnych końcach ściany;
+- podłoga pokoju (`sciany.podloga`): panele (deski 20 × 120 cm) albo płytki 60 × 60 cm, kolor z gotowych odcieni albo własny
+  – wybór w lewym panelu kreatora i w kreatorze ścian; zapisuje się w ofercie, klient widzi tę samą podłogę;
+- wokół pokoju podłoże w kolorze tła (bez linii horyzontu) z samymi cieniami.

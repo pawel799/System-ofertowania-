@@ -3,10 +3,11 @@
 import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
-import { Box3, PerspectiveCamera, Vector3, type Object3D } from "three";
+import { Box3, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three";
 import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaWOtworze } from "@/lib/otwory";
-import { wGranicachPokoju, zasiegScian } from "@/lib/sciany";
+import { czyObrys, muryPokoju, podlogaPlanu, wGranicachPokoju, zakresPokoju, zasiegScian } from "@/lib/sciany";
+import { panele, PLYTKA_PANELI, PLYTKA_PLYTEK, plytki, wielokatPoziomy } from "./teksturyPokoju";
 import { Plane, Raycaster, Vector2 } from "three";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
 import { useCountertop } from "../countertopStore";
@@ -162,6 +163,43 @@ function usePrzeciaganieMebla(plan: PlanKuchni, edycja: EdycjaMebli | undefined,
     };
   };
   return { podglad, zacznij };
+}
+
+/** Podłoga pokoju: panele albo płytki (kolor do wyboru) w obrysie pokoju (prostokąt – razem z grubością ścian), UV w metrach. */
+function PodlogaPokoju({ plan, onClick }: { plan: PlanKuchni; onClick?: () => void }) {
+  const punkty = useMemo(() => {
+    if (czyObrys(plan)) return plan.sciany!.obrys!;
+    const z = zakresPokoju(plan);
+    const m = muryPokoju(plan).flatMap((x) => x.punkty);
+    const x0 = Math.min(z.x0, ...m.map((q) => q.x));
+    const z0 = Math.min(z.z0, ...m.map((q) => q.z));
+    const x1 = Math.max(z.x1, ...m.map((q) => q.x));
+    const z1 = Math.max(z.z1, ...m.map((q) => q.z));
+    return [
+      { x: x0, z: z0 },
+      { x: x1, z: z0 },
+      { x: x1, z: z1 },
+      { x: x0, z: z1 },
+    ];
+  }, [plan]);
+  const klucz = punkty.map((p) => `${p.x},${p.z}`).join(";");
+  const plytka = podlogaPlanu(plan).rodzaj === "plytki" ? PLYTKA_PLYTEK : PLYTKA_PANELI;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const geo = useMemo(() => wielokatPoziomy(punkty, plytka), [klucz, plytka]);
+  useEffect(() => () => geo.dispose(), [geo]);
+  // Panele albo płytki; tekstura w odcieniach szarości, kolor z wyboru (sciany.podloga). Płytki lekko błyszczą.
+  const { rodzaj, kolor } = podlogaPlanu(plan);
+  const material = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        map: rodzaj === "plytki" ? plytki() : panele(),
+        color: kolor,
+        roughness: rodzaj === "plytki" ? 0.42 : 0.72,
+      }),
+    [rodzaj, kolor],
+  );
+  useEffect(() => () => material.dispose(), [material]);
+  return <mesh name="podloga" geometry={geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} material={material} receiveShadow onClick={onClick} />;
 }
 
 function zakres(plan: PlanKuchni) {
@@ -637,10 +675,17 @@ function Wnetrze({
       <ambientLight intensity={0.45} />
       <directionalLight position={[4, 6, 3]} intensity={1.7} castShadow shadow-mapSize={[1024, 1024]} />
       <directionalLight position={[-3, 3, -2]} intensity={0.35} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} receiveShadow onClick={wykonawca ? () => setWyborInny(null) : undefined}>
-        <planeGeometry args={[Math.max(1.2, x1 - x0 + 1.4), Math.max(1.2, z1 - z0 + 1.4)]} />
-        <meshStandardMaterial color={tlo.podloga} roughness={0.95} />
+      {/* Podłoże w kolorze tła (nic nie wisi w pustce, cienie mają na czym paść) i podłoga pokoju z paneli. */}
+      {/* Podłoże dokładnie w kolorze tła (bez linii horyzontu) + warstwa samych cieni. */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, -0.004, (z0 + z1) / 2]} onClick={wykonawca ? () => setWyborInny(null) : undefined}>
+        <planeGeometry args={[Math.max(60, (x1 - x0) * 8), Math.max(60, (z1 - z0) * 8)]} />
+        <meshBasicMaterial color={tlo.tlo} toneMapped={false} />
       </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[(x0 + x1) / 2, -0.002, (z0 + z1) / 2]} receiveShadow>
+        <planeGeometry args={[Math.max(12, (x1 - x0) * 3), Math.max(12, (z1 - z0) * 3)]} />
+        <shadowMaterial opacity={tlo.jasne ? 0.14 : 0.3} />
+      </mesh>
+      <PodlogaPokoju plan={plan} onClick={wykonawca ? () => setWyborInny(null) : undefined} />
       {/* Ściany pokoju z otworami na okna i drzwi, w kolorze z planu albo wybranym (Sciany.tsx). */}
       <Sciany
         plan={plan}

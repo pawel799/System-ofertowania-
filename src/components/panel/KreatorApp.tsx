@@ -18,7 +18,7 @@ import type { ScianaDodatkowa, ScianaPokoju, UstawieniaScian } from "@/lib/scian
 import FormatkiOkno from "../produkcja/FormatkiOkno";
 import { useHistoria } from "./useHistoria";
 import { useTelefon } from "./telefon";
-import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju } from "./KreatorScian";
+import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju, WyborPodlogi } from "./KreatorScian";
 import { zastosujZmianePokoju, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
 import { czyObrys, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
@@ -1001,6 +1001,7 @@ export default function KreatorApp() {
                 </button>
                 <ScianyPokoju plan={plan} setPlan={setPlan} wybrana={scianaPokoju} setWybrana={setScianaPokoju} />
                 <PrzelacznikSufitu plan={plan} setPlan={setPlan} />
+                <WyborPodlogi plan={plan} setPlan={setPlan} />
                 <SciankiDzialowe plan={plan} setPlan={setPlan} kompakt />
               </div>
               <label className="kr-search">

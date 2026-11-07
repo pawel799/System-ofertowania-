@@ -914,3 +914,13 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-pelny-pasek .btn[aria-pressed="true"] { background: var(--g3); }
 .pnl.kreator[data-pelny][data-katalog] .kr-catalog { display: block; position: fixed; left: 8px; top: 60px; bottom: 8px; width: min(320px, 85vw); max-height: none; z-index: 45; box-shadow: var(--sh-lg); }
 .pnl .kr-pelny-btn { min-height: 28px; padding: 4px 8px; font-size: 12px; gap: 5px; }
+
+/* ---------- podłoga: panele / płytki i kolor ---------- */
+.pnl .ks-podloga { display: grid; gap: 6px; font-size: 13px; }
+.pnl .ks-podloga-gora { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pnl .ks-podloga-gora > span { flex: 1; }
+.pnl .ks-podloga-kolory { display: flex; gap: 6px; flex-wrap: wrap; }
+.pnl .ks-probka { width: 26px; height: 26px; border-radius: 50%; border: 0; padding: 0; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15); cursor: pointer; position: relative; }
+.pnl .ks-probka[aria-checked="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+.pnl .ks-probka-wlasna { background: conic-gradient(#e66, #ee6, #6e6, #6ee, #66e, #e6e, #e66); overflow: hidden; }
+.pnl .ks-probka-wlasna input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }

@@ -32,6 +32,7 @@ import { otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwor
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Otwor } from "@/lib/wywiad";
 import { useSciany } from "./scianyStore";
+import { prostokatUV, strop, tynk } from "./teksturyPokoju";
 import PunktyInstalacji, { type EdycjaPunktow } from "./PunktyInstalacji";
 import type { PunktInstalacji } from "@/lib/wywiad";
 
@@ -132,43 +133,6 @@ function SufitObrysu({ obrys, H, material }: { obrys: readonly { x: number; z: n
   return <mesh name="sufit" geometry={geo} position={[0, H / 100, 0]} rotation={[Math.PI / 2, 0, 0]} material={material} receiveShadow />;
 }
 
-/** Tekstura wierzchu sufitu (płyta stropowa, beton): rysowana raz w przeglądarce, jedna płytka = 1 m. */
-let teksturaStropu: THREE.CanvasTexture | null = null;
-function stropTekstura() {
-  if (teksturaStropu) return teksturaStropu;
-  const N = 512;
-  const c = document.createElement("canvas");
-  c.width = c.height = N;
-  const g = c.getContext("2d")!;
-  g.fillStyle = "#b9b6b0";
-  g.fillRect(0, 0, N, N);
-  // Ziarno betonu: stały „los”, żeby tekstura była zawsze taka sama.
-  let ziarno = 1234567;
-  const los = () => ((ziarno = (ziarno * 16807) % 2147483647) / 2147483647);
-  for (let i = 0; i < 14000; i++) {
-    const v = Math.round(150 + los() * 70);
-    g.fillStyle = `rgba(${v},${v - 2},${v - 6},${0.18 + los() * 0.3})`;
-    const r = 0.6 + los() * 1.8;
-    g.fillRect(los() * N, los() * N, r, r);
-  }
-  for (let i = 0; i < 40; i++) {
-    g.fillStyle = `rgba(90,88,84,${0.05 + los() * 0.08})`;
-    g.beginPath();
-    g.arc(los() * N, los() * N, 6 + los() * 30, 0, Math.PI * 2);
-    g.fill();
-  }
-  // Łączenia płyt na krawędziach płytki.
-  g.strokeStyle = "rgba(70,68,64,0.55)";
-  g.lineWidth = 3;
-  g.strokeRect(1.5, 1.5, N - 3, N - 3);
-  const t = new THREE.CanvasTexture(c);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  teksturaStropu = t;
-  return t;
-}
-
 /** Wierzch sufitu (widok z góry): kształt pokoju z teksturą płyty stropowej. UV w metrach – płytka co 1 m. */
 function SufitOdGory({ punkty, H }: { punkty: readonly { x: number; z: number }[]; H: number }) {
   const klucz = punkty.map((p) => `${p.x},${p.z}`).join(";");
@@ -178,11 +142,18 @@ function SufitOdGory({ punkty, H }: { punkty: readonly { x: number; z: number }[
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [klucz],
   );
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ map: stropTekstura(), roughness: 0.97, side: THREE.FrontSide }), []);
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ map: strop(), roughness: 0.97, side: THREE.FrontSide }), []);
   useEffect(() => () => geo.dispose(), [geo]);
   useEffect(() => () => material.dispose(), [material]);
   // Płyta leży na ścianach (tuż nad wierzchem murów) – od spodu widać sufit, od góry płytę stropową.
   return <mesh name="sufit-gora" geometry={geo} position={[0, H / 100 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} material={material} receiveShadow />;
+}
+
+/** Kawałek ściany (między otworami) z UV w metrach – faktura tynku ciągła na całej ścianie. */
+function KawalekSciany({ w, h, u0, v0 }: { w: number; h: number; u0: number; v0: number }) {
+  const geo = useMemo(() => prostokatUV(w, h, u0, v0, 1), [w, h, u0, v0]);
+  useEffect(() => () => geo.dispose(), [geo]);
+  return <primitive object={geo} attach="geometry" />;
 }
 
 /** Wierzch muru ściany pokoju (wielokąt z rzutu na wysokości ściany, widoczny z góry). */
@@ -289,10 +260,15 @@ export default function Sciany({
   const podgladSciany = przeciaganieSciany.podglad;
   const H = wysokoscPokoju(plan);
   const sciany = scianyPokoju(plan);
-  const mury = new Map(muryPokoju(plan).map((m) => [m.s.id, m.punkty]));
+  const muryLista = muryPokoju(plan);
+  const mury = new Map(muryLista.map((m) => [m.s.id, m.punkty]));
+  const wolneKonce = new Map(muryLista.map((m) => [m.s.id, { g: m.g, polaczone: m.polaczone }]));
   const polaczenia = polaczeniaScianek((plan.sciany?.dodatkowe ?? []).map((sd, i) => podgladSciany?.zmiany.get(i) ?? sd));
   const otwory = (plan.wywiad?.otwory ?? []).map((o, i) => (podglad?.i === i ? podglad.o : o));
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92, side: THREE.FrontSide }), [kolor, kolorDomyslny]);
+  // Ściany z fakturą tynku (prawie biała mapa mnoży kolor – kolor ściany zostaje), też jako lekka wypukłość.
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, map: tynk(), bumpMap: tynk(), bumpScale: 0.6, roughness: 0.92, side: THREE.FrontSide }), [kolor, kolorDomyslny]);
+  const listwa = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f3f1ec", roughness: 0.55 }), []);
+  useEffect(() => () => listwa.dispose(), [listwa]);
   const szyba = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cfe3f5", roughness: 0.12, emissive: "#9ec4ea", emissiveIntensity: 0.3, transparent: true, opacity: 0.55, side: THREE.FrontSide }), []);
   const rama = useMemo(() => new THREE.MeshStandardMaterial({ color: "#eceae6", roughness: 0.5 }), []);
   const skrzydlo = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6f55", roughness: 0.7, side: THREE.FrontSide }), []);
@@ -306,11 +282,15 @@ export default function Sciany({
   const wlasne = useMemo(() => {
     const m = new Map<string, { sciana: THREE.MeshStandardMaterial; mur: THREE.MeshStandardMaterial }>();
     const kolory = new Set([...Object.values(koloryScian ?? {}), ...kolorySciankek.split(",")].filter((k): k is string => !!k));
-    for (const k of Array.from(kolory)) m.set(k, { sciana: new THREE.MeshStandardMaterial({ color: k, roughness: 0.92, side: THREE.FrontSide }), mur: new THREE.MeshStandardMaterial({ color: k, roughness: 0.92 }) });
+    for (const k of Array.from(kolory))
+      m.set(k, {
+        sciana: new THREE.MeshStandardMaterial({ color: k, map: tynk(), bumpMap: tynk(), bumpScale: 0.6, roughness: 0.92, side: THREE.FrontSide }),
+        mur: new THREE.MeshStandardMaterial({ color: k, map: tynk(), roughness: 0.92 }),
+      });
     return m;
   }, [koloryScian, kolorySciankek]);
   useEffect(() => () => wlasne.forEach((x) => (x.sciana.dispose(), x.mur.dispose())), [wlasne]);
-  const murMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92 }), [kolor, kolorDomyslny]);
+  const murMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, map: tynk(), roughness: 0.92 }), [kolor, kolorDomyslny]);
   useEffect(() => () => murMat.dispose(), [murMat]);
   const materialSciany = (id: ScianaPokoju) => (koloryScian?.[id] && wlasne.get(koloryScian[id]!)?.sciana) || material;
   useEffect(() => () => material.dispose(), [material]);
@@ -350,9 +330,42 @@ export default function Sciany({
                     : undefined
                 }
               >
-                <planeGeometry args={[(g.b - g.a) / 100, (g.y1 - g.y0) / 100]} />
+                <KawalekSciany w={(g.b - g.a) / 100} h={(g.y1 - g.y0) / 100} u0={g.a / 100} v0={g.y0 / 100} />
               </mesh>
             ))}
+            {/* Listwa przypodłogowa wzdłuż ściany (przerwana w drzwiach). */}
+            {segmenty
+              .filter((g) => g.y0 === 0 && g.b - g.a > 2)
+              .map((g, i) => {
+                const p = poz((g.a + g.b) / 2, 4);
+                return (
+                  <mesh key={`l${i}`} position={[p[0] + (s.nx * 0.8) / 100, p[1], p[2] + (s.nz * 0.8) / 100]} rotation={[0, s.obrot, 0]} material={listwa} receiveShadow>
+                    <boxGeometry args={[(g.b - g.a) / 100, 0.08, 0.016]} />
+                  </mesh>
+                );
+              })}
+            {/* Wolny koniec ściany (bez sąsiedniej ściany): widać jej grubość, nie kartkę. */}
+            {(() => {
+              const k = wolneKonce.get(s.id);
+              if (!k) return null;
+              return ([0, 1] as const)
+                .filter((e) => !k.polaczone[e])
+                .map((e) => {
+                  const a = e === 0 ? 0 : s.dlugosc;
+                  const p = poz(a, Hs / 2);
+                  const kierunek = e === 0 ? -1 : 1;
+                  return (
+                    <mesh
+                      key={`k${e}`}
+                      position={[p[0] - (s.nx * k.g) / 200, p[1], p[2] - (s.nz * k.g) / 200]}
+                      rotation={[0, Math.atan2(s.dx * kierunek, s.dz * kierunek), 0]}
+                      material={materialSciany(s.id)}
+                    >
+                      <planeGeometry args={[k.g / 100, Hs / 100]} />
+                    </mesh>
+                  );
+                });
+            })()}
             {/* Wierzch muru: grubość ściany widoczna z góry (sama ściana jest płaszczyzną – nie zasłania wnętrza). */}
             {mury.get(s.id) ? <WierzchMuru punkty={mury.get(s.id)!} y={Hs} material={materialSciany(s.id)} /> : null}
             {naScianie.map(({ o, i }) => {

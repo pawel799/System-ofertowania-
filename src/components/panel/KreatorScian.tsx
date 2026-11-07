@@ -15,6 +15,9 @@ import {
   GRUBOSC_SCIANY,
   gruboscScianyPokoju,
   KOLOR_SUFITU,
+  PODLOGI,
+  podlogaPlanu,
+  type RodzajPodlogi,
   LIMITY_SCIANY,
   MAX_SCIAN_DODATKOWYCH,
   MAX_SCIAN_POKOJU,
@@ -65,6 +68,7 @@ export function ustawSciany(setPlan: SetPlan, fn: (u: UstawieniaScian) => Ustawi
     if (!u.bez?.length) delete u.bez;
     if (!u.dodatkowe?.length) delete u.dodatkowe;
     if (!u.sufit) delete u.sufit;
+    if (!u.podloga) delete u.podloga;
     if (!u.obrys?.length) delete u.obrys;
     if (!u.koloryScian || !Object.keys(u.koloryScian).length) delete u.koloryScian;
     if (!u.grubosci || !Object.keys(u.grubosci).length) delete u.grubosci;
@@ -132,6 +136,41 @@ export function PrzelacznikSufitu({ plan, setPlan }: { plan: PlanKuchni; setPlan
           <span>kolor</span>
         </label>
       ) : null}
+    </div>
+  );
+}
+
+/** Podłoga w 3D: panele albo płytki i ich kolor (gotowe odcienie albo własny). */
+export function WyborPodlogi({ plan, setPlan }: { plan: PlanKuchni; setPlan: SetPlan }) {
+  const { rodzaj, kolor } = podlogaPlanu(plan);
+  const ustaw = (r: RodzajPodlogi, k?: string) =>
+    ustawSciany(setPlan, (u) => {
+      // Domyślne panele w domyślnym kolorze – bez wpisu w planie.
+      const dom = r === "panele" && (!k || k === PODLOGI.panele.domyslny);
+      return { ...u, podloga: dom ? undefined : { rodzaj: r, ...(k && k !== PODLOGI[r].domyslny ? { kolor: k } : {}) } };
+    });
+  return (
+    <div className="ks-podloga">
+      <div className="ks-podloga-gora">
+        <span>Podłoga</span>
+        <Seg
+          label="Podłoga"
+          value={rodzaj}
+          onChange={(r) => ustaw(r)}
+          options={[
+            { value: "panele", label: "Panele" },
+            { value: "plytki", label: "Płytki" },
+          ]}
+        />
+      </div>
+      <div className="ks-podloga-kolory" role="radiogroup" aria-label={`Kolor podłogi – ${PODLOGI[rodzaj].nazwa.toLowerCase()}`}>
+        {PODLOGI[rodzaj].kolory.map((k) => (
+          <button key={k.kolor} type="button" role="radio" aria-checked={kolor === k.kolor} aria-label={k.nazwa} title={k.nazwa} className="ks-probka" style={{ background: k.kolor }} onClick={() => ustaw(rodzaj, k.kolor)} />
+        ))}
+        <label className="ks-probka ks-probka-wlasna" title="Własny kolor">
+          <input type="color" aria-label="Własny kolor podłogi" value={kolor} onChange={(e) => ustaw(rodzaj, e.target.value.toLowerCase())} />
+        </label>
+      </div>
     </div>
   );
 }
@@ -678,11 +717,12 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
               </ol>
             </section>
             <section>
-              <h3>Wysokość i sufit</h3>
+              <h3>Wysokość, sufit i podłoga</h3>
               <div className="kr-dims">
                 <PoleCm id="ks-wys" label="Wysokość do sufitu" value={wysokoscPokoju(plan)} min={180} max={450} onCommit={(n) => onWysokosc(n)} />
               </div>
               <PrzelacznikSufitu plan={plan} setPlan={setPlan} />
+              <WyborPodlogi plan={plan} setPlan={setPlan} />
             </section>
             <section>
               <h3>Ścianki działowe</h3>

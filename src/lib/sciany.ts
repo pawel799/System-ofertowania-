@@ -60,12 +60,46 @@ export type UstawieniaScian = {
   dodatkowe?: ScianaDodatkowa[];
   /** Sufit w 3D (na wysokości pokoju); kolor domyślnie biały. */
   sufit?: { kolor?: string };
+  /** Podłoga w 3D: panele albo płytki, kolor (#rrggbb); brak = panele w kolorze dębu. */
+  podloga?: { rodzaj: RodzajPodlogi; kolor?: string };
   /** Kolory pojedynczych ścian pokoju (#rrggbb); ściana bez wpisu ma kolor ścian (kolor ze sceny). */
   koloryScian?: Partial<Record<ScianaPokoju, string>>;
   /** Grubość pojedynczych ścian pokoju [cm] (na zewnątrz od wewnętrznej strony); brak = GRUBOSC_SCIANY. */
   grubosci?: Partial<Record<ScianaPokoju, number>>;
   /** Wysokość pojedynczych ścian pokoju [cm]; brak = do sufitu. */
   wysokosci?: Partial<Record<ScianaPokoju, number>>;
+};
+
+export type RodzajPodlogi = "panele" | "plytki";
+export const PODLOGI: Record<RodzajPodlogi, { nazwa: string; domyslny: string; kolory: { kolor: string; nazwa: string }[] }> = {
+  panele: {
+    nazwa: "Panele",
+    domyslny: "#c9a27c",
+    kolory: [
+      { kolor: "#c9a27c", nazwa: "Dąb naturalny" },
+      { kolor: "#e2d5c3", nazwa: "Dąb bielony" },
+      { kolor: "#a89f95", nazwa: "Dąb szary" },
+      { kolor: "#8a6446", nazwa: "Orzech" },
+      { kolor: "#4d3c30", nazwa: "Wenge" },
+    ],
+  },
+  plytki: {
+    nazwa: "Płytki",
+    domyslny: "#d9d6d0",
+    kolory: [
+      { kolor: "#f0eeea", nazwa: "Biały" },
+      { kolor: "#d9d6d0", nazwa: "Jasnoszary" },
+      { kolor: "#d9c9b0", nazwa: "Beż" },
+      { kolor: "#8d8b88", nazwa: "Szary" },
+      { kolor: "#46464a", nazwa: "Grafit" },
+    ],
+  },
+};
+
+/** Podłoga z planu (domyślnie panele dąb naturalny). */
+export const podlogaPlanu = (plan: { sciany?: UstawieniaScian | null }) => {
+  const rodzaj = plan.sciany?.podloga?.rodzaj ?? "panele";
+  return { rodzaj, kolor: plan.sciany?.podloga?.kolor ?? PODLOGI[rodzaj].domyslny };
 };
 
 export const LIMITY_SCIANY = { dlugosc: [20, 2000], grubosc: [5, 60], wysokosc: [30, 450], poz: [-1000, 3000] } as const;
@@ -589,6 +623,12 @@ export function parseUstawieniaScian(v: unknown): UstawieniaScian | undefined {
     }
     if (Object.keys(m).length) out[klucz] = m;
   }
+  if (o.podloga !== undefined && o.podloga !== null) {
+    const pd = o.podloga as Record<string, unknown>;
+    if (typeof pd !== "object" || Array.isArray(pd) || (pd.rodzaj !== "panele" && pd.rodzaj !== "plytki")) throw new Error("Podłoga: panele albo płytki.");
+    if (pd.kolor !== undefined && pd.kolor !== null && (typeof pd.kolor !== "string" || !KOLOR_SCIANY_RE.test(pd.kolor))) throw new Error("Kolor podłogi: #rrggbb.");
+    out.podloga = { rodzaj: pd.rodzaj, ...(typeof pd.kolor === "string" ? { kolor: pd.kolor.toLowerCase() } : {}) };
+  }
   if (o.sufit !== undefined && o.sufit !== null && o.sufit !== false) {
     const su = o.sufit === true ? {} : o.sufit;
     if (typeof su !== "object" || Array.isArray(su)) throw new Error("Sufit: zły format.");
@@ -712,7 +752,8 @@ export function muryPokoju(plan: PlanScian) {
   const styka = (p: P, i: number) => konce.some((k, j) => j !== i && k.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 1));
   return sc.map((s, i) => {
     const g = gruboscScianyPokoju(plan, s.id);
-    return { s, g, punkty: obrysMuru(s, g, [styka(konce[i][0], i), styka(konce[i][1], i)]) };
+    const polaczone: [boolean, boolean] = [styka(konce[i][0], i), styka(konce[i][1], i)];
+    return { s, g, polaczone, punkty: obrysMuru(s, g, polaczone) };
   });
 }
 
