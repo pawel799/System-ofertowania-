@@ -99,6 +99,21 @@ function kolizjaZInnymi(plan: PlanKuchni, el: ElementKuchni) {
   return plan.elementy.some((inny) => inny.id !== el.id && konfliktElementow(el, inny) && nachodzi(r, rect(inny)));
 }
 
+/**
+ * Przesunięcie mebla o dx, dz (strzałki – na rzucie i skrótem w kreatorze): przyciąganie, granice pokoju,
+ * kolizje i otwory jak przy przeciąganiu. null = nic się nie zmienia, blad = nie można (undefined = nachodzi na mebel).
+ */
+export function przesunMebel(plan: PlanKuchni, e: ElementKuchni, dx: number, dz: number): { x: number; z: number } | { blad: string | undefined } | null {
+  const przyc = przyciagnij(plan, e, e.x + dx, e.z + dz);
+  const przy = wGranicachPokoju(plan, rect({ ...e, ...przyc }), przyc.x, przyc.z);
+  if (przy.x === e.x && przy.z === e.z) return null;
+  const kandydat = { ...e, x: przy.x, z: przy.z };
+  if (kolizjaZInnymi(plan, kandydat)) return { blad: undefined };
+  const wOtworze = meblaWOtworze(plan, kandydat);
+  if (wOtworze && !meblaWOtworze(plan, e)) return { blad: wOtworze };
+  return { x: przy.x, z: przy.z };
+}
+
 function Wymiar({
   x1,
   y1,
@@ -553,12 +568,10 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         const gl = Math.max(1, r.z1 - r.z0);
         const zaznaczona = zaznaczony === e.id;
         const przesun = (dx: number, dz: number) => {
-          const przy = przyciagnij(plan, e, e.x + dx, e.z + dz);
-          const kandydat = { ...e, x: przy.x, z: przy.z };
-          const wOtworze = meblaWOtworze(plan, kandydat);
-          if (kolizjaZInnymi(plan, kandydat)) onKolizja();
-          else if (wOtworze && !meblaWOtworze(plan, e)) onKolizja(wOtworze);
-          else if (przy.x !== e.x || przy.z !== e.z) onPrzesun(e.id, przy.x, przy.z);
+          const w = przesunMebel(plan, e, dx, dz);
+          if (!w) return;
+          if ("blad" in w) onKolizja(w.blad);
+          else onPrzesun(e.id, w.x, w.z);
         };
         const detale = wymiary && zaznaczona ? wymiaryZaznaczenia(e) : null;
         return (

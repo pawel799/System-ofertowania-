@@ -81,7 +81,8 @@ export function PanelState({
   mode: PanelMode;
   error: string;
   onRetry: () => void;
-  onNew: () => void;
+  /** Brak = telefon (sam podgląd ofert, bez tworzenia). */
+  onNew?: () => void;
   children?: ReactNode;
 }) {
   // „Wczytywanie…” dopiero po chwili – szybkie wczytanie (albo okno logowania) bez mignięcia napisu.
@@ -111,7 +112,7 @@ export function PanelState({
             <a className="btn btn-plain" href="/panel/zgloszenia">
               Zgłoszenia
             </a>
-            <a className="btn btn-plain" href="/panel/rozkroj">
+            <a className="btn btn-plain bez-telefonu" href="/panel/rozkroj">
               Rozkrój
             </a>
             <a className="btn btn-plain" href="/panel/ustawienia">
@@ -120,7 +121,7 @@ export function PanelState({
             <LogoutButton />
           </>
         ) : null}
-        {mode === "api" || mode === "local" ? (
+        {(mode === "api" || mode === "local") && onNew ? (
           <button type="button" className="btn btn-ink" onClick={onNew}>
             <svg viewBox="0 0 16 16" fill="none" aria-hidden>
               <path d="M8 3.5v9M3.5 8h9" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
@@ -143,9 +144,13 @@ export function PanelState({
           ) : null}
           {mode === "api" || mode === "local" ? (
             <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 16, flexWrap: "wrap" }}>
-              <button type="button" className="btn btn-ink" onClick={onNew}>
-                Dodaj ofertę
-              </button>
+              {onNew ? (
+                <button type="button" className="btn btn-ink" onClick={onNew}>
+                  Dodaj ofertę
+                </button>
+              ) : (
+                <span className="faint">Oferty dodasz na komputerze.</span>
+              )}
               <a className="btn btn-ghost" href="/panel/ustawienia">
                 Ustawienia (modele 3D)
               </a>

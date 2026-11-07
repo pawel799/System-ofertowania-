@@ -35,10 +35,9 @@ import {
   GOTOWE_KSZTALTY,
   gotowyKsztalt,
   naObrys,
-  naroznikDoUsuniecia,
   podzielSciane,
   przesunNaroznik,
-  usunNaroznik,
+  usunSciane,
   zastosujObrys,
   zmienDlugosc,
   type Wynik,
@@ -391,6 +390,20 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
       window.removeEventListener("keydown", esc);
     };
   }, [onClose]);
+  // Delete / Backspace usuwa wybraną ścianę (poza polami tekstowymi).
+  const klawisze = useRef<(e: KeyboardEvent) => void>(() => {});
+  klawisze.current = (e) => {
+    if (e.defaultPrevented || (e.key !== "Delete" && e.key !== "Backspace") || wybrana === null) return;
+    const cel = e.target as HTMLElement | null;
+    if (cel && (cel.isContentEditable || /^(input|textarea|select)$/i.test(cel.tagName))) return;
+    e.preventDefault();
+    usun(wybrana);
+  };
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => klawisze.current(e);
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
 
   const obrys = czyObrys(plan) ? plan.sciany!.obrys! : obrysZProstokata(plan);
   const sciany = scianyPokojuWszystkie(czyObrys(plan) ? plan : { ...plan, sciany: { ...plan.sciany, obrys } });
@@ -415,6 +428,28 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
     zapisz(setPlan, zastosujObrys(baza, nowy, topologia));
   };
 
+  /** Ściany A (i B w układzie L – przy niej stoją meble) nie usuwamy; pokój ma co najmniej 3 ściany. */
+  const moznaUsunac = (id: string) => sciany.length > 3 && id !== "A" && !(id === "B" && plan.uklad === "L");
+  const usun = (k: number) => {
+    const s = sciany[k];
+    if (!s) return;
+    if (!moznaUsunac(s.id)) {
+      toast(`Ściany ${s.id} nie można usunąć`, {
+        type: "err",
+        desc: sciany.length <= 3 ? "Pokój musi mieć co najmniej 3 ściany." : s.id === "A" ? "Od ściany A liczy się zabudowa. Możesz zmienić jej długość." : "Przy ścianie B stoi zabudowa w L.",
+      });
+      return;
+    }
+    const baza = bazowy();
+    if (!baza) return;
+    const nowy = usunSciane(baza.sciany!.obrys!, k);
+    if (!nowy) return void toast("Tak się nie da", { type: "err", desc: "Tej ściany nie można usunąć." });
+    if (zapisz(setPlan, zastosujObrys(baza, nowy, true))) {
+      setWybrana(null);
+      toast(`Usunięto ścianę ${s.id}`, { desc: "Ctrl+Z cofa." });
+    }
+  };
+
   const przelaczSciane = (id: ScianaUsuwalna, jest: boolean) => {
     if (!jest) {
       const naNiej = [
@@ -430,7 +465,7 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
   return (
     <div className="overlay" data-open={open ? "" : undefined}>
       <div className="backdrop" onClick={onClose} />
-      <div className="modal ks-okno" role="dialog" aria-modal="true" aria-labelledby="ks-tytul">
+      <div className="modal ks-okno" role="dialog" aria-modal="true" aria-labelledby="ks-tytul" data-cofanie="">
         <div className="m-pad pr-head">
           <div className="m-top">
             <h2 id="ks-tytul" style={{ fontSize: 15 }}>
@@ -456,7 +491,7 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
                   </button>
                 ))}
               </div>
-              <p className="kr-hint">Na rzucie: przeciągnij narożnik, „+” w połowie ściany dzieli ją na dwie (nowy narożnik). Narożnik przy ścianach A i B stoi w miejscu – od niego liczy się zabudowa.</p>
+              <p className="kr-hint">Na rzucie: przeciągnij narożnik, „+” w połowie ściany dzieli ją na dwie (nowy narożnik). Kliknij ścianę i naciśnij Delete (albo „Usuń”), żeby ją usunąć. Ctrl+Z cofa zmianę. Narożnik przy ścianach A i B stoi w miejscu – od niego liczy się zabudowa.</p>
             </section>
             <section>
               <h3>Ściany</h3>
@@ -464,7 +499,6 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
                 {sciany.map((s, k) => {
                   const usuwalna = s.id !== "A" && !(s.id === "B" && plan.uklad === "L");
                   const jest = !bez.has(s.id as ScianaUsuwalna);
-                  const scal = naroznikDoUsuniecia(obrys, k);
                   return (
                     <li key={s.id} data-litera={s.id} data-wybrana={wybrana === k ? "" : undefined}>
                       <span className="ks-znak">{s.id}</span>
@@ -504,9 +538,15 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
                         <button type="button" className="btn btn-plain" aria-label={`Podziel ścianę ${s.id}`} disabled={obrys.length >= MAX_SCIAN_POKOJU} onClick={() => operacja((w) => podzielSciane(w, k), true)}>
                           Podziel
                         </button>
-                        {scal !== null ? (
-                          <button type="button" className="btn btn-plain" aria-label={`Scal ścianę ${s.id} z następną`} onClick={() => operacja((w) => usunNaroznik(w, scal), true)}>
-                            Scal
+                        {moznaUsunac(s.id) ? (
+                          <button
+                            type="button"
+                            className="btn btn-plain kr-usun"
+                            aria-label={`Usuń ścianę ${s.id}`}
+                            title="Usuń ścianę – sąsiednie ściany się połączą (Delete)"
+                            onClick={() => usun(k)}
+                          >
+                            Usuń
                           </button>
                         ) : null}
                       </div>
@@ -538,6 +578,21 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
                 { value: "3d", label: "Podgląd 3D" },
               ]}
             />
+            {widok === "rzut" && wybrana !== null && sciany[wybrana] ? (
+              <div className="ks-wybrana">
+                <span>
+                  Ściana <b>{sciany[wybrana].id}</b> · {Math.round(sciany[wybrana].dlugosc)} cm
+                </span>
+                {moznaUsunac(sciany[wybrana].id) ? (
+                  <button type="button" className="btn btn-ghost kr-usun" onClick={() => usun(wybrana)} title="Delete">
+                    Usuń ścianę
+                  </button>
+                ) : null}
+                <button type="button" className="btn btn-plain" onClick={() => setWybrana(null)} aria-label="Odznacz ścianę">
+                  ⨯
+                </button>
+              </div>
+            ) : null}
             {widok === "rzut" ? (
               <EdytorObrysu plan={plan} setPlan={setPlan} wybrana={wybrana} setWybrana={setWybrana} />
             ) : (

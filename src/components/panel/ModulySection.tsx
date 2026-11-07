@@ -8,7 +8,8 @@ import { cennikApi } from "./offerApi";
 
 const clamp = (v: number, { min: lo, max: hi }: { min: number; max: number }) => Math.min(hi, Math.max(lo, Math.round(v) || lo));
 
-export function ModulySection({ moduly, onChange }: { moduly: ModulItem[]; onChange: (m: ModulItem[], label: string) => void }) {
+/** tylkoPodglad – telefon: sama lista, bez dodawania i usuwania. */
+export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { moduly: ModulItem[]; onChange: (m: ModulItem[], label: string) => void; tylkoPodglad?: boolean }) {
   const [cennik, setCennik] = useState<ModulCennik | null>(null);
   const [nowy, setNowy] = useState({ nazwa: "", w: "60", h: "72", d: "56" });
   useEffect(() => {
@@ -41,14 +42,16 @@ export function ModulySection({ moduly, onChange }: { moduly: ModulItem[]; onCha
                 {m.w}×{m.h}×{m.d} cm
               </span>
               <span style={{ minWidth: 90, textAlign: "right" }}>{cennik ? formatPln(modulCena(m, cennik)) : "…"}</span>
-              <button
-                type="button"
-                className="btn btn-plain"
-                aria-label={`Usuń ${m.nazwa}`}
-                onClick={() => onChange(moduly.filter((_, j) => j !== i), `Usunięto moduł: ${m.nazwa}`)}
-              >
-                ✕
-              </button>
+              {tylkoPodglad ? null : (
+                <button
+                  type="button"
+                  className="btn btn-plain"
+                  aria-label={`Usuń ${m.nazwa}`}
+                  onClick={() => onChange(moduly.filter((_, j) => j !== i), `Usunięto moduł: ${m.nazwa}`)}
+                >
+                  ✕
+                </button>
+              )}
             </li>
           ))}
           {cennik ? (
@@ -59,7 +62,7 @@ export function ModulySection({ moduly, onChange }: { moduly: ModulItem[]; onCha
           ) : null}
         </ul>
       ) : null}
-      {moduly.length < MAX_MODULY ? (
+      {!tylkoPodglad && moduly.length < MAX_MODULY ? (
         <div style={{ display: "grid", gap: 6, gridTemplateColumns: "2fr repeat(3, 1fr) auto", alignItems: "end" }}>
           <input className="input" aria-label="Nazwa modułu" placeholder="Nazwa (np. Zlewowa)" maxLength={60} value={nowy.nazwa} onChange={(e) => setNowy({ ...nowy, nazwa: e.target.value })} />
           {(["w", "h", "d"] as const).map((k) => (
@@ -78,6 +81,7 @@ export function ModulySection({ moduly, onChange }: { moduly: ModulItem[]; onCha
           </button>
         </div>
       ) : null}
+      {tylkoPodglad && !moduly.length ? <p className="lede">Brak szafek. Dodasz je na komputerze.</p> : null}
     </section>
   );
 }

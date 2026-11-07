@@ -183,6 +183,45 @@ export function usunNaroznik(w: readonly Punkt[], idx: number): Punkt[] {
   return w.filter((_, i) => i !== idx);
 }
 
+/**
+ * Usunięcie ściany k z pokoju. Najpierw sąsiednie ściany wydłużają się do przecięcia (np. ścięty narożnik
+ * wraca do prostego), a gdy są równoległe albo przecięcie nie pasuje – ściana scala się z sąsiednią (usunięcie
+ * narożnika). null = nie da się (ściana A, narożnik zabudowy, trójkąt).
+ */
+export function usunSciane(w: readonly Punkt[], k: number): Punkt[] | null {
+  const n = w.length;
+  if (n <= 3) return null;
+  const kraw = krawedzieObrysu(n)[k];
+  if (!kraw) return null;
+  // a → b w kolejności obrysu.
+  const [i, j] = kraw;
+  const a = (i + 1) % n === j ? i : j;
+  const b = (a + 1) % n;
+  if (a !== 0 && b !== 0) {
+    const P = w[(a - 1 + n) % n];
+    const A = w[a];
+    const B = w[b];
+    const Q = w[(b + 1) % n];
+    const d1 = { x: A.x - P.x, z: A.z - P.z };
+    const d2 = { x: Q.x - B.x, z: Q.z - B.z };
+    const det = d1.x * d2.z - d1.z * d2.x;
+    if (Math.abs(det) > 1e-6) {
+      const t = ((B.x - P.x) * d2.z - (B.z - P.z) * d2.x) / det;
+      // Przecięcie za końcem poprzedniej ściany (t ≥ 1) – sąsiednie ściany się wydłużają, nie skracają.
+      const X = { x: Math.round(P.x + d1.x * t), z: Math.round(P.z + d1.z * t) };
+      // … i najwyżej o długość usuwanej ściany (inaczej pokój urósłby nie do poznania – wtedy scalanie).
+      const L = Math.hypot(B.x - A.x, B.z - A.z);
+      if (t >= 1 - 1e-6 && Math.hypot(X.x - A.x, X.z - A.z) <= L + 0.5 && Math.hypot(X.x - B.x, X.z - B.z) <= L + 0.5) {
+        if (a === 1) X.z = 0;
+        const out = w.map((q, idx) => (idx === a ? X : q)).filter((_, idx) => idx !== b);
+        if (!sprawdzObrys(out).length) return out;
+      }
+    }
+  }
+  const idx = naroznikDoUsuniecia(w, k);
+  return idx === null ? null : usunNaroznik(w, idx);
+}
+
 /** Przesunięcie narożnika (v0 stoi, v1 tylko wzdłuż osi x); krok siatki i przyciąganie do pionu / poziomu sąsiadów. */
 export function przesunNaroznik(w: readonly Punkt[], idx: number, p: Punkt, k = 5): Punkt[] {
   if (idx === 0) return [...w];

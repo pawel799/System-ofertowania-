@@ -1,5 +1,6 @@
 "use client";
 
+import { useTelefon } from "./telefon";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
@@ -158,6 +159,8 @@ export default function PanelApp() {
   const [msgDirty, setMsgDirty] = useState(false);
   const [origin, setOrigin] = useState("");
   const [newOpen, setNewOpen] = useState<null | { instant: boolean }>(null);
+  // Telefon: sam podgląd ofert – bez tworzenia (nowa oferta, kreator, rozkrój) i bez zmian w ofercie.
+  const telefon = useTelefon();
   const [menu, setMenu] = useState<null | { instant: boolean }>(null);
   // Z ustawień (/panel/ustawienia): wgrane modele, pakiety RAL, własna domena linków.
   const [models, setModels] = useState<ModelMeta[]>([]);
@@ -281,7 +284,7 @@ export default function PanelApp() {
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
-      } else if (e.key === "n" || e.key === "N") {
+      } else if ((e.key === "n" || e.key === "N") && !telefon) {
         e.preventDefault();
         setNewOpen({ instant: true });
       } else if (["ArrowDown", "ArrowUp", "j", "k"].includes(e.key)) {
@@ -295,7 +298,7 @@ export default function PanelApp() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [menu, newOpen, visible, selId, select]);
+  }, [menu, newOpen, visible, selId, select, telefon]);
 
   const newDialog = newOpen ? (
     <NewOfferDialog
@@ -321,7 +324,7 @@ export default function PanelApp() {
 
   if (!offer)
     return (
-      <PanelState mode={store.mode} error={store.error} onRetry={store.retry} onNew={() => setNewOpen({ instant: false })}>
+      <PanelState mode={store.mode} error={store.error} onRetry={store.retry} onNew={telefon ? undefined : () => setNewOpen({ instant: false })}>
         {newDialog}
         {tokenDialog}
         <Toaster />
@@ -731,7 +734,7 @@ export default function PanelApp() {
             modele={models}
             projekt={offer.projekt}
           />
-          <p className="lede">
+          <p className="lede bez-telefonu">
             <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj układ w kreatorze</a>
           </p>
         </section>
@@ -774,14 +777,14 @@ export default function PanelApp() {
           </svg>
           <span className="hide-sm">Zgłoszenia</span>
         </a>
-        <a className="btn btn-plain" href="/panel/rozkroj" data-tip="Formatki z KD Max, PRO100 albo Excela – rozkrój płyt i CSV dla hurtowni">
+        <a className="btn btn-plain bez-telefonu" href="/panel/rozkroj" data-tip="Formatki z KD Max, PRO100 albo Excela – rozkrój płyt i CSV dla hurtowni">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <rect x="2" y="3" width="12" height="10" rx="1" stroke="currentColor" strokeWidth="1.4" />
             <path d="M7 3v10M7 8h7" stroke="currentColor" strokeWidth="1.4" />
           </svg>
           <span className="hide-sm">Rozkrój</span>
         </a>
-        <a className="btn btn-ghost" href="/panel/kreator" data-tip="Złóż kuchnię z modułów albo modeli firmy">
+        <a className="btn btn-ghost bez-telefonu" href="/panel/kreator" data-tip="Złóż kuchnię z modułów albo modeli firmy">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M2.5 13.5 8 3l5.5 10.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
             <path d="M6.2 9.5h3.6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -798,7 +801,7 @@ export default function PanelApp() {
         <LogoutButton />
         <button
           type="button"
-          className="btn btn-ink"
+          className="btn btn-ink bez-telefonu"
           data-tip="Nowa oferta"
           data-kbd="N"
           onClick={(e) => setNewOpen({ instant: e.detail === 0 })}
@@ -997,6 +1000,8 @@ export default function PanelApp() {
             </dl>
           ) : null}
 
+          {telefon ? <p className="lede tylko-komputer-info">Na telefonie oferta jest tylko do podglądu. Materiały, szafki i nowe oferty zmienisz na komputerze.</p> : null}
+          <fieldset className="mats-fs" disabled={telefon}>
           <div className="mats">
             {offer.kuchnia ? null : pokazWyborModelu(models, offer.modelId ?? "") ? (
               <div>
@@ -1090,6 +1095,7 @@ export default function PanelApp() {
               </div>
             ) : null}
           </div>
+          </fieldset>
 
           {offer.comment ? (
             <div className="callout">
@@ -1107,8 +1113,11 @@ export default function PanelApp() {
             <section className="sec">
               <h2>Pozycje z kreatora</h2>
               <p className="lede">
-                Cena szafek jest liczona na serwerze z cennika modułów. Tu nie da się jej wpisać ręcznie.{" "}
-                <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj w kreatorze</a>.
+                Cena szafek jest liczona na serwerze z cennika modułów. Tu nie da się jej wpisać ręcznie.
+                <span className="bez-telefonu">
+                  {" "}
+                  <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj w kreatorze</a>.
+                </span>
               </p>
               <ul className="kr-lines">
                 {offer.kuchnia.elementy.map((e) => (
@@ -1123,7 +1132,7 @@ export default function PanelApp() {
               </ul>
             </section>
           ) : (
-            <ModulySection moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
+            <ModulySection tylkoPodglad={telefon} moduly={offer.moduly ?? []} onChange={(m, label) => update(offer.id, (o) => withEvent({ ...o, moduly: m }, "edit", label))} />
           )}
 
           <WersjeOferty offer={offer} />
@@ -1143,7 +1152,7 @@ export default function PanelApp() {
             </ol>
           </section>
 
-          <section className="sec">
+          <section className="sec bez-telefonu">
             <h2>Usuń ofertę</h2>
             <p className="lede">
               Oferta zniknie z panelu{offer.link ? ", a link klienta przestanie działać" : ""}. Tego nie da się cofnąć.

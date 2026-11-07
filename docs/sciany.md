@@ -27,7 +27,8 @@ Kreator ścian zawiera:
 - gotowe kształty: prostokąt, L, ścięty narożnik, wnęka, T;
 - rzut z narożnikami do przeciągania (co 5 cm, z Shift co 1 cm, przyciąganie do pionu i poziomu sąsiadów);
 - „+” w połowie ściany, który ją dzieli;
-- „Scal”, który usuwa narożnik;
+- „Usuń” przy ścianie (albo kliknięcie ściany na rzucie i Delete) – usuwa ścianę (`usunSciane`): sąsiednie ściany wydłużają się do przecięcia (ścięty narożnik wraca do prostego), a gdy się nie da – ściana scala się z sąsiednią; ściany A (i B w układzie L) nie usuwa się, pokój ma min. 3 ściany;
+- Ctrl+Z / Ctrl+Shift+Z cofa i ponawia zmiany (historia całego planu w kreatorze);
 - długość ściany z pola;
 - „jest” – odznaczenie robi otwartą przestrzeń;
 - kolor ściany;
@@ -86,3 +87,17 @@ Zabezpieczenia:
 - Płaszczyzna w kształcie pokoju (prostokąt albo wielokąt) na wysokości pokoju.
 - Widać ją tylko od spodu.
 - „Ukryj ściany” chowa ją razem ze ścianami.
+
+## Skróty klawiszowe w kreatorze
+
+Historia planu: `src/components/panel/useHistoria.ts`. Lista skrótów: okno „?” w kreatorze (`SKROTY` w `KreatorApp.tsx`).
+
+- Ctrl+Z – cofnij, Ctrl+Shift+Z / Ctrl+Y – ponów (też w kreatorze ścian; w polach tekstowych działa zwykłe cofanie tekstu);
+- Ctrl+S – zapisz ofertę;
+- Delete / Backspace – usuń zaznaczony mebel (w kreatorze ścian – wybraną ścianę);
+- Ctrl+D – duplikuj, R – obróć o 90°, strzałki – przesuń o 5 cm (Shift: 1 cm), Enter – wymiary i wnętrze, Esc – odznacz.
+
+## Telefon
+
+Do 767 px szerokości (`src/components/panel/telefon.ts`) panel jest tylko podglądem ofert: bez nowej oferty, kreatora, rozkroju,
+zmian materiałów i szafek oraz usuwania oferty. `/panel/kreator` na telefonie pokazuje tylko informację i odsyła do ofert.

@@ -15,6 +15,8 @@ import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFir
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 import type { ScianaDodatkowa, UstawieniaScian } from "@/lib/sciany";
 import FormatkiOkno from "../produkcja/FormatkiOkno";
+import { useHistoria } from "./useHistoria";
+import { useTelefon } from "./telefon";
 import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe } from "./KreatorScian";
 import { czyObrys, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
@@ -50,7 +52,7 @@ import {
   type Sciana,
 } from "@/lib/kuchnia";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import RzutKuchni from "../kuchnia/RzutKuchni";
+import RzutKuchni, { przesunMebel } from "../kuchnia/RzutKuchni";
 import PrzyciskOtwarcia from "../kuchnia/PrzyciskOtwarcia";
 import { LoginDialog, LogoutButton, PanelBrand } from "./PanelGate";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
@@ -124,7 +126,9 @@ export default function KreatorApp() {
   const [lokalnie, setLokalnie] = useState(false);
   const [offer, setOffer] = useState<Offer | null>(null);
   const [istniejace, setIstniejace] = useState<Offer[]>([]);
-  const [plan, setPlan] = useState<PlanKuchni>(() => pustyPlan("ciag"));
+  // Plan z historią: Ctrl+Z cofa, Ctrl+Shift+Z / Ctrl+Y ponawia (useHistoria.ts).
+  const historia = useHistoria<PlanKuchni>(() => pustyPlan("ciag"));
+  const { wartosc: plan, ustaw: setPlan, reset: resetPlan, cofnij, ponow, moznaCofnac, moznaPonowic } = historia;
   const [client, setClient] = useState("");
   const [contact, setContact] = useState("");
   const [title, setTitle] = useState("");
@@ -162,6 +166,7 @@ export default function KreatorApp() {
   const otworzNowy = useCallback((el: ElementOkna) => setOkno({ tryb: "nowy", el }), []);
   const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
+  const telefon = useTelefon();
   const { cennik, blad: cennikBlad, gotowy: cennikGotowy } = useCennik();
   const ujecie = useRef<KuchniaUjecie | null>(null);
   const ustawUjecie = useCallback((u: KuchniaUjecie | null) => {
@@ -170,7 +175,7 @@ export default function KreatorApp() {
 
   const wczytajOferte = useCallback((o: Offer) => {
     setOffer(o);
-    setPlan(o.kuchnia ?? pustyPlan(o.layout === "L" ? "L" : "ciag"));
+    resetPlan(o.kuchnia ?? pustyPlan(o.layout === "L" ? "L" : "ciag"));
     setClient(o.client);
     setContact(o.contact);
     setTitle(o.title);
@@ -184,7 +189,7 @@ export default function KreatorApp() {
     setDodatki(o.kuchnia?.dodatki ?? []);
     // Zapisana oferta: projekt już jest – zaczynamy od mebli.
     setKrok("meble");
-  }, []);
+  }, [resetPlan]);
 
   const wczytaj = useCallback(async () => {
     const id = new URLSearchParams(window.location.search).get("id");
@@ -227,7 +232,7 @@ export default function KreatorApp() {
         if (new URLSearchParams(window.location.search).get("pokaz") === "1") {
           const pokaz = planPokazowy();
           setTyp("kuchnia");
-          setPlan(pokaz);
+          resetPlan(pokaz);
           zresetujSciany(pokaz.sciany?.kolor);
           setSamouczek(false);
           setTitle("Kuchnia w L – dąb i grafit");
@@ -254,7 +259,7 @@ export default function KreatorApp() {
     } finally {
       setGotowe(true);
     }
-  }, [wczytajOferte]);
+  }, [wczytajOferte, resetPlan]);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -272,16 +277,16 @@ export default function KreatorApp() {
   const wywiad: Wywiad = plan.wywiad ?? wywiadDomyslny(typ);
   const setWywiad = (fn: (w: Wywiad) => Wywiad) => setPlan((p) => ({ ...p, wywiad: fn(p.wywiad ?? wywiadDomyslny(typ)) }));
   // Okno albo drzwi przeciągnięte na rzucie / w 3D (już sprawdzone – sprawdzOtwor w src/lib/otwory.ts).
-  const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), []);
+  const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), [setPlan]);
   const bladOtworu = useCallback((powod: string) => toast("Tu nie można przesunąć", { type: "err", desc: powod }), []);
   const przesunSciane = useCallback(
     (i: number, sc: ScianaDodatkowa) =>
       setPlan((p) => (p.sciany?.dodatkowe ? { ...p, sciany: { ...p.sciany, dodatkowe: p.sciany.dodatkowe.map((x, j) => (j === i ? sc : x)) } } : p)),
-    [],
+    [setPlan],
   );
   const przesunPunkt = useCallback(
     (i: number, pk: PunktInstalacji) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, punkty: (p.wywiad.punkty ?? []).map((x, j) => (j === i ? pk : x)) } } : p)),
-    [],
+    [setPlan],
   );
   // Przeciąganie mebli w 3D (tylko kreator): nowe miejsce już sprawdzone w scenie.
   const edycjaMebli = useMemo(
@@ -289,7 +294,7 @@ export default function KreatorApp() {
       onPrzesun: (id: string, x: number, z: number) => setPlan((p) => ({ ...p, elementy: p.elementy.map((e) => (e.id === id ? { ...e, x, z } : e)) })),
       onKolizja: (powod: string) => toast("Tu nie można postawić mebla", { type: "err", desc: powod }),
     }),
-    [],
+    [setPlan],
   );
   const indeksKroku = KROKI.indexOf(krok);
   const gotoweKroki = new Set<Krok>([
@@ -319,7 +324,7 @@ export default function KreatorApp() {
   const [kreatorScian, setKreatorScian] = useState(false);
   const zamknijKreatorScian = useCallback(() => setKreatorScian(false), []);
   // Kliknięta ściana w 3D → własny kolor (PaletaSciany nad sceną).
-  const edycjaKolorow = useMemo(() => edycjaKolorowScian(setPlan), []);
+  const edycjaKolorow = useMemo(() => edycjaKolorowScian(setPlan), [setPlan]);
   const zamknijFormatki = useCallback(() => setFormatki(false), []);
   // Materiały do formatek: kolory mebli (fronty, boki, środek) i okucia z katalogu firmy – jak w PDF oferty.
   const zrodloProdukcji = useMemo<ZrodloMaterialow>(() => {
@@ -681,6 +686,124 @@ export default function KreatorApp() {
     setKrok("meble");
   };
 
+  const usunZaznaczony = () => {
+    if (!element) return;
+    setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
+    setZaznaczony(null);
+  };
+  const kopiujZaznaczony = () => {
+    if (!element) return;
+    dodaj({
+      nazwa: element.nazwa,
+      strefa: element.strefa,
+      rodzaj: element.rodzaj,
+      w: element.w,
+      h: element.h,
+      d: element.d,
+      zrodlo: element.zrodlo,
+      modelId: element.modelId,
+      wnetrze: element.wnetrze,
+      kolory: element.kolory,
+    });
+  };
+
+  // Skróty klawiszowe (lista: SKROTY, okno pod „?”). Handler w refie – zawsze widzi bieżący plan i zaznaczenie.
+  const [skroty, setSkroty] = useState(false);
+  const klawisze = useRef<(e: KeyboardEvent) => void>(() => {});
+  klawisze.current = (e: KeyboardEvent) => {
+    if (e.defaultPrevented || e.isComposing) return;
+    const mod = e.ctrlKey || e.metaKey;
+    const k = e.key.toLowerCase();
+    const cel = e.target as HTMLElement | null;
+    const wPolu = !!cel && (cel.isContentEditable || /^(input|textarea|select)$/i.test(cel.tagName));
+    // Otwarte okno: cofanie działa tylko w kreatorze ścian (data-cofanie), reszta skrótów – tylko bez okien.
+    const modal = document.querySelector<HTMLElement>('[aria-modal="true"]');
+    const cofanieWOknie = !modal || modal.hasAttribute("data-cofanie");
+    if (mod && k === "s") {
+      e.preventDefault();
+      if (!modal && !zapisuje && !auth) void zapisz();
+      return;
+    }
+    if (wPolu) return;
+    if (mod && !e.altKey && (k === "z" || k === "y")) {
+      if (!cofanieWOknie) return;
+      e.preventDefault();
+      const wstecz = k === "z" && !e.shiftKey;
+      if (wstecz ? !moznaCofnac : !moznaPonowic) return void toast(wstecz ? "Nie ma czego cofnąć" : "Nie ma czego ponowić");
+      if (wstecz) cofnij();
+      else ponow();
+      return;
+    }
+    if (modal) return;
+    if (!mod && !e.altKey && (e.key === "?" || (e.shiftKey && e.key === "/"))) {
+      e.preventDefault();
+      setSkroty(true);
+      return;
+    }
+    if (e.key === "Escape" && zaznaczony) {
+      setZaznaczony(null);
+      return;
+    }
+    if (!element) return;
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      usunZaznaczony();
+    } else if (mod && k === "d") {
+      e.preventDefault();
+      kopiujZaznaczony();
+    } else if (!mod && !e.altKey && k === "r") {
+      e.preventDefault();
+      aktualizujElement(element.id, (el) => ({ ...el, rot: (((el.rot + 90) % 360) as Obrot) }));
+    } else if (!mod && e.key === "Enter" && !cel?.closest("button, a")) {
+      e.preventDefault();
+      setOkno({ tryb: "edycja", id: element.id });
+    } else if (!mod && e.key.startsWith("Arrow")) {
+      const krok = e.shiftKey ? 1 : 5;
+      const [dx, dz] = e.key === "ArrowLeft" ? [-krok, 0] : e.key === "ArrowRight" ? [krok, 0] : e.key === "ArrowUp" ? [0, -krok] : e.key === "ArrowDown" ? [0, krok] : [0, 0];
+      if (!dx && !dz) return;
+      e.preventDefault();
+      const w = przesunMebel(plan, element, dx, dz);
+      if (!w) return;
+      if ("blad" in w) toast("Tu nie można postawić mebla", { type: "err", desc: w.blad ?? "Mebel wszedłby na inny element." });
+      else setPlan((p) => ({ ...p, elementy: p.elementy.map((el) => (el.id === element.id ? { ...el, x: w.x, z: w.z } : el)) }));
+    }
+  };
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => klawisze.current(e);
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, []);
+
+  // Telefon: kreator jest tylko na komputerze (i tablecie) – tu sam podgląd ofert.
+  if (telefon)
+    return (
+      <div className="pnl kreator">
+        <header className="top">
+          <a className="btn btn-plain" href="/panel" aria-label="Wróć do ofert">
+            <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+          <PanelBrand />
+          <span className="grow" />
+          <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
+        </header>
+        <div className="kr-telefon" role="status">
+          <h1>Kreator działa na komputerze</h1>
+          <p className="lede">Na telefonie możesz przeglądać oferty, podgląd 3D i wysyłać linki klientom. Projekty tworzysz i zmieniasz na większym ekranie.</p>
+          {offer?.link ? (
+            <a className="btn btn-ghost" href={`/oferta/${offer.link.slug}`}>
+              Podgląd tej oferty
+            </a>
+          ) : null}
+          <a className="btn btn-ink" href="/panel">
+            Przejdź do ofert
+          </a>
+        </div>
+        <Toaster />
+      </div>
+    );
+
   return (
     <div className="pnl kreator">
       <header className="top">
@@ -696,6 +819,24 @@ export default function KreatorApp() {
         </div>
         <span className="grow" />
         {lokalnie ? <span className="sample">Dane demo</span> : null}
+        <button type="button" className="btn btn-plain" aria-label="Cofnij" title="Cofnij (Ctrl+Z)" disabled={!moznaCofnac} onClick={cofnij}>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M5.5 3 2.5 6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 6h6.5a4 4 0 0 1 0 8H7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        <button type="button" className="btn btn-plain" aria-label="Ponów" title="Ponów (Ctrl+Shift+Z / Ctrl+Y)" disabled={!moznaPonowic} onClick={ponow}>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="m10.5 3 3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M13 6H6.5a4 4 0 0 0 0 8H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+        <button type="button" className="btn btn-plain hide-sm" aria-label="Skróty klawiszowe" title="Skróty klawiszowe (?)" onClick={() => setSkroty(true)}>
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <rect x="1.5" y="4" width="13" height="8" rx="1.2" stroke="currentColor" strokeWidth="1.3" />
+            <path d="M4 6.5h1M7.5 6.5h1M11 6.5h1M5 9.5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          </svg>
+        </button>
         <button type="button" className="btn btn-plain" aria-label="Samouczek" title="Samouczek" onClick={() => setSamouczek(true)}>
           <span className="hide-sm">Samouczek</span>
           <span className="kr-tylko-sm" aria-hidden>
@@ -929,26 +1070,8 @@ export default function KreatorApp() {
                         return { ...obrocony, x, z };
                       });
                     }}
-                    onUsun={() => {
-                      if (!element) return;
-                      setPlan((p) => ({ ...p, elementy: p.elementy.filter((e) => e.id !== element.id) }));
-                      setZaznaczony(null);
-                    }}
-                    onKopiuj={() => {
-                      if (!element) return;
-                      dodaj({
-                        nazwa: element.nazwa,
-                        strefa: element.strefa,
-                        rodzaj: element.rodzaj,
-                        w: element.w,
-                        h: element.h,
-                        d: element.d,
-                        zrodlo: element.zrodlo,
-                        modelId: element.modelId,
-                        wnetrze: element.wnetrze,
-                        kolory: element.kolory,
-                      });
-                    }}
+                    onUsun={usunZaznaczony}
+                    onKopiuj={kopiujZaznaczony}
                     onDociagnij={() => {
                       if (element) dociagnij(element.id);
                     }}
@@ -1124,6 +1247,7 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
+      {skroty ? <OknoSkrotow onClose={() => setSkroty(false)} /> : null}
       {kreatorScian ? <KreatorScian plan={plan} setPlan={setPlan} onWysokosc={(n) => setWywiad((w) => ({ ...w, wysokosc: n }))} onClose={zamknijKreatorScian} /> : null}
       {formatki ? (
         <FormatkiOkno
@@ -1306,6 +1430,61 @@ function Wybor({
           {o.delta ? <i>{`${o.delta > 0 ? "+" : ""}${formatPln(o.delta)}`}</i> : null}
         </button>
       ))}
+    </div>
+  );
+}
+
+/** Skróty klawiszowe kreatora (okno pod „?” i przyciskiem w nagłówku). */
+const SKROTY: { klawisze: string[]; opis: string }[] = [
+  { klawisze: ["Ctrl", "Z"], opis: "Cofnij ostatnią zmianę projektu" },
+  { klawisze: ["Ctrl", "Shift", "Z"], opis: "Ponów (także Ctrl + Y)" },
+  { klawisze: ["Ctrl", "S"], opis: "Zapisz ofertę" },
+  { klawisze: ["Delete"], opis: "Usuń zaznaczony mebel (także Backspace)" },
+  { klawisze: ["Ctrl", "D"], opis: "Duplikuj zaznaczony mebel" },
+  { klawisze: ["R"], opis: "Obróć zaznaczony mebel o 90°" },
+  { klawisze: ["←", "→", "↑", "↓"], opis: "Przesuń zaznaczony mebel o 5 cm (z Shift o 1 cm)" },
+  { klawisze: ["Enter"], opis: "Wymiary i wnętrze zaznaczonego mebla" },
+  { klawisze: ["Esc"], opis: "Odznacz mebel / zamknij okno" },
+  { klawisze: ["Delete"], opis: "W kreatorze ścian: usuń wybraną ścianę" },
+  { klawisze: ["?"], opis: "Ta lista" },
+];
+
+function OknoSkrotow({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [onClose]);
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  return (
+    <div className="overlay" data-open="">
+      <div className="backdrop" onClick={onClose} />
+      <div className="modal kr-skroty" role="dialog" aria-modal="true" aria-labelledby="kr-skroty-t">
+        <div className="m-pad">
+          <div className="m-top">
+            <h2 id="kr-skroty-t" style={{ fontSize: 15 }}>
+              Skróty klawiszowe
+            </h2>
+            <span style={{ flex: 1 }} />
+            <button type="button" className="btn btn-ink" onClick={onClose}>
+              Zamknij
+            </button>
+          </div>
+          <dl className="kr-skroty-lista">
+            {SKROTY.map((s, i) => (
+              <div key={i}>
+                <dt>
+                  {s.klawisze.map((k, j) => (
+                    <kbd key={j}>{mac && k === "Ctrl" ? "⌘" : k}</kbd>
+                  ))}
+                </dt>
+                <dd>{s.opis}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="kr-hint">Skróty nie działają, gdy piszesz w polu tekstowym (tam Ctrl+Z cofa tekst).</p>
+        </div>
+      </div>
     </div>
   );
 }

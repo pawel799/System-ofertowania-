@@ -757,7 +757,7 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-sciana-karta { border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
 .pnl .kr-sciana-gora { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 13px; }
 .pnl .kr-sciana-gora .btn { padding-left: 8px; padding-right: 8px; height: 28px; font-size: 12px; }
-.pnl .kr-sciana-gora .kr-usun { color: var(--red); }
+.pnl .kr-sciana-gora .kr-usun, .pnl .ks-lista .kr-usun, .pnl .ks-wybrana .kr-usun { color: var(--red); }
 
 /* Kreator ścian (okno) */
 .pnl .modal.ks-okno { width: min(1280px, 100%); height: min(920px, calc(100dvh - 32px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
@@ -819,3 +819,23 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .ks-paleta { grid-column: 1 / -1; padding: 4px 0 2px; }
 .pnl .ks-paleta [data-paleta-sciany] { width: auto !important; }
 .pnl .ks-kolor-linia { pointer-events: none; stroke-linecap: butt; }
+
+/* ---------- skróty klawiszowe kreatora ---------- */
+.pnl .modal.kr-skroty { width: min(480px, 100%); }
+.pnl .kr-skroty-lista { display: grid; gap: 8px; margin: 14px 0 10px; }
+.pnl .kr-skroty-lista > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; font-size: 13px; }
+.pnl .kr-skroty-lista dt { display: flex; gap: 4px; flex-wrap: wrap; }
+.pnl .kr-skroty-lista dd { margin: 0; color: var(--text-2); }
+
+/* ---------- telefon: bez tworzenia, sam podgląd ofert ---------- */
+.pnl .tylko-komputer-info { display: none; }
+@media (max-width: 767px) {
+  .pnl .bez-telefonu { display: none !important; }
+  .pnl .tylko-komputer-info { display: block; }
+}
+.pnl .kr-telefon { max-width: 420px; margin: 48px auto; padding: 0 16px; display: grid; gap: 12px; text-align: center; }
+.pnl .kr-telefon h1 { font-size: 18px; margin: 0; }
+.pnl .kr-telefon .btn { justify-self: center; }
+.pnl .ks-wybrana { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 8px 6px 12px; border-radius: 10px; background: var(--panel); box-shadow: 0 0 0 1px var(--ring-2, rgba(0,0,0,.08)); }
+.pnl .ks-wybrana > span { flex: 1; }
+.pnl .mats-fs { border: 0; margin: 0; padding: 0; min-width: 0; display: contents; }
