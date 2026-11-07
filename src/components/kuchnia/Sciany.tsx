@@ -11,7 +11,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { czyObrys, KOLOR_SUFITU, scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, zakresPokoju, type ScianaDodatkowa, type ScianaPokoju } from "@/lib/sciany";
+import {
+  czyObrys,
+  KOLOR_SUFITU,
+  muryPokoju,
+  polaczeniaScianek,
+  ruchScianki,
+  scianaZPolaczeniami,
+  scianyPokoju,
+  segmentySciany,
+  wysokoscOtworu,
+  wysokoscPokoju,
+  wysokoscSciany,
+  wysokoscScianyPokoju,
+  zakresPokoju,
+  type ScianaDodatkowa,
+  type ScianaPokoju,
+} from "@/lib/sciany";
 import { otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Otwor } from "@/lib/wywiad";
@@ -116,7 +132,20 @@ function SufitObrysu({ obrys, H, material }: { obrys: readonly { x: number; z: n
   return <mesh name="sufit" geometry={geo} position={[0, H / 100, 0]} rotation={[Math.PI / 2, 0, 0]} material={material} receiveShadow />;
 }
 
-type PodgladSciany = { i: number; s: ScianaDodatkowa; bledy: string[] };
+/** Wierzch muru ściany pokoju (wielokąt z rzutu na wysokości ściany, widoczny z góry). */
+function WierzchMuru({ punkty, y, material }: { punkty: readonly { x: number; z: number }[]; y: number; material: THREE.Material }) {
+  const klucz = punkty.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(";");
+  const geo = useMemo(
+    // Kształt (x, −z) obrócony o −90° wokół x → (x, 0, z), normalna w górę.
+    () => new THREE.ShapeGeometry(new THREE.Shape(punkty.map((p) => new THREE.Vector2(p.x / 100, -p.z / 100)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [klucz],
+  );
+  useEffect(() => () => geo.dispose(), [geo]);
+  return <mesh geometry={geo} position={[0, y / 100 + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]} material={material} />;
+}
+
+type PodgladSciany = { zmiany: Map<number, ScianaDodatkowa>; bledy: string[] };
 
 /** Przeciąganie dodatkowej ściany po podłodze (krok 5 cm, z Shift 1 cm); czerwona = nie może tam stać. */
 function usePrzeciaganieSciany(plan: PlanKuchni, edycja?: EdycjaOtworow) {
@@ -146,16 +175,15 @@ function usePrzeciaganieSciany(plan: PlanKuchni, edycja?: EdycjaOtworow) {
     };
     const p0 = naPodlodze(e.nativeEvent);
     if (!p0) return;
-    let teraz: PodgladSciany = { i, s: start, bledy: [] };
+    const plan0 = planRef.current;
+    let teraz: PodgladSciany = { zmiany: new Map([[i, start]]), bledy: [] };
     setPodglad(teraz);
     const move = (pe: PointerEvent) => {
       const p = naPodlodze(pe);
       if (!p) return;
-      const krok = pe.shiftKey ? 1 : 5;
-      const x = Math.round((start.x + (p.x - p0.x) * 100) / krok) * krok;
-      const z = Math.round((start.z + (p.z - p0.z) * 100) / krok) * krok;
-      const s = { ...start, x, z };
-      teraz = { i, s, bledy: sprawdzScianeDodatkowa(planRef.current, s) };
+      // Łączenie jak na rzucie: koniec przyciąga się do innych ścian (Alt – bez), połączone ścianki idą za nią.
+      const r = ruchScianki(plan0, i, "srodek", { x: start.x + (p.x - p0.x) * 100, z: start.z + (p.z - p0.z) * 100 }, { krok: pe.shiftKey ? 1 : 5, laczenie: !pe.altKey });
+      teraz = { zmiany: r.zmiany, bledy: Array.from(r.zmiany.values()).flatMap((s) => sprawdzScianeDodatkowa(planRef.current, s)) };
       setPodglad(teraz);
       invalidate();
     };
@@ -165,9 +193,11 @@ function usePrzeciaganieSciany(plan: PlanKuchni, edycja?: EdycjaOtworow) {
       if (controls) controls.enabled = true;
       setPodglad(null);
       invalidate();
-      if (teraz.s.x === start.x && teraz.s.z === start.z) return;
+      const lista = plan0.sciany?.dodatkowe ?? [];
+      const zmienione = Array.from(teraz.zmiany).filter(([j, s]) => lista[j] && (s.x !== lista[j].x || s.z !== lista[j].z || s.kat !== lista[j].kat || s.dlugosc !== lista[j].dlugosc));
+      if (!zmienione.length) return;
       if (teraz.bledy.length) edycja.onBlad(teraz.bledy[0]);
-      else edycja.onSciana?.(i, teraz.s);
+      else for (const [j, s] of zmienione) edycja.onSciana?.(j, s);
     };
     sprzatanie.current?.();
     window.addEventListener("pointermove", move);
@@ -206,6 +236,8 @@ export default function Sciany({
   const podgladSciany = przeciaganieSciany.podglad;
   const H = wysokoscPokoju(plan);
   const sciany = scianyPokoju(plan);
+  const mury = new Map(muryPokoju(plan).map((m) => [m.s.id, m.punkty]));
+  const polaczenia = polaczeniaScianek((plan.sciany?.dodatkowe ?? []).map((sd, i) => podgladSciany?.zmiany.get(i) ?? sd));
   const otwory = (plan.wywiad?.otwory ?? []).map((o, i) => (podglad?.i === i ? podglad.o : o));
   const material = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92, side: THREE.FrontSide }), [kolor, kolorDomyslny]);
   const szyba = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cfe3f5", roughness: 0.12, emissive: "#9ec4ea", emissiveIntensity: 0.3, transparent: true, opacity: 0.55, side: THREE.FrontSide }), []);
@@ -236,11 +268,13 @@ export default function Sciany({
     <group name="sciany">
       {sciany.map((s) => {
         const naScianie = otwory.map((o, i) => ({ o, i })).filter(({ o }) => o.sciana === s.id);
+        // Własna wysokość ściany (niższa ścianka) – otwory przycięte do niej.
+        const Hs = wysokoscScianyPokoju(plan, s.id);
         const segmenty = segmentySciany(
           s.dlugosc,
-          H,
+          Hs,
           naScianie.map(({ o }) => o),
-        );
+        ).map((g) => ({ ...g, y1: Math.min(g.y1, Hs) })).filter((g) => g.y1 > g.y0);
         // Lokalny układ ściany: x wzdłuż ściany (od początku), y w górę; potem przesunięcie i obrót do świata.
         const poz = (a: number, y: number): [number, number, number] => [(s.x + s.dx * a) / 100, y / 100, (s.z + s.dz * a) / 100];
         return (
@@ -266,6 +300,8 @@ export default function Sciany({
                 <planeGeometry args={[(g.b - g.a) / 100, (g.y1 - g.y0) / 100]} />
               </mesh>
             ))}
+            {/* Wierzch muru: grubość ściany widoczna z góry (sama ściana jest płaszczyzną – nie zasłania wnętrza). */}
+            {mury.get(s.id) ? <WierzchMuru punkty={mury.get(s.id)!} y={Hs} material={materialSciany(s.id)} /> : null}
             {naScianie.map(({ o, i }) => {
               const { y0, y1 } = wysokoscOtworu(o, H);
               const srodek = poz(o.od + o.szer / 2, (y0 + y1) / 2);
@@ -305,9 +341,12 @@ export default function Sciany({
         );
       })}
       {(plan.sciany?.dodatkowe ?? []).map((sd, i) => {
-        const w = podgladSciany?.i === i ? podgladSciany.s : sd;
+        const teraz = podgladSciany?.zmiany.get(i) ?? sd;
+        // Połączone końce wydłużone o pół grubości – narożnik bez szczeliny.
+        const pol = polaczenia[i];
+        const w = scianaZPolaczeniami(teraz, [pol[0].length > 0, pol[1].length > 0]);
         const h = wysokoscSciany(w, plan);
-        const czerwona = podgladSciany?.i === i && podgladSciany.bledy.length > 0;
+        const czerwona = !!podgladSciany?.zmiany.has(i) && podgladSciany.bledy.length > 0;
         return (
           <mesh
             key={sd.id}

@@ -12,6 +12,8 @@ import { rect, rectBazowy, type PlanKuchni } from "@/lib/kuchnia";
 import {
   czyObrys,
   etykietaSciany,
+  GRUBOSC_SCIANY,
+  gruboscScianyPokoju,
   KOLOR_SUFITU,
   LIMITY_SCIANY,
   MAX_SCIAN_DODATKOWYCH,
@@ -22,11 +24,14 @@ import {
   obrysZProstokata,
   poleObrysu,
   scianyObrysu,
+  scianyPokoju,
   scianyPokojuWszystkie,
   sprawdzObrys,
   wysokoscPokoju,
+  wysokoscScianyPokoju,
   type Punkt,
   type ScianaDodatkowa,
+  type ScianaPokoju,
   type ScianaUsuwalna,
   type UstawieniaScian,
 } from "@/lib/sciany";
@@ -35,6 +40,9 @@ import {
   GOTOWE_KSZTALTY,
   gotowyKsztalt,
   naObrys,
+  obrotSciany,
+  zastosujZmianePokoju,
+  zmianaDlugosci,
   podzielSciane,
   przesunNaroznik,
   usunSciane,
@@ -59,6 +67,8 @@ export function ustawSciany(setPlan: SetPlan, fn: (u: UstawieniaScian) => Ustawi
     if (!u.sufit) delete u.sufit;
     if (!u.obrys?.length) delete u.obrys;
     if (!u.koloryScian || !Object.keys(u.koloryScian).length) delete u.koloryScian;
+    if (!u.grubosci || !Object.keys(u.grubosci).length) delete u.grubosci;
+    if (!u.wysokosci || !Object.keys(u.wysokosci).length) delete u.wysokosci;
     const { sciany: _s, ...reszta } = p;
     void _s;
     return Object.keys(u).length ? { ...reszta, sciany: u } : reszta;
@@ -204,6 +214,118 @@ export function SciankiDzialowe({ plan, setPlan, kompakt = false }: { plan: Plan
       <button type="button" className="btn btn-ghost" onClick={dodaj}>
         + Ścianka działowa
       </button>
+    </div>
+  );
+}
+
+/* ---------- ściany pokoju (domyślne) – karta jak przy ściankach działowych ---------- */
+
+/**
+ * Ściany pokoju w lewym panelu: litery do wyboru (albo klik w ścianę na rzucie) i karta wybranej ściany –
+ * kolor, długość, grubość, wysokość, obrót, usunięcie. Te same funkcje co przy ściankach działowych,
+ * z ograniczeniami pokoju: A i B wyznaczają narożnik zabudowy (nie obracają się, A się nie usuwa).
+ */
+export function ScianyPokoju({
+  plan,
+  setPlan,
+  wybrana,
+  setWybrana,
+}: {
+  plan: PlanKuchni;
+  setPlan: SetPlan;
+  wybrana: ScianaPokoju | null;
+  setWybrana: (id: ScianaPokoju | null) => void;
+}) {
+  const sciany = scianyPokoju(plan);
+  const s = sciany.find((x) => x.id === wybrana) ?? null;
+  const H = wysokoscPokoju(plan);
+  const zastosuj = (z: ReturnType<typeof zmianaDlugosci>) => {
+    if (!z) return void toast("Tak się nie da", { type: "err", desc: "Tej ściany nie można tak zmienić." });
+    zapisz(setPlan, zastosujZmianePokoju(plan, z));
+  };
+  const ustawMape = (klucz: "grubosci" | "wysokosci", id: ScianaPokoju, v: number | undefined) =>
+    ustawSciany(setPlan, (u) => {
+      const m = { ...u[klucz] };
+      if (v === undefined) delete m[id];
+      else m[id] = v;
+      return { ...u, [klucz]: m };
+    });
+  const usuwalna = (id: ScianaPokoju) => id !== "A" && !(id === "B" && plan.uklad === "L");
+  const usun = (id: ScianaPokoju) => {
+    const naNiej = [
+      ...(plan.wywiad?.otwory ?? []).filter((o) => o.sciana === id).map((o) => (o.rodzaj === "okno" ? "okno" : "drzwi")),
+      ...(plan.wywiad?.punkty ?? []).filter((p) => p.sciana === id).map(() => "gniazdko"),
+      ...(plan.wywiad?.woda?.sciana === id ? ["woda"] : []),
+    ];
+    if (naNiej.length) return void toast(`Na ścianie ${id} jest ${Array.from(new Set(naNiej)).join(", ")}`, { type: "err", desc: "Przenieś je na inną ścianę, potem usuń ścianę." });
+    if (czyObrys(plan)) {
+      const k = scianyPokojuWszystkie(plan).findIndex((x) => x.id === id);
+      const nowy = k >= 0 ? usunSciane(plan.sciany!.obrys!, k) : null;
+      if (!nowy) return void toast("Tak się nie da", { type: "err", desc: "Tej ściany nie można usunąć." });
+      if (!zapisz(setPlan, zastosujObrys(plan, nowy, true))) return;
+    } else ustawSciany(setPlan, (u) => ({ ...u, bez: [...(u.bez ?? []), id as ScianaUsuwalna] }));
+    setWybrana(null);
+    toast(`Usunięto ścianę ${id}`, { desc: "Ctrl+Z cofa." });
+  };
+  const [grMin, grMax] = LIMITY_SCIANY.grubosc;
+  const obrot = s ? (czyObrys(plan) || plan.pomieszczenie) && s.id !== "A" && s.id !== "B" : false;
+  return (
+    <div className="ks-pokoj">
+      <div className="ks-litery" role="group" aria-label="Ściany pokoju">
+        {sciany.map((x) => (
+          <button key={x.id} type="button" className="btn btn-plain" aria-pressed={wybrana === x.id} onClick={() => setWybrana(wybrana === x.id ? null : x.id)} title={`Ściana ${x.id} · ${Math.round(x.dlugosc)} cm`}>
+            {x.id}
+          </button>
+        ))}
+      </div>
+      {s ? (
+        <div className="kr-sciana-karta" data-sciana-pokoju={s.id}>
+          <div className="kr-sciana-gora">
+            <b>Ściana {s.id}</b>
+            <input
+              type="color"
+              className="ks-kolor"
+              aria-label={`Kolor ściany ${s.id}`}
+              title="Kolor ściany"
+              value={plan.sciany?.koloryScian?.[s.id] ?? "#e2ddd5"}
+              onChange={(e) => edycjaKolorowScian(setPlan).onSciana(s.id, e.target.value.toLowerCase())}
+            />
+            {plan.sciany?.koloryScian?.[s.id] ? (
+              <button type="button" className="btn btn-plain" aria-label={`Kolor ściany ${s.id} jak reszta`} title="Kolor jak reszta ścian" onClick={() => edycjaKolorowScian(setPlan).onSciana(s.id, null)}>
+                ⨯
+              </button>
+            ) : null}
+            <span style={{ flex: 1 }} />
+            {obrot ? (
+              <>
+                <button type="button" className="btn btn-plain" aria-label={`Obróć ścianę ${s.id} w lewo o 15°`} onClick={() => zastosuj(obrotSciany(plan, s.id, -15))}>
+                  ↺ 15°
+                </button>
+                <button type="button" className="btn btn-plain" aria-label={`Obróć ścianę ${s.id} w prawo o 15°`} onClick={() => zastosuj(obrotSciany(plan, s.id, 15))}>
+                  ↻ 15°
+                </button>
+              </>
+            ) : null}
+            {usuwalna(s.id) ? (
+              <button type="button" className="btn btn-plain kr-usun" aria-label={`Usuń ścianę ${s.id}`} onClick={() => usun(s.id)}>
+                Usuń
+              </button>
+            ) : null}
+          </div>
+          <div className="kr-dims kr-dims-3">
+            <PoleCm id={`k-sp-${s.id}-dl`} label="Długość" value={Math.round(s.dlugosc)} min={20} max={2000} onCommit={(n) => Math.abs(n - s.dlugosc) >= 0.5 && zastosuj(zmianaDlugosci(plan, s.id, n))} />
+            <PoleCm id={`k-sp-${s.id}-gr`} label="Grubość" value={gruboscScianyPokoju(plan, s.id)} min={grMin} max={grMax} onCommit={(n) => ustawMape("grubosci", s.id, n === GRUBOSC_SCIANY ? undefined : n)} />
+            <PoleCm id={`k-sp-${s.id}-h`} label="Wysokość" value={wysokoscScianyPokoju(plan, s.id)} min={LIMITY_SCIANY.wysokosc[0]} max={H} onCommit={(n) => ustawMape("wysokosci", s.id, n >= H ? undefined : n)} />
+          </div>
+          <p className="kr-hint" style={{ margin: 0 }}>
+            Na rzucie: kółko na końcu zmienia długość, kwadrat w połowie przesuwa ścianę.{s.id === "A" || s.id === "B" ? " Ściany A i B wyznaczają narożnik zabudowy – zmieniasz ich długość, nie położenie." : ""}
+          </p>
+        </div>
+      ) : (
+        <p className="kr-hint" style={{ margin: 0 }}>
+          Kliknij ścianę na rzucie albo literę, żeby ją zmienić.
+        </p>
+      )}
     </div>
   );
 }

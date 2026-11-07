@@ -839,3 +839,18 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .ks-wybrana { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 6px 8px 6px 12px; border-radius: 10px; background: var(--panel); box-shadow: 0 0 0 1px var(--ring-2, rgba(0,0,0,.08)); }
 .pnl .ks-wybrana > span { flex: 1; }
 .pnl .mats-fs { border: 0; margin: 0; padding: 0; min-width: 0; display: contents; }
+
+/* ---------- ściany pokoju na rzucie: grubość, zaznaczenie, uchwyty; łączenie ścianek ---------- */
+.pnl .kr-mur polygon { fill: var(--text-3); fill-opacity: 0.35; stroke: none; }
+.pnl .kr-mur[data-wybrana] polygon { fill: var(--accent); fill-opacity: 0.45; }
+.pnl .kr-mur[data-wybrana] .kr-wall { stroke: var(--accent); }
+.pnl .kr-mur .kr-wall { pointer-events: none; }
+@media (hover: hover) and (pointer: fine) { .pnl .kr-mur:not([data-wybrana]) polygon:hover { fill-opacity: 0.6; } }
+.pnl .kr-uchwyt-pokoju circle, .pnl .kr-uchwyt-pokoju rect { fill: var(--panel); stroke: var(--accent); stroke-width: 1.6; }
+.pnl .kr-uchwyt-pokoju:hover circle, .pnl .kr-uchwyt-pokoju:hover rect { fill: var(--accent); }
+.pnl .kr-laczenie { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-dasharray: 2 2; pointer-events: none; }
+.pnl .kr-sciana-koniec[data-polaczony] { fill: var(--accent); }
+.pnl .ks-pokoj { display: grid; gap: 8px; }
+.pnl .ks-litery { display: flex; flex-wrap: wrap; gap: 4px; }
+.pnl .ks-litery .btn { min-width: 30px; padding: 0 8px; font-weight: 600; }
+.pnl .ks-litery .btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent, #fff); }

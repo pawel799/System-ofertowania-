@@ -13,11 +13,12 @@ import { setPalettes as setPaletteStore } from "../paletteStore";
 import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
 import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
-import type { ScianaDodatkowa, UstawieniaScian } from "@/lib/sciany";
+import type { ScianaDodatkowa, ScianaPokoju, UstawieniaScian } from "@/lib/sciany";
 import FormatkiOkno from "../produkcja/FormatkiOkno";
 import { useHistoria } from "./useHistoria";
 import { useTelefon } from "./telefon";
-import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe } from "./KreatorScian";
+import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju } from "./KreatorScian";
+import { zastosujZmianePokoju, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
 import { czyObrys, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
 import { useBrand } from "@/lib/brand";
@@ -322,6 +323,13 @@ export default function KreatorApp() {
   const brand = useBrand();
   const [formatki, setFormatki] = useState(false);
   const [kreatorScian, setKreatorScian] = useState(false);
+  /** Zaznaczona ściana pokoju (klik na rzucie / litera w lewym panelu) – karta ściany. */
+  const [scianaPokoju, setScianaPokoju] = useState<ScianaPokoju | null>(null);
+  const zmienPokoj = (z: ZmianaPokoju) => {
+    const w = zastosujZmianePokoju(plan, z);
+    if ("blad" in w) toast("Tak się nie da", { type: "err", desc: w.blad });
+    else setPlan(w.plan);
+  };
   const zamknijKreatorScian = useCallback(() => setKreatorScian(false), []);
   // Kliknięta ściana w 3D → własny kolor (PaletaSciany nad sceną).
   const edycjaKolorow = useMemo(() => edycjaKolorowScian(setPlan), [setPlan]);
@@ -740,8 +748,9 @@ export default function KreatorApp() {
       setSkroty(true);
       return;
     }
-    if (e.key === "Escape" && zaznaczony) {
+    if (e.key === "Escape" && (zaznaczony || scianaPokoju)) {
       setZaznaczony(null);
+      setScianaPokoju(null);
       return;
     }
     if (!element) return;
@@ -888,6 +897,7 @@ export default function KreatorApp() {
                 <button type="button" className="btn btn-ghost wide" onClick={() => setKreatorScian(true)}>
                   Kreator ścian
                 </button>
+                <ScianyPokoju plan={plan} setPlan={setPlan} wybrana={scianaPokoju} setWybrana={setScianaPokoju} />
                 <PrzelacznikSufitu plan={plan} setPlan={setPlan} />
                 <SciankiDzialowe plan={plan} setPlan={setPlan} kompakt />
               </div>
@@ -961,6 +971,9 @@ export default function KreatorApp() {
                   onBladOtworu={bladOtworu}
                   onPunkt={przesunPunkt}
                   onSciana={przesunSciane}
+                  scianaPokoju={scianaPokoju}
+                  onScianaPokoju={setScianaPokoju}
+                  onPokoj={zmienPokoj}
                 />
                 </div>
                 <p className="kr-legend">

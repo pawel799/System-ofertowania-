@@ -6,7 +6,7 @@ import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, PerspectiveCamera, Vector3, type Object3D } from "three";
 import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaWOtworze } from "@/lib/otwory";
-import { wGranicachPokoju } from "@/lib/sciany";
+import { wGranicachPokoju, zasiegScian } from "@/lib/sciany";
 import { Plane, Raycaster, Vector2 } from "three";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
 import { useCountertop } from "../countertopStore";
@@ -174,6 +174,12 @@ function zakres(plan: PlanKuchni) {
     x1 = Math.max(x1, plan.pomieszczenie.szer / 100);
     z1 = Math.max(z1, plan.pomieszczenie.dlug / 100);
   }
+  // Podłoga rośnie razem ze ścianami: kształt pokoju, grubość ścian i ścianki działowe (też poza pokojem).
+  const sc = zasiegScian(plan);
+  x0 = Math.min(x0, sc.x0 / 100);
+  z0 = Math.min(z0, sc.z0 / 100);
+  x1 = Math.max(x1, sc.x1 / 100);
+  z1 = Math.max(z1, sc.z1 / 100);
   for (const e of plan.elementy) {
     const r = rect(e);
     x0 = Math.min(x0, r.x0 / 100);

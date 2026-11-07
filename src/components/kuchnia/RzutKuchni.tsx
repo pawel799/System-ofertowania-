@@ -15,7 +15,22 @@ import {
   type PlanKuchni,
   type Strefa,
 } from "@/lib/kuchnia";
-import { czyObrys, koncowkiSciany, naroznikiSciany, punktNaScianie, scianaZKoncow, scianyPokoju, wGranicachPokoju, type ScianaDodatkowa } from "@/lib/sciany";
+import {
+  czyObrys,
+  koncowkiSciany,
+  muryPokoju,
+  naroznikiSciany,
+  polaczeniaScianek,
+  punktNaScianie,
+  ruchScianki,
+  scianaZPolaczeniami,
+  scianyPokoju,
+  wGranicachPokoju,
+  zasiegScian,
+  type ScianaDodatkowa,
+  type ScianaPokoju,
+} from "@/lib/sciany";
+import { podgladZmianyPokoju, uchwytyScianyPokoju, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
 import { meblaWOtworze, otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import { punktWPunkcie, sprawdzPunkt } from "@/lib/punkty";
 import { PUNKT_INFO, type PunktInstalacji, type RodzajPunktu } from "@/lib/wywiad";
@@ -39,6 +54,12 @@ type Props = {
   onPunkt?: (i: number, p: PunktInstalacji) => void;
   /** Dodatkowa ściana przesunięta, obrócona albo wydłużona (przeciąganie środka albo końca; błąd – onBladOtworu). */
   onSciana?: (i: number, s: ScianaDodatkowa) => void;
+  /** Zaznaczona ściana pokoju (karta ściany w kreatorze) – podświetlona, z uchwytami. */
+  scianaPokoju?: ScianaPokoju | null;
+  /** Klik w ścianę pokoju (null – klik obok). */
+  onScianaPokoju?: (id: ScianaPokoju | null) => void;
+  /** Uchwyt ściany pokoju puszczony: nowa długość, położenie ściany albo narożnika. */
+  onPokoj?: (z: ZmianaPokoju) => void;
 };
 
 type Ciagniecie = { id: string; pointer: number; dx: number; dz: number };
@@ -56,13 +77,12 @@ function widok(plan: PlanKuchni, wymiary: boolean) {
     x1 = Math.max(x1, plan.pomieszczenie.szer + (wymiary ? 48 : 24));
     z1 = Math.max(z1, plan.pomieszczenie.dlug + (wymiary ? 48 : 24));
   }
-  for (const sd of plan.sciany?.dodatkowe ?? [])
-    for (const p of naroznikiSciany(sd)) {
-      x0 = Math.min(x0, p.x - 20);
-      z0 = Math.min(z0, p.z - 20);
-      x1 = Math.max(x1, p.x + 20);
-      z1 = Math.max(z1, p.z + 20);
-    }
+  // Wszystkie ściany (kształt pokoju, grubość, ścianki działowe) mieszczą się w kadrze.
+  const sc = zasiegScian(plan);
+  x0 = Math.min(x0, sc.x0 - 20);
+  z0 = Math.min(z0, sc.z0 - 20);
+  x1 = Math.max(x1, sc.x1 + (wymiary ? 40 : 20));
+  z1 = Math.max(z1, sc.z1 + (wymiary ? 40 : 20));
   for (const e of plan.elementy) {
     const r = rect(e);
     x0 = Math.min(x0, r.x0 - 28);
@@ -248,7 +268,7 @@ function PunktRzut({ plan, p, zly, onPointerDown }: { plan: PlanKuchni; p: Punkt
   );
 }
 
-export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu, onPunkt, onSciana }: Props) {
+export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu, onPunkt, onSciana, scianaPokoju = null, onScianaPokoju, onPokoj }: Props) {
   // Podwójne kliknięcie liczymy sami: przechwycenie wskaźnika (przeciąganie) zjada zdarzenie dblclick.
   const ostatnieKlikniecie = useRef<{ id: string; t: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -351,7 +371,8 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
     window.addEventListener("pointercancel", up);
   };
   // Dodatkowe ściany: przeciąganie środka (przesuwa) albo końca (obraca i zmienia długość wokół drugiego końca).
-  const [podgladSciany, setPodgladSciany] = useState<{ i: number; s: ScianaDodatkowa; bledy: string[] } | null>(null);
+  // Łączenie jak przy budowie domu w grach: koniec przyciąga się do innej ściany (Alt – bez), połączone ściany idą razem.
+  const [podgladSciany, setPodgladSciany] = useState<{ zmiany: Map<number, ScianaDodatkowa>; bledy: string[]; cel: { x: number; z: number } | null } | null>(null);
   const cbSciana = useRef({ onSciana, onBladOtworu });
   cbSciana.current = { onSciana, onBladOtworu };
   const zacznijSciane = (ev: ReactPointerEvent<SVGElement>, i: number, tryb: "srodek" | "a" | "b") => {
@@ -359,22 +380,23 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
     ev.stopPropagation();
     ev.preventDefault();
     window.getSelection()?.removeAllRanges();
+    onScianaPokoju?.(null);
     const svg = svgRef.current;
-    const start = planRef.current.sciany?.dodatkowe?.[i];
+    const plan0 = planRef.current;
+    const start = plan0.sciany?.dodatkowe?.[i];
     if (!svg || !start) return;
-    const [ka, kb] = koncowkiSciany(start);
     const p0 = punkt(svg, ev);
-    let teraz = { i, s: start, bledy: [] as string[] };
+    let teraz = { zmiany: new Map([[i, start]]), bledy: [] as string[], cel: null as { x: number; z: number } | null };
     setPodgladSciany(teraz);
     svg.setPointerCapture(ev.pointerId);
     const move = (pe: PointerEvent) => {
       if (pe.pointerId !== ev.pointerId) return;
       const q = punkt(svg, pe);
       const krok = pe.shiftKey ? 1 : 5;
-      let s: ScianaDodatkowa;
-      if (tryb === "srodek") s = { ...start, x: Math.round((start.x + q.x - p0.x) / krok) * krok, z: Math.round((start.z + q.y - p0.y) / krok) * krok };
-      else s = scianaZKoncow(start, tryb === "a" ? kb : ka, { x: q.x, z: q.y }, krok, pe.shiftKey ? 1 : 15);
-      teraz = { i, s, bledy: sprawdzScianeDodatkowa(planRef.current, s) };
+      const cel = tryb === "srodek" ? { x: start.x + q.x - p0.x, z: start.z + q.y - p0.y } : { x: q.x, z: q.y };
+      const r = ruchScianki(plan0, i, tryb, cel, { krok, krokKata: pe.shiftKey ? 1 : 15, laczenie: !pe.altKey });
+      const bledy = Array.from(r.zmiany.values()).flatMap((s) => sprawdzScianeDodatkowa(planRef.current, s));
+      teraz = { zmiany: r.zmiany, bledy, cel: r.cel };
       setPodgladSciany(teraz);
     };
     const up = (pe: PointerEvent) => {
@@ -383,10 +405,14 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       sluchacze.current = null;
       if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
       setPodgladSciany(null);
-      const s = teraz.s;
-      if (s.x === start.x && s.z === start.z && s.kat === start.kat && s.dlugosc === start.dlugosc) return;
+      const lista = plan0.sciany?.dodatkowe ?? [];
+      const zmienione = Array.from(teraz.zmiany).filter(([j, s]) => {
+        const st = lista[j];
+        return st && (s.x !== st.x || s.z !== st.z || s.kat !== st.kat || s.dlugosc !== st.dlugosc);
+      });
+      if (!zmienione.length) return;
       if (teraz.bledy.length) cbSciana.current.onBladOtworu?.(teraz.bledy[0]);
-      else cbSciana.current.onSciana?.(i, s);
+      else for (const [j, s] of zmienione) cbSciana.current.onSciana?.(j, s);
     };
     sluchacze.current?.();
     sluchacze.current = () => {
@@ -398,7 +424,47 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
   };
-  const scianyDodatkowe = (plan.sciany?.dodatkowe ?? []).map((sd, i) => (podgladSciany?.i === i ? podgladSciany.s : sd));
+  const scianyDodatkowe = (plan.sciany?.dodatkowe ?? []).map((sd, i) => podgladSciany?.zmiany.get(i) ?? sd);
+  const polaczenia = polaczeniaScianek(scianyDodatkowe);
+  // Ściany pokoju: klik zaznacza, uchwyty zmieniają długość, położenie ściany i narożniki (podgląd do puszczenia).
+  const [podgladPokoju, setPodgladPokoju] = useState<ZmianaPokoju | null>(null);
+  const cbPokoj = useRef(onPokoj);
+  cbPokoj.current = onPokoj;
+  const planRys = podgladPokoju ? podgladZmianyPokoju(plan, podgladPokoju) : plan;
+  const uchwyty = scianaPokoju && onPokoj ? uchwytyScianyPokoju(planRys, scianaPokoju) : [];
+  const zacznijUchwyt = (ev: ReactPointerEvent<SVGElement>, nr: number) => {
+    if (ev.button !== 0 || !scianaPokoju) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    const svg = svgRef.current;
+    const u = uchwytyScianyPokoju(planRef.current, scianaPokoju)[nr];
+    if (!svg || !u) return;
+    svg.setPointerCapture(ev.pointerId);
+    let teraz: ZmianaPokoju | null = null;
+    const move = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      const q = punkt(svg, pe);
+      teraz = u.ruch({ x: q.x, z: q.y }, pe.shiftKey ? 1 : 5);
+      setPodgladPokoju(teraz);
+    };
+    const up = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      sluchacze.current?.();
+      sluchacze.current = null;
+      if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
+      setPodgladPokoju(null);
+      if (teraz) cbPokoj.current?.(teraz);
+    };
+    sluchacze.current?.();
+    sluchacze.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
   const elementy = plan.elementy.map((e) => (podglad && e.id === podglad.id ? { ...e, x: podglad.x, z: podglad.z } : e));
   const widokPlan: PlanKuchni = { ...plan, elementy };
   const podgladEl = podglad ? elementy.find((e) => e.id === podglad.id) : undefined;
@@ -430,25 +496,48 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       role="group"
       aria-label="Rzut kuchni z góry. Przeciągnij element, strzałki przesuwają zaznaczony."
       onPointerDown={(e) => {
-        if (e.target === e.currentTarget) onWybierz(null);
+        if (e.target === e.currentTarget) {
+          onWybierz(null);
+          onScianaPokoju?.(null);
+        }
       }}
     >
-      {czyObrys(plan) ? (
-        <polygon className="kr-room" points={plan.sciany!.obrys!.map((p) => `${p.x},${p.z}`).join(" ")} />
-      ) : plan.pomieszczenie ? (
-        <rect className="kr-room" x={0} y={0} width={plan.pomieszczenie.szer} height={plan.pomieszczenie.dlug} />
+      {czyObrys(planRys) ? (
+        <polygon className="kr-room" points={planRys.sciany!.obrys!.map((p) => `${p.x},${p.z}`).join(" ")} />
+      ) : planRys.pomieszczenie ? (
+        <rect className="kr-room" x={0} y={0} width={planRys.pomieszczenie.szer} height={planRys.pomieszczenie.dlug} />
       ) : null}
       {linie.map((l) => (
         <line key={l.k} className="kr-grid" x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} />
       ))}
-      {scianyPokoju(plan).map((s) => (
-        <line key={s.id} className="kr-wall" data-sciana-pokoju={s.id} x1={s.x} y1={s.z} x2={s.x + s.dx * s.dlugosc} y2={s.z + s.dz * s.dlugosc} />
+      {/* Ściany pokoju z grubością (na zewnątrz); klik – karta ściany w kreatorze (kolor, długość, grubość, wysokość…). */}
+      {muryPokoju(planRys).map(({ s, punkty: mur }) => (
+        <g key={s.id} className="kr-mur" data-sciana-pokoju={s.id} data-wybrana={scianaPokoju === s.id ? "" : undefined}>
+          <polygon
+            points={mur.map((p) => `${p.x},${p.z}`).join(" ")}
+            onPointerDown={
+              onScianaPokoju
+                ? (ev) => {
+                    if (ev.button !== 0) return;
+                    ev.stopPropagation();
+                    onWybierz(null);
+                    onScianaPokoju(s.id);
+                  }
+                : undefined
+            }
+            style={onScianaPokoju ? { cursor: "pointer" } : undefined}
+          >
+            <title>{`Ściana ${s.id} · ${Math.round(s.dlugosc)} cm`}</title>
+          </polygon>
+          <line className="kr-wall" x1={s.x} y1={s.z} x2={s.x + s.dx * s.dlugosc} y2={s.z + s.dz * s.dlugosc} />
+        </g>
       ))}
       {/* Dodatkowe ściany: środek – przesuń, kółka na końcach – obróć i zmień długość (Shift: co 1 cm / 1°). */}
       {scianyDodatkowe.map((sd, i) => {
-        const pkt = naroznikiSciany(sd);
+        // Połączone końce wydłużone o pół grubości – narożnik bez szczeliny.
+        const pkt = naroznikiSciany(scianaZPolaczeniami(sd, [polaczenia[i][0].length > 0, polaczenia[i][1].length > 0]));
         const [a, b] = koncowkiSciany(sd);
-        const zla = podgladSciany?.i === i && podgladSciany.bledy.length > 0;
+        const zla = !!podgladSciany?.zmiany.has(i) && podgladSciany.bledy.length > 0;
         // Podpis wzdłuż ściany, zawsze czytelny (−90°…90°).
         const kat = sd.kat > 90 ? sd.kat - 180 : sd.kat;
         return (
@@ -461,21 +550,28 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
               <title>{`Ściana ${i + 1} · ${sd.dlugosc} cm · ${sd.kat}°`}</title>
             </polygon>
             <text x={sd.x} y={sd.z} textAnchor="middle" dominantBaseline="central" transform={kat ? `rotate(${kat} ${sd.x} ${sd.z})` : undefined}>
-              {wymiary || podgladSciany?.i === i ? `${i + 1} · ${sd.dlugosc} cm${sd.kat ? ` · ${sd.kat}°` : ""}` : `${i + 1}`}
+              {wymiary || podgladSciany?.zmiany.has(i) ? `${i + 1} · ${sd.dlugosc} cm${sd.kat ? ` · ${sd.kat}°` : ""}` : `${i + 1}`}
             </text>
             {onSciana
               ? ([
                   ["a", a],
                   ["b", b],
                 ] as const).map(([k, p]) => (
-                  <circle key={k} className="kr-sciana-koniec" data-koniec={k} cx={p.x} cy={p.z} r={4.5} onPointerDown={(ev) => zacznijSciane(ev, i, k)} style={{ cursor: "crosshair", touchAction: "none" }}>
-                    <title>Przeciągnij: obróć i zmień długość</title>
+                  <circle key={k} className="kr-sciana-koniec" data-koniec={k} data-polaczony={polaczenia[i][k === "a" ? 0 : 1].length ? "" : undefined} cx={p.x} cy={p.z} r={4.5} onPointerDown={(ev) => zacznijSciane(ev, i, k)} style={{ cursor: "crosshair", touchAction: "none" }}>
+                    <title>Przeciągnij: obróć i zmień długość. Koniec przyciąga się do innych ścian (Alt – bez przyciągania).</title>
                   </circle>
                 ))
               : null}
           </g>
         );
       })}
+      {podgladSciany?.cel ? <circle className="kr-laczenie" cx={podgladSciany.cel.x} cy={podgladSciany.cel.z} r={7} aria-hidden /> : null}
+      {uchwyty.map((u, nr) => (
+        <g key={nr} className="kr-uchwyt-pokoju" data-rodzaj={u.rodzaj} onPointerDown={(ev) => zacznijUchwyt(ev, nr)} style={{ cursor: u.rodzaj === "sciana" ? "move" : "crosshair", touchAction: "none" }}>
+          {u.rodzaj === "sciana" ? <rect x={u.p.x - 6} y={u.p.z - 6} width={12} height={12} rx={3} /> : <circle cx={u.p.x} cy={u.p.z} r={5.5} />}
+          <title>{u.rodzaj === "sciana" ? "Przeciągnij: przesuń ścianę (Shift: co 1 cm)" : "Przeciągnij: zmień długość ściany (Shift: co 1 cm)"}</title>
+        </g>
+      ))}
       {/* Okna i drzwi na ścianach A–D: przeciągnij, żeby przesunąć (także na inną ścianę); czerwone = nie może tam stać. */}
       {otwory.map((o, i) => (
         <OtworRzut

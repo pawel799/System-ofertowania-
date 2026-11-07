@@ -62,6 +62,10 @@ export type UstawieniaScian = {
   sufit?: { kolor?: string };
   /** Kolory pojedynczych ścian pokoju (#rrggbb); ściana bez wpisu ma kolor ścian (kolor ze sceny). */
   koloryScian?: Partial<Record<ScianaPokoju, string>>;
+  /** Grubość pojedynczych ścian pokoju [cm] (na zewnątrz od wewnętrznej strony); brak = GRUBOSC_SCIANY. */
+  grubosci?: Partial<Record<ScianaPokoju, number>>;
+  /** Wysokość pojedynczych ścian pokoju [cm]; brak = do sufitu. */
+  wysokosci?: Partial<Record<ScianaPokoju, number>>;
 };
 
 export const LIMITY_SCIANY = { dlugosc: [20, 2000], grubosc: [5, 60], wysokosc: [30, 450], poz: [-1000, 3000] } as const;
@@ -96,6 +100,12 @@ export type Sciana = {
 export function wysokoscPokoju(plan: PlanScian) {
   return plan.wywiad?.wysokosc ?? WYSOKOSC_DOMYSLNA;
 }
+
+/** Grubość ściany pokoju [cm] (rzut i wierzch muru w 3D). */
+export const gruboscScianyPokoju = (plan: PlanScian, id: ScianaPokoju) => plan.sciany?.grubosci?.[id] ?? GRUBOSC_SCIANY;
+
+/** Wysokość ściany pokoju [cm] – własna (niższa ścianka) albo do sufitu. */
+export const wysokoscScianyPokoju = (plan: PlanScian, id: ScianaPokoju) => Math.min(plan.sciany?.wysokosci?.[id] ?? wysokoscPokoju(plan), wysokoscPokoju(plan));
 
 const sciana = (id: ScianaPokoju, x: number, z: number, dx: number, dz: number, dlugosc: number, nx: number, nz: number): Sciana => ({
   id,
@@ -565,6 +575,20 @@ export function parseUstawieniaScian(v: unknown): UstawieniaScian | undefined {
     }
     if (Object.keys(k).length) out.koloryScian = k;
   }
+  for (const [klucz, [min, max], nazwa] of [
+    ["grubosci", LIMITY_SCIANY.grubosc, "Grubość"],
+    ["wysokosci", LIMITY_SCIANY.wysokosc, "Wysokość"],
+  ] as const) {
+    const v = o[klucz];
+    if (v === undefined || v === null) continue;
+    if (typeof v !== "object" || Array.isArray(v)) throw new Error(`${nazwa} ścian: zły format.`);
+    const m: Partial<Record<ScianaPokoju, number>> = {};
+    for (const [id, n] of Object.entries(v as Record<string, unknown>)) {
+      if (!(LITERY_SCIAN as readonly string[]).includes(id) || typeof n !== "number" || !Number.isFinite(n) || n < min || n > max) throw new Error(`${nazwa} ściany ${id}: ${min}–${max} cm.`);
+      m[id as ScianaPokoju] = Math.round(n);
+    }
+    if (Object.keys(m).length) out[klucz] = m;
+  }
   if (o.sufit !== undefined && o.sufit !== null && o.sufit !== false) {
     const su = o.sufit === true ? {} : o.sufit;
     if (typeof su !== "object" || Array.isArray(su)) throw new Error("Sufit: zły format.");
@@ -573,4 +597,218 @@ export function parseUstawieniaScian(v: unknown): UstawieniaScian | undefined {
     out.sufit = typeof k === "string" ? { kolor: k.toLowerCase() } : {};
   }
   return Object.keys(out).length ? out : undefined;
+}
+
+/* ---------- łączenie ścian (jak w grach o budowaniu domu) ---------- */
+
+/** Promień przyciągania końca ściany [cm]. */
+export const PROMIEN_LACZENIA = 18;
+
+export type CelLaczenia = { p: P; rodzaj: "koniec" | "naroznik" | "sciana" };
+
+/** Najbliższy punkt na odcinku a–b. */
+function rzutNaOdcinek(p: P, a: P, b: P): P {
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const L2 = dx * dx + dz * dz || 1;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / L2));
+  return { x: a.x + dx * t, z: a.z + dz * t };
+}
+
+/**
+ * Przyciąganie końca ściany działowej: do końców innych ścianek i narożników pokoju (pierwszeństwo),
+ * potem do linii ścian pokoju (wewnętrzna strona) i osi innych ścianek (połączenie w „T”).
+ * pomin – indeksy ścianek, które się teraz ruszają. null = nic w zasięgu.
+ */
+export function przyciagnijKoniec(plan: PlanScian, p: P, pomin: ReadonlySet<number>, promien = PROMIEN_LACZENIA): CelLaczenia | null {
+  let best: { c: CelLaczenia; d: number } | null = null;
+  const sprobuj = (q: P, rodzaj: CelLaczenia["rodzaj"], kara = 0) => {
+    const d = Math.hypot(q.x - p.x, q.z - p.z);
+    if (d > promien) return;
+    if (!best || d + kara < best.d) best = { c: { p: { x: Math.round(q.x), z: Math.round(q.z) }, rodzaj }, d: d + kara };
+  };
+  const dodatkowe = plan.sciany?.dodatkowe ?? [];
+  dodatkowe.forEach((s, i) => {
+    if (pomin.has(i)) return;
+    for (const k of koncowkiSciany(s)) sprobuj(k, "koniec");
+  });
+  const sciany = scianyPokoju(plan);
+  for (const s of sciany) {
+    sprobuj({ x: s.x, z: s.z }, "naroznik");
+    sprobuj({ x: s.x + s.dx * s.dlugosc, z: s.z + s.dz * s.dlugosc }, "naroznik");
+  }
+  // Linie (kara – narożnik i koniec wygrywają, gdy są blisko).
+  for (const s of sciany) sprobuj(rzutNaOdcinek(p, { x: s.x, z: s.z }, { x: s.x + s.dx * s.dlugosc, z: s.z + s.dz * s.dlugosc }), "sciana", 6);
+  dodatkowe.forEach((s, i) => {
+    if (pomin.has(i)) return;
+    const [a, b] = koncowkiSciany(s);
+    sprobuj(rzutNaOdcinek(p, a, b), "sciana", 6);
+  });
+  return (best as { c: CelLaczenia } | null)?.c ?? null;
+}
+
+/** Ścianka dokładnie między dwoma punktami (bez zaokrąglania kąta – połączona ściana idzie za narożnikiem). */
+export function scianaMiedzy(s: ScianaDodatkowa, a: P, b: P): ScianaDodatkowa {
+  const [min, max] = LIMITY_SCIANY.dlugosc;
+  const dlugosc = Math.min(max, Math.max(min, Math.round(Math.hypot(b.x - a.x, b.z - a.z))));
+  const kat = (Math.atan2(b.z - a.z, b.x - a.x) * 180) / Math.PI;
+  return { ...s, x: Math.round((a.x + b.x) / 2), z: Math.round((a.z + b.z) / 2), dlugosc, kat: normujKat(((kat % 360) + 360) % 360) };
+}
+
+/**
+ * Połączenia końców ścianek: dla ścianki i, koniec 0/1 → lista [j, koniec] ścianek, których koniec leży w tym samym
+ * miejscu (≤ 2 cm). Do ruszania połączonych ścian razem i domykania narożników.
+ */
+export function polaczeniaScianek(dodatkowe: readonly ScianaDodatkowa[], tol = 2): [number, 0 | 1][][][] {
+  const konce = dodatkowe.map((s) => koncowkiSciany(s));
+  return konce.map((ki, i) =>
+    ki.map((p) => {
+      const out: [number, 0 | 1][] = [];
+      konce.forEach((kj, j) => {
+        if (j === i) return;
+        kj.forEach((q, e) => {
+          if (Math.hypot(q.x - p.x, q.z - p.z) <= tol) out.push([j, e as 0 | 1]);
+        });
+      });
+      return out;
+    }),
+  );
+}
+
+/**
+ * Ścianka do rysowania z domkniętymi narożnikami: koniec połączony z inną ścianką wydłuża się o pół grubości,
+ * więc narożnik w „L” nie ma szczeliny.
+ */
+export function scianaZPolaczeniami(s: ScianaDodatkowa, polaczone: readonly [boolean, boolean]): ScianaDodatkowa {
+  const ea = polaczone[0] ? s.grubosc / 2 : 0;
+  const eb = polaczone[1] ? s.grubosc / 2 : 0;
+  if (!ea && !eb) return s;
+  const ux = Math.cos(s.kat * RAD);
+  const uz = Math.sin(s.kat * RAD);
+  return { ...s, dlugosc: s.dlugosc + ea + eb, x: s.x + (ux * (eb - ea)) / 2, z: s.z + (uz * (eb - ea)) / 2 };
+}
+
+/**
+ * Narożniki ściany pokoju z grubością (na zewnątrz od wewnętrznej strony) – rzut. Koniec, przy którym stoi
+ * inna ściana pokoju, idzie skosem (narożnik domknięty), wolny koniec jest prosty.
+ */
+export function obrysMuru(s: Sciana, g: number, polaczone: readonly [boolean, boolean] = [true, true]): P[] {
+  const x2 = s.x + s.dx * s.dlugosc;
+  const z2 = s.z + s.dz * s.dlugosc;
+  const ea = polaczone[0] ? g : 0;
+  const eb = polaczone[1] ? g : 0;
+  return [
+    { x: s.x, z: s.z },
+    { x: x2, z: z2 },
+    { x: x2 + s.dx * eb - s.nx * g, z: z2 + s.dz * eb - s.nz * g },
+    { x: s.x - s.dx * ea - s.nx * g, z: s.z - s.dz * ea - s.nz * g },
+  ];
+}
+
+/** Mury ścian pokoju (rzut): ściana, grubość i narożniki z domkniętymi połączeniami. */
+export function muryPokoju(plan: PlanScian) {
+  const sc = scianyPokoju(plan);
+  const konce = sc.map((s) => [{ x: s.x, z: s.z }, { x: s.x + s.dx * s.dlugosc, z: s.z + s.dz * s.dlugosc }]);
+  const styka = (p: P, i: number) => konce.some((k, j) => j !== i && k.some((q) => Math.hypot(q.x - p.x, q.z - p.z) < 1));
+  return sc.map((s, i) => {
+    const g = gruboscScianyPokoju(plan, s.id);
+    return { s, g, punkty: obrysMuru(s, g, [styka(konce[i][0], i), styka(konce[i][1], i)]) };
+  });
+}
+
+/** Zasięg w rzucie wszystkiego, co stoi na podłodze: ściany pokoju (z grubością) i ścianki działowe [cm]. */
+export function zasiegScian(plan: PlanScian) {
+  let x0 = 0;
+  let z0 = 0;
+  let x1 = 0;
+  let z1 = 0;
+  const dodaj = (p: P) => {
+    x0 = Math.min(x0, p.x);
+    z0 = Math.min(z0, p.z);
+    x1 = Math.max(x1, p.x);
+    z1 = Math.max(z1, p.z);
+  };
+  for (const m of muryPokoju(plan)) for (const p of m.punkty) dodaj(p);
+  for (const sd of plan.sciany?.dodatkowe ?? []) for (const p of naroznikiSciany(sd)) dodaj(p);
+  if (plan.pomieszczenie) dodaj({ x: plan.pomieszczenie.szer, z: plan.pomieszczenie.dlug });
+  return { x0, z0, x1, z1 };
+}
+
+export type RuchScianki = {
+  /** Zmienione ścianki: przeciągana i połączone z nią (indeks → nowa ścianka). */
+  zmiany: Map<number, ScianaDodatkowa>;
+  /** Punkt, do którego koniec się przyciągnął (do podświetlenia); null = bez przyciągania. */
+  cel: P | null;
+};
+
+/**
+ * Ruch ścianki działowej z łączeniem (rzut i 3D):
+ *  srodek – przesunięcie (q = nowy środek), koniec ściany, który trafi w zasięg innej ściany, przyciąga się do niej;
+ *  a / b  – przeciąganie końca (q = kursor): obrót i długość wokół drugiego końca, koniec przyciąga się do ścian.
+ * Ścianki połączone końcem z ruszanym końcem idą za nim (ich drugi koniec stoi). laczenie = false (Alt) – bez przyciągania.
+ */
+export function ruchScianki(
+  plan: PlanScian,
+  i: number,
+  tryb: "srodek" | "a" | "b",
+  q: P,
+  { krok = 5, krokKata = 15, laczenie = true }: { krok?: number; krokKata?: number; laczenie?: boolean } = {},
+): RuchScianki {
+  const lista = plan.sciany?.dodatkowe ?? [];
+  const start = lista[i];
+  const zmiany = new Map<number, ScianaDodatkowa>();
+  if (!start) return { zmiany, cel: null };
+  const pol = polaczeniaScianek(lista)[i];
+  const [ka, kb] = koncowkiSciany(start);
+  // Końce, które się ruszają (0 = a, 1 = b), i ścianki pociągnięte za nimi.
+  const ruszane: (0 | 1)[] = tryb === "srodek" ? [0, 1] : [tryb === "a" ? 0 : 1];
+  const pomin = new Set<number>([i]);
+  for (const e of ruszane) for (const [j] of pol[e]) pomin.add(j);
+  let s: ScianaDodatkowa;
+  let cel: P | null = null;
+  if (tryb === "srodek") {
+    s = { ...start, x: Math.round(q.x / krok) * krok, z: Math.round(q.z / krok) * krok };
+    if (laczenie) {
+      // Koniec najbliżej celu wygrywa; cała ścianka przesuwa się o tyle, ile trzeba.
+      let best: { d: number; dx: number; dz: number; p: P } | null = null;
+      for (const k of koncowkiSciany(s)) {
+        const c = przyciagnijKoniec(plan, k, pomin);
+        if (!c) continue;
+        const d = Math.hypot(c.p.x - k.x, c.p.z - k.z);
+        if (!best || d < best.d) best = { d, dx: c.p.x - k.x, dz: c.p.z - k.z, p: c.p };
+      }
+      if (best) {
+        s = { ...s, x: Math.round(s.x + best.dx), z: Math.round(s.z + best.dz) };
+        cel = best.p;
+      }
+    }
+  } else {
+    const staly = tryb === "a" ? kb : ka;
+    const c = laczenie ? przyciagnijKoniec(plan, q, pomin) : null;
+    if (c && Math.hypot(c.p.x - staly.x, c.p.z - staly.z) >= LIMITY_SCIANY.dlugosc[0]) {
+      s = scianaMiedzy(start, staly, c.p);
+      cel = c.p;
+    } else s = scianaZKoncow(start, staly, q, krok, krokKata);
+    // scianaMiedzy / scianaZKoncow liczą kierunek od stałego końca – kolejność końców może się odwrócić; nieistotne.
+  }
+  zmiany.set(i, s);
+  // Połączone ścianki: koniec przy ruszanym końcu jedzie za nim, drugi stoi.
+  const nk = koncowkiSciany(s);
+  const odl = (a: P, b: P) => Math.hypot(a.x - b.x, a.z - b.z);
+  for (const e of ruszane) {
+    let nowy: P;
+    if (tryb === "srodek") nowy = nk[e];
+    else {
+      // Ruszany koniec = ten dalej od stałego (kierunek ścianki mógł się odwrócić).
+      const staly = tryb === "a" ? kb : ka;
+      nowy = cel ?? (odl(nk[0], staly) >= odl(nk[1], staly) ? nk[0] : nk[1]);
+    }
+    for (const [j, ej] of pol[e]) {
+      const kj = koncowkiSciany(lista[j]);
+      const drugi = kj[ej === 0 ? 1 : 0];
+      if (odl(nowy, drugi) < LIMITY_SCIANY.dlugosc[0]) continue;
+      zmiany.set(j, scianaMiedzy(lista[j], drugi, nowy));
+    }
+  }
+  return { zmiany, cel };
 }

@@ -101,3 +101,28 @@ Historia planu: `src/components/panel/useHistoria.ts`. Lista skrótów: okno „
 
 Do 767 px szerokości (`src/components/panel/telefon.ts`) panel jest tylko podglądem ofert: bez nowej oferty, kreatora, rozkroju,
 zmian materiałów i szafek oraz usuwania oferty. `/panel/kreator` na telefonie pokazuje tylko informację i odsyła do ofert.
+
+## Ściany pokoju edytowane jak ścianki działowe
+
+Domyślne ściany pokoju (A, B, C, D… – także sama ściana A bez wymiarów pokoju) mają w lewym panelu kreatora kartę jak ścianka działowa
+(`ScianyPokoju` w `KreatorScian.tsx`): litery do wyboru albo klik w ścianę na rzucie.
+
+- kolor, długość (`zmianaDlugosci`), grubość (`grubosci`, domyślnie 12 cm, na zewnątrz od wewnętrznej strony), wysokość (`wysokosci`, niższa niż sufit);
+- obrót ±15° (`obrotSciany`) – poza A i B, na których stoi zabudowa;
+- usuwanie – poza A (i B w L); w prostokącie ściana znika (otwarta przestrzeń), w innym kształcie sąsiednie ściany się łączą;
+- na rzucie zaznaczona ściana ma uchwyty (`uchwytyScianyPokoju`): kółko na końcu – długość / narożnik, kwadrat w połowie – przesunięcie ściany.
+  Zmiany idą przez `zastosujZmianePokoju` (okna, drzwi i gniazdka muszą się zmieścić).
+
+Grubość widać na rzucie (mur ze skosem w narożnikach, `muryPokoju`) i w 3D jako wierzch muru; sama ściana w 3D zostaje płaszczyzną,
+żeby nie zasłaniać wnętrza.
+
+## Łączenie ścian
+
+Przeciągany koniec ścianki działowej przyciąga się (18 cm) do końców innych ścianek, narożników pokoju, a potem do linii ścian
+(połączenie w „T”) – `przyciagnijKoniec`, `ruchScianki`. Alt wyłącza przyciąganie. Ścianki połączone końcami ruszają się razem
+(przesunięcie albo przeciągnięcie wspólnego narożnika ciągnie drugą ściankę), a narożnik jest domknięty (`scianaZPolaczeniami`).
+Działa na rzucie i przy przeciąganiu w 3D.
+
+## Podłoga
+
+Podłoga w 3D i kadr rzutu obejmują wszystkie ściany (kształt pokoju, grubość, ścianki działowe także poza pokojem) – `zasiegScian`.

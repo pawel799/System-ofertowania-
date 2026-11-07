@@ -50,10 +50,10 @@ function przeniesBez(bez: readonly ScianaUsuwalna[] | undefined, stare: readonly
   return out.size ? Array.from(out).sort() : undefined;
 }
 
-/** Kolory ścian po zmianie układu (podzielona ściana – obie części w jej kolorze). */
-function przeniesKolory(k: UstawieniaScian["koloryScian"], stare: readonly Sciana[], nowe: readonly Sciana[]) {
+/** Kolory (też grubości, wysokości) ścian po zmianie układu (podzielona ściana – obie części dostają wartość starej). */
+function przeniesKolory<V>(k: Partial<Record<ScianaPokoju, V>> | undefined, stare: readonly Sciana[], nowe: readonly Sciana[]) {
   if (!k || !Object.keys(k).length) return undefined;
-  const out: NonNullable<UstawieniaScian["koloryScian"]> = {};
+  const out: Partial<Record<ScianaPokoju, V>> = {};
   for (const w of nowe) {
     const m = { x: w.x + (w.dx * w.dlugosc) / 2, z: w.z + (w.dz * w.dlugosc) / 2 };
     const s = stare.find((x) => {
@@ -61,7 +61,7 @@ function przeniesKolory(k: UstawieniaScian["koloryScian"], stare: readonly Scian
       return Math.abs((m.x - x.x) * x.nx + (m.z - x.z) * x.nz) < 1.5 && t > 0 && t < x.dlugosc;
     });
     const kolor = s ? k[s.id] : undefined;
-    if (kolor) out[w.id] = kolor;
+    if (kolor !== undefined) out[w.id] = kolor;
   }
   return Object.keys(out).length ? out : undefined;
 }
@@ -73,12 +73,22 @@ function zObrysem(
   bez: ScianaUsuwalna[] | undefined,
   prostokat?: { szer: number; dlug: number },
   kolory: UstawieniaScian["koloryScian"] = p.sciany?.koloryScian,
+  wymiary: Pick<UstawieniaScian, "grubosci" | "wysokosci"> = { grubosci: p.sciany?.grubosci, wysokosci: p.sciany?.wysokosci },
 ): PlanKuchni {
-  const { obrys: _o, bez: _b, koloryScian: _k, ...reszta } = p.sciany ?? {};
+  const { obrys: _o, bez: _b, koloryScian: _k, grubosci: _g, wysokosci: _w, ...reszta } = p.sciany ?? {};
   void _o;
   void _b;
   void _k;
-  const sciany = { ...reszta, ...(obrys ? { obrys } : {}), ...(bez?.length ? { bez } : {}), ...(kolory ? { koloryScian: kolory } : {}) };
+  void _g;
+  void _w;
+  const sciany = {
+    ...reszta,
+    ...(obrys ? { obrys } : {}),
+    ...(bez?.length ? { bez } : {}),
+    ...(kolory ? { koloryScian: kolory } : {}),
+    ...(wymiary.grubosci && Object.keys(wymiary.grubosci).length ? { grubosci: wymiary.grubosci } : {}),
+    ...(wymiary.wysokosci && Object.keys(wymiary.wysokosci).length ? { wysokosci: wymiary.wysokosci } : {}),
+  };
   const out: PlanKuchni = { ...p, sciany: Object.keys(sciany).length ? sciany : undefined };
   if (!out.sciany) delete out.sciany;
   if (obrys) {
@@ -127,7 +137,8 @@ export function zastosujObrys(p: PlanKuchni, obrys: Punkt[], topologia: boolean)
     if ("blad" in w) return w;
     wywiad = w.wywiad;
   }
-  return { plan: { ...zObrysem(p, obrys, przeniesBez(p.sciany?.bez, stare, nowe), undefined, przeniesKolory(p.sciany?.koloryScian, stare, nowe)), ...(wywiad ? { wywiad } : {}) } };
+  const wymiary = { grubosci: przeniesKolory(p.sciany?.grubosci, stare, nowe), wysokosci: przeniesKolory(p.sciany?.wysokosci, stare, nowe) };
+  return { plan: { ...zObrysem(p, obrys, przeniesBez(p.sciany?.bez, stare, nowe), undefined, przeniesKolory(p.sciany?.koloryScian, stare, nowe), wymiary), ...(wywiad ? { wywiad } : {}) } };
 }
 
 /** Prostokąt → pokój o dowolnym kształcie (te same ściany, okna i drzwi zostają na miejscach). */
@@ -142,10 +153,12 @@ export function naProstokat(p: PlanKuchni): Wynik {
   if (!czyObrys(p)) return { plan: p };
   const prostokat = prostokatObrysu(p.sciany!.obrys!);
   const stare = scianyPokojuWszystkie(p);
-  const cel0 = zObrysem(p, null, undefined, prostokat, undefined);
+  const cel0 = zObrysem(p, null, undefined, prostokat, undefined, {});
   const nowe = scianyPokojuWszystkie(cel0);
   const kol = przeniesKolory(p.sciany?.koloryScian, stare, nowe);
-  const cel = kol ? { ...cel0, sciany: { ...cel0.sciany, koloryScian: kol } } : cel0;
+  const gr = przeniesKolory(p.sciany?.grubosci, stare, nowe);
+  const wy = przeniesKolory(p.sciany?.wysokosci, stare, nowe);
+  const cel = kol || gr || wy ? { ...cel0, sciany: { ...cel0.sciany, ...(kol ? { koloryScian: kol } : {}), ...(gr ? { grubosci: gr } : {}), ...(wy ? { wysokosci: wy } : {}) } } : cel0;
   let wywiad = p.wywiad;
   if (wywiad) {
     const w = przeniesNaSciany(wywiad, stare, nowe);
@@ -317,4 +330,121 @@ export function gotowyKsztalt(k: GotowyKsztalt, W: number, D: number): Punkt[] {
         { x: 0, z: r(D * 0.5) },
       ];
   }
+}
+
+/* ---------- edycja ścian pokoju z rzutu i karty ściany (jak ścianki działowe) ---------- */
+
+/** Zmiana geometrii pokoju: nowy obrys albo wymiary prostokąta / długości ścian A i B. */
+export type ZmianaPokoju = { obrys: Punkt[] } | { scianaA?: number; scianaB?: number; pomieszczenie?: { szer: number; dlug: number } };
+
+const ogr = (v: number, min: number, max: number) => Math.max(min, Math.min(max, Math.round(v)));
+
+/** Plan po zmianie – bez sprawdzania (podgląd na rzucie w trakcie przeciągania). */
+export function podgladZmianyPokoju(p: PlanKuchni, z: ZmianaPokoju): PlanKuchni {
+  if ("obrys" in z) return { ...p, sciany: { ...p.sciany, obrys: z.obrys } };
+  return {
+    ...p,
+    ...(z.scianaA !== undefined ? { scianaA: ogr(z.scianaA, 80, 1200) } : {}),
+    ...(z.scianaB !== undefined ? { scianaB: ogr(z.scianaB, 80, 1200) } : {}),
+    ...(z.pomieszczenie ? { pomieszczenie: { szer: ogr(z.pomieszczenie.szer, 120, 2000), dlug: ogr(z.pomieszczenie.dlug, 120, 2000) } } : {}),
+  };
+}
+
+/** Zmiana geometrii pokoju ze sprawdzeniem (okna, drzwi i gniazdka muszą się zmieścić na swoich ścianach). */
+export function zastosujZmianePokoju(p: PlanKuchni, z: ZmianaPokoju): Wynik {
+  if ("obrys" in z) {
+    const baza = czyObrys(p) ? { plan: p } : naObrys(p);
+    if ("blad" in baza) return baza;
+    return zastosujObrys(baza.plan, z.obrys, false);
+  }
+  const nowy = podgladZmianyPokoju(p, z);
+  if (nowy.pomieszczenie) {
+    // Zabudowa nie dłuższa niż pokój.
+    nowy.scianaA = Math.min(nowy.scianaA, nowy.pomieszczenie.szer);
+    if (nowy.uklad === "L") nowy.scianaB = Math.min(nowy.scianaB, nowy.pomieszczenie.dlug);
+  }
+  const blad = sprawdzZawartosc(nowy, scianyPokojuWszystkie(nowy));
+  return blad ? { blad } : { plan: nowy };
+}
+
+/** Nowa długość ściany pokoju (karta ściany): obrys, prostokąt albo same ściany A / B. */
+export function zmianaDlugosci(p: PlanKuchni, id: ScianaPokoju, L: number): ZmianaPokoju | null {
+  if (czyObrys(p)) {
+    const w = p.sciany!.obrys!;
+    const k = scianyObrysu(w).findIndex((s) => s.id === id);
+    const n = k >= 0 ? zmienDlugosc(w, k, L) : null;
+    return n ? { obrys: n } : null;
+  }
+  if (p.pomieszczenie) {
+    const { szer, dlug } = p.pomieszczenie;
+    return id === "A" || id === "C" ? { pomieszczenie: { szer: L, dlug } } : { pomieszczenie: { szer, dlug: L } };
+  }
+  return id === "A" ? { scianaA: L } : id === "B" ? { scianaB: L } : null;
+}
+
+/** Obrót ściany pokoju o kąt [°] wokół jej narożnika przy ścianie A/B (A i B nie obracają się – na nich stoi zabudowa). */
+export function obrotSciany(p: PlanKuchni, id: ScianaPokoju, stopnie: number): ZmianaPokoju | null {
+  if (id === "A" || id === "B") return null;
+  const w = czyObrys(p) ? p.sciany!.obrys! : p.pomieszczenie ? obrysZProstokata(p) : null;
+  if (!w) return null;
+  const k = scianyObrysu(w).findIndex((s) => s.id === id);
+  if (k < 0) return null;
+  const [i, j] = krawedzieObrysu(w.length)[k];
+  const ruchomy = j > 1 ? j : i > 1 ? i : null;
+  if (ruchomy === null) return null;
+  const os = w[ruchomy === j ? i : j];
+  const q = w[ruchomy];
+  const r = (stopnie * Math.PI) / 180;
+  const dx = q.x - os.x;
+  const dz = q.z - os.z;
+  const nowy = { x: Math.round(os.x + dx * Math.cos(r) - dz * Math.sin(r)), z: Math.round(os.z + dx * Math.sin(r) + dz * Math.cos(r)) };
+  return { obrys: w.map((pt, idx) => (idx === ruchomy ? nowy : pt)) };
+}
+
+/**
+ * Uchwyty ściany pokoju na rzucie: przesunięcie całej ściany (prostopadle) i narożniki na jej końcach.
+ * Każdy uchwyt zamienia punkt kursora (cm) na zmianę pokoju. Ściana A i B nie przesuwają się (narożnik zabudowy).
+ */
+export type UchwytPokoju = { rodzaj: "naroznik" | "sciana"; p: Punkt; ruch: (q: Punkt, krok: number) => ZmianaPokoju };
+
+export function uchwytyScianyPokoju(p: PlanKuchni, id: ScianaPokoju): UchwytPokoju[] {
+  const kr = (v: number, k: number) => Math.round(v / k) * k;
+  if (czyObrys(p)) {
+    const w = p.sciany!.obrys!;
+    const sc = scianyObrysu(w);
+    const k = sc.findIndex((s) => s.id === id);
+    if (k < 0) return [];
+    const [i, j] = krawedzieObrysu(w.length)[k];
+    const out: UchwytPokoju[] = [];
+    for (const idx of [i, j]) if (idx !== 0) out.push({ rodzaj: "naroznik", p: w[idx], ruch: (q, krok) => ({ obrys: przesunNaroznik(w, idx, q, krok) }) });
+    const s = sc[k];
+    const moznaPrzesunac = i !== 0 && j !== 0 && ((i !== 1 && j !== 1) || Math.abs(s.nz) < 1e-6);
+    if (moznaPrzesunac) {
+      const m = { x: s.x + (s.dx * s.dlugosc) / 2, z: s.z + (s.dz * s.dlugosc) / 2 };
+      out.push({
+        rodzaj: "sciana",
+        p: m,
+        ruch: (q, krok) => {
+          const d = kr((q.x - m.x) * s.nx + (q.z - m.z) * s.nz, krok);
+          return { obrys: w.map((pt, idx) => (idx === i || idx === j ? { x: Math.max(0, Math.round(pt.x + s.nx * d)), z: Math.max(0, Math.round(pt.z + s.nz * d)) } : pt)) };
+        },
+      });
+    }
+    return out;
+  }
+  const pom = p.pomieszczenie;
+  if (pom) {
+    const LA = Math.max(p.scianaA, pom.szer);
+    const LB = Math.max(p.uklad === "L" ? p.scianaB : 0, pom.dlug);
+    const rog = { x: LA, z: LB };
+    const naroznik: UchwytPokoju = { rodzaj: "naroznik", p: rog, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: kr(q.z, krok) } }) };
+    if (id === "A") return [{ rodzaj: "naroznik", p: { x: LA, z: 0 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: pom.dlug } }) }];
+    if (id === "B") return [{ rodzaj: "naroznik", p: { x: 0, z: LB }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(q.z, krok) } }) }];
+    if (id === "C") return [naroznik, { rodzaj: "sciana", p: { x: LA / 2, z: LB }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(q.z, krok) } }) }];
+    if (id === "D") return [naroznik, { rodzaj: "sciana", p: { x: LA, z: LB / 2 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: pom.dlug } }) }];
+    return [];
+  }
+  if (id === "A") return [{ rodzaj: "naroznik", p: { x: p.scianaA, z: 0 }, ruch: (q, krok) => ({ scianaA: kr(q.x, krok) }) }];
+  if (id === "B" && p.uklad === "L") return [{ rodzaj: "naroznik", p: { x: 0, z: p.scianaB }, ruch: (q, krok) => ({ scianaB: kr(q.z, krok) }) }];
+  return [];
 }
