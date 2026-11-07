@@ -738,3 +738,23 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .pr-lista li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--g3); font-size: 12.5px; }
 .pnl .pr-lista b { font-weight: 550; white-space: nowrap; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .pnl .pr-body { padding: 12px; } .pnl .modal.pr-okno { height: calc(100dvh - 16px); } }
+
+/* Dodatkowe ściany na rzucie */
+.pnl .kr-sciana-dod polygon { fill: var(--text-2); stroke: var(--text); stroke-width: 0.8; opacity: 0.9; }
+.pnl .kr-sciana-dod[data-bad] polygon { fill: var(--red); stroke: var(--red); opacity: 0.75; }
+.pnl .kr-sciana-dod text { font-size: 7px; font-weight: 600; fill: var(--panel); pointer-events: none; paint-order: stroke; stroke: var(--text-2); stroke-width: 1.6px; }
+.pnl .kr-sciana-koniec { fill: var(--panel); stroke: var(--accent); stroke-width: 1.4; }
+.pnl .kr-sciana-koniec:hover { fill: var(--accent); }
+
+/* Krok „Pomiar”: ściany i sufit */
+.pnl .kr-sciany { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--g3); padding-top: 12px; margin-top: 4px; }
+.pnl .kr-sciany h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.pnl .kr-sciany-pokoju { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.pnl .kr-sciany-pokoju .kr-hint { flex-basis: 100%; margin: 0; }
+.pnl .kr-sufit { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.pnl .kr-sufit input[type="color"] { width: 32px; height: 24px; padding: 0; border: 0; background: none; cursor: pointer; }
+.pnl .kr-sciany-lista { display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-sciana-karta { border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.pnl .kr-sciana-gora { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 13px; }
+.pnl .kr-sciana-gora .btn { padding-left: 8px; padding-right: 8px; height: 28px; font-size: 12px; }
+.pnl .kr-sciana-gora .kr-usun { color: var(--red); }

@@ -8,7 +8,7 @@
  */
 import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaPrzyScianie } from "@/lib/otwory";
-import { SCIANA_LABEL, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
+import { naroznikiSciany, SCIANA_LABEL, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
 import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { PunktInstalacji } from "@/lib/wywiad";
 import { yElementu } from "@/components/kuchnia/uklad3d";
@@ -210,6 +210,11 @@ function zasieg(plan: PlanKuchni) {
     x1 = Math.max(x1, r.x1);
     z1 = Math.max(z1, r.z1);
   }
+  for (const sd of plan.sciany?.dodatkowe ?? [])
+    for (const p of naroznikiSciany(sd)) {
+      x1 = Math.max(x1, p.x);
+      z1 = Math.max(z1, p.z);
+    }
   return { x1, z1 };
 }
 
@@ -268,6 +273,13 @@ export function svgRzutu(plan: PlanKuchni): string {
   const sciany = scianyPokoju(plan);
   if (plan.pomieszczenie) out.push(`<rect class="rys-pokoj" x="0" y="0" width="${n(plan.pomieszczenie.szer)}" height="${n(plan.pomieszczenie.dlug)}" />`);
   for (const s of sciany) otworyRzut(out, plan, s, gr);
+  // Dodatkowe ściany (działowe, skosy) – mur z numerem i długością.
+  (plan.sciany?.dodatkowe ?? []).forEach((sd, i) => {
+    out.push(`<polygon class="rys-mur" points="${naroznikiSciany(sd).map((p) => `${n(p.x)},${n(p.z)}`).join(" ")}" />`);
+    const kat = sd.kat > 90 ? sd.kat - 180 : sd.kat;
+    const ty = sd.z - sd.grubosc / 2 - fs * 0.7;
+    out.push(`<text class="rys-opis" x="${n(sd.x)}" y="${n(ty)}" font-size="${n(fs * 0.8)}" text-anchor="middle"${kat ? ` transform="rotate(${n(kat)} ${n(sd.x)} ${n(sd.z)})"` : ""}>ściana ${i + 1} · ${cm(sd.dlugosc)}</text>`);
+  });
   const el = plan.elementy.map((e, i) => ({ e, i })).sort((a, b) => KOLEJNOSC[a.e.strefa] - KOLEJNOSC[b.e.strefa]);
   for (const { e } of el) {
     const r = rectBazowy(e);

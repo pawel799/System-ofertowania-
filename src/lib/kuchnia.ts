@@ -14,7 +14,7 @@ import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
-import { KOLOR_SCIANY_RE } from "./sciany";
+import { parseUstawieniaScian, type UstawieniaScian } from "./sciany";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -120,8 +120,8 @@ export type PlanKuchni = {
   dodatki?: DodatekOferty[];
   /** Wspólne kolory boków i środka (front jest w ofercie). Brak = jak fronty / jak boki. */
   kolory?: KoloryProjektu;
-  /** Ściany pokoju w 3D: kolor (#rrggbb, sciany.ts); brak = kolor tła sceny. */
-  sciany?: { kolor?: string };
+  /** Ściany pokoju w 3D (sciany.ts): kolor (brak = kolor tła sceny), usunięte ściany pokoju, dodatkowe ściany, sufit. */
+  sciany?: UstawieniaScian;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -1086,9 +1086,12 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     }
   }
   const plyta = typeof o.plyta === "string" && /^[A-Za-z0-9-]{1,24}$/.test(o.plyta) ? o.plyta : undefined;
-  const scianyO = o.sciany && typeof o.sciany === "object" && !Array.isArray(o.sciany) ? (o.sciany as Record<string, unknown>) : null;
-  if (scianyO?.kolor !== undefined && scianyO.kolor !== null && (typeof scianyO.kolor !== "string" || !KOLOR_SCIANY_RE.test(scianyO.kolor))) blad("Kolor ścian: #rrggbb.");
-  const kolorScian = typeof scianyO?.kolor === "string" ? scianyO.kolor.toLowerCase() : undefined;
+  let sciany: UstawieniaScian | undefined;
+  try {
+    sciany = parseUstawieniaScian(o.sciany);
+  } catch (err) {
+    blad(err instanceof Error ? err.message : "Ściany mają zły format.");
+  }
   let kolory: KoloryProjektu | undefined;
   try {
     const k = parseKoloryMebla(o.kolory, "Kolory projektu");
@@ -1114,7 +1117,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(plyta ? { plyta } : {}),
     ...(dodatki?.length ? { dodatki } : {}),
     ...(kolory ? { kolory } : {}),
-    ...(kolorScian ? { sciany: { kolor: kolorScian } } : {}),
+    ...(sciany ? { sciany } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

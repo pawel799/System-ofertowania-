@@ -15,8 +15,8 @@ import {
   type PlanKuchni,
   type Strefa,
 } from "@/lib/kuchnia";
-import { punktNaScianie, scianyPokoju, wGranicachPokoju } from "@/lib/sciany";
-import { meblaWOtworze, otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
+import { koncowkiSciany, naroznikiSciany, punktNaScianie, scianaZKoncow, scianyPokoju, wGranicachPokoju, type ScianaDodatkowa } from "@/lib/sciany";
+import { meblaWOtworze, otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import { punktWPunkcie, sprawdzPunkt } from "@/lib/punkty";
 import { PUNKT_INFO, type PunktInstalacji, type RodzajPunktu } from "@/lib/wywiad";
 import type { Otwor } from "@/lib/wywiad";
@@ -37,6 +37,8 @@ type Props = {
   onBladOtworu?: (powod: string) => void;
   /** Przesunięcie gniazdka / punktu instalacji po ścianach (błąd – onBladOtworu). */
   onPunkt?: (i: number, p: PunktInstalacji) => void;
+  /** Dodatkowa ściana przesunięta, obrócona albo wydłużona (przeciąganie środka albo końca; błąd – onBladOtworu). */
+  onSciana?: (i: number, s: ScianaDodatkowa) => void;
 };
 
 type Ciagniecie = { id: string; pointer: number; dx: number; dz: number };
@@ -54,6 +56,13 @@ function widok(plan: PlanKuchni, wymiary: boolean) {
     x1 = Math.max(x1, plan.pomieszczenie.szer + (wymiary ? 48 : 24));
     z1 = Math.max(z1, plan.pomieszczenie.dlug + (wymiary ? 48 : 24));
   }
+  for (const sd of plan.sciany?.dodatkowe ?? [])
+    for (const p of naroznikiSciany(sd)) {
+      x0 = Math.min(x0, p.x - 20);
+      z0 = Math.min(z0, p.z - 20);
+      x1 = Math.max(x1, p.x + 20);
+      z1 = Math.max(z1, p.z + 20);
+    }
   for (const e of plan.elementy) {
     const r = rect(e);
     x0 = Math.min(x0, r.x0 - 28);
@@ -224,7 +233,7 @@ function PunktRzut({ plan, p, zly, onPointerDown }: { plan: PlanKuchni; p: Punkt
   );
 }
 
-export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu, onPunkt }: Props) {
+export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrzesun, onKolizja, onOtworz, onOtwor, onBladOtworu, onPunkt, onSciana }: Props) {
   // Podwójne kliknięcie liczymy sami: przechwycenie wskaźnika (przeciąganie) zjada zdarzenie dblclick.
   const ostatnieKlikniecie = useRef<{ id: string; t: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -326,6 +335,55 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
   };
+  // Dodatkowe ściany: przeciąganie środka (przesuwa) albo końca (obraca i zmienia długość wokół drugiego końca).
+  const [podgladSciany, setPodgladSciany] = useState<{ i: number; s: ScianaDodatkowa; bledy: string[] } | null>(null);
+  const cbSciana = useRef({ onSciana, onBladOtworu });
+  cbSciana.current = { onSciana, onBladOtworu };
+  const zacznijSciane = (ev: ReactPointerEvent<SVGElement>, i: number, tryb: "srodek" | "a" | "b") => {
+    if (ev.button !== 0) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    const svg = svgRef.current;
+    const start = planRef.current.sciany?.dodatkowe?.[i];
+    if (!svg || !start) return;
+    const [ka, kb] = koncowkiSciany(start);
+    const p0 = punkt(svg, ev);
+    let teraz = { i, s: start, bledy: [] as string[] };
+    setPodgladSciany(teraz);
+    svg.setPointerCapture(ev.pointerId);
+    const move = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      const q = punkt(svg, pe);
+      const krok = pe.shiftKey ? 1 : 5;
+      let s: ScianaDodatkowa;
+      if (tryb === "srodek") s = { ...start, x: Math.round((start.x + q.x - p0.x) / krok) * krok, z: Math.round((start.z + q.y - p0.y) / krok) * krok };
+      else s = scianaZKoncow(start, tryb === "a" ? kb : ka, { x: q.x, z: q.y }, krok, pe.shiftKey ? 1 : 15);
+      teraz = { i, s, bledy: sprawdzScianeDodatkowa(planRef.current, s) };
+      setPodgladSciany(teraz);
+    };
+    const up = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      sluchacze.current?.();
+      sluchacze.current = null;
+      if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
+      setPodgladSciany(null);
+      const s = teraz.s;
+      if (s.x === start.x && s.z === start.z && s.kat === start.kat && s.dlugosc === start.dlugosc) return;
+      if (teraz.bledy.length) cbSciana.current.onBladOtworu?.(teraz.bledy[0]);
+      else cbSciana.current.onSciana?.(i, s);
+    };
+    sluchacze.current?.();
+    sluchacze.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+  const scianyDodatkowe = (plan.sciany?.dodatkowe ?? []).map((sd, i) => (podgladSciany?.i === i ? podgladSciany.s : sd));
   const elementy = plan.elementy.map((e) => (podglad && e.id === podglad.id ? { ...e, x: podglad.x, z: podglad.z } : e));
   const widokPlan: PlanKuchni = { ...plan, elementy };
   const podgladEl = podglad ? elementy.find((e) => e.id === podglad.id) : undefined;
@@ -364,8 +422,41 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
       {linie.map((l) => (
         <line key={l.k} className="kr-grid" x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} />
       ))}
-      <line className="kr-wall" x1={0} y1={0} x2={plan.scianaA} y2={0} />
-      {plan.uklad === "L" ? <line className="kr-wall" x1={0} y1={0} x2={0} y2={plan.scianaB} /> : null}
+      {scianyPokoju(plan).map((s) => (
+        <line key={s.id} className="kr-wall" data-sciana-pokoju={s.id} x1={s.x} y1={s.z} x2={s.x + s.dx * s.dlugosc} y2={s.z + s.dz * s.dlugosc} />
+      ))}
+      {/* Dodatkowe ściany: środek – przesuń, kółka na końcach – obróć i zmień długość (Shift: co 1 cm / 1°). */}
+      {scianyDodatkowe.map((sd, i) => {
+        const pkt = naroznikiSciany(sd);
+        const [a, b] = koncowkiSciany(sd);
+        const zla = podgladSciany?.i === i && podgladSciany.bledy.length > 0;
+        // Podpis wzdłuż ściany, zawsze czytelny (−90°…90°).
+        const kat = sd.kat > 90 ? sd.kat - 180 : sd.kat;
+        return (
+          <g key={sd.id} className="kr-sciana-dod" data-nr={i + 1} data-bad={zla ? "" : undefined}>
+            <polygon
+              points={pkt.map((p) => `${p.x},${p.z}`).join(" ")}
+              onPointerDown={onSciana ? (ev) => zacznijSciane(ev, i, "srodek") : undefined}
+              style={onSciana ? { cursor: "grab", touchAction: "none" } : undefined}
+            >
+              <title>{`Ściana ${i + 1} · ${sd.dlugosc} cm · ${sd.kat}°`}</title>
+            </polygon>
+            <text x={sd.x} y={sd.z} textAnchor="middle" dominantBaseline="central" transform={kat ? `rotate(${kat} ${sd.x} ${sd.z})` : undefined}>
+              {wymiary || podgladSciany?.i === i ? `${i + 1} · ${sd.dlugosc} cm${sd.kat ? ` · ${sd.kat}°` : ""}` : `${i + 1}`}
+            </text>
+            {onSciana
+              ? ([
+                  ["a", a],
+                  ["b", b],
+                ] as const).map(([k, p]) => (
+                  <circle key={k} className="kr-sciana-koniec" data-koniec={k} cx={p.x} cy={p.z} r={4.5} onPointerDown={(ev) => zacznijSciane(ev, i, k)} style={{ cursor: "crosshair", touchAction: "none" }}>
+                    <title>Przeciągnij: obróć i zmień długość</title>
+                  </circle>
+                ))
+              : null}
+          </g>
+        );
+      })}
       {/* Okna i drzwi na ścianach A–D: przeciągnij, żeby przesunąć (także na inną ścianę); czerwone = nie może tam stać. */}
       {otwory.map((o, i) => (
         <OtworRzut

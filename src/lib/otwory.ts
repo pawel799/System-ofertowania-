@@ -4,7 +4,7 @@
  * ani zasłaniać okna (słupek, szafka górna na wysokości okna, szafka wyższa niż parapet).
  */
 import { rect, rodzajElementu, type ElementKuchni, type PlanKuchni } from "./kuchnia";
-import { scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "./sciany";
+import { LIMITY_SCIANY, scianaNachodzi, scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, type ScianaDodatkowa, type Sciana, type ScianaPokoju } from "./sciany";
 import type { Otwor } from "./wywiad";
 
 /** Dół szafek górnych [cm] – jak Y_GORNA w scenie 3D (components/kuchnia/uklad3d.ts). */
@@ -62,8 +62,38 @@ export function sprawdzOtwor(plan: PlanKuchni, i: number, o: Otwor): string[] {
   return Array.from(new Set(bledy));
 }
 
-/** Mebel, który po przesunięciu stanąłby w drzwiach albo zasłonił okno – komunikat (null = w porządku). */
+/** Dodatkowa ściana, na którą wchodzi mebel (niższa ściana nie przeszkadza szafkom wiszącym nad nią). */
+export function scianaPodMeblem(plan: PlanKuchni, e: ElementKuchni): { s: ScianaDodatkowa; nr: number } | null {
+  const lista = plan.sciany?.dodatkowe ?? [];
+  if (!lista.length) return null;
+  const pion = wysokoscMebla(e);
+  const r = rect(e);
+  for (let i = 0; i < lista.length; i++) {
+    const s = lista[i];
+    if (pion && pion.y0 >= wysokoscSciany(s, plan)) continue;
+    if (scianaNachodzi(s, r)) return { s, nr: i + 1 };
+  }
+  return null;
+}
+
+/** Błędy dodatkowej ściany (pusta lista = można): nie może wchodzić na meble ani uciec daleko poza pokój. */
+export function sprawdzScianeDodatkowa(plan: PlanKuchni, s: ScianaDodatkowa): string[] {
+  const bledy: string[] = [];
+  const [min, max] = LIMITY_SCIANY.poz;
+  if (s.x < min || s.x > max || s.z < min || s.z > max) bledy.push("Ściana jest za daleko od pokoju.");
+  const H = wysokoscSciany(s, plan);
+  for (const e of plan.elementy) {
+    const pion = wysokoscMebla(e);
+    if (pion && pion.y0 >= H) continue;
+    if (scianaNachodzi(s, rect(e))) bledy.push(`Ściana wchodzi na „${e.nazwa}”.`);
+  }
+  return Array.from(new Set(bledy)).slice(0, 3);
+}
+
+/** Mebel, który po przesunięciu stanąłby w drzwiach, zasłonił okno albo wszedł w ścianę – komunikat (null = w porządku). */
 export function meblaWOtworze(plan: PlanKuchni, e: ElementKuchni): string | null {
+  const sc = scianaPodMeblem(plan, e);
+  if (sc) return `„${e.nazwa}” wchodzi na ścianę ${sc.nr}.`;
   for (const s of scianyPokoju(plan)) {
     const odc = meblaPrzyScianie(e, s);
     if (!odc) continue;

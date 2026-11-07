@@ -21,6 +21,7 @@ export function PoleCm({
   min,
   max,
   onCommit,
+  jedn = "cm",
 }: {
   id: string;
   label: string;
@@ -28,6 +29,8 @@ export function PoleCm({
   min: number;
   max: number;
   onCommit: (n: number) => boolean | void;
+  /** Jednostka w podpowiedzi zakresu. */
+  jedn?: string;
 }) {
   const [tekst, setTekst] = useState(String(value));
   useEffect(() => setTekst(String(value)), [value]);
@@ -59,7 +62,7 @@ export function PoleCm({
         }}
       />
       <span className="kr-hint">
-        {min}–{max} cm
+        {min}–{max} {jedn}
       </span>
     </label>
   );

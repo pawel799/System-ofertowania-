@@ -13,6 +13,7 @@ import { setPalettes as setPaletteStore } from "../paletteStore";
 import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
 import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
+import type { ScianaDodatkowa, UstawieniaScian } from "@/lib/sciany";
 import FormatkiOkno from "../produkcja/FormatkiOkno";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
 import { useBrand } from "@/lib/brand";
@@ -105,6 +106,14 @@ function useWaski() {
     return () => mq.removeEventListener("change", on);
   }, []);
   return waski;
+}
+
+/** Ustawienia ścian do zapisu: kolor ze sceny (scianyStore), reszta (usunięte, dodatkowe, sufit) z planu. */
+function scianyZKolorem(sc: UstawieniaScian | undefined, kolor: string | null): { sciany?: UstawieniaScian } {
+  const { kolor: _stary, ...reszta } = sc ?? {};
+  void _stary;
+  const out: UstawieniaScian = { ...reszta, ...(kolor ? { kolor } : {}) };
+  return Object.keys(out).length ? { sciany: out } : {};
 }
 
 export default function KreatorApp() {
@@ -263,6 +272,11 @@ export default function KreatorApp() {
   // Okno albo drzwi przeciągnięte na rzucie / w 3D (już sprawdzone – sprawdzOtwor w src/lib/otwory.ts).
   const przesunOtwor = useCallback((i: number, o: Otwor) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, otwory: p.wywiad.otwory.map((x, j) => (j === i ? o : x)) } } : p)), []);
   const bladOtworu = useCallback((powod: string) => toast("Tu nie można przesunąć", { type: "err", desc: powod }), []);
+  const przesunSciane = useCallback(
+    (i: number, sc: ScianaDodatkowa) =>
+      setPlan((p) => (p.sciany?.dodatkowe ? { ...p, sciany: { ...p.sciany, dodatkowe: p.sciany.dodatkowe.map((x, j) => (j === i ? sc : x)) } } : p)),
+    [],
+  );
   const przesunPunkt = useCallback(
     (i: number, pk: PunktInstalacji) => setPlan((p) => (p.wywiad ? { ...p, wywiad: { ...p.wywiad, punkty: (p.wywiad.punkty ?? []).map((x, j) => (j === i ? pk : x)) } } : p)),
     [],
@@ -292,7 +306,7 @@ export default function KreatorApp() {
       ...(plytaId ? { plyta: plytaId } : {}),
       ...(dodatki?.length ? { dodatki } : {}),
       ...(koloryProjektu.korpus || koloryProjektu.srodek ? { kolory: koloryProjektu } : {}),
-      ...(kolorScian ? { sciany: { kolor: kolorScian } } : {}),
+      ...scianyZKolorem(plan.sciany, kolorScian),
     }),
     [plan, plytaId, dodatki, koloryProjektu, kolorScian],
   );
@@ -782,6 +796,7 @@ export default function KreatorApp() {
                   onOtwor={przesunOtwor}
                   onBladOtworu={bladOtworu}
                   onPunkt={przesunPunkt}
+                  onSciana={przesunSciane}
                 />
                 </div>
                 <p className="kr-legend">
@@ -807,7 +822,7 @@ export default function KreatorApp() {
                 </div>
                 <KuchniaTlo
                   plan={plan}
-                  edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu, onPunkt: przesunPunkt }}
+                  edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu, onPunkt: przesunPunkt, onSciana: przesunSciane }}
                   edycjaMebli={edycjaMebli}
                   modele={modeleSceny}
                   zaznaczony={zaznaczony}

@@ -13,6 +13,7 @@ import { PoleCm } from "./KreatorWlasciwosci";
 import { scianyPokoju, SCIANA_LABEL } from "@/lib/sciany";
 import { sprawdzOtwor, wolneMiejsceOtworu } from "@/lib/otwory";
 import { Seg } from "./ui";
+import KreatorSciany from "./KreatorSciany";
 
 export const KROKI = ["pomieszczenie", "otoczenie", "wyposazenie", "meble", "materialy", "oferta"] as const;
 export type Krok = (typeof KROKI)[number];
@@ -112,6 +113,7 @@ export function KrokPomieszczenie({
             ? "Ściana A to ściana z oknem albo najdłuższa. W układzie L ściana B zaczyna się w tym samym narożniku."
             : "Obrys pokoju widać na rzucie jako przerywaną linię."}
       </p>
+      <KreatorSciany plan={plan} setPlan={setPlan} />
     </div>
   );
 }

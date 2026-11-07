@@ -11,8 +11,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, type ScianaPokoju } from "@/lib/sciany";
-import { otworWPunkcie, sprawdzOtwor } from "@/lib/otwory";
+import { KOLOR_SUFITU, scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, zakresPokoju, type ScianaDodatkowa, type ScianaPokoju } from "@/lib/sciany";
+import { otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Otwor } from "@/lib/wywiad";
 import { useSciany } from "./scianyStore";
@@ -27,6 +27,8 @@ export type EdycjaOtworow = {
   onBlad: (powod: string) => void;
   /** Gniazdka i inne punkty instalacji (PunktyInstalacji.tsx). */
   onPunkt?: EdycjaPunktow["onPunkt"];
+  /** Dodatkowa ściana przesunięta w 3D (przeciąganie po podłodze). */
+  onSciana?: (i: number, s: ScianaDodatkowa) => void;
 };
 
 type Podglad = { i: number; o: Otwor; bledy: string[] };
@@ -105,6 +107,72 @@ function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow, onPodgl
   return { podglad, zacznij };
 }
 
+type PodgladSciany = { i: number; s: ScianaDodatkowa; bledy: string[] };
+
+/** Przeciąganie dodatkowej ściany po podłodze (krok 5 cm, z Shift 1 cm); czerwona = nie może tam stać. */
+function usePrzeciaganieSciany(plan: PlanKuchni, edycja?: EdycjaOtworow) {
+  const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
+  const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
+  const invalidate = useThree((s) => s.invalidate);
+  const [podglad, setPodglad] = useState<PodgladSciany | null>(null);
+  const planRef = useRef(plan);
+  planRef.current = plan;
+  const sprzatanie = useRef<(() => void) | null>(null);
+  useEffect(() => () => sprzatanie.current?.(), []);
+  const zacznij = (e: ThreeEvent<PointerEvent>, i: number) => {
+    if (!edycja?.onSciana || e.button !== 0) return;
+    e.stopPropagation();
+    const start = planRef.current.sciany?.dodatkowe?.[i];
+    if (!start) return;
+    if (controls) controls.enabled = false;
+    const ray = new THREE.Raycaster();
+    const ndc = new THREE.Vector2();
+    const podloga = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const naPodlodze = (pe: { clientX: number; clientY: number }) => {
+      const r = gl.domElement.getBoundingClientRect();
+      ndc.set(((pe.clientX - r.left) / r.width) * 2 - 1, -((pe.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      return ray.ray.intersectPlane(podloga, new THREE.Vector3());
+    };
+    const p0 = naPodlodze(e.nativeEvent);
+    if (!p0) return;
+    let teraz: PodgladSciany = { i, s: start, bledy: [] };
+    setPodglad(teraz);
+    const move = (pe: PointerEvent) => {
+      const p = naPodlodze(pe);
+      if (!p) return;
+      const krok = pe.shiftKey ? 1 : 5;
+      const x = Math.round((start.x + (p.x - p0.x) * 100) / krok) * krok;
+      const z = Math.round((start.z + (p.z - p0.z) * 100) / krok) * krok;
+      const s = { ...start, x, z };
+      teraz = { i, s, bledy: sprawdzScianeDodatkowa(planRef.current, s) };
+      setPodglad(teraz);
+      invalidate();
+    };
+    const up = () => {
+      sprzatanie.current?.();
+      sprzatanie.current = null;
+      if (controls) controls.enabled = true;
+      setPodglad(null);
+      invalidate();
+      if (teraz.s.x === start.x && teraz.s.z === start.z) return;
+      if (teraz.bledy.length) edycja.onBlad(teraz.bledy[0]);
+      else edycja.onSciana?.(i, teraz.s);
+    };
+    sprzatanie.current?.();
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    sprzatanie.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  };
+  return { podglad, zacznij };
+}
+
 export default function Sciany({
   plan,
   kolorDomyslny,
@@ -125,6 +193,8 @@ export default function Sciany({
 }) {
   const { widoczne, kolor } = useSciany();
   const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja, onPodglad);
+  const przeciaganieSciany = usePrzeciaganieSciany(plan, edycja);
+  const podgladSciany = przeciaganieSciany.podglad;
   const H = wysokoscPokoju(plan);
   const sciany = scianyPokoju(plan);
   const otwory = (plan.wywiad?.otwory ?? []).map((o, i) => (podglad?.i === i ? podglad.o : o));
@@ -133,6 +203,11 @@ export default function Sciany({
   const rama = useMemo(() => new THREE.MeshStandardMaterial({ color: "#eceae6", roughness: 0.5 }), []);
   const skrzydlo = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6f55", roughness: 0.7, side: THREE.FrontSide }), []);
   const zly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d64545", roughness: 0.6, transparent: true, opacity: 0.8, side: THREE.DoubleSide }), []);
+  const kolorSufitu = plan.sciany?.sufit ? (plan.sciany.sufit.kolor ?? KOLOR_SUFITU) : null;
+  const sufit = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorSufitu ?? KOLOR_SUFITU, roughness: 0.95, side: THREE.FrontSide }), [kolorSufitu]);
+  const murMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92 }), [kolor, kolorDomyslny]);
+  useEffect(() => () => sufit.dispose(), [sufit]);
+  useEffect(() => () => murMat.dispose(), [murMat]);
   useEffect(() => () => material.dispose(), [material]);
   useEffect(() => () => [szyba, rama, skrzydlo, zly].forEach((m) => m.dispose()), [szyba, rama, skrzydlo, zly]);
   if (!widoczne) return null;
@@ -209,6 +284,41 @@ export default function Sciany({
           </group>
         );
       })}
+      {(plan.sciany?.dodatkowe ?? []).map((sd, i) => {
+        const w = podgladSciany?.i === i ? podgladSciany.s : sd;
+        const h = wysokoscSciany(w, plan);
+        const czerwona = podgladSciany?.i === i && podgladSciany.bledy.length > 0;
+        return (
+          <mesh
+            key={sd.id}
+            name={`sciana-dodatkowa-${i + 1}`}
+            position={[w.x / 100, h / 200, w.z / 100]}
+            rotation={[0, (-w.kat * Math.PI) / 180, 0]}
+            material={czerwona ? zly : murMat}
+            castShadow
+            receiveShadow
+            onPointerDown={edycja?.onSciana ? (e) => przeciaganieSciany.zacznij(e, i) : undefined}
+            onClick={(e) => {
+              if (e.delta > 4) return;
+              e.stopPropagation();
+            }}
+            onPointerOver={edycja?.onSciana ? () => (document.body.style.cursor = "grab") : undefined}
+            onPointerOut={edycja?.onSciana ? () => (document.body.style.cursor = "") : undefined}
+          >
+            <boxGeometry args={[w.dlugosc / 100, h / 100, w.grubosc / 100]} />
+          </mesh>
+        );
+      })}
+      {kolorSufitu
+        ? (() => {
+            const z = zakresPokoju(plan);
+            return (
+              <mesh name="sufit" position={[(z.x0 + z.x1) / 200, H / 100, (z.z0 + z.z1) / 200]} rotation={[Math.PI / 2, 0, 0]} material={sufit} receiveShadow>
+                <planeGeometry args={[(z.x1 - z.x0) / 100, (z.z1 - z.z0) / 100]} />
+              </mesh>
+            );
+          })()
+        : null}
       <PunktyInstalacji
         plan={plan}
         edycja={edycja?.onPunkt ? { onPunkt: edycja.onPunkt, onBlad: edycja.onBlad } : undefined}
