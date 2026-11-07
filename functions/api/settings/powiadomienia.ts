@@ -1,6 +1,6 @@
 /*
  * /api/settings/powiadomienia (panel) – które e-maile wysyłamy (powiadomienia.ts).
- *   GET – { powiadomienia, adresy, poczta }  (adresy = dokąd idą powiadomienia firmy; poczta = czy Resend skonfigurowany)
+ *   GET – { powiadomienia, adresy, poczta }  (adresy = dokąd idą powiadomienia firmy; poczta = czy wysyłka e-maili jest skonfigurowana)
  *   PUT – { otwarcie, akceptacja, uwagi, wybor, przypomnienia } (tylko właściciel konta)
  */
 import { panel, requireOwner } from "../../_lib/auth";

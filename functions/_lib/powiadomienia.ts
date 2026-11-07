@@ -1,5 +1,5 @@
 /*
- * Powiadomienia e-mail o ofertach (Resend – notify.ts):
+ * Powiadomienia e-mail o ofertach (API poczty – notify.ts):
  *   do firmy:   klient pierwszy raz otworzył link, zaakceptował ofertę, wysłał uwagi, zmienia kolory w podglądzie;
  *   do klienta: przypomnienie 3 dni przed wygaśnięciem linku (gdy kontakt to e-mail i link na to pozwala).
  * Firma włącza / wyłącza każde w Ustawienia → Powiadomienia (KV: powiadomienia; domyślnie wszystkie włączone).

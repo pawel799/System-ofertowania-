@@ -17,7 +17,7 @@ Pola `wersje`, `akceptacja`, `przypomnienie` pisze tylko serwer – zapis z pane
 
 ## Powiadomienia e-mail
 
-Wysyłka przez Resend (`functions/_lib/notify.ts`) – potrzebne sekrety `RESEND_API_KEY` i (zalecane) `NOTIFY_FROM` z domeną zweryfikowaną w Resend. Bez klucza nic nie wychodzi, reszta działa.
+Wysyłka przez własny serwer poczty (`functions/_lib/notify.ts` → `mail-relay/` na VPS) – potrzebne `MAIL_API_URL`, `MAIL_API_KEY` (sekret) i `NOTIFY_FROM`; instrukcja w `docs/poczta.md`. Bez nich nic nie wychodzi, reszta działa.
 
 Do firmy (właściciele konta; firma „main” – `NOTIFY_EMAIL`), z linkiem `/panel?oferta=<numer>`, który otwiera tę ofertę:
 
@@ -32,4 +32,4 @@ Do klienta – **przypomnienie 3 dni przed wygaśnięciem linku** (gdy w kontakc
 
 **Ustawienia → Powiadomienia**: włączanie i wyłączanie każdego z pięciu (zapis `powiadomienia` w KV firmy, zmienia właściciel konta), adresy, na które idą maile, i informacja, czy poczta jest skonfigurowana.
 
-Testy lokalne: `RESEND_API_BASE` (tylko do testów) kieruje wysyłkę na atrapę API zamiast api.resend.com.
+Testy lokalne: `MAIL_API_URL` może wskazywać na atrapę API poczty.

@@ -54,7 +54,7 @@ export const POLITYKA: LegalSection[] = [
   {
     title: "Odbiorcy danych",
     items: [
-      "Dane mogą być przekazywane wyłącznie dostawcom usług, z których korzysta Administrator: hostingu i bazy danych (Cloudflare) oraz wysyłki powiadomień e-mail (Resend). Działają oni na podstawie umów powierzenia.",
+      "Dane mogą być przekazywane wyłącznie dostawcom usług, z których korzysta Administrator: hostingu i bazy danych (Cloudflare) oraz serwera, z którego wysyłamy powiadomienia e-mail (dostawca VPS). Działają oni na podstawie umów powierzenia.",
       "Część dostawców może przetwarzać dane poza Europejskim Obszarem Gospodarczym – w takim przypadku na podstawie standardowych klauzul umownych zatwierdzonych przez Komisję Europejską.",
     ],
   },

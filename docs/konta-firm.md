@@ -19,7 +19,7 @@ albo „Mam kod administratora”. `/reset-hasla` i `/rejestracja` wracają do n
 - **Linki klientów** (`slug:<link>`) są wspólne: wartość `"<firmId>|<klucz oferty>"` mówi, do której
   firmy należy oferta (dla `main` – sam klucz, jak dotąd). Firma nie zajmie linku innej firmy (409).
 - **Zgłoszenia** z formularza na stronie oferty trafiają do firmy, która wysłała link (pole `link`
-  w `POST /api/zapytania`); z `/kontakt` i oferty demo – do `main`. Powiadomienie e-mail (Resend)
+  w `POST /api/zapytania`); z `/kontakt` i oferty demo – do `main`. Powiadomienie e-mail (własny serwer poczty – docs/poczta.md)
   idzie do właściciela konta firmy, a dla `main` na `NOTIFY_EMAIL`.
 - **Pliki modeli 3D** są publiczne (strona klienta); `modelowner:<id>` mówi, w której firmie szukać opisu.
 
@@ -59,7 +59,7 @@ albo „Mam kod administratora”. `/reset-hasla` i `/rejestracja` wracają do n
 | `POST /api/auth/logout` | zalogowany | koniec sesji |
 | `GET /api/auth/me` | zalogowany | `{ role, user, firm }` (administrator: `role: "admin"`) |
 | `POST /api/auth/password` | konto | `{ obecne, nowe }` – zmiana hasła |
-| `POST /api/auth/reset` | każdy | `{ email }` → mail z linkiem (gdy jest `RESEND_API_KEY`); `{ mail: false }` bez poczty |
+| `POST /api/auth/reset` | każdy | `{ email }` → mail z linkiem (gdy jest skonfigurowana poczta – `MAIL_API_URL`, `MAIL_API_KEY`); `{ mail: false }` bez poczty |
 | `POST /api/auth/reset/confirm` | każdy | `{ token, haslo }` – nowe hasło z linku |
 | `GET /api/team`, `POST /api/team` | firma / właściciel | lista kont, nowe konto pracownika `{ email, imie, haslo }` |
 | `PATCH /api/team/:email`, `DELETE /api/team/:email` | właściciel | nowe hasło pracownika, usunięcie konta |

@@ -22,7 +22,7 @@ ale nie da się dodać oferty, utworzyć nowego linku, wgrać modelu ani dodać 
 ## Płatności dziś: faktura ręcznie
 
 1. Właściciel konta firmy wybiera plan w **Ustawienia → Plan** → `POST /api/billing/request`.
-2. Prośba zapisuje się przy firmie, a na `NOTIFY_EMAIL` przychodzi mail (Resend).
+2. Prośba zapisuje się przy firmie, a na `NOTIFY_EMAIL` przychodzi mail (docs/poczta.md).
 3. Wystawiacie fakturę. Po wpłacie administrator (kod `PANEL_TOKEN`) w **Ustawienia → Firmy**
    ustawia plan, status „Aktywna” i „Opłacone do”. Prośba znika sama.
 

@@ -93,8 +93,8 @@ Otwarte:
 
 ## Pakiet przed pokazem inwestorskim (18.10.2026) – zrobione
 
-- Zgłoszenia: widok `/panel/zgloszenia` (obsłużone / usuń) + powiadomienie e-mail przez Resend
-  (`RESEND_API_KEY`, `NOTIFY_EMAIL`, `NOTIFY_FROM`) – instrukcja w `docs/zgloszenia.md`. Obietnica na /kontakt bez „1 dnia roboczego”.
+- Zgłoszenia: widok `/panel/zgloszenia` (obsłużone / usuń) + powiadomienie e-mail przez własny serwer poczty
+  (`MAIL_API_URL`, `MAIL_API_KEY`, `NOTIFY_EMAIL`, `NOTIFY_FROM`) – instrukcja w `docs/poczta.md`. Obietnica na /kontakt bez „1 dnia roboczego”.
 - Rejestracja, logowanie i reset hasła usunięte (przekierowania w `_redirects`); jedno wejście „Wejdź do panelu” (kod dostępu), CTA „Umów prezentację”. Przycisk „Wyloguj”.
 - Regulamin i polityka prywatności – projekt treści w `src/content/prawne.ts` (dane z `firma.ts`, neutralne sformułowania przy pustych polach). Klauzula RODO pod formularzem kontaktowym i formularzem oferty. **Przed publikacją do przejrzenia przez prawnika.**
 - Nazwa i logo firmy w Ustawieniach → Firma (KV `settings:brand`, logo ≤ 200 KB): strona oferty, mail i podgląd, nagłówek panelu. Fallback: `FIRMA.nazwaHandlowa`.
@@ -108,6 +108,6 @@ Otwarte:
 
 ### Nadal otwarte
 - Dane firmy w `src/content/firma.ts` (nazwa prawna, NIP, adres, e-mail, telefon) – od nich zależą stopka, /kontakt, regulamin i polityka.
-- Konfiguracja Resend w Cloudflare (patrz `docs/zgloszenia.md`).
+- Serwer poczty na VPS i zmienne w Cloudflare (patrz `docs/poczta.md`).
 - Czarny mat na czarnym granicie jest mało widoczny – to kwestia kontrastu kolorów, nie geometrii.
 - Messenger nie ma oficjalnego linku „wyślij z treścią” bez aplikacji Facebooka – dlatego kopiujemy treść i otwieramy messenger.com.

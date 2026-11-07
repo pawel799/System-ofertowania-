@@ -56,7 +56,7 @@ export function PowiadomieniaTab({ canEdit, onAuthError }: { canEdit: boolean; o
         </p>
         {!view.poczta ? (
           <p className="lede" role="status">
-            Wysyłka e-maili nie jest jeszcze skonfigurowana na serwerze (RESEND_API_KEY) – ustawienia zapiszą się, maile zaczną wychodzić po konfiguracji.
+            Wysyłka e-maili nie jest jeszcze skonfigurowana na serwerze (MAIL_API_URL, MAIL_API_KEY) – ustawienia zapiszą się, maile zaczną wychodzić po konfiguracji.
           </p>
         ) : null}
         <div className="toggles">

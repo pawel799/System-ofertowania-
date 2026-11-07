@@ -55,12 +55,14 @@ export interface Env {
   CF_API_TOKEN?: string;
   CF_ZONE_ID?: string;
   CF_CNAME_TARGET?: string;
-  /** Powiadomienia o zgłoszeniach (opcjonalne): klucz API Resend, adres(y) odbiorcy, nadawca. */
-  RESEND_API_KEY?: string;
+  /**
+   * Wysyłka e-maili (opcjonalna): adres API poczty (własny przekaźnik na VPS – mail-relay/, POST JSON) i jego klucz,
+   * adres(y) odbiorcy powiadomień właściciela systemu, nadawca. Bez MAIL_API_URL / MAIL_API_KEY nic nie wychodzi.
+   */
+  MAIL_API_URL?: string;
+  MAIL_API_KEY?: string;
   NOTIFY_EMAIL?: string;
   NOTIFY_FROM?: string;
-  /** Tylko do testów: inny adres API Resend (atrapa poczty). */
-  RESEND_API_BASE?: string;
   /** Tylko do testów: inny adres API Cloudflare. */
   CF_API_BASE?: string;
   /** Liczba iteracji PBKDF2 dla nowych haseł (domyślnie 100 000 – maksimum w Workers). */

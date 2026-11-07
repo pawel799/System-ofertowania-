@@ -15,7 +15,7 @@ export const onRequestPost = handle(async (ctx) => {
   if (!offer) throw new HttpError(404, "not_found", "Nie ma takiej oferty.");
   if (!offer.link) throw new HttpError(400, "no_link", "Oferta nie ma linku dla klienta.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(offer.contact.trim())) throw new HttpError(400, "no_email", "W kontakcie klienta nie ma adresu e-mail.");
-  if (!mailConfigured(ctx.env)) throw new HttpError(503, "mail_off", "Wysyłka e-maili nie jest skonfigurowana (RESEND_API_KEY).");
+  if (!mailConfigured(ctx.env)) throw new HttpError(503, "mail_off", "Wysyłka e-maili nie jest skonfigurowana (MAIL_API_URL, MAIL_API_KEY).");
   const limitKey = `przypomnijrate:${key}`;
   const n = Number((await kv.get(limitKey)) ?? 0);
   if (n >= 3) throw new HttpError(429, "too_many", "Przypomnienie wysłano już 3 razy dzisiaj.");

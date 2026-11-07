@@ -1,0 +1,22 @@
+# /etc/systemd/system/mail-relay.service – przekaźnik poczty OP RZUT (docs/poczta.md)
+[Unit]
+Description=OP RZUT – przekaźnik poczty (HTTP → Postfix)
+After=network.target postfix.service
+
+[Service]
+Type=simple
+User=mailrelay
+Group=mailrelay
+# Plik z MAIL_API_KEY=... (chmod 600, właściciel root) – klucz nie trafia do repozytorium ani do tego pliku.
+EnvironmentFile=/etc/mail-relay.env
+Environment=ALLOWED_FROM_DOMAIN=oprzut.app
+Environment=PORT=8025
+ExecStart=/usr/bin/node /opt/mail-relay/server.mjs
+Restart=always
+RestartSec=3
+# Bez NoNewPrivileges / ProtectSystem=strict: sendmail Postfixa woła postdrop (setgid), który musi pisać do kolejki.
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

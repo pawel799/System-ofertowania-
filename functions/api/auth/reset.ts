@@ -1,6 +1,6 @@
 /*
  * POST /api/auth/reset – { email } → mail z linkiem do ustawienia nowego hasła (ważny 1 godzinę).
- * Zawsze ta sama odpowiedź (nie zdradzamy, czy konto istnieje). Bez skonfigurowanej poczty (RESEND_API_KEY)
+ * Zawsze ta sama odpowiedź (nie zdradzamy, czy konto istnieje). Bez skonfigurowanej poczty (MAIL_API_URL, MAIL_API_KEY)
  * odpowiedź mówi { mail: false } – strona prosi wtedy o kontakt z właścicielem konta albo z nami.
  * Limit: 5 próśb na godzinę z IP.
  */

@@ -373,7 +373,7 @@ export default function PanelApp() {
     });
   };
 
-  /** E-mail do klienta z przypomnieniem (serwer wysyła przez Resend i zapisuje w historii). */
+  /** E-mail do klienta z przypomnieniem (serwer wysyła przez API poczty i zapisuje w historii). */
   const przypomnijTeraz = async () => {
     try {
       const saved = await panelApi.przypomnij(offer.id);

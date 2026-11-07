@@ -1,0 +1,11 @@
+# /etc/caddy/Caddyfile – HTTPS dla przekaźnika (certyfikat Let's Encrypt automatycznie).
+# Rekord DNS: A poczta.oprzut.app → IP VPS, w Cloudflare „DNS only” (szara chmurka), żeby Caddy dostał certyfikat.
+poczta.oprzut.app {
+	@api path /emails /health
+	handle @api {
+		reverse_proxy 127.0.0.1:8025
+	}
+	handle {
+		respond 404
+	}
+}

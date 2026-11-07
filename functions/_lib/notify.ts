@@ -1,7 +1,11 @@
 /*
- * Wysyłka e-maili przez HTTP API Resend (https://resend.com) – Pages Functions nie wysyłają poczty same.
- * Działa tylko, gdy w ustawieniach projektu jest RESEND_API_KEY (sekret); NOTIFY_FROM (zweryfikowana
- * domena w Resend) jest opcjonalny. Bez klucza – po cichu nic nie robi.
+ * Wysyłka e-maili przez HTTP API poczty – Pages Functions nie wysyłają poczty same (Cloudflare blokuje port 25).
+ * Domyślnie własny przekaźnik na VPS (mail-relay/server.mjs: przyjmuje JSON i oddaje maila Postfixowi z DKIM).
+ * Konfiguracja projektu: MAIL_API_URL (np. https://poczta.oprzut.app/emails) i MAIL_API_KEY (sekret), NOTIFY_FROM
+ * (nadawca z domeny podpisanej DKIM), NOTIFY_EMAIL. Bez adresu i klucza – po cichu nic nie robi.
+ *
+ * Format żądania: POST, Authorization: Bearer <klucz>, JSON { from, to[], reply_to?, subject, text, html }
+ * (zgodny z popularnymi API poczty – w razie zmiany dostawcy wystarczy podmienić MAIL_API_URL i klucz).
  *
  * Powiadomienie o zgłoszeniu (wycena / pomiar / kontakt) trafia:
  *   - dla firm z kontami: na e-maile właścicieli konta firmy,
@@ -14,19 +18,22 @@ const TYP: Record<string, string> = { wycena: "Prośba o wycenę", pomiar: "Pro�
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
-export const mailConfigured = (env: Env) => !!env.RESEND_API_KEY;
+export const mailConfigured = (env: Env) => !!(env.MAIL_API_URL && env.MAIL_API_KEY);
+
+/** Nadawca domyślny, gdy nie ustawiono NOTIFY_FROM. */
+export const NADAWCA_DOMYSLNY = "OP RZUT <powiadomienia@oprzut.app>";
 
 export async function sendMail(
   env: Env,
   mail: { to: string[]; subject: string; text: string; html: string; replyTo?: string },
 ): Promise<boolean> {
-  if (!env.RESEND_API_KEY || !mail.to.length) return false;
+  if (!mailConfigured(env) || !mail.to.length) return false;
   try {
-    const res = await fetch(`${env.RESEND_API_BASE || "https://api.resend.com"}/emails`, {
+    const res = await fetch(env.MAIL_API_URL!, {
       method: "POST",
-      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, "content-type": "application/json" },
+      headers: { authorization: `Bearer ${env.MAIL_API_KEY}`, "content-type": "application/json" },
       body: JSON.stringify({
-        from: env.NOTIFY_FROM || "OP RZUT <onboarding@resend.dev>",
+        from: env.NOTIFY_FROM || NADAWCA_DOMYSLNY,
         to: mail.to,
         reply_to: mail.replyTo || undefined,
         subject: mail.subject,
@@ -34,10 +41,10 @@ export async function sendMail(
         html: mail.html,
       }),
     });
-    if (!res.ok) console.error("Resend", res.status, await res.text().catch(() => ""));
+    if (!res.ok) console.error("Poczta", res.status, await res.text().catch(() => ""));
     return res.ok;
   } catch (e) {
-    console.error("Resend", e);
+    console.error("Poczta", e);
     return false;
   }
 }

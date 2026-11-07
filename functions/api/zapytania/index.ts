@@ -8,7 +8,7 @@
  *   - wymagane imię i (telefon albo e-mail),
  *   - limit 5 zgłoszeń na godzinę z jednego IP (rate:zap:<ip>),
  *   - zapis w KV (binding OFFERS): zapytanie:<data>:<losowe id>, przechowywane 180 dni.
- *   - powiadomienie e-mail przez Resend, jeśli ustawiono RESEND_API_KEY i NOTIFY_EMAIL (patrz docs/zgloszenia.md).
+ *   - powiadomienie e-mail (własny serwer poczty), jeśli ustawiono MAIL_API_URL, MAIL_API_KEY i NOTIFY_EMAIL (docs/poczta.md).
  * Odczyt: GET z panelu (zalogowana firma widzi tylko swoje) – ostatnie 200 zgłoszeń, najnowsze pierwsze.
  * Zmiana / usuwanie: /api/zapytania/:id (PATCH { obsluzone }, DELETE).
  */
