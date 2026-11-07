@@ -860,3 +860,14 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .ks-litery { display: flex; flex-wrap: wrap; gap: 4px; }
 .pnl .ks-litery .btn { min-width: 30px; padding: 0 8px; font-weight: 600; }
 .pnl .ks-litery .btn[aria-pressed="true"] { background: var(--accent); color: var(--on-accent, #fff); }
+
+/* ---------- katalog: kategorie jako listy rozwijane ---------- */
+.pnl .kr-lista-rozwijana { gap: 0; margin-top: 4px; border-radius: 10px; }
+.pnl .kr-group-head { display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 6px; border-radius: 8px; background: none; color: inherit; font: inherit; font-size: 13px; font-weight: 600; text-align: left; }
+.pnl .kr-group-head svg { width: 12px; height: 12px; flex: none; color: var(--text-3); transition: transform 150ms var(--ease-out); }
+.pnl .kr-lista-rozwijana[data-otwarta] .kr-group-head svg { transform: rotate(90deg); }
+.pnl .kr-group-head span:first-of-type { flex: 1; }
+.pnl .kr-group-n { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text-3); background: var(--g2); border-radius: 999px; padding: 1px 7px; }
+.pnl .kr-group-head:disabled { cursor: default; opacity: 1; }
+@media (hover: hover) and (pointer: fine) { .pnl .kr-group-head:not(:disabled):hover { background: var(--g2); } }
+.pnl .kr-group-body { display: flex; flex-direction: column; gap: 4px; padding: 2px 0 8px; }

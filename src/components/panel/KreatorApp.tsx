@@ -2,7 +2,8 @@
 
 import { planPokazowy } from "@/lib/pokaz";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { dopasuj, podobienstwo } from "@/lib/szukaj";
 import { COUNTERTOPS } from "../catalog";
 import { FRONTS } from "../frontStore";
 import { HARDWARE } from "../hardwareStore";
@@ -915,12 +916,11 @@ export default function KreatorApp() {
                 <input type="checkbox" checked={wszystkieGrupy || typ === "inne"} disabled={typ === "inne"} onChange={(e) => setWszystkieGrupy(e.target.checked)} />
                 Pokaż wszystkie elementy (nie tylko: {TYP_PROJEKTU[typ].label.toLowerCase()})
               </label>
-              {GRUPY_PRESETOW.filter((g) => wszystkieGrupy || GRUPY_TYPU[typ].presety.includes(g.id)).map((g) => {
-                const lista = PRESETY.filter((p) => p.grupa === g.id && p.nazwa.toLowerCase().includes(szukaj.trim().toLowerCase()));
+              {GRUPY_PRESETOW.filter((g) => wszystkieGrupy || GRUPY_TYPU[typ].presety.includes(g.id)).map((g, nr) => {
+                const lista = filtruj(PRESETY.filter((p) => p.grupa === g.id), (p) => `${p.nazwa} ${g.label} ${p.w}`, szukaj);
                 if (!lista.length) return null;
                 return (
-                  <div key={g.id} className="kr-group">
-                    <h3>{g.label}</h3>
+                  <GrupaKatalogu key={g.id} id={`p-${g.id}`} tytul={g.label} liczba={lista.length} szukanie={!!szukaj.trim()} domyslnieOtwarta={nr === 0}>
                     {lista.map((p) => (
                       <button key={p.id} type="button" className="kr-item" onClick={() => otworzNowy({ nazwa: p.nazwa, strefa: p.strefa, rodzaj: p.rodzaj, w: p.w, h: p.h, d: p.d, zrodlo: "modul" })}>
                         <b>{p.nazwa}</b>
@@ -930,12 +930,21 @@ export default function KreatorApp() {
                         </span>
                       </button>
                     ))}
-                  </div>
+                  </GrupaKatalogu>
                 );
               })}
+              <PodobneWKatalogu
+                fraza={szukaj}
+                pozycje={[
+                  ...GRUPY_PRESETOW.filter((g) => wszystkieGrupy || GRUPY_TYPU[typ].presety.includes(g.id)).flatMap((g) =>
+                    PRESETY.filter((p) => p.grupa === g.id).map((p) => ({ klucz: p.id, nazwa: p.nazwa, onClick: () => otworzNowy({ nazwa: p.nazwa, strefa: p.strefa, rodzaj: p.rodzaj, w: p.w, h: p.h, d: p.d, zrodlo: "modul" as const }) })),
+                  ),
+                ]}
+                ukryj={GRUPY_PRESETOW.some((g) => (wszystkieGrupy || GRUPY_TYPU[typ].presety.includes(g.id)) && filtruj(PRESETY.filter((p) => p.grupa === g.id), (p) => `${p.nazwa} ${g.label} ${p.w}`, szukaj).length) || maModeleDoFrazy(models, szukaj)}
+              />
               <BibliotekaModeli
                 models={models}
-                fraza={szukaj.trim().toLowerCase()}
+                fraza={szukaj.trim()}
                 cennik={cennikOferty}
                 onDodaj={otworzNowy}
                 grupy={wszystkieGrupy ? null : GRUPY_TYPU[typ].biblioteka}
@@ -1333,16 +1342,18 @@ function BibliotekaModeli({
   grupy: readonly GrupaBiblioteki[] | null;
 }) {
   const { moduly, wlasne, kuchnie } = podzielModele(models);
-  const pasuje = (nazwa: string) => nazwa.toLowerCase().includes(fraza);
-  const wlasneWidoczne = wlasne.filter((m) => pasuje(m.name));
+  const wlasneWidoczne = filtruj(wlasne, (m) => m.name, fraza);
   return (
     <>
       {GRUPY_BIBLIOTEKI.filter((g) => !grupy || grupy.includes(g.id)).map((g) => {
-        const lista = moduly.filter((x) => x.wpis.grupa === g.id && x.wpis.strefa && x.wpis.rodzaj && pasuje(x.wpis.nazwa));
+        const lista = filtruj(
+          moduly.filter((x) => x.wpis.grupa === g.id && x.wpis.strefa && x.wpis.rodzaj),
+          (x) => `${x.wpis.nazwa} ${g.label} ${x.wpis.w}`,
+          fraza,
+        );
         if (!lista.length) return null;
         return (
-          <div key={g.id} className="kr-group">
-            <h3>{g.label}</h3>
+          <GrupaKatalogu key={g.id} id={`b-${g.id}`} tytul={g.label} liczba={lista.length} szukanie={!!fraza}>
             {lista.map(({ model, wpis }) => {
               const strefa = wpis.strefa;
               const rodzaj = wpis.rodzaj;
@@ -1374,12 +1385,11 @@ function BibliotekaModeli({
                 </button>
               );
             })}
-          </div>
+          </GrupaKatalogu>
         );
       })}
       {wlasneWidoczne.length || !fraza ? (
-      <div className="kr-group">
-        <h3>Modele firmy</h3>
+      <GrupaKatalogu id="b-wlasne" tytul="Modele firmy" liczba={wlasneWidoczne.length} szukanie={!!fraza}>
         {wlasneWidoczne.length ? (
           wlasneWidoczne.map((m) => (
             <button
@@ -1417,9 +1427,79 @@ function BibliotekaModeli({
             szafkę.
           </p>
         ) : null}
-      </div>
+      </GrupaKatalogu>
       ) : null}
     </>
+  );
+}
+
+/** Pozycje katalogu pasujące do frazy (odporne na literówki, odmianę i słowa pokrewne – src/lib/szukaj.ts), najlepsze pierwsze. */
+function filtruj<T>(lista: readonly T[], tekst: (x: T) => string, fraza: string): T[] {
+  if (!fraza.trim()) return [...lista];
+  return lista
+    .map((x, i) => ({ x, i, w: dopasuj(fraza, tekst(x)) }))
+    .filter((r): r is { x: T; i: number; w: number } => r.w !== null)
+    .sort((a, b) => a.w - b.w || a.i - b.i)
+    .map((r) => r.x);
+}
+
+const maModeleDoFrazy = (models: ModelMeta[], fraza: string) => !!fraza.trim() && models.some((m) => dopasuj(fraza, m.name) !== null);
+
+/** Kategoria katalogu jako lista rozwijana; przy szukaniu otwarte są wszystkie z wynikami. Stan zapamiętany w przeglądarce. */
+function GrupaKatalogu({ id, tytul, liczba, szukanie, domyslnieOtwarta = false, children }: { id: string; tytul: string; liczba: number; szukanie: boolean; domyslnieOtwarta?: boolean; children: ReactNode }) {
+  const klucz = `kr-katalog-${id}`;
+  const [otwarta, setOtwarta] = useState(domyslnieOtwarta);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(klucz);
+      if (v !== null) setOtwarta(v === "1");
+    } catch {
+      /* bez pamięci – zostaje domyślnie */
+    }
+  }, [klucz]);
+  const przelacz = () => {
+    setOtwarta((o) => {
+      try {
+        localStorage.setItem(klucz, o ? "0" : "1");
+      } catch {
+        /* bez pamięci */
+      }
+      return !o;
+    });
+  };
+  const widoczna = szukanie || otwarta;
+  return (
+    <div className="kr-group kr-lista-rozwijana" data-otwarta={widoczna ? "" : undefined}>
+      <button type="button" className="kr-group-head" aria-expanded={widoczna} onClick={przelacz} disabled={szukanie}>
+        <svg viewBox="0 0 12 12" fill="none" aria-hidden>
+          <path d="m4.5 3 3 3-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span>{tytul}</span>
+        <span className="kr-group-n">{liczba}</span>
+      </button>
+      {widoczna ? <div className="kr-group-body">{children}</div> : null}
+    </div>
+  );
+}
+
+/** Nic nie pasuje: „Może chodziło o…” – najbliższe nazwy. */
+function PodobneWKatalogu({ fraza, pozycje, ukryj }: { fraza: string; pozycje: { klucz: string; nazwa: string; onClick: () => void }[]; ukryj: boolean }) {
+  if (ukryj || !fraza.trim()) return null;
+  const najblizsze = pozycje
+    .map((p) => ({ p, d: podobienstwo(fraza, p.nazwa) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 5);
+  return (
+    <div className="kr-group">
+      <p className="lede" style={{ margin: "4px 0" }}>
+        Nic nie pasuje do „{fraza.trim()}”. Może chodziło o:
+      </p>
+      {najblizsze.map(({ p }) => (
+        <button key={p.klucz} type="button" className="kr-item" onClick={p.onClick}>
+          <b>{p.nazwa}</b>
+        </button>
+      ))}
+    </div>
   );
 }
 
