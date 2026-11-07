@@ -332,6 +332,30 @@ export function gotowyKsztalt(k: GotowyKsztalt, W: number, D: number): Punkt[] {
   }
 }
 
+/**
+ * Przesunięcie ściany k prostopadle o d [cm] (dodatnie = do środka pokoju): oba jej narożniki jadą razem,
+ * sąsiednie ściany się wydłużają albo skracają. Ściana przy narożniku zabudowy (A, B) nie rusza narożnika (0, 0) –
+ * zamiast niej przesuwa się reszta pokoju (efekt ten sam: pokój rośnie albo maleje). null = nie da się.
+ */
+export function przesunScianeObrysu(w: readonly Punkt[], k: number, d: number): Punkt[] | null {
+  const kraw = krawedzieObrysu(w.length)[k];
+  if (!kraw || !d) return kraw ? [...w] : null;
+  const [i, j] = kraw;
+  const s = scianyObrysu(w)[k];
+  const dx = s.nx * d;
+  const dz = s.nz * d;
+  const r = (v: number) => Math.round(v * 10) / 10;
+  if (i !== 0 && j !== 0) {
+    // v1 leży na osi x – może jechać tylko wzdłuż x.
+    if ((i === 1 || j === 1) && Math.abs(dz) > 0.01) return null;
+    return w.map((p, idx) => (idx === i || idx === j ? { x: r(p.x + dx), z: r(p.z + dz) } : p));
+  }
+  // Ściana z narożnikiem zabudowy: przesuwamy wszystkie pozostałe narożniki w przeciwną stronę.
+  // v1 (koniec ściany A) też musi zostać na osi x.
+  if (i !== 1 && j !== 1 && Math.abs(dz) > 0.01) return null;
+  return w.map((p, idx) => (idx === i || idx === j ? p : { x: r(p.x - dx), z: r(p.z - dz) }));
+}
+
 /* ---------- edycja ścian pokoju z rzutu i karty ściany (jak ścianki działowe) ---------- */
 
 /** Zmiana geometrii pokoju: nowy obrys albo wymiary prostokąta / długości ścian A i B. */
@@ -418,16 +442,12 @@ export function uchwytyScianyPokoju(p: PlanKuchni, id: ScianaPokoju): UchwytPoko
     const out: UchwytPokoju[] = [];
     for (const idx of [i, j]) if (idx !== 0) out.push({ rodzaj: "naroznik", p: w[idx], ruch: (q, krok) => ({ obrys: przesunNaroznik(w, idx, q, krok) }) });
     const s = sc[k];
-    const moznaPrzesunac = i !== 0 && j !== 0 && ((i !== 1 && j !== 1) || Math.abs(s.nz) < 1e-6);
-    if (moznaPrzesunac) {
+    if (przesunScianeObrysu(w, k, 5)) {
       const m = { x: s.x + (s.dx * s.dlugosc) / 2, z: s.z + (s.dz * s.dlugosc) / 2 };
       out.push({
         rodzaj: "sciana",
         p: m,
-        ruch: (q, krok) => {
-          const d = kr((q.x - m.x) * s.nx + (q.z - m.z) * s.nz, krok);
-          return { obrys: w.map((pt, idx) => (idx === i || idx === j ? { x: Math.max(0, Math.round(pt.x + s.nx * d)), z: Math.max(0, Math.round(pt.z + s.nz * d)) } : pt)) };
-        },
+        ruch: (q, krok) => ({ obrys: przesunScianeObrysu(w, k, kr((q.x - m.x) * s.nx + (q.z - m.z) * s.nz, krok)) ?? [...w] }),
       });
     }
     return out;
@@ -438,8 +458,17 @@ export function uchwytyScianyPokoju(p: PlanKuchni, id: ScianaPokoju): UchwytPoko
     const LB = Math.max(p.uklad === "L" ? p.scianaB : 0, pom.dlug);
     const rog = { x: LA, z: LB };
     const naroznik: UchwytPokoju = { rodzaj: "naroznik", p: rog, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: kr(q.z, krok) } }) };
-    if (id === "A") return [{ rodzaj: "naroznik", p: { x: LA, z: 0 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: pom.dlug } }) }];
-    if (id === "B") return [{ rodzaj: "naroznik", p: { x: 0, z: LB }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(q.z, krok) } }) }];
+    // A i B: przesunięcie ściany na zewnątrz powiększa pokój (przeciwległa ściana zostaje, zabudowa przy A / B też).
+    if (id === "A")
+      return [
+        { rodzaj: "naroznik", p: { x: LA, z: 0 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: pom.dlug } }) },
+        { rodzaj: "sciana", p: { x: LA / 2, z: 0 }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(pom.dlug - q.z, krok) } }) },
+      ];
+    if (id === "B")
+      return [
+        { rodzaj: "naroznik", p: { x: 0, z: LB }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(q.z, krok) } }) },
+        { rodzaj: "sciana", p: { x: 0, z: LB / 2 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(pom.szer - q.x, krok), dlug: pom.dlug } }) },
+      ];
     if (id === "C") return [naroznik, { rodzaj: "sciana", p: { x: LA / 2, z: LB }, ruch: (q, krok) => ({ pomieszczenie: { szer: pom.szer, dlug: kr(q.z, krok) } }) }];
     if (id === "D") return [naroznik, { rodzaj: "sciana", p: { x: LA, z: LB / 2 }, ruch: (q, krok) => ({ pomieszczenie: { szer: kr(q.x, krok), dlug: pom.dlug } }) }];
     return [];

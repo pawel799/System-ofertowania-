@@ -690,7 +690,13 @@ export default function KreatorApp() {
 
   const przyklad = () => {
     if (plan.elementy.length && !window.confirm("Zastąpić obecne szafki układem przykładowym?")) return;
-    setPlan((p) => ({ ...(typ === "kuchnia" || typ === "inne" ? wstawPrzyklad(p.uklad) : wstawPrzykladMebli(typ)), ...(p.wywiad ? { wywiad: p.wywiad } : {}) }));
+    // Przykład zastępuje meble – pokój (wymiary, kształt, ściany, podłoga, sufit) i odpowiedzi z wywiadu zostają.
+    setPlan((p) => ({
+      ...(typ === "kuchnia" || typ === "inne" ? wstawPrzyklad(p.uklad) : wstawPrzykladMebli(typ)),
+      ...(p.wywiad ? { wywiad: p.wywiad } : {}),
+      ...(p.pomieszczenie ? { pomieszczenie: p.pomieszczenie } : {}),
+      ...(p.sciany ? { sciany: p.sciany } : {}),
+    }));
     ustawZaznaczony(null);
     setKrok("meble");
   };

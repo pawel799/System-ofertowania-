@@ -26,6 +26,8 @@ Każda ściana ma okna, drzwi i gniazdka. Wybór ściany przy oknie ma przyciski
 Kreator ścian zawiera:
 - gotowe kształty: prostokąt, L, ścięty narożnik, wnęka, T;
 - rzut z narożnikami do przeciągania (co 5 cm, z Shift co 1 cm, przyciąganie do pionu i poziomu sąsiadów);
+- chwycenie ściany przesuwa ją prostopadle – sąsiednie ściany się wydłużają albo skracają (`przesunScianeObrysu`);
+  ściana A albo B przesuwa resztę pokoju (narożnik zabudowy stoi);
 - „+” w połowie ściany, który ją dzieli;
 - „Usuń” przy ścianie (albo kliknięcie ściany na rzucie i Delete) – usuwa ścianę (`usunSciane`): sąsiednie ściany wydłużają się do przecięcia (ścięty narożnik wraca do prostego), a gdy się nie da – ściana scala się z sąsiednią; ściany A (i B w układzie L) nie usuwa się, pokój ma min. 3 ściany;
 - Ctrl+Z / Ctrl+Shift+Z cofa i ponawia zmiany (historia całego planu w kreatorze);
@@ -158,7 +160,12 @@ Gdy nic nie pasuje, pokazuje „Może chodziło o…”.
 ## Wygląd pokoju w 3D
 
 Tekstury rysowane w przeglądarce (`src/components/kuchnia/teksturyPokoju.ts`, bez plików do pobrania), UV w metrach:
-- ściany: faktura tynku (mnoży kolor ściany), listwa przypodłogowa przerwana w drzwiach, widoczna grubość na wolnych końcach ściany;
+- ściany pokoju to pełne mury: tynk po obu stronach (mnoży kolor ściany), wierzch, ościeża okien i drzwi, wolne końce,
+  listwa przypodłogowa przerwana w drzwiach;
+- przycinanie (jak w grach o budowaniu domu): ściana, za którą stoi kamera, obniża się do cokołu 32 cm – wnętrze widać,
+  a ściana dalej ma bryłę i tynk; przycisk „Pełne ściany” / „Przycinaj ściany” nad sceną (scianyStore `przyciete`);
 - podłoga pokoju (`sciany.podloga`): panele (deski 20 × 120 cm) albo płytki 60 × 60 cm, kolor z gotowych odcieni albo własny
   – wybór w lewym panelu kreatora i w kreatorze ścian; zapisuje się w ofercie, klient widzi tę samą podłogę;
-- wokół pokoju podłoże w kolorze tła (bez linii horyzontu) z samymi cieniami.
+- krawędź podłogi bez ściany (pokój bez wymiarów, otwarta przestrzeń) łagodnie przechodzi w tło;
+- wokół pokoju podłoże w kolorze tła (bez linii horyzontu) z samymi cieniami;
+- wierzch sufitu: jednolita płyta stropowa (bez fug), spód sufitu – tynk w kolorze sufitu.

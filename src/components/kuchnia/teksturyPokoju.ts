@@ -151,29 +151,26 @@ export const plytki = () =>
     return tekstura(c, true);
   });
 
-/** Płyta stropowa (beton) z łączeniami co 1 m – wierzch sufitu. */
+/** Wierzch stropu: jednolita płyta (beton zatarty) – bez fug i łączeń, delikatne ziarno i plamy. */
 export const strop = () =>
   raz("strop", () => {
     const N = 512;
     const [c, g] = plotno(N);
-    g.fillStyle = "#b9b6b0";
+    g.fillStyle = "#c4c1bb";
     g.fillRect(0, 0, N, N);
     const los = generator(1234567);
-    for (let i = 0; i < 14000; i++) {
-      const v = Math.round(150 + los() * 70);
-      g.fillStyle = `rgba(${v},${v - 2},${v - 6},${0.18 + los() * 0.3})`;
-      const r = 0.6 + los() * 1.8;
-      g.fillRect(los() * N, los() * N, r, r);
-    }
-    for (let i = 0; i < 40; i++) {
-      g.fillStyle = `rgba(90,88,84,${0.05 + los() * 0.08})`;
+    for (let i = 0; i < 120; i++) {
+      const v = 180 + Math.round(los() * 30);
+      g.fillStyle = `rgba(${v},${v - 1},${v - 4},0.12)`;
       g.beginPath();
-      g.arc(los() * N, los() * N, 6 + los() * 30, 0, Math.PI * 2);
+      g.arc(los() * N, los() * N, 14 + los() * 50, 0, Math.PI * 2);
       g.fill();
     }
-    g.strokeStyle = "rgba(70,68,64,0.55)";
-    g.lineWidth = 3;
-    g.strokeRect(1.5, 1.5, N - 3, N - 3);
+    for (let i = 0; i < 18000; i++) {
+      const v = Math.round(170 + los() * 50);
+      g.fillStyle = `rgba(${v},${v - 1},${v - 4},0.35)`;
+      g.fillRect(los() * N, los() * N, 1 + los() * 1.2, 1 + los() * 1.2);
+    }
     return tekstura(c, true);
   });
 

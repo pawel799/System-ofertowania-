@@ -6,7 +6,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { KOLORY_SCIAN, nazwaKoloruSciany } from "@/lib/sciany";
-import { przelaczSciany, ustawKolorScian, useSciany } from "./scianyStore";
+import { przelaczPrzycinanie, przelaczSciany, ustawKolorScian, useSciany } from "./scianyStore";
 
 export default function SterowanieScian({
   className,
@@ -23,7 +23,7 @@ export default function SterowanieScian({
   /** Po wyborze koloru (kreator zapisuje go w planie). */
   onKolor?: (kolor: string | null) => void;
 }) {
-  const { widoczne, kolor } = useSciany();
+  const { widoczne, kolor, przyciete } = useSciany();
   const [otwarte, setOtwarte] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -50,6 +50,17 @@ export default function SterowanieScian({
       <button type="button" className={className} aria-pressed={!widoczne} onClick={() => przelaczSciany()}>
         {widoczne ? "Ukryj ściany" : "Pokaż ściany"}
       </button>
+      {widoczne ? (
+        <button
+          type="button"
+          className={className}
+          aria-pressed={!przyciete}
+          title={przyciete ? "Ściany od strony kamery są obniżone – pokaż je w całości" : "Obniżaj ściany od strony kamery, żeby było widać wnętrze"}
+          onClick={() => przelaczPrzycinanie()}
+        >
+          {przyciete ? "Pełne ściany" : "Przycinaj ściany"}
+        </button>
+      ) : null}
       <button type="button" className={className} aria-expanded={otwarte} aria-haspopup="dialog" onClick={() => setOtwarte((o) => !o)}>
         <span aria-hidden style={{ display: "inline-block", width: 12, height: 12, borderRadius: 999, marginRight: 6, verticalAlign: "-1px", background: kolor ?? "#9a948c", boxShadow: "inset 0 0 0 1px rgba(0,0,0,.25)" }} />
         Kolor ścian

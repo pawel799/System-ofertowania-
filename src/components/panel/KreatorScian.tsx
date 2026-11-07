@@ -48,6 +48,7 @@ import {
   zmianaDlugosci,
   podzielSciane,
   przesunNaroznik,
+  przesunScianeObrysu,
   usunSciane,
   zastosujObrys,
   zmienDlugosc,
@@ -381,8 +382,10 @@ function EdytorObrysu({ plan, setPlan, wybrana, setWybrana }: { plan: PlanKuchni
   const obrys = ciag?.obrys ?? (czyObrys(plan) ? plan.sciany!.obrys! : obrysZProstokata(plan));
   const sciany = scianyObrysu(obrys);
   const bez = new Set(plan.sciany?.bez ?? []);
-  const xs = [...obrys.map((p) => p.x), ...plan.elementy.flatMap((e) => [rect(e).x0, rect(e).x1])];
-  const zs = [...obrys.map((p) => p.z), ...plan.elementy.flatMap((e) => [rect(e).z0, rect(e).z1])];
+  // Kadr z zapisanego kształtu (nie z podglądu): w trakcie przeciągania widok stoi, kursor nie „ucieka”.
+  const obrysKadru = czyObrys(plan) ? plan.sciany!.obrys! : obrysZProstokata(plan);
+  const xs = [...obrysKadru.map((p) => p.x), ...plan.elementy.flatMap((e) => [rect(e).x0, rect(e).x1])];
+  const zs = [...obrysKadru.map((p) => p.z), ...plan.elementy.flatMap((e) => [rect(e).z0, rect(e).z1])];
   const x0 = Math.min(0, ...xs);
   const z0 = Math.min(0, ...zs);
   const x1 = Math.max(...xs);
@@ -449,6 +452,51 @@ function EdytorObrysu({ plan, setPlan, wybrana, setWybrana }: { plan: PlanKuchni
     };
   };
 
+  // Chwycenie ściany: przesunięcie prostopadle (sąsiednie ściany się wydłużają / skracają). Klik bez ruchu – wybór ściany.
+  const zacznijSciane = (ev: ReactPointerEvent<SVGElement>, k: number) => {
+    if (ev.button !== 0) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    const svg = svgRef.current;
+    if (!svg) return;
+    const start = obrys;
+    const s0 = scianyObrysu(start)[k];
+    const p0 = punkt(ev);
+    let teraz: Ciagniecie = { idx: -1, obrys: start, bledy: [] };
+    svg.setPointerCapture(ev.pointerId);
+    const move = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      const q = punkt(pe);
+      const krok = pe.shiftKey ? 1 : 5;
+      const d = Math.round(((q.x - p0.x) * s0.nx + (q.z - p0.z) * s0.nz) / krok) * krok;
+      const nowy = przesunScianeObrysu(start, k, d);
+      if (!nowy) return;
+      teraz = { idx: -1, obrys: nowy, bledy: sprawdzObrys(nowy) };
+      setCiag(teraz);
+    };
+    const up = (pe: PointerEvent) => {
+      if (pe.pointerId !== ev.pointerId) return;
+      sprzatanie.current?.();
+      sprzatanie.current = null;
+      if (svg.hasPointerCapture(pe.pointerId)) svg.releasePointerCapture(pe.pointerId);
+      setCiag(null);
+      // Klik bez ruchu – wybór ściany (kolor, długość w liście).
+      if (teraz.obrys === start) return void setWybrana(k);
+      if (teraz.bledy.length) return void toast("Tak się nie da", { type: "err", desc: teraz.bledy[0] });
+      const baza = bazowy();
+      if (baza) zapisz(setPlan, zastosujObrys(baza, teraz.obrys, false));
+    };
+    sprzatanie.current?.();
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+    sprzatanie.current = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
+  };
+
   const podziel = (k: number) => {
     if (obrys.length >= MAX_SCIAN_POKOJU) return void toast("Limit ścian", { type: "err", desc: `Pokój może mieć najwyżej ${MAX_SCIAN_POKOJU} ścian.` });
     const baza = bazowy();
@@ -486,7 +534,9 @@ function EdytorObrysu({ plan, setPlan, wybrana, setWybrana }: { plan: PlanKuchni
         const otwory = (plan.wywiad?.otwory ?? []).filter((o) => o.sciana === s.id);
         return (
           <g key={s.id} className="ks-sciana" data-litera={s.id} data-bez={bez.has(s.id as ScianaUsuwalna) ? "" : undefined} data-wybrana={wybrana === k ? "" : undefined}>
-            <line x1={s.x} y1={s.z} x2={x2} y2={z2} strokeWidth={7 * u} onPointerDown={() => setWybrana(k)} style={{ cursor: "pointer" }} />
+            <line x1={s.x} y1={s.z} x2={x2} y2={z2} strokeWidth={9 * u} onPointerDown={(e) => zacznijSciane(e, k)} style={{ cursor: Math.abs(s.nx) > Math.abs(s.nz) ? "ew-resize" : "ns-resize", touchAction: "none" }}>
+              <title>{`Ściana ${s.id} – przeciągnij, żeby ją przesunąć (sąsiednie się wydłużą). Shift: co 1 cm.`}</title>
+            </line>
             {plan.sciany?.koloryScian?.[s.id] && !ciag ? (
               <line className="ks-kolor-linia" x1={s.x - s.nx * 1.6 * u} y1={s.z - s.nz * 1.6 * u} x2={x2 - s.nx * 1.6 * u} y2={z2 - s.nz * 1.6 * u} stroke={plan.sciany.koloryScian[s.id]} strokeWidth={3.4 * u} />
             ) : null}
@@ -652,7 +702,7 @@ export default function KreatorScian({ plan, setPlan, onWysokosc, onClose }: { p
                   </button>
                 ))}
               </div>
-              <p className="kr-hint">Na rzucie: przeciągnij narożnik, „+” w połowie ściany dzieli ją na dwie (nowy narożnik). Kliknij ścianę i naciśnij Delete (albo „Usuń”), żeby ją usunąć. Ctrl+Z cofa zmianę. Narożnik przy ścianach A i B stoi w miejscu – od niego liczy się zabudowa.</p>
+              <p className="kr-hint">Na rzucie: chwyć ścianę i przesuń ją (sąsiednie ściany się wydłużą), przeciągnij narożnik, „+” w połowie ściany dzieli ją na dwie (nowy narożnik). Kliknij ścianę i naciśnij Delete (albo „Usuń”), żeby ją usunąć. Ctrl+Z cofa zmianę. Narożnik przy ścianach A i B stoi w miejscu – od niego liczy się zabudowa.</p>
             </section>
             <section>
               <h3>Ściany</h3>

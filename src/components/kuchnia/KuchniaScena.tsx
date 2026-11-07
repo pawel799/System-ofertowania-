@@ -3,10 +3,10 @@
 import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
-import { Box3, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three";
+import { Box3, BufferAttribute, CanvasTexture, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three";
 import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaWOtworze } from "@/lib/otwory";
-import { czyObrys, muryPokoju, podlogaPlanu, wGranicachPokoju, zakresPokoju, zasiegScian } from "@/lib/sciany";
+import { czyObrys, muryPokoju, podlogaPlanu, scianyPokoju, wGranicachPokoju, zakresPokoju, zasiegScian } from "@/lib/sciany";
 import { panele, PLYTKA_PANELI, PLYTKA_PLYTEK, plytki, wielokatPoziomy } from "./teksturyPokoju";
 import { Plane, Raycaster, Vector2 } from "three";
 import { applyRoles, lookFor, type PublicModel } from "../modelRoles";
@@ -165,38 +165,104 @@ function usePrzeciaganieMebla(plan: PlanKuchni, edycja: EdycjaMebli | undefined,
   return { podglad, zacznij };
 }
 
-/** Podłoga pokoju: panele albo płytki (kolor do wyboru) w obrysie pokoju (prostokąt – razem z grubością ścian), UV w metrach. */
+/**
+ * Podłoga pokoju: panele albo płytki (kolor do wyboru) w obrysie pokoju (prostokąt – razem z grubością ścian), UV w metrach.
+ * Krawędź, przy której nie stoi ściana (pokój bez wymiarów, otwarta przestrzeń), łagodnie przechodzi w tło.
+ */
 function PodlogaPokoju({ plan, onClick }: { plan: PlanKuchni; onClick?: () => void }) {
-  const punkty = useMemo(() => {
-    if (czyObrys(plan)) return plan.sciany!.obrys!;
+  const { punkty, zanik } = useMemo(() => {
+    if (czyObrys(plan)) return { punkty: plan.sciany!.obrys!, zanik: null };
     const z = zakresPokoju(plan);
     const m = muryPokoju(plan).flatMap((x) => x.punkty);
-    const x0 = Math.min(z.x0, ...m.map((q) => q.x));
+    let x0 = Math.min(z.x0, ...m.map((q) => q.x));
     const z0 = Math.min(z.z0, ...m.map((q) => q.z));
-    const x1 = Math.max(z.x1, ...m.map((q) => q.x));
-    const z1 = Math.max(z.z1, ...m.map((q) => q.z));
-    return [
-      { x: x0, z: z0 },
-      { x: x1, z: z0 },
-      { x: x1, z: z1 },
-      { x: x0, z: z1 },
-    ];
+    let x1 = Math.max(z.x1, ...m.map((q) => q.x));
+    let z1 = Math.max(z.z1, ...m.map((q) => q.z));
+    // Która krawędź ma ścianę (ściana leży wzdłuż niej, z tolerancją na grubość).
+    const sc = scianyPokoju(plan);
+    const wzdluz = (os: "x" | "z", v: number) => sc.some((s) => (os === "x" ? Math.abs(s.dx) < 0.01 && Math.abs(s.x - v) < 40 : Math.abs(s.dz) < 0.01 && Math.abs(s.z - v) < 40));
+    const lewa = wzdluz("x", 0);
+    const prawa = wzdluz("x", z.x1);
+    const tyl = wzdluz("z", 0);
+    const przod = wzdluz("z", z.z1);
+    // Bez ściany: podłoga trochę dalej, potem zanika.
+    if (!lewa) x0 -= 80;
+    if (!prawa) x1 += 80;
+    if (!przod) z1 = Math.max(z1 + 60, 360);
+    return {
+      punkty: [
+        { x: x0, z: z0 },
+        { x: x1, z: z0 },
+        { x: x1, z: z1 },
+        { x: x0, z: z1 },
+      ],
+      zanik: lewa && prawa && tyl && przod ? null : { lewa: !lewa, prawa: !prawa, tyl: !tyl, przod: !przod, w: x1 - x0, d: z1 - z0 },
+    };
   }, [plan]);
   const klucz = punkty.map((p) => `${p.x},${p.z}`).join(";");
   const plytka = podlogaPlanu(plan).rodzaj === "plytki" ? PLYTKA_PLYTEK : PLYTKA_PANELI;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const geo = useMemo(() => wielokatPoziomy(punkty, plytka), [klucz, plytka]);
+  const geo = useMemo(() => {
+    const g = wielokatPoziomy(punkty, plytka);
+    // Drugi zestaw UV (0–1 na całej podłodze) – dla mapy zanikania krawędzi.
+    const pos = g.getAttribute("position");
+    const xs = punkty.map((p) => p.x / 100);
+    const zs = punkty.map((p) => p.z / 100);
+    const [X0, X1, Z0, Z1] = [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)];
+    const uv1 = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) {
+      uv1[i * 2] = (pos.getX(i) - X0) / Math.max(0.01, X1 - X0);
+      uv1[i * 2 + 1] = (-pos.getY(i) - Z0) / Math.max(0.01, Z1 - Z0);
+    }
+    g.setAttribute("uv1", new BufferAttribute(uv1, 2));
+    return g;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [klucz, plytka]);
   useEffect(() => () => geo.dispose(), [geo]);
-  // Panele albo płytki; tekstura w odcieniach szarości, kolor z wyboru (sciany.podloga). Płytki lekko błyszczą.
   const { rodzaj, kolor } = podlogaPlanu(plan);
+  const zanikKlucz = zanik ? JSON.stringify(zanik) : "";
+  const alpha = useMemo(() => {
+    if (!zanik) return null;
+    const N = 256;
+    const c = document.createElement("canvas");
+    c.width = c.height = N;
+    const g = c.getContext("2d")!;
+    const img = g.createImageData(N, N);
+    // Pas zanikania ok. 1 m (nie więcej niż 40% wymiaru).
+    const fu = Math.min(0.4, 100 / zanik.w);
+    const fv = Math.min(0.4, 100 / zanik.d);
+    const gladko = (t: number) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++) {
+        const u = x / (N - 1);
+        const v = y / (N - 1);
+        let a = 1;
+        if (zanik.lewa) a = Math.min(a, gladko(u / fu));
+        if (zanik.prawa) a = Math.min(a, gladko((1 - u) / fu));
+        if (zanik.tyl) a = Math.min(a, gladko(v / fv));
+        if (zanik.przod) a = Math.min(a, gladko((1 - v) / fv));
+        const k = Math.round(a * 255);
+        const o = (y * N + x) * 4;
+        img.data[o] = img.data[o + 1] = img.data[o + 2] = k;
+        img.data[o + 3] = 255;
+      }
+    g.putImageData(img, 0, 0);
+    const t = new CanvasTexture(c);
+    t.channel = 1;
+    t.flipY = false;
+    return t;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zanikKlucz]);
+  useEffect(() => () => alpha?.dispose(), [alpha]);
+  // Panele albo płytki; tekstura w odcieniach szarości, kolor z wyboru (sciany.podloga). Płytki lekko błyszczą.
   const material = useMemo(
     () =>
       new MeshStandardMaterial({
         map: rodzaj === "plytki" ? plytki() : panele(),
         color: kolor,
         roughness: rodzaj === "plytki" ? 0.42 : 0.72,
+        ...(alpha ? { alphaMap: alpha, transparent: true } : {}),
       }),
-    [rodzaj, kolor],
+    [rodzaj, kolor, alpha],
   );
   useEffect(() => () => material.dispose(), [material]);
   return <mesh name="podloga" geometry={geo} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} material={material} receiveShadow onClick={onClick} />;

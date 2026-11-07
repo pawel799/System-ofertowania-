@@ -9,7 +9,7 @@
  * gdy otwór nie może tam stać (sprawdzOtwor: poza ścianą, na innym otworze, w meblach); puszczony – wraca.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useThree, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import {
   czyObrys,
@@ -25,6 +25,7 @@ import {
   wysokoscSciany,
   wysokoscScianyPokoju,
   zakresPokoju,
+  type Sciana,
   type ScianaDodatkowa,
   type ScianaPokoju,
 } from "@/lib/sciany";
@@ -133,7 +134,7 @@ function SufitObrysu({ obrys, H, material }: { obrys: readonly { x: number; z: n
   return <mesh name="sufit" geometry={geo} position={[0, H / 100, 0]} rotation={[Math.PI / 2, 0, 0]} material={material} receiveShadow />;
 }
 
-/** Wierzch sufitu (widok z góry): kształt pokoju z teksturą płyty stropowej. UV w metrach – płytka co 1 m. */
+/** Wierzch sufitu (widok z góry): kształt pokoju, jednolita płyta stropowa (bez fug). UV w metrach. */
 function SufitOdGory({ punkty, H }: { punkty: readonly { x: number; z: number }[]; H: number }) {
   const klucz = punkty.map((p) => `${p.x},${p.z}`).join(";");
   const geo = useMemo(
@@ -147,6 +148,193 @@ function SufitOdGory({ punkty, H }: { punkty: readonly { x: number; z: number }[
   useEffect(() => () => material.dispose(), [material]);
   // Płyta leży na ścianach (tuż nad wierzchem murów) – od spodu widać sufit, od góry płytę stropową.
   return <mesh name="sufit-gora" geometry={geo} position={[0, H / 100 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} material={material} receiveShadow />;
+}
+
+/** Wysokość cokołu ściany przyciętej (kamera po zewnętrznej stronie ściany) [cm]. */
+const COKOL = 32;
+
+type OtworNaMurze = { o: Otwor; i: number };
+type MaterialyMuru = { listwa: THREE.Material; szyba: THREE.Material; rama: THREE.Material; skrzydlo: THREE.Material; zly: THREE.Material };
+
+/**
+ * Ściana pokoju jako mur: wewnętrzna i zewnętrzna strona (tynk), ościeża okien i drzwi, wierzch, wolne końce, listwa.
+ * Przycinanie (jak w grach o budowaniu domu): gdy kamera jest po zewnętrznej stronie ściany, zamiast pełnej ściany
+ * widać niski cokół – wnętrze nie jest zasłonięte. Bez przycinania ściana zawsze pełna, z obu stron otynkowana.
+ */
+function Mur({
+  s,
+  H,
+  Hs,
+  g,
+  polaczone,
+  mur,
+  otwory,
+  material,
+  m,
+  przycinanie,
+  podgladOtworu,
+  onOtworDown,
+  onWybierz,
+  edycja,
+}: {
+  s: Sciana;
+  H: number;
+  Hs: number;
+  g: number;
+  polaczone: readonly [boolean, boolean];
+  mur: { x: number; z: number }[] | null;
+  otwory: OtworNaMurze[];
+  material: THREE.Material;
+  m: MaterialyMuru;
+  przycinanie: boolean;
+  podgladOtworu: { i: number; bledy: string[] } | null;
+  onOtworDown?: (e: ThreeEvent<PointerEvent>, i: number) => void;
+  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju }) => void;
+  edycja: boolean;
+}) {
+  const pelna = useRef<THREE.Group>(null);
+  const cokol = useRef<THREE.Group>(null);
+  useFrame(({ camera }) => {
+    // Kamera po zewnętrznej stronie (przeciwnie do normalnej do wnętrza) – ściana przycięta do cokołu.
+    const zewnatrz = (camera.position.x * 100 - s.x) * s.nx + (camera.position.z * 100 - s.z) * s.nz < 0;
+    const przytnij = przycinanie && zewnatrz;
+    if (pelna.current) pelna.current.visible = !przytnij;
+    if (cokol.current) cokol.current.visible = przytnij;
+  });
+  const poz = (a: number, y: number, wglab = 0): [number, number, number] => [(s.x + s.dx * a - s.nx * wglab) / 100, y / 100, (s.z + s.dz * a - s.nz * wglab) / 100];
+  const klikSciany = onWybierz
+    ? (e: ThreeEvent<MouseEvent>) => {
+        // Puszczenie po przeciąganiu (mebla, otworu, obrotu kamery) to nie klik.
+        if (e.delta > 4) return;
+        e.stopPropagation();
+        onWybierz({ typ: "sciana", id: s.id });
+      }
+    : undefined;
+  const obrotZew = s.obrot + Math.PI;
+  /** Obie strony ściany, wierzch, wolne końce i listwa – do wysokości h (pełna albo cokół). */
+  const bryla = (h: number, zOtworami: boolean) => {
+    const seg = segmentySciany(
+      s.dlugosc,
+      h,
+      zOtworami ? otwory.map(({ o }) => o) : [],
+    )
+      .map((x) => ({ ...x, y1: Math.min(x.y1, h) }))
+      .filter((x) => x.y1 > x.y0);
+    return (
+      <>
+        {seg.map((x, i) => (
+          <group key={i}>
+            <mesh position={poz((x.a + x.b) / 2, (x.y0 + x.y1) / 2)} rotation={[0, s.obrot, 0]} material={material} receiveShadow onClick={klikSciany}>
+              <KawalekSciany w={(x.b - x.a) / 100} h={(x.y1 - x.y0) / 100} u0={x.a / 100} v0={x.y0 / 100} />
+            </mesh>
+            {(() => {
+              // Zewnętrzna strona w narożniku z sąsiednią ścianą sięga o grubość dalej – róg zamknięty.
+              const a = x.a <= 0.01 && polaczone[0] ? -g : x.a;
+              const b = x.b >= s.dlugosc - 0.01 && polaczone[1] ? s.dlugosc + g : x.b;
+              return (
+                <mesh position={poz((a + b) / 2, (x.y0 + x.y1) / 2, g)} rotation={[0, obrotZew, 0]} material={material} receiveShadow onClick={klikSciany}>
+                  <KawalekSciany w={(b - a) / 100} h={(x.y1 - x.y0) / 100} u0={a / 100} v0={x.y0 / 100} />
+                </mesh>
+              );
+            })()}
+          </group>
+        ))}
+        {/* Listwa przypodłogowa po stronie pokoju (przerwana w drzwiach). */}
+        {seg
+          .filter((x) => x.y0 === 0 && x.b - x.a > 2)
+          .map((x, i) => (
+            <mesh key={`l${i}`} position={poz((x.a + x.b) / 2, 4, -0.8)} rotation={[0, s.obrot, 0]} material={m.listwa} receiveShadow>
+              <boxGeometry args={[(x.b - x.a) / 100, 0.08, 0.016]} />
+            </mesh>
+          ))}
+        {/* Wolne końce (bez sąsiedniej ściany) – widać grubość. */}
+        {([0, 1] as const)
+          .filter((e) => !polaczone[e])
+          .map((e) => {
+            const kier = e === 0 ? -1 : 1;
+            return (
+              <mesh key={`k${e}`} position={poz(e === 0 ? 0 : s.dlugosc, h / 2, g / 2)} rotation={[0, Math.atan2(s.dx * kier, s.dz * kier), 0]} material={material}>
+                <planeGeometry args={[g / 100, h / 100]} />
+              </mesh>
+            );
+          })}
+        {mur ? <WierzchMuru punkty={mur} y={h} material={material} /> : null}
+      </>
+    );
+  };
+  return (
+    <group name={`sciana-${s.id}`}>
+      <group ref={pelna}>
+        {bryla(Hs, true)}
+        {/* Ościeża: boki i nadproże otworu (i parapet okna) na grubość muru – z zewnątrz nie widać szczeliny. */}
+        {otwory.map(({ o, i }) => {
+          const { y0, y1: y1r } = wysokoscOtworu(o, H);
+          const y1 = Math.min(y1r, Hs);
+          if (y1 <= y0) return null;
+          const a0 = Math.max(0, o.od);
+          const a1 = Math.min(s.dlugosc, o.od + o.szer);
+          return (
+            <group key={`os${i}`}>
+              <mesh position={poz(a0, (y0 + y1) / 2, g / 2)} rotation={[0, Math.atan2(s.dx, s.dz), 0]} material={material}>
+                <planeGeometry args={[g / 100, (y1 - y0) / 100]} />
+              </mesh>
+              <mesh position={poz(a1, (y0 + y1) / 2, g / 2)} rotation={[0, Math.atan2(-s.dx, -s.dz), 0]} material={material}>
+                <planeGeometry args={[g / 100, (y1 - y0) / 100]} />
+              </mesh>
+              {y1 < Hs ? (
+                <mesh position={poz((a0 + a1) / 2, y1, g / 2)} rotation={[Math.PI / 2, 0, Math.atan2(-s.dz, s.dx)]} material={material}>
+                  <planeGeometry args={[(a1 - a0) / 100, g / 100]} />
+                </mesh>
+              ) : null}
+              {y0 > 0 ? (
+                <mesh position={poz((a0 + a1) / 2, y0, g / 2)} rotation={[-Math.PI / 2, 0, Math.atan2(-s.dz, s.dx)]} material={material}>
+                  <planeGeometry args={[(a1 - a0) / 100, g / 100]} />
+                </mesh>
+              ) : null}
+            </group>
+          );
+        })}
+        {otwory.map(({ o, i }) => {
+          const { y0, y1 } = wysokoscOtworu(o, H);
+          const srodek = poz(o.od + o.szer / 2, (y0 + y1) / 2);
+          const czerwony = podgladOtworu?.i === i && podgladOtworu.bledy.length > 0;
+          // Szyba i drzwi w głębi ściany (od strony pokoju widać wnękę).
+          const cofniecie: [number, number, number] = [srodek[0] - (s.nx * 6) / 100, srodek[1], srodek[2] - (s.nz * 6) / 100];
+          return (
+            <group key={`o${i}`} name={`otwor-${i}`}>
+              <mesh
+                position={cofniecie}
+                rotation={[0, s.obrot, 0]}
+                material={czerwony ? m.zly : o.rodzaj === "okno" ? m.szyba : m.skrzydlo}
+                onPointerDown={onOtworDown ? (e) => onOtworDown(e, i) : undefined}
+                onClick={
+                  onWybierz
+                    ? (e) => {
+                        if (e.delta > 4) return;
+                        e.stopPropagation();
+                        onWybierz({ typ: "otwor", i });
+                      }
+                    : undefined
+                }
+                onPointerOver={edycja ? () => (document.body.style.cursor = "grab") : undefined}
+                onPointerOut={edycja ? () => (document.body.style.cursor = "") : undefined}
+              >
+                <planeGeometry args={[o.szer / 100, (y1 - y0) / 100]} />
+              </mesh>
+              {o.rodzaj === "okno" ? (
+                <mesh position={[srodek[0] + (s.nx * 7) / 100, y0 / 100 - 0.015, srodek[2] + (s.nz * 7) / 100]} rotation={[0, s.obrot, 0]} material={m.rama} receiveShadow>
+                  <boxGeometry args={[o.szer / 100 + 0.06, 0.03, 0.14]} />
+                </mesh>
+              ) : null}
+            </group>
+          );
+        })}
+      </group>
+      <group ref={cokol} visible={false}>
+        {bryla(Math.min(COKOL, Hs), true)}
+      </group>
+    </group>
+  );
 }
 
 /** Kawałek ściany (między otworami) z UV w metrach – faktura tynku ciągła na całej ścianie. */
@@ -254,7 +442,7 @@ export default function Sciany({
   /** Przeciągany punkt instalacji; null po puszczeniu. */
   onPodgladPunktu?: (p: { i: number; p: PunktInstalacji } | null) => void;
 }) {
-  const { widoczne, kolor } = useSciany();
+  const { widoczne, kolor, przyciete } = useSciany();
   const { podglad, zacznij } = usePrzeciaganieOtworu(plan, edycja, onPodglad);
   const przeciaganieSciany = usePrzeciaganieSciany(plan, edycja);
   const podgladSciany = przeciaganieSciany.podglad;
@@ -269,12 +457,12 @@ export default function Sciany({
   const material = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, map: tynk(), bumpMap: tynk(), bumpScale: 0.6, roughness: 0.92, side: THREE.FrontSide }), [kolor, kolorDomyslny]);
   const listwa = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f3f1ec", roughness: 0.55 }), []);
   useEffect(() => () => listwa.dispose(), [listwa]);
-  const szyba = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cfe3f5", roughness: 0.12, emissive: "#9ec4ea", emissiveIntensity: 0.3, transparent: true, opacity: 0.55, side: THREE.FrontSide }), []);
+  const szyba = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cfe3f5", roughness: 0.12, emissive: "#9ec4ea", emissiveIntensity: 0.3, transparent: true, opacity: 0.55, side: THREE.DoubleSide }), []);
   const rama = useMemo(() => new THREE.MeshStandardMaterial({ color: "#eceae6", roughness: 0.5 }), []);
-  const skrzydlo = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6f55", roughness: 0.7, side: THREE.FrontSide }), []);
+  const skrzydlo = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6f55", roughness: 0.7, side: THREE.DoubleSide }), []);
   const zly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d64545", roughness: 0.6, transparent: true, opacity: 0.8, side: THREE.DoubleSide }), []);
   const kolorSufitu = plan.sciany?.sufit ? (plan.sciany.sufit.kolor ?? KOLOR_SUFITU) : null;
-  const sufit = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorSufitu ?? KOLOR_SUFITU, roughness: 0.95, side: THREE.FrontSide }), [kolorSufitu]);
+  const sufit = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorSufitu ?? KOLOR_SUFITU, map: tynk(), roughness: 0.95, side: THREE.FrontSide }), [kolorSufitu]);
   useEffect(() => () => sufit.dispose(), [sufit]);
   // Własne kolory ścian (plan.sciany.koloryScian) i ścianek działowych – materiał na każdy użyty kolor.
   const koloryScian = plan.sciany?.koloryScian;
@@ -300,110 +488,25 @@ export default function Sciany({
   return (
     <group name="sciany">
       {sciany.map((s) => {
-        const naScianie = otwory.map((o, i) => ({ o, i })).filter(({ o }) => o.sciana === s.id);
-        // Własna wysokość ściany (niższa ścianka) – otwory przycięte do niej.
-        const Hs = wysokoscScianyPokoju(plan, s.id);
-        const segmenty = segmentySciany(
-          s.dlugosc,
-          Hs,
-          naScianie.map(({ o }) => o),
-        ).map((g) => ({ ...g, y1: Math.min(g.y1, Hs) })).filter((g) => g.y1 > g.y0);
-        // Lokalny układ ściany: x wzdłuż ściany (od początku), y w górę; potem przesunięcie i obrót do świata.
-        const poz = (a: number, y: number): [number, number, number] => [(s.x + s.dx * a) / 100, y / 100, (s.z + s.dz * a) / 100];
+        const k = wolneKonce.get(s.id);
         return (
-          <group key={s.id} name={`sciana-${s.id}`}>
-            {segmenty.map((g, i) => (
-              <mesh
-                key={i}
-                position={poz((g.a + g.b) / 2, (g.y0 + g.y1) / 2)}
-                rotation={[0, s.obrot, 0]}
-                material={materialSciany(s.id)}
-                receiveShadow
-                onClick={
-                  onWybierz
-                    ? (e) => {
-                        // Puszczenie po przeciąganiu (mebla, otworu, obrotu kamery) to nie klik.
-                        if (e.delta > 4) return;
-                        e.stopPropagation();
-                        onWybierz({ typ: "sciana", id: s.id });
-                      }
-                    : undefined
-                }
-              >
-                <KawalekSciany w={(g.b - g.a) / 100} h={(g.y1 - g.y0) / 100} u0={g.a / 100} v0={g.y0 / 100} />
-              </mesh>
-            ))}
-            {/* Listwa przypodłogowa wzdłuż ściany (przerwana w drzwiach). */}
-            {segmenty
-              .filter((g) => g.y0 === 0 && g.b - g.a > 2)
-              .map((g, i) => {
-                const p = poz((g.a + g.b) / 2, 4);
-                return (
-                  <mesh key={`l${i}`} position={[p[0] + (s.nx * 0.8) / 100, p[1], p[2] + (s.nz * 0.8) / 100]} rotation={[0, s.obrot, 0]} material={listwa} receiveShadow>
-                    <boxGeometry args={[(g.b - g.a) / 100, 0.08, 0.016]} />
-                  </mesh>
-                );
-              })}
-            {/* Wolny koniec ściany (bez sąsiedniej ściany): widać jej grubość, nie kartkę. */}
-            {(() => {
-              const k = wolneKonce.get(s.id);
-              if (!k) return null;
-              return ([0, 1] as const)
-                .filter((e) => !k.polaczone[e])
-                .map((e) => {
-                  const a = e === 0 ? 0 : s.dlugosc;
-                  const p = poz(a, Hs / 2);
-                  const kierunek = e === 0 ? -1 : 1;
-                  return (
-                    <mesh
-                      key={`k${e}`}
-                      position={[p[0] - (s.nx * k.g) / 200, p[1], p[2] - (s.nz * k.g) / 200]}
-                      rotation={[0, Math.atan2(s.dx * kierunek, s.dz * kierunek), 0]}
-                      material={materialSciany(s.id)}
-                    >
-                      <planeGeometry args={[k.g / 100, Hs / 100]} />
-                    </mesh>
-                  );
-                });
-            })()}
-            {/* Wierzch muru: grubość ściany widoczna z góry (sama ściana jest płaszczyzną – nie zasłania wnętrza). */}
-            {mury.get(s.id) ? <WierzchMuru punkty={mury.get(s.id)!} y={Hs} material={materialSciany(s.id)} /> : null}
-            {naScianie.map(({ o, i }) => {
-              const { y0, y1 } = wysokoscOtworu(o, H);
-              const srodek = poz(o.od + o.szer / 2, (y0 + y1) / 2);
-              const czerwony = podglad?.i === i && podglad.bledy.length > 0;
-              // Szyba i drzwi lekko w głąb ściany (od strony pokoju widać wnękę).
-              const cofniecie: [number, number, number] = [srodek[0] - (s.nx * 6) / 100, srodek[1], srodek[2] - (s.nz * 6) / 100];
-              return (
-                <group key={`o${i}`} name={`otwor-${i}`}>
-                  <mesh
-                    position={cofniecie}
-                    rotation={[0, s.obrot, 0]}
-                    material={czerwony ? zly : o.rodzaj === "okno" ? szyba : skrzydlo}
-                    onPointerDown={edycja ? (e) => zacznij(e, i) : undefined}
-                    onClick={
-                      onWybierz
-                        ? (e) => {
-                            if (e.delta > 4) return;
-                            e.stopPropagation();
-                            onWybierz({ typ: "otwor", i });
-                          }
-                        : undefined
-                    }
-                    onPointerOver={edycja ? () => (document.body.style.cursor = "grab") : undefined}
-                    onPointerOut={edycja ? () => (document.body.style.cursor = "") : undefined}
-                  >
-                    <planeGeometry args={[o.szer / 100, (y1 - y0) / 100]} />
-                  </mesh>
-                  {o.rodzaj === "okno" ? (
-                    <mesh position={[srodek[0] + (s.nx * 7) / 100, y0 / 100 - 0.015, srodek[2] + (s.nz * 7) / 100]} rotation={[0, s.obrot, 0]} material={rama} receiveShadow>
-                      <boxGeometry args={[o.szer / 100 + 0.06, 0.03, 0.14]} />
-                    </mesh>
-                  ) : null}
-                </group>
-              );
-            })}
-          </group>
+          <Mur
+            key={s.id}
+            s={s}
+            H={H}
+            Hs={wysokoscScianyPokoju(plan, s.id)}
+            g={k?.g ?? 12}
+            polaczone={k?.polaczone ?? [true, true]}
+            mur={mury.get(s.id) ?? null}
+            otwory={otwory.map((o, i) => ({ o, i })).filter(({ o }) => o.sciana === s.id)}
+            material={materialSciany(s.id)}
+            m={{ listwa, szyba, rama, skrzydlo, zly }}
+            przycinanie={przyciete}
+            podgladOtworu={podglad}
+            onOtworDown={edycja ? zacznij : undefined}
+            onWybierz={onWybierz}
+            edycja={!!edycja}
+          />
         );
       })}
       {(plan.sciany?.dodatkowe ?? []).map((sd, i) => {
@@ -459,7 +562,7 @@ export default function Sciany({
             const z = zakresPokoju(plan);
             return (
               <mesh name="sufit" position={[(z.x0 + z.x1) / 200, H / 100, (z.z0 + z.z1) / 200]} rotation={[Math.PI / 2, 0, 0]} material={sufit} receiveShadow>
-                <planeGeometry args={[(z.x1 - z.x0) / 100, (z.z1 - z.z0) / 100]} />
+                <KawalekSciany w={(z.x1 - z.x0) / 100} h={(z.z1 - z.z0) / 100} u0={0} v0={0} />
               </mesh>
             );
           })()
