@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import { Html, Line } from "@react-three/drei";
-import { rect, rectBazowy, zasiegNaScianie, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
-import { scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type ScianaPokoju } from "@/lib/sciany";
+import { rectBazowy, zasiegNaScianie, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { meblaPrzyScianie } from "@/lib/otwory";
+import { czyObrys, scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type ScianaPokoju } from "@/lib/sciany";
 import { PUNKT_INFO } from "@/lib/wywiad";
 import { yElementu } from "./uklad3d";
 
@@ -102,23 +103,22 @@ function wymiaryBazowe(el: ElementKuchni, plan: PlanKuchni): { a: Pkt; b: Pkt; t
 }
 
 /** Co jest zaznaczone w 3D: mebel, okno / drzwi (indeks w wywiad.otwory) albo ściana. */
-export type Wybor3D = { typ: "element"; id: string } | { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number } | null;
+export type Wybor3D = { typ: "element"; id: string } | { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number } | { typ: "scianka"; i: number } | null;
 
 type Linia = { a: Pkt; b: Pkt; tekst: string; k: string; akcent?: boolean };
 
 /** Odległości mebla od ścian, przy których stoi wzdłuż (od narożnika i do końca ściany) – na podłodze przed meblem. */
 function odleglosciMebla(el: ElementKuchni, plan: PlanKuchni): Linia[] {
-  const r = rect(el);
   const out: Linia[] = [];
   const y = 0.015;
   for (const s of scianyPokoju(plan)) {
-    const przy = s.id === "A" ? r.z0 < 8 : s.id === "B" ? r.x0 < 8 : s.id === "C" ? r.z1 > s.z - 8 : r.x1 > s.x - 8;
+    const przy = meblaPrzyScianie(el, s);
     if (!przy) continue;
-    const a0 = s.dx ? r.x0 : r.z0;
-    const a1 = s.dx ? r.x1 : r.z1;
+    const a0 = Math.max(0, przy.a);
+    const a1 = Math.min(s.dlugosc, przy.b);
     // Linia na podłodze tuż przed frontem (od strony pokoju).
-    const glebia = s.id === "A" ? r.z1 + 6 : s.id === "B" ? r.x1 + 6 : s.id === "C" ? r.z0 - 6 : r.x0 - 6;
-    const pkt = (t: number): Pkt => (s.dx ? [t / 100, y, glebia / 100] : [glebia / 100, y, t / 100]);
+    const glebia = przy.glebia + 6;
+    const pkt = (t: number): Pkt => [(s.x + s.dx * t + s.nx * glebia) / 100, y, (s.z + s.dz * t + s.nz * glebia) / 100];
     if (a0 > 1) out.push({ a: pkt(0), b: pkt(a0), tekst: `← ${cm(a0)}`, k: `od-${s.id}`, akcent: true });
     if (s.dlugosc - a1 > 1) out.push({ a: pkt(a1), b: pkt(s.dlugosc), tekst: `${cm(s.dlugosc - a1)} →`, k: `do-${s.id}`, akcent: true });
   }
@@ -184,7 +184,14 @@ export function useLinieWymiarow(plan: PlanKuchni, wybor: Wybor3D, przeglad: boo
     if (przeglad) {
       linie.push({ a: [0, 0.03, -0.16], b: [plan.scianaA / 100, 0.03, -0.16], tekst: cm(plan.scianaA), k: "sciana-a" });
       if (plan.uklad === "L") linie.push({ a: [-0.16, 0.03, 0], b: [-0.16, 0.03, plan.scianaB / 100], tekst: cm(plan.scianaB), k: "sciana-b" });
-      if (plan.pomieszczenie) {
+      if (czyObrys(plan)) {
+        // Pokój o dowolnym kształcie: długość każdej ściany na podłodze, tuż przy niej.
+        for (const s of scianyPokoju(plan)) {
+          if (s.id === "A" || (s.id === "B" && plan.uklad === "L")) continue;
+          const pkt = (t: number): Pkt => [(s.x + s.dx * t + s.nx * 12) / 100, 0.02, (s.z + s.dz * t + s.nz * 12) / 100];
+          linie.push({ a: pkt(0), b: pkt(s.dlugosc), tekst: `${s.id} · ${cm(s.dlugosc)}`, k: `pokoj-${s.id}` });
+        }
+      } else if (plan.pomieszczenie) {
         const szer = plan.pomieszczenie.szer / 100;
         const dlug = plan.pomieszczenie.dlug / 100;
         linie.push(

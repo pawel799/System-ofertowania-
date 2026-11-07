@@ -11,7 +11,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { KOLOR_SUFITU, scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, zakresPokoju, type ScianaDodatkowa, type ScianaPokoju } from "@/lib/sciany";
+import { czyObrys, KOLOR_SUFITU, scianyPokoju, segmentySciany, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, zakresPokoju, type ScianaDodatkowa, type ScianaPokoju } from "@/lib/sciany";
 import { otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Otwor } from "@/lib/wywiad";
@@ -19,8 +19,6 @@ import { useSciany } from "./scianyStore";
 import PunktyInstalacji, { type EdycjaPunktow } from "./PunktyInstalacji";
 import type { PunktInstalacji } from "@/lib/wywiad";
 
-/** Kąt obrotu płaszczyzny (normalna +z) tak, żeby patrzyła do wnętrza pokoju. */
-const OBROT: Record<ScianaPokoju, number> = { A: 0, B: Math.PI / 2, C: Math.PI, D: -Math.PI / 2 };
 
 export type EdycjaOtworow = {
   onOtwor: (i: number, o: Otwor) => void;
@@ -107,6 +105,17 @@ function usePrzeciaganieOtworu(plan: PlanKuchni, edycja?: EdycjaOtworow, onPodgl
   return { podglad, zacznij };
 }
 
+/** Sufit pokoju o dowolnym kształcie: wielokąt na wysokości pokoju, widoczny od spodu. */
+function SufitObrysu({ obrys, H, material }: { obrys: readonly { x: number; z: number }[]; H: number; material: THREE.Material }) {
+  const geo = useMemo(() => {
+    const ksztalt = new THREE.Shape(obrys.map((p) => new THREE.Vector2(p.x / 100, p.z / 100)));
+    return new THREE.ShapeGeometry(ksztalt);
+  }, [obrys]);
+  useEffect(() => () => geo.dispose(), [geo]);
+  // Kształt w płaszczyźnie XY obrócony o +90° wokół x: (x, y) → (x, 0, y), normalna w dół.
+  return <mesh name="sufit" geometry={geo} position={[0, H / 100, 0]} rotation={[Math.PI / 2, 0, 0]} material={material} receiveShadow />;
+}
+
 type PodgladSciany = { i: number; s: ScianaDodatkowa; bledy: string[] };
 
 /** Przeciąganie dodatkowej ściany po podłodze (krok 5 cm, z Shift 1 cm); czerwona = nie może tam stać. */
@@ -185,7 +194,7 @@ export default function Sciany({
   kolorDomyslny: string;
   edycja?: EdycjaOtworow;
   /** Wykonawca: klik w ścianę, otwór albo gniazdko – zaznaczenie (wymiary na żywo, Wymiary3D.tsx). */
-  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number }) => void;
+  onWybierz?: (w: { typ: "otwor"; i: number } | { typ: "sciana"; id: ScianaPokoju } | { typ: "punkt"; i: number } | { typ: "scianka"; i: number }) => void;
   /** Przeciągany otwór (do wymiarów na żywo); null po puszczeniu. */
   onPodglad?: (p: { i: number; o: Otwor } | null) => void;
   /** Przeciągany punkt instalacji; null po puszczeniu. */
@@ -205,9 +214,20 @@ export default function Sciany({
   const zly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d64545", roughness: 0.6, transparent: true, opacity: 0.8, side: THREE.DoubleSide }), []);
   const kolorSufitu = plan.sciany?.sufit ? (plan.sciany.sufit.kolor ?? KOLOR_SUFITU) : null;
   const sufit = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorSufitu ?? KOLOR_SUFITU, roughness: 0.95, side: THREE.FrontSide }), [kolorSufitu]);
-  const murMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92 }), [kolor, kolorDomyslny]);
   useEffect(() => () => sufit.dispose(), [sufit]);
+  // Własne kolory ścian (plan.sciany.koloryScian) i ścianek działowych – materiał na każdy użyty kolor.
+  const koloryScian = plan.sciany?.koloryScian;
+  const kolorySciankek = (plan.sciany?.dodatkowe ?? []).map((d) => d.kolor ?? "").join(",");
+  const wlasne = useMemo(() => {
+    const m = new Map<string, { sciana: THREE.MeshStandardMaterial; mur: THREE.MeshStandardMaterial }>();
+    const kolory = new Set([...Object.values(koloryScian ?? {}), ...kolorySciankek.split(",")].filter((k): k is string => !!k));
+    for (const k of Array.from(kolory)) m.set(k, { sciana: new THREE.MeshStandardMaterial({ color: k, roughness: 0.92, side: THREE.FrontSide }), mur: new THREE.MeshStandardMaterial({ color: k, roughness: 0.92 }) });
+    return m;
+  }, [koloryScian, kolorySciankek]);
+  useEffect(() => () => wlasne.forEach((x) => (x.sciana.dispose(), x.mur.dispose())), [wlasne]);
+  const murMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor ?? kolorDomyslny, roughness: 0.92 }), [kolor, kolorDomyslny]);
   useEffect(() => () => murMat.dispose(), [murMat]);
+  const materialSciany = (id: ScianaPokoju) => (koloryScian?.[id] && wlasne.get(koloryScian[id]!)?.sciana) || material;
   useEffect(() => () => material.dispose(), [material]);
   useEffect(() => () => [szyba, rama, skrzydlo, zly].forEach((m) => m.dispose()), [szyba, rama, skrzydlo, zly]);
   if (!widoczne) return null;
@@ -229,8 +249,8 @@ export default function Sciany({
               <mesh
                 key={i}
                 position={poz((g.a + g.b) / 2, (g.y0 + g.y1) / 2)}
-                rotation={[0, OBROT[s.id], 0]}
-                material={material}
+                rotation={[0, s.obrot, 0]}
+                material={materialSciany(s.id)}
                 receiveShadow
                 onClick={
                   onWybierz
@@ -256,7 +276,7 @@ export default function Sciany({
                 <group key={`o${i}`} name={`otwor-${i}`}>
                   <mesh
                     position={cofniecie}
-                    rotation={[0, OBROT[s.id], 0]}
+                    rotation={[0, s.obrot, 0]}
                     material={czerwony ? zly : o.rodzaj === "okno" ? szyba : skrzydlo}
                     onPointerDown={edycja ? (e) => zacznij(e, i) : undefined}
                     onClick={
@@ -274,7 +294,7 @@ export default function Sciany({
                     <planeGeometry args={[o.szer / 100, (y1 - y0) / 100]} />
                   </mesh>
                   {o.rodzaj === "okno" ? (
-                    <mesh position={[srodek[0] + (s.nx * 7) / 100, y0 / 100 - 0.015, srodek[2] + (s.nz * 7) / 100]} rotation={[0, OBROT[s.id], 0]} material={rama} receiveShadow>
+                    <mesh position={[srodek[0] + (s.nx * 7) / 100, y0 / 100 - 0.015, srodek[2] + (s.nz * 7) / 100]} rotation={[0, s.obrot, 0]} material={rama} receiveShadow>
                       <boxGeometry args={[o.szer / 100 + 0.06, 0.03, 0.14]} />
                     </mesh>
                   ) : null}
@@ -294,13 +314,14 @@ export default function Sciany({
             name={`sciana-dodatkowa-${i + 1}`}
             position={[w.x / 100, h / 200, w.z / 100]}
             rotation={[0, (-w.kat * Math.PI) / 180, 0]}
-            material={czerwona ? zly : murMat}
+            material={czerwona ? zly : (sd.kolor && wlasne.get(sd.kolor)?.mur) || murMat}
             castShadow
             receiveShadow
             onPointerDown={edycja?.onSciana ? (e) => przeciaganieSciany.zacznij(e, i) : undefined}
             onClick={(e) => {
               if (e.delta > 4) return;
               e.stopPropagation();
+              onWybierz?.({ typ: "scianka", i });
             }}
             onPointerOver={edycja?.onSciana ? () => (document.body.style.cursor = "grab") : undefined}
             onPointerOut={edycja?.onSciana ? () => (document.body.style.cursor = "") : undefined}
@@ -309,7 +330,8 @@ export default function Sciany({
           </mesh>
         );
       })}
-      {kolorSufitu
+      {kolorSufitu && czyObrys(plan) ? <SufitObrysu obrys={plan.sciany!.obrys!} H={H} material={sufit} /> : null}
+      {kolorSufitu && !czyObrys(plan)
         ? (() => {
             const z = zakresPokoju(plan);
             return (

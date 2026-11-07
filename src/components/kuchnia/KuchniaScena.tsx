@@ -25,6 +25,7 @@ import { useRuch } from "./MebelParametryczny";
 import { przygotujRuchome, ustawOtwarcie } from "./ruchomeGlb";
 import { otwarty, przelaczElement, useOtwarcie } from "./otwarcieStore";
 import { useKoloryProjektu } from "../koloryStore";
+import PaletaSciany, { type EdycjaKolorowScian } from "./PaletaSciany";
 import Sciany, { type EdycjaOtworow } from "./Sciany";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 
@@ -56,6 +57,8 @@ type Props = {
   onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
   /** Ile pikseli od dołu sceny zasłania nakładka (strona klienta na komputerze: pasek materiałów) – kadr nad nią. */
   zasloniete?: number;
+  /** Kreator: kliknięta ściana dostaje własny kolor (okienko nad sceną). */
+  edycjaKolorow?: EdycjaKolorowScian;
 };
 
 export type EdycjaMebli = {
@@ -716,6 +719,27 @@ export default function KuchniaScena(props: Props) {
       >
         <Wnetrze {...props} tlo={tlo} wyborInny={wyborInny} setWyborInny={setWyborInny} />
       </Canvas>
+      {props.edycjaKolorow && (wyborInny?.typ === "sciana" || wyborInny?.typ === "scianka") ? (
+        <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 5 }}>
+          {wyborInny.typ === "sciana" ? (
+            <PaletaSciany
+              className="kr-sciany-panel"
+              tytul={`Ściana ${wyborInny.id}`}
+              kolor={props.plan.sciany?.koloryScian?.[wyborInny.id] ?? null}
+              onKolor={(k) => props.edycjaKolorow!.onSciana(wyborInny.id, k)}
+              onZamknij={() => setWyborInny(null)}
+            />
+          ) : (
+            <PaletaSciany
+              className="kr-sciany-panel"
+              tytul={`Ścianka ${wyborInny.i + 1}`}
+              kolor={props.plan.sciany?.dodatkowe?.[wyborInny.i]?.kolor ?? null}
+              onKolor={(k) => props.edycjaKolorow!.onScianka(wyborInny.i, k)}
+              onZamknij={() => setWyborInny(null)}
+            />
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

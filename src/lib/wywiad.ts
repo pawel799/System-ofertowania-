@@ -15,10 +15,15 @@ import type { TypProjektu } from "./projekt";
 /** Ściana zabudowy (jak w kuchnia.ts – tu bez importu, bo kuchnia.ts korzysta z tego pliku). */
 type Sciana = "A" | "B";
 
+/** Litery ścian pokoju: prostokąt A–D, pokój o dowolnym kształcie – do 16 ścian (src/lib/sciany.ts). */
+export const LITERY_SCIAN = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P"] as const;
+export type LiteraSciany = (typeof LITERY_SCIAN)[number];
+const czyLitera = (x: unknown): x is LiteraSciany => typeof x === "string" && (LITERY_SCIAN as readonly string[]).includes(x);
+
 export type Otwor = {
   rodzaj: "okno" | "drzwi";
-  /** A, B – ściany zabudowy; C, D – naprzeciw nich (gdy podano wymiary pokoju, src/lib/sciany.ts). */
-  sciana: Sciana | "C" | "D";
+  /** A, B – ściany zabudowy; C, D – naprzeciw nich (prostokąt); dalsze litery w pokoju o innym kształcie (src/lib/sciany.ts). */
+  sciana: LiteraSciany;
   /** Od narożnika (początku ściany) do krawędzi otworu [cm]. */
   od: number;
   szer: number;
@@ -31,7 +36,7 @@ export type RodzajPunktu = "gniazdko" | "gniazdko-2" | "sila" | "wlacznik" | "sw
 
 export type PunktInstalacji = {
   rodzaj: RodzajPunktu;
-  sciana: Sciana | "C" | "D";
+  sciana: LiteraSciany;
   /** Środek punktu od narożnika (początku ściany) [cm]. */
   od: number;
   /** Środek punktu nad podłogą [cm]. */
@@ -145,7 +150,7 @@ export function parseWywiad(v: unknown): Wywiad {
     const rodzaj = ot.rodzaj === "okno" || ot.rodzaj === "drzwi" ? ot.rodzaj : zle(`otwór ${i + 1}: okno albo drzwi.`);
     return {
       rodzaj,
-      sciana: ot.sciana === "C" || ot.sciana === "D" ? ot.sciana : sciana(ot.sciana),
+      sciana: czyLitera(ot.sciana) ? ot.sciana : zle(`otwór ${i + 1}: zła ściana.`),
       od: liczba(ot.od, `otwór ${i + 1} – od narożnika`, 0, 2000),
       szer: liczba(ot.szer, `otwór ${i + 1} – szerokość`, 30, 600),
       ...(rodzaj === "okno" && ot.parapet !== undefined && ot.parapet !== null ? { parapet: liczba(ot.parapet, `okno ${i + 1} – parapet`, 0, 250) } : {}),
@@ -163,7 +168,7 @@ export function parseWywiad(v: unknown): Wywiad {
     const rodzaj = typeof pk.rodzaj === "string" && (RODZAJE_PUNKTOW as readonly string[]).includes(pk.rodzaj) ? (pk.rodzaj as RodzajPunktu) : zle(`punkt ${i + 1}: nieznany rodzaj.`);
     return {
       rodzaj,
-      sciana: pk.sciana === "C" || pk.sciana === "D" ? pk.sciana : sciana(pk.sciana),
+      sciana: czyLitera(pk.sciana) ? pk.sciana : zle(`punkt ${i + 1}: zła ściana.`),
       od: liczba(pk.od, `punkt ${i + 1} – od narożnika`, 0, 2000),
       wys: liczba(pk.wys, `punkt ${i + 1} – wysokość`, 0, 450),
     } as PunktInstalacji;

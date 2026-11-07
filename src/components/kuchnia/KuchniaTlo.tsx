@@ -5,6 +5,7 @@ import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "../modelRoles";
 import type { EdycjaMebli, KuchniaUjecie } from "./KuchniaScena";
 import type { EdycjaOtworow } from "./Sciany";
+import type { EdycjaKolorowScian } from "./PaletaSciany";
 
 export type { KuchniaUjecie };
 
@@ -35,6 +36,8 @@ export default function KuchniaTlo({
   onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
   /** Piksele sceny zasłonięte od dołu przez nakładkę – kadr nad nią. */
   zasloniete?: number;
+  /** Kreator: własny kolor klikniętej ściany. */
+  edycjaKolorow?: EdycjaKolorowScian;
   className?: string;
 }) {
   return (

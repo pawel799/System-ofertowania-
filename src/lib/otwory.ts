@@ -25,13 +25,25 @@ export function wysokoscMebla(e: ElementKuchni): { y0: number; y1: number } | nu
   return { y0: 0, y1: e.h + (e.strefa === "dolna" ? 3 : 0) };
 }
 
-/** Odcinek wzdłuż ściany [cm od jej początku], który zajmuje mebel stojący przy tej ścianie; null = nie stoi przy niej. */
-export function meblaPrzyScianie(e: ElementKuchni, s: Sciana): { a: number; b: number } | null {
+/**
+ * Odcinek wzdłuż ściany [cm od jej początku], który zajmuje mebel stojący przy tej ścianie; null = nie stoi przy niej.
+ * glebia – najdalszy punkt mebla od ściany (do linii wymiarów przed frontem). Działa dla ścian pod dowolnym kątem.
+ */
+export function meblaPrzyScianie(e: ElementKuchni, s: Sciana): { a: number; b: number; glebia: number } | null {
   const r = rect(e);
-  const przy =
-    s.id === "A" ? r.z0 < PRZY_SCIANIE : s.id === "B" ? r.x0 < PRZY_SCIANIE : s.id === "C" ? r.z1 > s.z - PRZY_SCIANIE : r.x1 > s.x - PRZY_SCIANIE;
-  if (!przy) return null;
-  return s.dx ? { a: r.x0, b: r.x1 } : { a: r.z0, b: r.z1 };
+  const rogi = [
+    [r.x0, r.z0],
+    [r.x1, r.z0],
+    [r.x1, r.z1],
+    [r.x0, r.z1],
+  ];
+  const t = rogi.map(([x, z]) => (x - s.x) * s.dx + (z - s.z) * s.dz);
+  const d = rogi.map(([x, z]) => (x - s.x) * s.nx + (z - s.z) * s.nz);
+  if (Math.min(...d) >= PRZY_SCIANIE || Math.max(...d) <= -PRZY_SCIANIE) return null;
+  const a = Math.min(...t);
+  const b = Math.max(...t);
+  if (b <= 0.5 || a >= s.dlugosc - 0.5) return null;
+  return { a, b, glebia: Math.max(...d) };
 }
 
 /** Błędy otworu po zmianie (pusta lista = można). i – indeks w plan.wywiad.otwory (dla nowego: -1). */
@@ -39,7 +51,7 @@ export function sprawdzOtwor(plan: PlanKuchni, i: number, o: Otwor): string[] {
   const bledy: string[] = [];
   const s = scianaPoId(plan, o.sciana as ScianaPokoju);
   const nazwa = nazwaOtworu(o);
-  if (!s) return [`Ściany ${o.sciana} nie ma – ${o.sciana === "C" || o.sciana === "D" ? "podaj wymiary pokoju w kroku „Pomiar”" : "ustaw układ L"}.`];
+  if (!s) return [`Ściany ${o.sciana} nie ma – ${o.sciana === "B" ? "ustaw układ L albo wymiary pokoju" : "podaj wymiary pokoju w kroku „Pomiar” albo sprawdź kreator ścian"}.`];
   if (o.od < 0 || o.od + o.szer > s.dlugosc) bledy.push(`${nazwa} wychodzi poza ścianę ${s.id} (${s.dlugosc} cm).`);
   const H = wysokoscPokoju(plan);
   const { y0, y1 } = wysokoscOtworu(o, H);

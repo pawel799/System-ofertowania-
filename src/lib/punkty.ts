@@ -25,7 +25,7 @@ export function obrysPunktu(p: PunktInstalacji) {
 /** Błędy punktu po zmianie (pusta lista = można). i – indeks w plan.wywiad.punkty (nowy: -1). */
 export function sprawdzPunkt(plan: PlanKuchni, i: number, p: PunktInstalacji): string[] {
   const s = scianaPoId(plan, p.sciana as ScianaPokoju);
-  if (!s) return [`Ściany ${p.sciana} nie ma – ${p.sciana === "C" || p.sciana === "D" ? "podaj wymiary pokoju w kroku „Pomiar”" : "ustaw układ L"}.`];
+  if (!s) return [`Ściany ${p.sciana} nie ma – ${p.sciana === "B" ? "ustaw układ L albo wymiary pokoju" : "podaj wymiary pokoju w kroku „Pomiar” albo sprawdź kreator ścian"}.`];
   const bledy: string[] = [];
   const H = wysokoscPokoju(plan);
   const r = obrysPunktu(p);

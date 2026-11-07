@@ -15,6 +15,8 @@ import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFir
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 import type { ScianaDodatkowa, UstawieniaScian } from "@/lib/sciany";
 import FormatkiOkno from "../produkcja/FormatkiOkno";
+import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe } from "./KreatorScian";
+import { czyObrys, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
 import { useBrand } from "@/lib/brand";
 import type { Palette } from "../palettes";
@@ -314,6 +316,10 @@ export default function KreatorApp() {
   const kCtx = { palettes, katalog };
   const brand = useBrand();
   const [formatki, setFormatki] = useState(false);
+  const [kreatorScian, setKreatorScian] = useState(false);
+  const zamknijKreatorScian = useCallback(() => setKreatorScian(false), []);
+  // Kliknięta ściana w 3D → własny kolor (PaletaSciany nad sceną).
+  const edycjaKolorow = useMemo(() => edycjaKolorowScian(setPlan), []);
   const zamknijFormatki = useCallback(() => setFormatki(false), []);
   // Materiały do formatek: kolory mebli (fronty, boki, środek) i okucia z katalogu firmy – jak w PDF oferty.
   const zrodloProdukcji = useMemo<ZrodloMaterialow>(() => {
@@ -727,6 +733,23 @@ export default function KreatorApp() {
                     : [{ value: "A", label: "Ściana A" }]
                 }
               />
+              <div className="kr-pokoj-blok" data-tour="sciany">
+                <div className="kr-pokoj-gora">
+                  <b>Ściany</b>
+                  <span className="faint">
+                    {czyObrys(plan)
+                      ? `${scianyPokojuWszystkie(plan).length} ścian · własny kształt`
+                      : plan.pomieszczenie
+                        ? `prostokąt ${plan.pomieszczenie.szer} × ${plan.pomieszczenie.dlug} cm`
+                        : "bez wymiarów pokoju"}
+                  </span>
+                </div>
+                <button type="button" className="btn btn-ghost wide" onClick={() => setKreatorScian(true)}>
+                  Kreator ścian
+                </button>
+                <PrzelacznikSufitu plan={plan} setPlan={setPlan} />
+                <SciankiDzialowe plan={plan} setPlan={setPlan} kompakt />
+              </div>
               <label className="kr-search">
                 Szukaj
                 <input
@@ -824,6 +847,7 @@ export default function KreatorApp() {
                   plan={plan}
                   edycjaOtworow={{ onOtwor: przesunOtwor, onBlad: bladOtworu, onPunkt: przesunPunkt, onSciana: przesunSciane }}
                   edycjaMebli={edycjaMebli}
+                  edycjaKolorow={edycjaKolorow}
                   modele={modeleSceny}
                   zaznaczony={zaznaczony}
                   onWybierz={setZaznaczony}
@@ -850,6 +874,7 @@ export default function KreatorApp() {
                     setPlan((p) => ({ ...p, uklad: v }));
                     if (v === "ciag") setSciana("A");
                   }}
+                  onKreatorScian={() => setKreatorScian(true)}
                 />
               ) : krok === "otoczenie" ? (
                 <KrokOtoczenie typ={typ} plan={plan} wywiad={wywiad} setWywiad={setWywiad} />
@@ -1099,6 +1124,7 @@ export default function KreatorApp() {
         </div>
       ) : null}
 
+      {kreatorScian ? <KreatorScian plan={plan} setPlan={setPlan} onWysokosc={(n) => setWywiad((w) => ({ ...w, wysokosc: n }))} onClose={zamknijKreatorScian} /> : null}
       {formatki ? (
         <FormatkiOkno
           plan={planCeny}

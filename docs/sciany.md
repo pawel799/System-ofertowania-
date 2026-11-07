@@ -1,44 +1,88 @@
-# Ściany i sufit
+# Ściany, kształt pokoju, kolory i sufit
 
-Kreator → krok **Pomiar** → sekcja **Ściany i sufit**. Dane leżą w `plan.sciany` (`src/lib/sciany.ts`, walidacja `parseUstawieniaScian`).
+Dane leżą w `plan.sciany`. Logika jest w `src/lib/sciany.ts` (ściany, walidacja `parseUstawieniaScian`) i `src/lib/ksztaltPokoju.ts` (zmiany kształtu). Ściany i sufit są tylko do wizualizacji. Do formatek, okuć ani ceny nie wchodzą.
 
-## Ściany pokoju
+## Kształt pokoju
 
-- A, B, C i D jak dotąd. C i D są tylko przy podanych wymiarach pokoju.
-- Ścianę B, C albo D można odznaczyć (otwarta przestrzeń). Lista usuniętych ścian jest w `bez`.
-- A zostaje zawsze. B zostaje w układzie L.
-- Ściany nie da się usunąć, gdy jest na niej okno, drzwi, gniazdko albo woda – najpierw trzeba je przenieść.
-- `scianyPokoju()` pomija usunięte ściany. Dlatego otwory, gniazdka, granice mebli, 3D i rysunek widzą to samo.
+W kroku **Pomiar** pierwsze pytanie brzmi: „Ściany pomieszczenia: Standardowe – 4 ściany / Inny kształt”.
 
-## Dodatkowe ściany (`dodatkowe`)
+### Standardowe
 
-Służą jako działowe, skosy, wnęki albo ścianki przy wyspie.
+Prostokąt jak dotąd: wymiary pokoju, ściany A, B, C (naprzeciw A) i D (naprzeciw B).
 
-Każda ściana ma:
-- środek `x`, `z` w cm;
+### Inny kształt
+
+Otwiera się okno **Kreator ścian**. Pokój to wielokąt `obrys` z 3–16 narożnikami, ściany mają litery A–P.
+
+Zasady obrysu:
+- v0 = (0, 0) to narożnik zabudowy i stoi w miejscu;
+- v1 leży na osi x;
+- wszystkie punkty mają x, z ≥ 0;
+- litery: A = v0→v1, B = v0→v(n−1), C = v(n−1)→v(n−2) i dalej dookoła pokoju;
+- dla prostokąta litery A–D wychodzą takie jak w trybie standardowym.
+
+Każda ściana ma okna, drzwi i gniazdka. Wybór ściany przy oknie ma przyciski przy 2–4 ścianach i listę przy większej liczbie.
+
+Kreator ścian zawiera:
+- gotowe kształty: prostokąt, L, ścięty narożnik, wnęka, T;
+- rzut z narożnikami do przeciągania (co 5 cm, z Shift co 1 cm, przyciąganie do pionu i poziomu sąsiadów);
+- „+” w połowie ściany, który ją dzieli;
+- „Scal”, który usuwa narożnik;
+- długość ściany z pola;
+- „jest” – odznaczenie robi otwartą przestrzeń;
+- kolor ściany;
+- wysokość, sufit i ścianki działowe;
+- podgląd 3D z kolorowaniem ścian kliknięciem.
+
+Przeniesienia okien, drzwi, gniazdek i wody:
+- Zmiana geometrii (narożnik, długość) zostawia litery – elementy jadą ze swoją ścianą i muszą się na niej zmieścić.
+- Zmiana układu (podział, scalenie, gotowy kształt, przejście prostokąt ↔ obrys) przenosi je po położeniu w pokoju na ścianę, na której teraz leżą (`przeniesNaSciany`).
+- Usunięte ściany i kolory przechodzą tak samo.
+- Gdy coś nie ma gdzie zostać, zmiana nie przechodzi i pojawia się komunikat.
+
+Synchronizacja z resztą planu:
+- `pomieszczenie` to prostokąt opisany na obrysie;
+- `scianaA` = długość ściany A;
+- `scianaB` = długość ściany B, gdy biegnie wzdłuż osi z.
+
+Meble:
+- „przy ścianie” i granice pokoju (`meblaPrzyScianie`, `wGranicachPokoju`) liczą się geometrycznie, dla ścian pod dowolnym kątem.
+
+## Lewy panel kreatora
+
+Pod przełącznikiem „Ściana A / Ściana B” jest blok **Ściany**:
+- opis kształtu;
+- przycisk „Kreator ścian”;
+- sufit;
+- ścianki działowe (dodawanie, obrót, kolor, usuwanie).
+
+## Kolory
+
+- **„Kolor ścian”** nad sceną to kolor domyślny wszystkich ścian. Klient może go zmienić u siebie.
+- **Kolor pojedynczej ściany** (`koloryScian`): kliknięcie ściany w 3D w kreatorze otwiera okienko z kolorami w lewym dolnym rogu sceny. W kreatorze ścian kolor ustawia przycisk „Kolor” przy ścianie albo kliknięcie ściany na rzucie. „Jak reszta” usuwa własny kolor.
+- **Ścianka działowa** ma własny `kolor` (kliknięcie w 3D albo pole koloru na karcie).
+
+## Ścianki działowe (`dodatkowe`)
+
+Każda ścianka ma:
+- środek `x`, `z`;
 - `dlugosc`;
-- `kat` od 0 do 179° (0 = wzdłuż A, 90 = wzdłuż B);
+- `kat` od 0 do 179°;
 - `grubosc`;
-- opcjonalnie `wysokosc` (brak = do sufitu).
-
-Limit: najwyżej 30 ścian.
+- opcjonalnie `wysokosc` i `kolor`.
 
 Edycja:
-- **Pola w kroku „Pomiar”:** długość, kąt, grubość, środek od ściany B i od A, wysokość. Przyciski ↺ 15°, ↻ 15° i 90°.
-- **Rzut:** przeciągnięcie ściany ją przesuwa. Przeciągnięcie kółka na końcu obraca ją i zmienia długość wokół drugiego końca (co 15° i 5 cm, z Shift co 1° i 1 cm).
-- **3D:** przeciągnięcie po podłodze przesuwa ścianę.
+- pola w kreatorze ścian;
+- na rzucie: przeciąganie przesuwa, kółko na końcu obraca i zmienia długość;
+- w 3D: przeciąganie po podłodze.
 
 Zabezpieczenia:
-- Ściana nie może wejść na meble (`sprawdzScianeDodatkowa`).
-- Mebel nie może wejść w ścianę – sprawdza to `meblaWOtworze`, czyli rzut, strzałki i przeciąganie w 3D.
-- Niższa ściana nie blokuje szafek wiszących nad nią.
-
-Rysunek techniczny rysuje dodatkowe ściany jako mur z numerem i długością.
+- ścianka nie wchodzi na meble;
+- mebel nie wchodzi w ściankę;
+- niższa ścianka nie blokuje szafek wiszących nad nią.
 
 ## Sufit (`sufit`)
 
-- Płaszczyzna na wysokości pokoju, nad całym pokojem, domyślnie w kolorze `#f4f2ee`.
-- Widać ją tylko od spodu. Z góry, w zwykłym widoku kreatora, znika jak ściany zwrócone tyłem.
-- „Ukryj ściany” chowa też sufit i dodatkowe ściany.
-
-Otwory (okna, drzwi) i gniazdka są na razie tylko na ścianach A–D.
+- Płaszczyzna w kształcie pokoju (prostokąt albo wielokąt) na wysokości pokoju.
+- Widać ją tylko od spodu.
+- „Ukryj ściany” chowa ją razem ze ścianami.

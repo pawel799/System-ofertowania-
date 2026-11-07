@@ -15,7 +15,7 @@ import {
   type PlanKuchni,
   type Strefa,
 } from "@/lib/kuchnia";
-import { koncowkiSciany, naroznikiSciany, punktNaScianie, scianaZKoncow, scianyPokoju, wGranicachPokoju, type ScianaDodatkowa } from "@/lib/sciany";
+import { czyObrys, koncowkiSciany, naroznikiSciany, punktNaScianie, scianaZKoncow, scianyPokoju, wGranicachPokoju, type ScianaDodatkowa } from "@/lib/sciany";
 import { meblaWOtworze, otworWPunkcie, sprawdzOtwor, sprawdzScianeDodatkowa } from "@/lib/otwory";
 import { punktWPunkcie, sprawdzPunkt } from "@/lib/punkty";
 import { PUNKT_INFO, type PunktInstalacji, type RodzajPunktu } from "@/lib/wywiad";
@@ -418,7 +418,11 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         if (e.target === e.currentTarget) onWybierz(null);
       }}
     >
-      {plan.pomieszczenie ? <rect className="kr-room" x={0} y={0} width={plan.pomieszczenie.szer} height={plan.pomieszczenie.dlug} /> : null}
+      {czyObrys(plan) ? (
+        <polygon className="kr-room" points={plan.sciany!.obrys!.map((p) => `${p.x},${p.z}`).join(" ")} />
+      ) : plan.pomieszczenie ? (
+        <rect className="kr-room" x={0} y={0} width={plan.pomieszczenie.szer} height={plan.pomieszczenie.dlug} />
+      ) : null}
       {linie.map((l) => (
         <line key={l.k} className="kr-grid" x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} />
       ))}
@@ -476,7 +480,13 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
         <g>
           <Wymiar x1={0} y1={0} x2={plan.scianaA} y2={0} nx={0} ny={-1} odsun={18} tekst={`${plan.scianaA}`} />
           {plan.uklad === "L" ? <Wymiar x1={0} y1={0} x2={0} y2={plan.scianaB} nx={-1} ny={0} odsun={18} tekst={`${plan.scianaB}`} /> : null}
-          {plan.pomieszczenie ? (
+          {czyObrys(plan) ? (
+            scianyPokoju(plan)
+              .filter((s) => s.id !== "A" && !(s.id === "B" && plan.uklad === "L"))
+              .map((s) => (
+                <Wymiar key={`w-${s.id}`} x1={s.x} y1={s.z} x2={s.x + s.dx * s.dlugosc} y2={s.z + s.dz * s.dlugosc} nx={-s.nx} ny={-s.nz} odsun={14} tekst={`${s.id} · ${Math.round(s.dlugosc)}`} />
+              ))
+          ) : plan.pomieszczenie ? (
             <>
               <Wymiar
                 x1={0}

@@ -7,13 +7,17 @@
  */
 import { UKLAD_KUCHNI_LABEL, type PlanKuchni, type Sciana, type UkladKuchni } from "@/lib/kuchnia";
 import { parseTypProjektu, TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
+import type { LiteraSciany } from "@/lib/wywiad";
 import { AGD_IDS, AGD_LABEL, MAX_PUNKTOW, MEBEL_LABEL, MEBLE_SALONU, POTRZEBA_LABEL, POTRZEBY, PUNKT_INFO, RODZAJE_PUNKTOW, type Otwor, type PunktInstalacji, type RodzajPunktu, type Wywiad } from "@/lib/wywiad";
 import { propozycjaPunktow, sprawdzPunkt, uwagiPunktu, wolneMiejscePunktu } from "@/lib/punkty";
 import { PoleCm } from "./KreatorWlasciwosci";
-import { scianyPokoju, SCIANA_LABEL } from "@/lib/sciany";
+import { etykietaSciany, scianyPokoju } from "@/lib/sciany";
 import { sprawdzOtwor, wolneMiejsceOtworu } from "@/lib/otwory";
 import { Seg } from "./ui";
-import KreatorSciany from "./KreatorSciany";
+import { PrzelacznikSufitu } from "./KreatorScian";
+import { naObrys, naProstokat } from "@/lib/ksztaltPokoju";
+import { czyObrys, scianyPokojuWszystkie as wszystkieSciany } from "@/lib/sciany";
+import { toast } from "./ui";
 
 export const KROKI = ["pomieszczenie", "otoczenie", "wyposazenie", "meble", "materialy", "oferta"] as const;
 export type Krok = (typeof KROKI)[number];
@@ -75,7 +79,15 @@ export function KrokPomieszczenie({
   wywiad,
   setWywiad,
   onUklad,
-}: Wspolne & { setTyp: (t: TypProjektu) => void; setPlan: (fn: (p: PlanKuchni) => PlanKuchni) => void; onUklad: (u: UkladKuchni) => void }) {
+  onKreatorScian,
+}: Wspolne & { setTyp: (t: TypProjektu) => void; setPlan: (fn: (p: PlanKuchni) => PlanKuchni) => void; onUklad: (u: UkladKuchni) => void; onKreatorScian: () => void }) {
+  const inny = czyObrys(plan);
+  const ksztalt = (v: "prostokat" | "inny") => {
+    const w = v === "inny" ? naObrys(plan) : naProstokat(plan);
+    if ("blad" in w) return void toast("Tak się nie da", { type: "err", desc: w.blad });
+    setPlan(() => w.plan);
+    if (v === "inny") onKreatorScian();
+  };
   const pom = plan.pomieszczenie ?? { szer: Math.min(2000, Math.max(120, plan.scianaA + 60)), dlug: Math.min(2000, Math.max(120, (plan.uklad === "L" ? plan.scianaB : 200) + 60)) };
   return (
     <div className="kr-krok" data-krok="pomieszczenie">
@@ -91,21 +103,54 @@ export function KrokPomieszczenie({
           ))}
         </select>
       </div>
+      <div className="field">
+        <span className="lab">Ściany pomieszczenia</span>
+        <Seg
+          label="Kształt pomieszczenia"
+          value={inny ? "inny" : "prostokat"}
+          onChange={ksztalt}
+          options={[
+            { value: "prostokat", label: "Standardowe – 4 ściany" },
+            { value: "inny", label: "Inny kształt" },
+          ]}
+        />
+      </div>
+      {inny ? (
+        <div className="kr-ksztalt">
+          <p>
+            <b>{wszystkieSciany(plan).length} ścian</b> · {wszystkieSciany(plan).map((s) => `${s.id} ${Math.round(s.dlugosc)}`).join(" · ")} cm
+          </p>
+          <button type="button" className="btn btn-ink" onClick={onKreatorScian}>
+            Otwórz kreator ścian
+          </button>
+          <div className="kr-dims">
+            <PoleCm id="k-pom-wys" label="Wysokość do sufitu" value={wywiad.wysokosc} min={180} max={450} onCommit={(n) => setWywiad((w) => ({ ...w, wysokosc: n }))} />
+          </div>
+        </div>
+      ) : (
       <div className="kr-dims kr-dims-3">
         <PoleCm id="k-pom-szer" label="Szerokość pokoju" value={pom.szer} min={120} max={2000} onCommit={(n) => setPlan((p) => ({ ...p, pomieszczenie: { szer: n, dlug: p.pomieszczenie?.dlug ?? pom.dlug } }))} />
         <PoleCm id="k-pom-dlug" label="Długość pokoju" value={pom.dlug} min={120} max={2000} onCommit={(n) => setPlan((p) => ({ ...p, pomieszczenie: { szer: p.pomieszczenie?.szer ?? pom.szer, dlug: n } }))} />
         <PoleCm id="k-pom-wys" label="Wysokość do sufitu" value={wywiad.wysokosc} min={180} max={450} onCommit={(n) => setWywiad((w) => ({ ...w, wysokosc: n }))} />
       </div>
+      )}
+      {!inny ? (
+        <p className="kr-hint">Pokój ze skosem, wnęką, w kształcie L albo z więcej niż 4 ścianami? Wybierz „Inny kształt” – otworzy się kreator ścian.</p>
+      ) : null}
       {typ === "kuchnia" || typ === "inne" ? (
         <div className="field">
           <span className="lab">Układ zabudowy</span>
           <Seg label="Układ zabudowy" value={plan.uklad} onChange={onUklad} options={(Object.keys(UKLAD_KUCHNI_LABEL) as UkladKuchni[]).map((u) => ({ value: u, label: UKLAD_KUCHNI_LABEL[u] }))} />
         </div>
       ) : null}
-      <div className="kr-dims">
-        <PoleCm id="k-sciana-a" label={SCIANA_A[typ]} value={plan.scianaA} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaA: n }))} />
-        {plan.uklad === "L" ? <PoleCm id="k-sciana-b" label="Ściana B – druga ściana (L)" value={plan.scianaB} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaB: n }))} /> : null}
-      </div>
+      {inny ? (
+        <p className="kr-hint">Długości ścian A i B pod zabudowę bierzemy z kreatora ścian.</p>
+      ) : (
+        <div className="kr-dims">
+          <PoleCm id="k-sciana-a" label={SCIANA_A[typ]} value={plan.scianaA} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaA: n }))} />
+          {plan.uklad === "L" ? <PoleCm id="k-sciana-b" label="Ściana B – druga ściana (L)" value={plan.scianaB} min={80} max={1200} onCommit={(n) => setPlan((p) => ({ ...p, scianaB: n }))} /> : null}
+        </div>
+      )}
       <p className="kr-hint">
         {typ === "szafa"
           ? "Szafę zrobimy na całą wnękę i do sufitu (minus 2 cm luzu). Wysokość mierz w kilku miejscach – liczy się najniższa."
@@ -113,8 +158,24 @@ export function KrokPomieszczenie({
             ? "Ściana A to ściana z oknem albo najdłuższa. W układzie L ściana B zaczyna się w tym samym narożniku."
             : "Obrys pokoju widać na rzucie jako przerywaną linię."}
       </p>
-      <KreatorSciany plan={plan} setPlan={setPlan} />
+      <PrzelacznikSufitu plan={plan} setPlan={setPlan} />
     </div>
+  );
+}
+
+/** Wybór ściany dla okna, drzwi albo gniazdka: przyciski przy 2–4 ścianach, lista przy większej liczbie. */
+function WyborSciany({ plan, label, value, onChange }: { plan: PlanKuchni; label: string; value: LiteraSciany; onChange: (v: LiteraSciany) => void }) {
+  const sciany = scianyPokoju(plan);
+  const nazwa = (id: LiteraSciany) => etykietaSciany(plan, id).replace(" (naprzeciw ", " · nap. ").replace(")", "");
+  if (sciany.length <= 4) return <Seg label={label} value={value} onChange={onChange} options={sciany.map((s) => ({ value: s.id, label: nazwa(s.id) }))} />;
+  return (
+    <select className="input" aria-label={label} value={value} onChange={(e) => onChange(e.target.value as LiteraSciany)}>
+      {sciany.map((s) => (
+        <option key={s.id} value={s.id}>
+          {nazwa(s.id)} · {Math.round(s.dlugosc)} cm
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -151,12 +212,7 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
               {o.rodzaj === "okno" ? "Okno" : "Drzwi"} {i + 1}
             </legend>
             {sciany.length > 1 ? (
-              <Seg
-                label={`${o.rodzaj === "okno" ? "Okno" : "Drzwi"} ${i + 1}: ściana`}
-                value={o.sciana}
-                onChange={(v: Otwor["sciana"]) => ustawOtwor(i, { sciana: v })}
-                options={sciany.map((s) => ({ value: s.id as Otwor["sciana"], label: SCIANA_LABEL[s.id].replace(" (naprzeciw ", " · nap. ").replace(")", "") }))}
-              />
+              <WyborSciany plan={plan} label={`${o.rodzaj === "okno" ? "Okno" : "Drzwi"} ${i + 1}: ściana`} value={o.sciana} onChange={(v) => ustawOtwor(i, { sciana: v })} />
             ) : null}
             <div className={o.rodzaj === "okno" ? "kr-dims kr-dims-3" : "kr-dims"}>
               <PoleCm id={`k-ot-od-${i}`} label="Od narożnika" value={o.od} min={0} max={2000} onCommit={(n) => ustawOtwor(i, { od: n })} />
@@ -200,12 +256,7 @@ export function KrokOtoczenie({ typ, plan, wywiad, setWywiad }: Wspolne) {
                 {info.nazwa} · {i + 1}
               </legend>
               {sciany.length > 1 ? (
-                <Seg
-                  label={`${info.krotka} ${i + 1}: ściana`}
-                  value={p.sciana}
-                  onChange={(v: PunktInstalacji["sciana"]) => ustawPunkt(i, { sciana: v })}
-                  options={sciany.map((s) => ({ value: s.id as PunktInstalacji["sciana"], label: SCIANA_LABEL[s.id].replace(" (naprzeciw ", " · nap. ").replace(")", "") }))}
-                />
+                <WyborSciany plan={plan} label={`${info.krotka} ${i + 1}: ściana`} value={p.sciana} onChange={(v) => ustawPunkt(i, { sciana: v })} />
               ) : null}
               <div className="kr-dims">
                 <PoleCm id={`k-pk-od-${i}`} label="Oś od narożnika" value={p.od} min={0} max={2000} onCommit={(n) => ustawPunkt(i, { od: n })} />

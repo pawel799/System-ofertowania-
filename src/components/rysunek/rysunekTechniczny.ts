@@ -8,7 +8,7 @@
  */
 import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaPrzyScianie } from "@/lib/otwory";
-import { naroznikiSciany, SCIANA_LABEL, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
+import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
 import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { PunktInstalacji } from "@/lib/wywiad";
 import { yElementu } from "@/components/kuchnia/uklad3d";
@@ -271,7 +271,8 @@ export function svgRzutu(plan: PlanKuchni): string {
   const m = fs * 6.2;
   const out: string[] = [];
   const sciany = scianyPokoju(plan);
-  if (plan.pomieszczenie) out.push(`<rect class="rys-pokoj" x="0" y="0" width="${n(plan.pomieszczenie.szer)}" height="${n(plan.pomieszczenie.dlug)}" />`);
+  if (plan.sciany?.obrys && plan.sciany.obrys.length >= 3) out.push(`<polygon class="rys-pokoj" points="${plan.sciany.obrys.map((p) => `${n(p.x)},${n(p.z)}`).join(" ")}" />`);
+  else if (plan.pomieszczenie) out.push(`<rect class="rys-pokoj" x="0" y="0" width="${n(plan.pomieszczenie.szer)}" height="${n(plan.pomieszczenie.dlug)}" />`);
   for (const s of sciany) otworyRzut(out, plan, s, gr);
   // Dodatkowe ściany (działowe, skosy) – mur z numerem i długością.
   (plan.sciany?.dodatkowe ?? []).forEach((sd, i) => {
@@ -352,8 +353,8 @@ export function svgSciany(plan: PlanKuchni, id: ScianaPokoju): string {
   const H = wysokoscPokoju(plan);
   const L = s.dlugosc;
   const fs = Math.min(12, Math.max(6, Math.max(L, H) / 46));
-  // Ściany B i C ogląda się „w lustrze” (patrząc od środka pokoju, początek ściany jest po prawej).
-  const lustro = id === "B" || id === "C";
+  // Widok od środka pokoju: ściana, której kierunek × normalna < 0, rysuje się w lustrze (B i C w prostokącie).
+  const lustro = !!s && s.dx * s.nz - s.dz * s.nx < 0;
   const X = (t: number) => (lustro ? L - t : t);
   const Y = (y: number) => H - y;
   const out: string[] = [];
@@ -370,7 +371,7 @@ export function svgSciany(plan: PlanKuchni, id: ScianaPokoju): string {
   }
   const meble = plan.elementy
     .map((e, i) => ({ e, i, o: meblaPrzyScianie(e, s) }))
-    .filter((m): m is { e: ElementKuchni; i: number; o: { a: number; b: number } } => !!m.o)
+    .filter((m): m is { e: ElementKuchni; i: number; o: { a: number; b: number; glebia: number } } => !!m.o)
     .sort((a, b) => KOLEJNOSC[a.e.strefa] - KOLEJNOSC[b.e.strefa]);
   const dolne: number[] = [];
   const gorne: number[] = [];
@@ -422,7 +423,7 @@ export function svgSciany(plan: PlanKuchni, id: ScianaPokoju): string {
     if (o.rodzaj === "okno") poziomy.add(y0);
     poziomy.add(y1);
   }
-  wymiar(out, naDole(0), naDole(L), dol(fs * 3.6), `${SCIANA_LABEL[id].replace(/ \(.*\)/, "")} · ${cm(L)}`, fs);
+  wymiar(out, naDole(0), naDole(L), dol(fs * 3.6), `${etykietaSciany(plan, id).replace(/ \(.*\)/, "")} · ${cm(L)}`, fs);
   const pion = Array.from(poziomy).filter((v) => v >= 0 && v <= H);
   lancuch(out, pion, (y) => [L, Y(y)], fs * 1.6, fs * 0.85);
   wymiar(out, [L, Y(0)], [L, Y(H)], fs * 4, `wys. ${cm(H)}`, fs * 0.9);
@@ -527,7 +528,7 @@ ${tabelka}
 ${sciany
   .map(
     (id) => `<section class="rt-arkusz rt-sciana">
-<h2 class="rt-tytul">Widok ${esc(SCIANA_LABEL[id].replace("Ściana", "ściany"))} – od środka pomieszczenia</h2>
+<h2 class="rt-tytul">Widok ${esc(etykietaSciany(plan, id).replace("Ściana", "ściany"))} – od środka pomieszczenia</h2>
 <div class="rt-rys">${svgSciany(plan, id)}</div>
 ${tabelka}
 </section>`,

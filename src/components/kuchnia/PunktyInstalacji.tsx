@@ -13,10 +13,9 @@ import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { naScianie, sprawdzPunkt } from "@/lib/punkty";
-import { scianyPokoju, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
+import { scianyPokoju, wysokoscPokoju, type Sciana } from "@/lib/sciany";
 import { PUNKT_INFO, type PunktInstalacji, type RodzajPunktu } from "@/lib/wywiad";
 
-const OBROT: Record<ScianaPokoju, number> = { A: 0, B: Math.PI / 2, C: Math.PI, D: -Math.PI / 2 };
 
 export type EdycjaPunktow = {
   onPunkt: (i: number, p: PunktInstalacji) => void;
@@ -169,7 +168,7 @@ function PunktNaScianie({
       ref={g}
       name={`punkt-${p.rodzaj}`}
       position={[(s.x + s.dx * p.od) / 100 + s.nx * 0.001, p.wys / 100, (s.z + s.dz * p.od) / 100 + s.nz * 0.001]}
-      rotation={[0, OBROT[s.id], 0]}
+      rotation={[0, s.obrot, 0]}
       onPointerDown={onPointerDown}
       onClick={onClick}
       onPointerOver={edycja ? () => (document.body.style.cursor = "grab") : undefined}

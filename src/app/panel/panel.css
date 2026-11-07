@@ -758,3 +758,64 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-sciana-gora { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; font-size: 13px; }
 .pnl .kr-sciana-gora .btn { padding-left: 8px; padding-right: 8px; height: 28px; font-size: 12px; }
 .pnl .kr-sciana-gora .kr-usun { color: var(--red); }
+
+/* Kreator ścian (okno) */
+.pnl .modal.ks-okno { width: min(1280px, 100%); height: min(920px, calc(100dvh - 32px)); max-height: none; display: flex; flex-direction: column; overflow: hidden; }
+.pnl .ks-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(300px, 380px) 1fr; }
+.pnl .ks-panel { overflow: hidden; padding: 14px 18px 24px; border-right: 1px solid var(--g3); display: flex; flex-direction: column; gap: 18px; }
+.pnl .ks-panel[data-przewijanie] { overflow: auto; overscroll-behavior: contain; }
+.pnl .ks-panel section { display: flex; flex-direction: column; gap: 8px; }
+.pnl .ks-panel h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.pnl .ks-gotowe { display: flex; flex-wrap: wrap; gap: 6px; }
+.pnl .ks-gotowe .btn { height: 30px; font-size: 12.5px; padding: 0 10px; }
+.pnl .ks-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pnl .ks-lista li { display: grid; grid-template-columns: 28px 1fr; gap: 4px 10px; align-items: center; padding: 6px 8px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); }
+.pnl .ks-lista li[data-wybrana] { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.pnl .ks-lista label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-2); }
+.pnl .ks-lista label.kr-check { flex-direction: row; color: var(--text); }
+.pnl .ks-lista .kr-hint { display: none; }
+.pnl .ks-znak { grid-row: span 2; width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; font-weight: 650; font-size: 12.5px; background: var(--text); color: var(--panel); }
+.pnl .ks-akcje { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.pnl .ks-akcje .btn { height: 26px; padding: 0 8px; font-size: 12px; }
+.pnl .ks-sufit { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.pnl .ks-sufit input[type="color"] { width: 30px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+.pnl .ks-dzialowe { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+.pnl .ks-widok { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; background: var(--g1, var(--bg)); }
+.pnl .ks-svg { flex: 1; min-height: 0; width: 100%; height: 100%; touch-action: none; user-select: none; }
+.pnl .ks-3d { position: relative; flex: 1; min-height: 320px; border-radius: 12px; overflow: hidden; }
+.pnl .ks-pokoj { fill: var(--panel); stroke: none; }
+.pnl .ks-pokoj[data-bad] { fill: #f6d9d7; }
+.pnl .ks-mebel { fill: var(--g3); opacity: 0.7; }
+.pnl .ks-dzialowa { fill: var(--text-2); opacity: 0.8; }
+.pnl .ks-sciana line:first-child { stroke: var(--text); stroke-linecap: square; }
+.pnl .ks-sciana[data-bez] line:first-child { stroke: var(--text-3); stroke-dasharray: 3 3; opacity: 0.6; }
+.pnl .ks-sciana[data-wybrana] line:first-child { stroke: var(--accent); }
+.pnl .ks-okno { stroke: #4f8fd6; }
+.pnl .ks-drzwi { stroke: #a8763e; }
+.pnl .ks-sciana text { fill: var(--text-2); font-variant-numeric: tabular-nums; pointer-events: none; }
+.pnl .ks-litera { fill: var(--text); cursor: pointer; }
+.pnl .ks-sciana .ks-litera-t { fill: var(--panel); font-weight: 650; }
+.pnl .ks-plus circle { fill: var(--panel); stroke: var(--accent); stroke-width: 0.6; cursor: copy; }
+.pnl .ks-plus path { stroke: var(--accent); pointer-events: none; }
+.pnl .ks-plus:hover circle { fill: var(--accent); }
+.pnl .ks-plus:hover path { stroke: var(--panel); }
+.pnl .ks-naroznik { fill: var(--panel); stroke: var(--accent); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.pnl .ks-naroznik[data-staly] { fill: var(--text); stroke: var(--text); }
+.pnl .ks-naroznik:not([data-staly]):hover { fill: var(--accent); }
+.pnl .ks-blad { fill: var(--red); font-weight: 600; }
+.pnl .kr-pokoj-blok { display: flex; flex-direction: column; gap: 8px; padding: 10px 0 12px; border-bottom: 1px solid var(--g3); }
+.pnl .kr-pokoj-gora { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 13px; }
+.pnl .kr-pokoj-gora .faint { font-size: 12px; }
+.pnl .kr-pokoj-blok .kr-sciana-karta { padding: 6px 8px 8px; }
+.pnl .kr-ksztalt { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.pnl .kr-ksztalt p { margin: 0; font-size: 12.5px; color: var(--text-2); }
+@media (max-width: 860px) {
+  .pnl .ks-body { grid-template-columns: 1fr; grid-template-rows: auto minmax(360px, 1fr); overflow: auto; }
+  .pnl .ks-panel { border-right: 0; border-bottom: 1px solid var(--g3); overflow: visible; }
+}
+.pnl .ks-kolor { width: 24px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer; }
+.pnl .ks-kolor-btn { display: inline-flex; align-items: center; gap: 6px; }
+.pnl .ks-kolor-btn i { width: 14px; height: 14px; border-radius: 999px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); display: inline-block; }
+.pnl .ks-paleta { grid-column: 1 / -1; padding: 4px 0 2px; }
+.pnl .ks-paleta [data-paleta-sciany] { width: auto !important; }
+.pnl .ks-kolor-linia { pointer-events: none; stroke-linecap: butt; }
