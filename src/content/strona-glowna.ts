@@ -66,7 +66,7 @@ export const HOME = {
       {
         title: "Komody i szafki",
         text: "Komody od 40 do 220 cm, szuflandie, szafki RTV, nocne, na buty, regały i witryny.",
-        media: { src: "/strona/meble-komody.webp", alt: "Komoda z dwunastoma szufladami w 3D", ratio: "4 / 3" } as Media,
+        media: { src: "/strona/meble-komody.webp", alt: "Komoda trzyczęściowa w 3D: drzwi, trzy szuflady, drzwi", ratio: "4 / 3" } as Media,
       },
       {
         title: "Łazienka i przedpokój",
