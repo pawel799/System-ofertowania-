@@ -28,9 +28,23 @@ export type ModelMeta = {
   /** Klucz pliku w R2. */
   file: string;
   tags: Record<string, ModelRole>;
+  /** Rzeczywiste wymiary modelu [cm] (szer. × wys. × gł.) – z analizy przy wgrywaniu albo ustawione ręcznie. */
+  wymiary?: WymiaryModelu;
   createdAt: string;
   updatedAt: string;
 };
+
+export type WymiaryModelu = { w: number; h: number; d: number };
+
+/** Wymiary modelu z żądania: { w, h, d } w cm (1–2000) albo tekst „w,h,d” z nagłówka. */
+export function validateWymiary(v: unknown): WymiaryModelu {
+  const lista = typeof v === "string" ? v.split(",").map(Number) : v && typeof v === "object" ? [(v as Record<string, unknown>).w, (v as Record<string, unknown>).h, (v as Record<string, unknown>).d] : [];
+  if (lista.length !== 3 || lista.some((n) => typeof n !== "number" || !Number.isFinite(n) || n < 1 || n > 2000)) {
+    throw new HttpError(400, "invalid", "Wymiary modelu: szerokość, wysokość i głębokość od 1 do 2000 cm.");
+  }
+  const [w, h, d] = (lista as number[]).map((n) => Math.round(n * 10) / 10);
+  return { w, h, d };
+}
 
 /** Limit pliku po optymalizacji. Pages Functions przyjmują do 100 MB, ale klient i tak musi to pobrać. */
 export const MAX_MODEL_BYTES = 40 * 1024 * 1024;

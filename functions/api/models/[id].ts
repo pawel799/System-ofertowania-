@@ -1,10 +1,10 @@
 /*
  * /api/models/:id  (panel, wymaga tokenu)
  *   GET    – opis modelu
- *   PUT    – zmiana nazwy i oznaczeń elementów: { name?, tags? }
+ *   PUT    – zmiana nazwy, oznaczeń elementów i wymiarów: { name?, tags?, wymiary?: { w, h, d } | null }
  *   DELETE – usunięcie modelu i pliku; 409, gdy używa go jakaś oferta
  */
-import { bucket, cleanName, getModel, modelId, offersUsing, putModel, validateTags } from "../../_lib/assets";
+import { bucket, cleanName, getModel, modelId, offersUsing, putModel, validateTags, validateWymiary } from "../../_lib/assets";
 import { handle, HttpError, json, param, readJson } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 
@@ -24,8 +24,12 @@ export const onRequestPut = handle(async (ctx) => {
   const body = await readJson(ctx.request);
   if (!body || typeof body !== "object" || Array.isArray(body)) throw new HttpError(400, "invalid", "Oczekiwano obiektu.");
   const b = body as Record<string, unknown>;
+  const { wymiary: _stare, ...bezWymiarow } = m;
+  void _stare;
+  const wymiary = b.wymiary === null ? undefined : b.wymiary !== undefined ? validateWymiary(b.wymiary) : m.wymiary;
   const saved = {
-    ...m,
+    ...bezWymiarow,
+    ...(wymiary ? { wymiary } : {}),
     ...(b.name !== undefined ? { name: cleanName(b.name, "name") } : {}),
     ...(b.tags !== undefined ? { tags: validateTags(b.tags) } : {}),
     updatedAt: new Date().toISOString(),

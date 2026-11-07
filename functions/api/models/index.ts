@@ -2,9 +2,10 @@
  * /api/models  (panel, wymaga tokenu)
  *   GET  – lista wgranych modeli 3D
  *   POST – nowy model: treść = plik GLB (już zoptymalizowany w przeglądarce),
- *          nagłówek X-Model-Name = nazwa (zakodowana encodeURIComponent).
+ *          nagłówek X-Model-Name = nazwa (zakodowana encodeURIComponent),
+ *          opcjonalnie X-Model-Wymiary = „w,h,d” – rzeczywiste wymiary w cm (z analizy w przeglądarce).
  */
-import { bucket, cleanName, isGlb, listModels, MAX_MODEL_BYTES, putModel, type ModelMeta } from "../../_lib/assets";
+import { bucket, cleanName, isGlb, listModels, MAX_MODEL_BYTES, putModel, validateWymiary, type ModelMeta } from "../../_lib/assets";
 import { handle, HttpError, json, randomId } from "../../_lib/offers";
 import { panel } from "../../_lib/auth";
 import { assertCanWrite, assertLimit, firmPlan } from "../../_lib/plan";
@@ -31,6 +32,8 @@ export const onRequestPost = handle(async (ctx) => {
     throw new HttpError(400, "invalid", "Zła nazwa modelu.");
   }
   const name = cleanName(rawName, "name");
+  const naglowekWymiarow = ctx.request.headers.get("x-model-wymiary");
+  const wymiary = naglowekWymiarow ? validateWymiary(naglowekWymiarow) : undefined;
 
   const buf = await ctx.request.arrayBuffer();
   if (buf.byteLength > MAX_MODEL_BYTES) throw tooBig;
@@ -40,7 +43,7 @@ export const onRequestPost = handle(async (ctx) => {
   const file = `models/${id}/1.glb`;
   await r2.put(file, buf, { httpMetadata: { contentType: "model/gltf-binary" } });
   const now = new Date().toISOString();
-  const meta: ModelMeta = { id, name, size: buf.byteLength, version: 1, file, tags: {}, createdAt: now, updatedAt: now };
+  const meta: ModelMeta = { id, name, size: buf.byteLength, version: 1, file, tags: {}, ...(wymiary ? { wymiary } : {}), createdAt: now, updatedAt: now };
   await putModel(kv, meta);
   // Plik modelu jest publiczny (strona klienta) – zapamiętujemy, do której firmy należy.
   await kv.root.put(`modelowner:${id}`, kv.firmId);

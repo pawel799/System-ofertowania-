@@ -1,5 +1,6 @@
 "use client";
 
+import type { Analiza, Jednostka } from "./modelOptimize";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { KatalogTab } from "./KatalogTab";
 import dynamic from "next/dynamic";
@@ -172,6 +173,10 @@ type Upload =
   | { k: "send"; part: number; before: number; after: number }
   | { k: "error"; message: string };
 
+const zaokr = (v: number) => Math.round(v * 10) / 10;
+/** Jednostki → metry (jak JEDNOSTKI w modelOptimize.ts – tamten moduł ładuje się dopiero przy wgrywaniu). */
+const JEDNOSTKI_M: Record<Jednostka, number> = { m: 1, cm: 0.01, mm: 0.001 };
+
 function uporzadkujModele(models: ModelMeta[]) {
   const { wlasne, kuchnie, moduly } = podzielModele(models);
   return [...wlasne, ...kuchnie.map((k) => k.model), ...moduly.map((m) => m.model)];
@@ -200,32 +205,68 @@ function ModelsTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
     void load();
   }, [load]);
 
-  const choose = (list: FileList | null) => {
+  // Sprawdzenie modelu po wybraniu pliku (modelOptimize.ts): problemy siatki, wymiary, jednostki.
+  const [analiza, setAnaliza] = useState<Analiza | null>(null);
+  const [jednostka, setJednostka] = useState<Jednostka>("m");
+  const [wym, setWym] = useState<{ w: number; h: number; d: number }>({ w: 60, h: 72, d: 56 });
+  const [proporcje, setProporcje] = useState(true);
+  const [mimoBledow, setMimoBledow] = useState(false);
+  const wymZPliku = (a: Analiza, j: Jednostka) =>
+    a.surowe ? { w: zaokr((a.surowe.x * JEDNOSTKI_M[j]) / 0.01), h: zaokr((a.surowe.y * JEDNOSTKI_M[j]) / 0.01), d: zaokr((a.surowe.z * JEDNOSTKI_M[j]) / 0.01) } : { w: 60, h: 72, d: 56 };
+
+  const choose = async (list: FileList | null) => {
     const arr = list ? Array.from(list) : [];
     setFiles(arr);
+    setAnaliza(null);
+    setMimoBledow(false);
     setUpload({ k: "idle" });
     const main = arr.find((f) => /\.(glb|obj)$/i.test(f.name));
     if (main && !name) setName(main.name.replace(/\.(glb|obj)$/i, "").replace(/[_-]+/g, " ").trim());
+    if (!main) return;
+    try {
+      setUpload({ k: "prepare", step: "Wczytywanie narzędzi…" });
+      const { analizujModel } = await import("./modelOptimize");
+      const a = await analizujModel(arr, (step) => setUpload({ k: "prepare", step }));
+      setAnaliza(a);
+      setJednostka(a.jednostka);
+      setWym(wymZPliku(a, a.jednostka));
+      setUpload({ k: "idle" });
+    } catch (err) {
+      setUpload({ k: "error", message: errText(err) });
+    }
+  };
+
+  /** Zmiana jednego wymiaru; z zachowaniem proporcji pozostałe zmieniają się tak samo. */
+  const ustawWymiar = (klucz: "w" | "h" | "d", v: number) => {
+    if (!Number.isFinite(v) || v <= 0) return;
+    setWym((stare) => {
+      if (!proporcje || !stare[klucz]) return { ...stare, [klucz]: v };
+      const k = v / stare[klucz];
+      return { w: zaokr(stare.w * k), h: zaokr(stare.h * k), d: zaokr(stare.d * k), [klucz]: v };
+    });
   };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!files.length) return setUpload({ k: "error", message: "Wybierz plik modelu (.glb albo .obj)." });
     if (!name.trim()) return setUpload({ k: "error", message: "Wpisz nazwę modelu." });
+    if (analiza?.problemy.some((p) => p.poziom === "blad") && !mimoBledow) return setUpload({ k: "error", message: "Model ma błędy (lista wyżej). Popraw plik albo zaznacz „Wgraj mimo błędów”." });
+    if ([wym.w, wym.h, wym.d].some((v) => !(v >= 1 && v <= 2000))) return setUpload({ k: "error", message: "Wymiary modelu: od 1 do 2000 cm." });
     try {
       setUpload({ k: "prepare", step: "Wczytywanie narzędzi…" });
-      const { prepareModel, MAX_UPLOAD_BYTES, formatBytes } = await import("./modelOptimize");
-      const prepared = await prepareModel(files, (step) => setUpload({ k: "prepare", step }));
+      const { analizujModel, przygotujModel, MAX_UPLOAD_BYTES, formatBytes } = await import("./modelOptimize");
+      // Świeża analiza (przygotowanie zmienia dokument), te same jednostki i wymiary.
+      const a = await analizujModel(files, (step) => setUpload({ k: "prepare", step }));
+      const prepared = await przygotujModel({ ...a, jednostka }, wym, (step) => setUpload({ k: "prepare", step }));
       if (prepared.after > MAX_UPLOAD_BYTES) {
         throw new Error(`Po optymalizacji model ma ${formatBytes(prepared.after)}, a limit to ${formatBytes(MAX_UPLOAD_BYTES)}. Uprość model albo tekstury.`);
       }
       setUpload({ k: "send", part: 0, before: prepared.before, after: prepared.after });
-      const model = await assetsApi.uploadModel(prepared.glb, name.trim(), (part) =>
-        setUpload({ k: "send", part, before: prepared.before, after: prepared.after }),
-      );
+      const model = await assetsApi.uploadModel(prepared.glb, name.trim(), (part) => setUpload({ k: "send", part, before: prepared.before, after: prepared.after }), wym);
       setModels((list) => [model, ...(list ?? [])]);
       setFiles([]);
       setName("");
+      setAnaliza(null);
       setUpload({ k: "idle" });
       setFileKey((k) => k + 1);
       toast("Wgrano model", {
@@ -267,8 +308,9 @@ function ModelsTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
       <section className="set-card">
         <h2>Wgraj model</h2>
         <p className="lede">
-          Plik <b>.glb</b> (np. eksport z Winner Flex) albo <b>.obj</b> z PRO100 (możesz dodać .mtl i tekstury). Przed wysłaniem
-          model jest kompresowany w przeglądarce. Limit po kompresji: 40 MB.
+          Plik <b>.glb</b> (np. eksport z Winner Flex) albo <b>.obj</b> z PRO100 (możesz dodać .mtl i tekstury). Po wybraniu pliku
+          sprawdzamy siatkę (dziury, duplikaty, błędne płaszczyzny) i wymiary – model wczyta się w ofercie w rzeczywistej wielkości.
+          Przed wysłaniem jest naprawiany i kompresowany w przeglądarce. Limit po kompresji: 40 MB.
         </p>
         <form onSubmit={submit} noValidate>
           <div className="field">
@@ -281,13 +323,84 @@ function ModelsTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
               multiple
               accept=".glb,.obj,.mtl,.png,.jpg,.jpeg"
               disabled={busy}
-              onChange={(e) => choose(e.target.files)}
+              onChange={(e) => void choose(e.target.files)}
             />
           </div>
           <div className="field">
             <label htmlFor="m-name">Nazwa modelu</label>
             <input id="m-name" className="input" autoComplete="off" value={name} disabled={busy} onChange={(e) => setName(e.target.value)} />
           </div>
+          {analiza ? (
+            <div className="mo-analiza" aria-live="polite">
+              <b>Sprawdzenie modelu</b>
+              <span className="faint">
+                {analiza.trojkaty ? `${analiza.trojkaty.toLocaleString("pl-PL")} trójkątów · ${analiza.elementy} elementów` : "bez podglądu siatki"}
+              </span>
+              {analiza.problemy.length ? (
+                <ul className="mo-problemy">
+                  {analiza.problemy.map((p, i) => (
+                    <li key={i} data-poziom={p.poziom}>
+                      {p.tekst}
+                      {p.naprawa ? <span className="faint"> Przy wgrywaniu {p.naprawa}.</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mo-ok">Siatka w porządku – bez dziur, duplikatów i błędnych płaszczyzn.</p>
+              )}
+              {analiza.problemy.some((p) => p.poziom === "blad") ? (
+                <label className="kr-check">
+                  <input type="checkbox" checked={mimoBledow} onChange={(e) => setMimoBledow(e.target.checked)} />
+                  <span>Wgraj mimo błędów</span>
+                </label>
+              ) : null}
+              <b style={{ marginTop: 6 }}>Wymiary w ofercie</b>
+              <p className="lede" style={{ margin: 0 }}>
+                {analiza.surowe ? "Z pliku – model wczyta się w tej wielkości. Zmień, jeśli jednostki albo proporcje się nie zgadzają." : "Pliku nie da się zmierzyć – wpisz wymiary."}
+              </p>
+              {analiza.surowe ? (
+                <div className="mo-jednostki">
+                  <span>Jednostki w pliku</span>
+                  <Seg
+                    label="Jednostki w pliku"
+                    value={jednostka}
+                    onChange={(j) => {
+                      setJednostka(j);
+                      setWym(wymZPliku(analiza, j));
+                    }}
+                    options={[
+                      { value: "mm", label: "mm" },
+                      { value: "cm", label: "cm" },
+                      { value: "m", label: "m" },
+                    ]}
+                  />
+                </div>
+              ) : null}
+              <div className="mo-wymiary">
+                {(
+                  [
+                    ["w", "Szerokość"],
+                    ["h", "Wysokość"],
+                    ["d", "Głębokość"],
+                  ] as const
+                ).map(([k, label]) => (
+                  <label key={k}>
+                    <span>{label} [cm]</span>
+                    <input className="input" inputMode="decimal" key={`${k}-${wym[k]}`} defaultValue={String(wym[k]).replace(".", ",")} disabled={busy} onBlur={(e) => ustawWymiar(k, Number(e.target.value.replace(",", ".")))} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), (e.target as HTMLInputElement).blur())} />
+                  </label>
+                ))}
+              </div>
+              <label className="kr-check">
+                <input type="checkbox" checked={proporcje} onChange={(e) => setProporcje(e.target.checked)} />
+                <span>Zachowaj proporcje</span>
+              </label>
+              {analiza.surowe ? (
+                <button type="button" className="btn btn-plain" style={{ justifySelf: "start" }} onClick={() => setWym(wymZPliku(analiza, jednostka))}>
+                  Wymiary z pliku
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           {upload.k === "prepare" ? (
             <p className="nip-msg" role="status">
               <span className="spin" aria-hidden />

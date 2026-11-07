@@ -126,3 +126,27 @@ Działa na rzucie i przy przeciąganiu w 3D.
 ## Podłoga
 
 Podłoga w 3D i kadr rzutu obejmują wszystkie ściany (kształt pokoju, grubość, ścianki działowe także poza pokojem) – `zasiegScian`.
+
+## Wgrywanie modeli 3D – sprawdzenie i wymiary
+
+Ustawienia → Modele 3D (`SettingsApp.tsx`, logika `modelOptimize.ts`). Po wybraniu pliku `analizujModel()`:
+- błędy (blokują, chyba że „Wgraj mimo błędów”): brak bryły, błędne współrzędne (NaN), zerowy rozmiar;
+- uwagi: zdegenerowane trójkąty, zdublowane płaszczyzny (migotanie), krawędzie łączące > 2 płaszczyzny (non-manifold),
+  brak normalnych, bardzo dużo trójkątów; informacje: otwarte krawędzie, linie/punkty, model nie stoi na podłodze;
+- wymiary z pliku w cm; jednostki zgadywane (≤ 12 → m, ≤ 1200 → cm, więcej → mm), do zmiany; wymiary do wpisania, z proporcjami albo bez.
+
+`przygotujModel()` usuwa złe trójkąty, liczy brakujące normalne, zapisuje skalę w pliku (model w metrach, środek podstawy w 0, 0, 0)
+i optymalizuje. Wymiary idą na serwer (`X-Model-Wymiary`, `ModelMeta.wymiary`); w kreatorze model firmy wstawia się w tych wymiarach.
+Plik z kompresją Draco nie da się sprawdzić – wymiary wpisuje się ręcznie.
+
+## Kreator – pełny ekran (kiosk)
+
+Przycisk „Pełny ekran” (albo klawisz F, albo `?kiosk=1` w adresie): scena (rzut i 3D) i kroki na całym ekranie, bez nawigacji panelu.
+Na pasku: katalog (wysuwany), wymiary, kreator ścian, cofnij/ponów, zapis, wyjście. Esc wychodzi z pełnego ekranu.
+
+## Katalog i wyszukiwarka
+
+Kategorie katalogu to listy rozwijane (stan zapamiętany w przeglądarce, przy szukaniu otwarte są te z wynikami).
+Wyszukiwarka (`src/lib/szukaj.ts`) toleruje brak polskich znaków i błędy (gurne = górne, rz/ż, ch/h), literówki,
+odmianę (szafka = szafki = szafek) i słowa pokrewne (lodówka = chłodziarka, okap = wyciąg, piekarnik = piec).
+Gdy nic nie pasuje, pokazuje „Może chodziło o…”.

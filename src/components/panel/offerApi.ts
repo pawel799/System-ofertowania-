@@ -132,6 +132,8 @@ export type ModelMeta = {
   size: number;
   version: number;
   tags: Record<string, ModelRole>;
+  /** Rzeczywiste wymiary [cm] – z analizy przy wgrywaniu (modelOptimize.ts) albo ustawione ręcznie. */
+  wymiary?: { w: number; h: number; d: number };
   createdAt: string;
   updatedAt: string;
 };
@@ -151,13 +153,14 @@ export type DomainState = {
 export type DomainView = { configured: boolean; target: string | null; domain: DomainState | null; active: boolean };
 
 /** Wysyłka pliku modelu (GLB) z postępem – fetch nie raportuje postępu wysyłania, więc XHR. */
-function uploadGlb(glb: Uint8Array, name: string, onProgress?: (part: number) => void): Promise<ModelMeta> {
+function uploadGlb(glb: Uint8Array, name: string, onProgress?: (part: number) => void, wymiary?: { w: number; h: number; d: number }): Promise<ModelMeta> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/models");
     if (getToken()) xhr.setRequestHeader("authorization", `Bearer ${getToken()}`);
     xhr.setRequestHeader("content-type", "model/gltf-binary");
     xhr.setRequestHeader("x-model-name", encodeURIComponent(name));
+    if (wymiary) xhr.setRequestHeader("x-model-wymiary", `${wymiary.w},${wymiary.h},${wymiary.d}`);
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress?.(e.loaded / e.total);
     xhr.onerror = () => reject(new ApiError(0, "network", "Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie."));
     xhr.onload = () => {
@@ -177,7 +180,7 @@ function uploadGlb(glb: Uint8Array, name: string, onProgress?: (part: number) =>
 export const assetsApi = {
   models: () => call<{ models: ModelMeta[] }>("GET", "/api/models", { headers: auth() }).then((r) => r.models),
   uploadModel: uploadGlb,
-  updateModel: (id: string, patch: { name?: string; tags?: Record<string, ModelRole> }) =>
+  updateModel: (id: string, patch: { name?: string; tags?: Record<string, ModelRole>; wymiary?: { w: number; h: number; d: number } | null }) =>
     call<{ model: ModelMeta }>("PUT", `/api/models/${id}`, { body: patch, headers: auth() }).then((r) => r.model),
   removeModel: (id: string) => call<void>("DELETE", `/api/models/${id}`, { headers: auth() }),
 

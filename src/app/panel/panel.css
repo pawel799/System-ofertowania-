@@ -888,3 +888,15 @@ html[data-motyw="ciemny"] .pnl {
   .pnl.kreator[data-kiosk] .kr-body { grid-template-columns: 1fr; }
   .pnl.kreator[data-kiosk][data-katalog] .kr-catalog { position: fixed; top: 60px; left: 8px; bottom: 8px; max-height: none; }
 }
+
+/* ---------- wgrywanie modelu: sprawdzenie siatki i wymiary ---------- */
+.pnl .mo-analiza { display: grid; gap: 6px; padding: 12px; margin: 4px 0 12px; border-radius: 10px; background: var(--g2); font-size: 13px; }
+.pnl .mo-problemy { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.pnl .mo-problemy li { padding-left: 18px; position: relative; line-height: 1.4; }
+.pnl .mo-problemy li::before { content: ""; position: absolute; left: 3px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); }
+.pnl .mo-problemy li[data-poziom="blad"]::before { background: var(--red); }
+.pnl .mo-problemy li[data-poziom="uwaga"]::before { background: var(--amber); }
+.pnl .mo-ok { margin: 0; color: var(--green); }
+.pnl .mo-jednostki { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pnl .mo-wymiary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pnl .mo-wymiary label { display: grid; gap: 3px; font-size: 12px; color: var(--text-2); }

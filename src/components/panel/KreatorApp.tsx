@@ -1466,16 +1466,17 @@ function BibliotekaModeli({
                 onDodaj({
                   nazwa: m.name.slice(0, 80) || "Model",
                   strefa: "dolna",
-                  w: 60,
-                  h: 72,
-                  d: 56,
+                  // Rzeczywiste wymiary z wgrywania (Ustawienia → Modele 3D); stare modele bez nich – 60×72×56.
+                  w: Math.round(m.wymiary?.w ?? 60),
+                  h: Math.round(m.wymiary?.h ?? 72),
+                  d: Math.round(m.wymiary?.d ?? 56),
                   zrodlo: "model",
                   modelId: m.id,
                 })
               }
             >
               <b>{m.name}</b>
-              <span className="mono">GLB · 60×72×56, skalowane</span>
+              <span className="mono">{m.wymiary ? `GLB · ${Math.round(m.wymiary.w)}×${Math.round(m.wymiary.h)}×${Math.round(m.wymiary.d)} cm` : "GLB · 60×72×56, skalowane"}</span>
             </button>
           ))
         ) : !fraza ? (
