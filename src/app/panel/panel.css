@@ -900,3 +900,17 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .mo-jednostki { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .pnl .mo-wymiary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .pnl .mo-wymiary label { display: grid; gap: 3px; font-size: 12px; color: var(--text-2); }
+
+/* ---------- pełny ekran osobno: sam edytor (rzut) albo sam podgląd 3D ---------- */
+.pnl.kreator[data-pelny="rzut"] .kr-plan,
+.pnl.kreator[data-pelny="3d"] .kr-view3d { position: fixed; inset: 0; z-index: 40; padding-top: env(safe-area-inset-top); background-color: var(--bg); }
+.pnl.kreator[data-pelny="rzut"] .kr-plan { background: color-mix(in srgb, var(--g2) 82%, #c4b49a); }
+.pnl.kreator[data-pelny="rzut"] .kr-plan .kr-scroll { flex: 1; min-height: 0; }
+.pnl.kreator[data-pelny="3d"] .kr-view3d { display: flex; flex-direction: column; }
+.pnl.kreator[data-pelny="3d"] .kr-view3d > :last-child { flex: 1; min-height: 0; }
+.pnl.kreator[data-pelny="3d"] .kr-narzedzia3d { top: 62px; }
+.pnl .kr-pelny-pasek { position: relative; z-index: 4; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 12px; background: var(--panel); box-shadow: var(--sh-sm); font-size: 13.5px; }
+.pnl .kr-pelny-pasek .grow { flex: 1; }
+.pnl .kr-pelny-pasek .btn[aria-pressed="true"] { background: var(--g3); }
+.pnl.kreator[data-pelny][data-katalog] .kr-catalog { display: block; position: fixed; left: 8px; top: 60px; bottom: 8px; width: min(320px, 85vw); max-height: none; z-index: 45; box-shadow: var(--sh-lg); }
+.pnl .kr-pelny-btn { min-height: 28px; padding: 4px 8px; font-size: 12px; gap: 5px; }

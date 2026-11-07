@@ -132,6 +132,59 @@ function SufitObrysu({ obrys, H, material }: { obrys: readonly { x: number; z: n
   return <mesh name="sufit" geometry={geo} position={[0, H / 100, 0]} rotation={[Math.PI / 2, 0, 0]} material={material} receiveShadow />;
 }
 
+/** Tekstura wierzchu sufitu (płyta stropowa, beton): rysowana raz w przeglądarce, jedna płytka = 1 m. */
+let teksturaStropu: THREE.CanvasTexture | null = null;
+function stropTekstura() {
+  if (teksturaStropu) return teksturaStropu;
+  const N = 512;
+  const c = document.createElement("canvas");
+  c.width = c.height = N;
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#b9b6b0";
+  g.fillRect(0, 0, N, N);
+  // Ziarno betonu: stały „los”, żeby tekstura była zawsze taka sama.
+  let ziarno = 1234567;
+  const los = () => ((ziarno = (ziarno * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 14000; i++) {
+    const v = Math.round(150 + los() * 70);
+    g.fillStyle = `rgba(${v},${v - 2},${v - 6},${0.18 + los() * 0.3})`;
+    const r = 0.6 + los() * 1.8;
+    g.fillRect(los() * N, los() * N, r, r);
+  }
+  for (let i = 0; i < 40; i++) {
+    g.fillStyle = `rgba(90,88,84,${0.05 + los() * 0.08})`;
+    g.beginPath();
+    g.arc(los() * N, los() * N, 6 + los() * 30, 0, Math.PI * 2);
+    g.fill();
+  }
+  // Łączenia płyt na krawędziach płytki.
+  g.strokeStyle = "rgba(70,68,64,0.55)";
+  g.lineWidth = 3;
+  g.strokeRect(1.5, 1.5, N - 3, N - 3);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  teksturaStropu = t;
+  return t;
+}
+
+/** Wierzch sufitu (widok z góry): kształt pokoju z teksturą płyty stropowej. UV w metrach – płytka co 1 m. */
+function SufitOdGory({ punkty, H }: { punkty: readonly { x: number; z: number }[]; H: number }) {
+  const klucz = punkty.map((p) => `${p.x},${p.z}`).join(";");
+  const geo = useMemo(
+    // Kształt (x, −z) obrócony o −90° wokół x → (x, 0, z), normalna w górę; UV = współrzędne kształtu (metry).
+    () => new THREE.ShapeGeometry(new THREE.Shape(punkty.map((p) => new THREE.Vector2(p.x / 100, -p.z / 100)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [klucz],
+  );
+  const material = useMemo(() => new THREE.MeshStandardMaterial({ map: stropTekstura(), roughness: 0.97, side: THREE.FrontSide }), []);
+  useEffect(() => () => geo.dispose(), [geo]);
+  useEffect(() => () => material.dispose(), [material]);
+  // Płyta leży na ścianach (tuż nad wierzchem murów) – od spodu widać sufit, od góry płytę stropową.
+  return <mesh name="sufit-gora" geometry={geo} position={[0, H / 100 + 0.004, 0]} rotation={[-Math.PI / 2, 0, 0]} material={material} receiveShadow />;
+}
+
 /** Wierzch muru ściany pokoju (wielokąt z rzutu na wysokości ściany, widoczny z góry). */
 function WierzchMuru({ punkty, y, material }: { punkty: readonly { x: number; z: number }[]; y: number; material: THREE.Material }) {
   const klucz = punkty.map((p) => `${p.x.toFixed(1)},${p.z.toFixed(1)}`).join(";");
@@ -370,6 +423,24 @@ export default function Sciany({
         );
       })}
       {kolorSufitu && czyObrys(plan) ? <SufitObrysu obrys={plan.sciany!.obrys!} H={H} material={sufit} /> : null}
+      {kolorSufitu
+        ? (() => {
+            // Prostokąt: płyta razem z grubością murów (zasięg ścian pokoju); inny kształt – obrys pokoju.
+            const m = muryPokoju(plan).flatMap((x) => x.punkty);
+            const z = m.length
+              ? { x0: Math.min(...m.map((q) => q.x)), z0: Math.min(...m.map((q) => q.z)), x1: Math.max(...m.map((q) => q.x)), z1: Math.max(...m.map((q) => q.z)) }
+              : zakresPokoju(plan);
+            const punkty = czyObrys(plan)
+              ? plan.sciany!.obrys!
+              : [
+                  { x: z.x0, z: z.z0 },
+                  { x: z.x1, z: z.z0 },
+                  { x: z.x1, z: z.z1 },
+                  { x: z.x0, z: z.z1 },
+                ];
+            return <SufitOdGory punkty={punkty} H={H} />;
+          })()
+        : null}
       {kolorSufitu && !czyObrys(plan)
         ? (() => {
             const z = zakresPokoju(plan);

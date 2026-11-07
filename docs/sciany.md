@@ -86,6 +86,7 @@ Zabezpieczenia:
 
 - Płaszczyzna w kształcie pokoju (prostokąt albo wielokąt) na wysokości pokoju.
 - Widać ją tylko od spodu.
+- Od góry: płyta stropowa z teksturą betonu (generowana w przeglądarce, łączenia co 1 m), leży na ścianach razem z grubością murów.
 - „Ukryj ściany” chowa ją razem ze ścianami.
 
 ## Skróty klawiszowe w kreatorze
@@ -143,6 +144,9 @@ Plik z kompresją Draco nie da się sprawdzić – wymiary wpisuje się ręcznie
 
 Przycisk „Pełny ekran” (albo klawisz F, albo `?kiosk=1` w adresie): scena (rzut i 3D) i kroki na całym ekranie, bez nawigacji panelu.
 Na pasku: katalog (wysuwany), wymiary, kreator ścian, cofnij/ponów, zapis, wyjście. Esc wychodzi z pełnego ekranu.
+
+Osobno: sam edytor (rzut) albo sam podgląd 3D na pełnym ekranie – przycisk „Pełny ekran” pod rzutem i w narzędziach 3D.
+Pasek: cofnij/ponów, wymiary, przełączenie na drugi widok, wyjście (Esc); przy rzucie także wysuwany katalog i kreator ścian.
 
 ## Katalog i wyszukiwarka
 

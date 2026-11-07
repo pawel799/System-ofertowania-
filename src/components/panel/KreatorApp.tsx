@@ -724,12 +724,43 @@ export default function KreatorApp() {
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("kiosk") === "1") setKiosk(true);
     const zmiana = () => {
-      // Wyjście z pełnego ekranu (Esc, gest przeglądarki) kończy też kiosk.
-      if (!document.fullscreenElement) setKiosk((k) => (k && document.documentElement.dataset.kioskApi === "1" ? false : k));
+      // Wyjście z pełnego ekranu (Esc, gest przeglądarki) kończy też kiosk i pełny ekran rzutu / 3D.
+      if (!document.fullscreenElement && document.documentElement.dataset.kioskApi === "1") {
+        delete document.documentElement.dataset.kioskApi;
+        setKiosk(false);
+        setPelny(null);
+        setKatalogKiosk(false);
+      }
     };
     document.addEventListener("fullscreenchange", zmiana);
     return () => document.removeEventListener("fullscreenchange", zmiana);
   }, []);
+  /** Pełny ekran samego edytora (rzut) albo samego podglądu 3D – osobno od kiosku. */
+  const [pelny, setPelny] = useState<"rzut" | "3d" | null>(null);
+  const pelnyEkranApi = async () => {
+    try {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+        document.documentElement.dataset.kioskApi = "1";
+      }
+    } catch {
+      // Bez Fullscreen API (iPhone, ramka) – panel i tak zakrywa całe okno.
+    }
+  };
+  const wejdzPelny = (cel: "rzut" | "3d") => {
+    setPelny(cel);
+    setZakladka(cel);
+    setKatalogKiosk(false);
+    void pelnyEkranApi();
+  };
+  const wyjdzPelny = () => {
+    setPelny(null);
+    setKatalogKiosk(false);
+    if (!kiosk) {
+      delete document.documentElement.dataset.kioskApi;
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    }
+  };
   const wejdzKiosk = async () => {
     setKiosk(true);
     try {
@@ -773,6 +804,10 @@ export default function KreatorApp() {
       return;
     }
     if (modal) return;
+    if (e.key === "Escape" && pelny) {
+      wyjdzPelny();
+      return;
+    }
     if (!mod && !e.altKey && k === "f" && !e.shiftKey) {
       e.preventDefault();
       if (kiosk) wyjdzKiosk();
@@ -850,7 +885,7 @@ export default function KreatorApp() {
     );
 
   return (
-    <div className="pnl kreator" data-kiosk={kiosk ? "" : undefined} data-katalog={kiosk && katalogKiosk ? "" : undefined}>
+    <div className="pnl kreator" data-kiosk={kiosk ? "" : undefined} data-pelny={pelny ?? undefined} data-katalog={(kiosk || pelny === "rzut") && katalogKiosk ? "" : undefined}>
       <header className="top">
         <a className="btn btn-plain" href="/panel" aria-label="Wróć do ofert">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -1031,6 +1066,25 @@ export default function KreatorApp() {
             ) : null}
             {(!waski || zakladka === "rzut") && (
               <div className="kr-plan" data-tour="rzut">
+                {pelny === "rzut" ? (
+                  <PasekPelnegoEkranu
+                    tytul="Edytor – rzut"
+                    cofnij={moznaCofnac ? cofnij : null}
+                    ponow={moznaPonowic ? ponow : null}
+                    wymiary={wymiary}
+                    onWymiary={() => setWymiary((v) => !v)}
+                    onInny={() => wejdzPelny("3d")}
+                    inny="Podgląd 3D"
+                    onWyjdz={wyjdzPelny}
+                  >
+                    <button type="button" className="btn btn-ghost" aria-pressed={katalogKiosk} onClick={() => setKatalogKiosk((v) => !v)}>
+                      Katalog
+                    </button>
+                    <button type="button" className="btn btn-plain" onClick={() => setKreatorScian(true)}>
+                      Ściany
+                    </button>
+                  </PasekPelnegoEkranu>
+                ) : null}
                 <div className="kr-scroll">
                 <RzutKuchni
                   plan={plan}
@@ -1063,12 +1117,34 @@ export default function KreatorApp() {
                   <button type="button" className="btn btn-ghost kr-dim-toggle" aria-pressed={wymiary} onClick={() => setWymiary((v) => !v)}>
                     {wymiary ? "Ukryj wymiary" : "Pokaż wymiary"}
                   </button>
+                  {pelny !== "rzut" ? (
+                    <button type="button" className="btn btn-ghost kr-pelny-btn" onClick={() => wejdzPelny("rzut")} title="Sam edytor (rzut) na pełnym ekranie">
+                      <IkonaPelnyEkran /> Pełny ekran
+                    </button>
+                  ) : null}
                 </p>
               </div>
             )}
             {(!waski || zakladka === "3d") && (
               <div className="kr-view3d" data-tour="widok3d">
+                {pelny === "3d" ? (
+                  <PasekPelnegoEkranu
+                    tytul="Podgląd 3D"
+                    cofnij={moznaCofnac ? cofnij : null}
+                    ponow={moznaPonowic ? ponow : null}
+                    wymiary={wymiary}
+                    onWymiary={() => setWymiary((v) => !v)}
+                    onInny={() => wejdzPelny("rzut")}
+                    inny="Edytor – rzut"
+                    onWyjdz={wyjdzPelny}
+                  />
+                ) : null}
                 <div className="kr-narzedzia3d">
+                  {pelny !== "3d" ? (
+                    <button type="button" className="btn btn-ghost kr-otworz" onClick={() => wejdzPelny("3d")} title="Sam podgląd 3D na pełnym ekranie">
+                      <IkonaPelnyEkran /> Pełny ekran
+                    </button>
+                  ) : null}
                   <PrzyciskOtwarcia className="btn btn-ghost kr-otworz" />
                   <SterowanieScian className="btn btn-ghost kr-otworz" klasaPanelu="kr-sciany-panel" wlasnyKolor />
                 </div>
@@ -1646,6 +1722,58 @@ function OknoSkrotow({ onClose }: { onClose: () => void }) {
           <p className="kr-hint">Skróty nie działają, gdy piszesz w polu tekstowym (tam Ctrl+Z cofa tekst).</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+const IkonaPelnyEkran = () => (
+  <svg viewBox="0 0 16 16" fill="none" aria-hidden width="14" height="14">
+    <path d="M2.5 6V2.5H6M13.5 6V2.5H10M2.5 10v3.5H6M13.5 10v3.5H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+/** Pasek na pełnym ekranie edytora (rzut) albo podglądu 3D: cofnij/ponów, wymiary, przełączenie na drugi widok, wyjście. */
+function PasekPelnegoEkranu({
+  tytul,
+  cofnij,
+  ponow,
+  wymiary,
+  onWymiary,
+  onInny,
+  inny,
+  onWyjdz,
+  children,
+}: {
+  tytul: string;
+  cofnij: (() => void) | null;
+  ponow: (() => void) | null;
+  wymiary: boolean;
+  onWymiary: () => void;
+  onInny: () => void;
+  inny: string;
+  onWyjdz: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="kr-pelny-pasek" role="toolbar" aria-label={`${tytul} – pełny ekran`}>
+      <b>{tytul}</b>
+      <span className="grow" />
+      {children}
+      <button type="button" className="btn btn-plain" aria-label="Cofnij" title="Cofnij (Ctrl+Z)" disabled={!cofnij} onClick={() => cofnij?.()}>
+        ↶
+      </button>
+      <button type="button" className="btn btn-plain" aria-label="Ponów" title="Ponów (Ctrl+Shift+Z)" disabled={!ponow} onClick={() => ponow?.()}>
+        ↷
+      </button>
+      <button type="button" className="btn btn-plain" aria-pressed={wymiary} onClick={onWymiary}>
+        Wymiary
+      </button>
+      <button type="button" className="btn btn-plain" onClick={onInny}>
+        {inny}
+      </button>
+      <button type="button" className="btn btn-ink" onClick={onWyjdz} title="Wyjdź z pełnego ekranu (Esc)">
+        Wyjdź
+      </button>
     </div>
   );
 }
