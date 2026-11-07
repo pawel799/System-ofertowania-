@@ -7,7 +7,7 @@
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
-import { initials, loadBrand, useBrand } from "@/lib/brand";
+import { loadBrand, useBrand } from "@/lib/brand";
 import { ApiError, authApi } from "./offerApi";
 import { TURNSTILE_SITE_KEY, useTurnstile } from "../Turnstile";
 import { useMe } from "./AccountTabs";
@@ -62,9 +62,12 @@ export function PanelBrand() {
         // eslint-disable-next-line @next/next/no-img-element -- logo z KV jako data URL
         <img src={brand.logo} alt="" className="logo-img" />
       ) : (
-        <span className="logo-mark" aria-hidden>
-          {initials(brand.name)}
-        </span>
+        // Znak OP RZUT (public/logo-na-jasne-tlo.svg / logo-na-ciemne-tlo.svg) – kolory z motywu panelu.
+        <svg className="logo-znak" viewBox="0 0 64 64" aria-hidden>
+          <rect x="4" y="4" width="56" height="56" fill="none" className="logo-ramka" strokeWidth="1" />
+          <path d="M26 13 V38 H51" fill="none" className="logo-kreska" strokeWidth="7" strokeLinecap="square" strokeLinejoin="miter" />
+          <path d="M26 38 L13.5 50.5" fill="none" className="logo-kreska" strokeWidth="7" strokeLinecap="butt" />
+        </svg>
       )}
       {brand.name}
     </div>

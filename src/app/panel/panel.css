@@ -9,6 +9,7 @@
   --ring: rgba(16, 16, 24, 0.08); --ring-2: rgba(16, 16, 24, 0.14);
   --text: #16161b; --text-2: #5e5f69; --text-3: #62636c; --on-red: #ffffff;
   --ink: #16161b; --ink-text: #ffffff;
+  --logo-ramka: #a8a29e; --logo-kreska: #1c1917;
   --accent: #3f63e0; --teal: #0f8f84; --amber: #c27100; --green: #1a7a43; --red: #d23b33;
   --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(16, 16, 24, 0.04);
   --sh-md: 0 0 0 1px var(--ring), 0 2px 4px rgba(16, 16, 24, 0.04), 0 8px 24px rgba(16, 16, 24, 0.07);
@@ -36,6 +37,7 @@
     --ring: rgba(255, 255, 255, 0.08); --ring-2: rgba(255, 255, 255, 0.15);
     --text: #ededf0; --text-2: #a1a2ac; --text-3: #8a8b95; --on-red: #111114;
     --ink: #ededf0; --ink-text: #111114;
+    --logo-ramka: #57534e; --logo-kreska: #f5f5f4;
     --accent: #7c98ff; --teal: #3cc3b5; --amber: #f2a93b; --green: #4cc57e; --red: #ff6a61;
     --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(0, 0, 0, 0.3);
     --sh-md: 0 0 0 1px var(--ring), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -48,6 +50,7 @@ html[data-motyw="ciemny"] .pnl {
   --ring: rgba(255, 255, 255, 0.08); --ring-2: rgba(255, 255, 255, 0.15);
   --text: #ededf0; --text-2: #a1a2ac; --text-3: #8a8b95; --on-red: #111114;
   --ink: #ededf0; --ink-text: #111114;
+  --logo-ramka: #57534e; --logo-kreska: #f5f5f4;
   --accent: #7c98ff; --teal: #3cc3b5; --amber: #f2a93b; --green: #4cc57e; --red: #ff6a61;
   --sh-sm: 0 0 0 1px var(--ring), 0 1px 2px rgba(0, 0, 0, 0.3);
   --sh-md: 0 0 0 1px var(--ring), 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
@@ -80,6 +83,9 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .top { display: flex; align-items: center; gap: 12px; height: 56px; }
 .pnl .logo { display: flex; align-items: center; gap: 9px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; }
 .pnl .logo-img { height: 22px; width: auto; max-width: 96px; object-fit: contain; border-radius: 4px; }
+.pnl .logo-znak { width: 28px; height: 28px; flex: none; }
+.pnl .logo-ramka { stroke: var(--logo-ramka); }
+.pnl .logo-kreska { stroke: var(--logo-kreska); }
 .pnl .logo-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--ink); color: var(--ink-text); display: grid; place-items: center; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
 .pnl .crumb { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 13.5px; min-width: 0; }
 .pnl .crumb b { font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
