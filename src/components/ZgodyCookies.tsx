@@ -2,8 +2,8 @@
 
 /*
  * Baner zgód na pliki cookies (Google Consent Mode v2 – logika w src/lib/zgody.ts).
- * „Akceptuj wszystkie” i „Odrzuć wszystkie” mają ten sam wygląd i są na pierwszym ekranie (odmowa tak łatwa jak zgoda –
- * wytyczne EDPB 03/2022 i UODO); „Ustawienia” – wybór kategorii. Panel otwiera też link „Ustawienia cookies”
+ * Kwadrat na środku ekranu. „Akceptuj wszystkie” i „Odrzuć wszystkie” mają ten sam wygląd i są na pierwszym ekranie
+ * (odmowa tak łatwa jak zgoda – wytyczne EDPB 03/2022 i UODO); „Ustawienia” – wybór kategorii. Panel otwiera też link „Ustawienia cookies”
  * w stopce i w polityce cookies (zmiana i wycofanie zgody w każdej chwili, art. 7 ust. 3 RODO).
  * Bez banera: strony z stronaBezZgod() – tam nie ładujemy żadnych tagów.
  */
@@ -130,25 +130,53 @@ export default function ZgodyCookies() {
     );
 
   if (zgody) return null;
+  // Kwadrat na środku ekranu: przyciski „Akceptuj” i „Odrzuć” jednakowe i jeden pod drugim, „Ustawienia” pod nimi.
   return (
-    <div role="region" aria-label="Zgoda na pliki cookies" style={{ position: "fixed", left: 12, right: 12, bottom: "calc(12px + env(safe-area-inset-bottom, 0px))", zIndex: 2147483000, display: "flex", justifyContent: "center", pointerEvents: "none" }}>
-      <div style={{ pointerEvents: "auto", width: "min(640px, 100%)", padding: 18, borderRadius: 16, background: "rgba(28,25,23,0.97)", color: "#e7e5e4", fontSize: 14, lineHeight: 1.5, boxShadow: "0 12px 40px rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.1)" }}>
-        <p style={{ margin: 0, color: "#fafaf9", fontWeight: 600 }}>Pliki cookies</p>
-        <p style={{ margin: "6px 0 14px", color: "#d6d3d1" }}>
-          Niezbędne pliki służą do logowania, bezpieczeństwa i zapamiętania ustawień. Za Twoją zgodą użyjemy też plików analitycznych (statystyki odwiedzin) i marketingowych (pomiar reklam Google). Zgodę możesz zmienić w każdej chwili.{" "}
-          <a href="/polityka-cookies" style={{ color: "#fafaf9", textDecoration: "underline" }}>
-            Polityka cookies
-          </a>
-        </p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 2147483000, display: "grid", placeItems: "center", padding: 16, background: "rgba(0,0,0,0.5)" }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="zgody-baner-tytul"
+        aria-describedby="zgody-baner-opis"
+        style={{
+          width: "min(420px, 100%)",
+          aspectRatio: "1 / 1",
+          maxHeight: "calc(100dvh - 32px)",
+          overflow: "auto",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          gap: 16,
+          padding: 24,
+          borderRadius: 20,
+          background: "#1c1917",
+          color: "#e7e5e4",
+          fontSize: 14,
+          lineHeight: 1.5,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+          border: "1px solid rgba(255,255,255,0.1)",
+        }}
+      >
+        <div>
+          <p id="zgody-baner-tytul" style={{ margin: 0, color: "#fafaf9", fontSize: 18, fontWeight: 600 }}>
+            Pliki cookies
+          </p>
+          <p id="zgody-baner-opis" style={{ margin: "10px 0 0", color: "#d6d3d1" }}>
+            Niezbędne pliki służą do logowania, bezpieczeństwa i zapamiętania ustawień. Za Twoją zgodą użyjemy też plików analitycznych (statystyki odwiedzin) i marketingowych (pomiar reklam Google). Zgodę możesz zmienić w każdej chwili.{" "}
+            <a href="/polityka-cookies" style={{ color: "#fafaf9", textDecoration: "underline" }}>
+              Polityka cookies
+            </a>
+          </p>
+        </div>
+        <div style={{ display: "grid", gap: 8 }}>
+          <button type="button" style={przycisk(true)} onClick={() => wszystkie(true)}>
+            Akceptuj wszystkie
+          </button>
           <button type="button" style={przycisk(true)} onClick={() => wszystkie(false)}>
             Odrzuć wszystkie
           </button>
-          <button type="button" style={przycisk(false)} onClick={otworzUstawieniaZgod}>
+          <button type="button" style={{ ...przycisk(false), border: 0, fontWeight: 500, textDecoration: "underline", textUnderlineOffset: 3 }} onClick={otworzUstawieniaZgod}>
             Ustawienia
-          </button>
-          <button type="button" style={przycisk(true)} onClick={() => wszystkie(true)}>
-            Akceptuj wszystkie
           </button>
         </div>
       </div>
