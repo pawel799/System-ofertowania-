@@ -20,7 +20,7 @@ import { useHistoria } from "./useHistoria";
 import { useTelefon } from "./telefon";
 import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju, WyborPodlogi } from "./KreatorScian";
 import { zastosujZmianePokoju, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
-import { czyObrys, scianyPokojuWszystkie } from "@/lib/sciany";
+import { czyObrys, mebelZaSciana, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
 import { useBrand } from "@/lib/brand";
 import type { Palette } from "../palettes";
@@ -129,7 +129,11 @@ export default function KreatorApp() {
   const [offer, setOffer] = useState<Offer | null>(null);
   const [istniejace, setIstniejace] = useState<Offer[]>([]);
   // Plan z historią: Ctrl+Z cofa, Ctrl+Shift+Z / Ctrl+Y ponawia (useHistoria.ts).
-  const historia = useHistoria<PlanKuchni>(() => pustyPlan("ciag"));
+  // Strażnik: żadna zmiana (przeciąganie, klawisze, wymiary, obrót, ściany, katalog) nie może postawić mebla za ścianą.
+  const historia = useHistoria<PlanKuchni>(() => pustyPlan("ciag"), {
+    walidacja: mebleZaScianami,
+    onOdrzucone: (k) => toast("Mebel nie może stać za ścianą", { type: "err", desc: k }),
+  });
   const { wartosc: plan, ustaw: setPlan, reset: resetPlan, cofnij, ponow, moznaCofnac, moznaPonowic } = historia;
   const [client, setClient] = useState("");
   const [contact, setContact] = useState("");
@@ -1783,4 +1787,19 @@ function PasekPelnegoEkranu({
       </button>
     </div>
   );
+}
+
+/**
+ * Strażnik planu: komunikat, gdy po zmianie jakiś mebel stoi za ścianą albo przez nią przechodzi (src/lib/sciany.ts).
+ * Mebel, który już stał za ścianą (stary projekt) i się nie zmienił, nie blokuje innych zmian.
+ */
+function mebleZaScianami(stary: PlanKuchni, nowy: PlanKuchni): string | null {
+  const zaStary = new Set(stary.elementy.filter((e) => mebelZaSciana(stary, rect(e))).map((e) => e.id));
+  const zly = nowy.elementy.find((e) => !zaStary.has(e.id) && mebelZaSciana(nowy, rect(e)));
+  if (!zly) return null;
+  const pokojZmieniony = stary.sciany?.obrys !== nowy.sciany?.obrys || stary.pomieszczenie !== nowy.pomieszczenie || stary.scianaA !== nowy.scianaA || stary.scianaB !== nowy.scianaB || stary.sciany?.bez !== nowy.sciany?.bez;
+  const byl = stary.elementy.some((e) => e.id === zly.id);
+  if (pokojZmieniony && byl) return `„${zly.nazwa}” znalazłby się za ścianą. Najpierw przesuń mebel, potem zmień ściany.`;
+  if (!byl) return `„${zly.nazwa}” nie mieści się w pokoju przy tej ścianie. Zrób miejsce albo powiększ pokój.`;
+  return `„${zly.nazwa}” znalazłby się za ścianą albo w niej.`;
 }

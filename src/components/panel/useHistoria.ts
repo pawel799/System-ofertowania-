@@ -5,7 +5,7 @@
  * Każde setPlan, które naprawdę coś zmienia, to jeden krok. Kilka setPlan w tej samej chwili (jedna akcja
  * użytkownika, np. operacja w kreatorze ścian) łączy się w jeden krok. reset() – wczytanie oferty, bez historii.
  */
-import { useCallback, useState, type SetStateAction } from "react";
+import { useCallback, useRef, useState, type SetStateAction } from "react";
 
 const MAX_KROKOW = 100;
 /** Zmiany szybciej niż co tyle ms to jedna akcja. */
@@ -15,13 +15,32 @@ type Stan<T> = { teraz: T; wstecz: T[]; naprzod: T[]; t: number };
 
 const rowne = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.stringify(b);
 
-export function useHistoria<T>(start: () => T) {
+/**
+ * walidacja – strażnik zmian: zwraca komunikat, gdy zmiana jest niedozwolona (np. mebel za ścianą); wtedy plan
+ * zostaje bez zmian, a onOdrzucone dostaje komunikat (raz – updater Reacta może się wykonać dwa razy).
+ */
+export function useHistoria<T>(start: () => T, opcje: { walidacja?: (stary: T, nowy: T) => string | null; onOdrzucone?: (komunikat: string) => void } = {}) {
   const [stan, setStan] = useState<Stan<T>>(() => ({ teraz: start(), wstecz: [], naprzod: [], t: 0 }));
+  const opcjeRef = useRef(opcje);
+  opcjeRef.current = opcje;
+  const odrzucone = useRef<string | null>(null);
 
   const ustaw = useCallback((next: SetStateAction<T>) => {
     setStan((s) => {
       const v = typeof next === "function" ? (next as (p: T) => T)(s.teraz) : next;
       if (rowne(v, s.teraz)) return s;
+      const blad = opcjeRef.current.walidacja?.(s.teraz, v) ?? null;
+      if (blad) {
+        if (odrzucone.current === null) {
+          odrzucone.current = blad;
+          queueMicrotask(() => {
+            const k = odrzucone.current;
+            odrzucone.current = null;
+            if (k) opcjeRef.current.onOdrzucone?.(k);
+          });
+        }
+        return s;
+      }
       const t = Date.now();
       const scal = t - s.t < SCAL_MS && s.wstecz.length > 0;
       return { teraz: v, wstecz: scal ? s.wstecz : [...s.wstecz, s.teraz].slice(-MAX_KROKOW), naprzod: [], t };

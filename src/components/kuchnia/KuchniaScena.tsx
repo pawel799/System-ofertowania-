@@ -5,7 +5,7 @@ import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, 
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, BufferAttribute, CanvasTexture, MeshStandardMaterial, PerspectiveCamera, Vector3, type Object3D } from "three";
-import { konfliktElementow, nachodzi, przyciagnij, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { konfliktElementow, nachodzi, przyciagnij, rect, wPokoju, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaWOtworze } from "@/lib/otwory";
 import { czyObrys, muryPokoju, podlogaPlanu, scianyPokoju, wGranicachPokoju, zakresPokoju, zasiegScian } from "@/lib/sciany";
 import { panele, PLYTKA_PANELI, PLYTKA_PLYTEK, plytki, wielokatPoziomy } from "./teksturyPokoju";
@@ -137,7 +137,9 @@ function usePrzeciaganieMebla(plan: PlanKuchni, edycja: EdycjaMebli | undefined,
       const surowe = { x: Math.max(-100, Math.min(1500, Math.round(p.x * 100 + dx))), z: Math.max(-100, Math.min(1500, Math.round(p.z * 100 + dz))) };
       const przyc = pe.shiftKey ? surowe : przyciagnij(pl, oryginal, surowe.x, surowe.z);
       // Mebel nie wychodzi za ściany pokoju.
-      const przy = wGranicachPokoju(pl, rect({ ...oryginal, x: przyc.x, z: przyc.z }), przyc.x, przyc.z);
+      const przyW = wGranicachPokoju(pl, rect({ ...oryginal, x: przyc.x, z: przyc.z }), przyc.x, przyc.z);
+      // Nigdy przez ścianę: ślizganie po ścianie albo ostatnie dobre miejsce.
+      const przy = wPokoju(pl, oryginal, przyW, teraz ? { x: teraz.x, z: teraz.z } : { x: oryginal.x, z: oryginal.z });
       teraz = { id: el.id, x: przy.x, z: przy.z, zly: powodKolizji(pl, oryginal, { ...oryginal, x: przy.x, z: przy.z }) };
       ustaw(teraz);
     };

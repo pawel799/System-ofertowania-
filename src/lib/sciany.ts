@@ -853,3 +853,66 @@ export function ruchScianki(
   }
   return { zmiany, cel };
 }
+
+/* ---------- mebel za ścianą ---------- */
+
+type R = { x0: number; z0: number; x1: number; z1: number };
+
+/** Odcinek a–b przechodzi przez wnętrze prostokąta (Liang–Barsky); stykanie się krawędzią się nie liczy. */
+function odcinekPrzezProstokat(a: P, b: P, r: R) {
+  let t0 = 0;
+  let t1 = 1;
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  for (const [p, q] of [
+    [-dx, a.x - r.x0],
+    [dx, r.x1 - a.x],
+    [-dz, a.z - r.z0],
+    [dz, r.z1 - a.z],
+  ] as const) {
+    if (Math.abs(p) < 1e-9) {
+      if (q <= 0) return false;
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) t0 = Math.max(t0, t);
+    else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+  return t1 - t0 > 1e-9;
+}
+
+/**
+ * Mebel (obrys w rzucie) stoi za ścianą pokoju albo przez nią przechodzi.
+ * - żadna ściana pokoju nie może przecinać mebla (stykanie się – mebel przy ścianie – jest w porządku);
+ * - pokój zamknięty (obrys albo prostokąt z wymiarami, bez usuniętych ścian): środek mebla w środku pokoju
+ *   (pokój w kształcie L – mebel nie stanie w „wyciętym” narożniku);
+ * - pokój otwarty (sama ściana A / A i B, otwarta przestrzeń): mebel nie stoi za żadną ścianą na jej długości.
+ * Luz 1 cm – zaokrąglenia przy przyciąganiu do ściany.
+ */
+export function mebelZaSciana(plan: PlanScian, r: R): boolean {
+  const L = 1;
+  const rr = { x0: r.x0 + L, z0: r.z0 + L, x1: r.x1 - L, z1: r.z1 - L };
+  if (rr.x1 <= rr.x0 || rr.z1 <= rr.z0) return false;
+  const sc = scianyPokoju(plan);
+  for (const s of sc) if (odcinekPrzezProstokat({ x: s.x, z: s.z }, { x: s.x + s.dx * s.dlugosc, z: s.z + s.dz * s.dlugosc }, rr)) return true;
+  const zamkniety = sc.length === scianyPokojuWszystkie(plan).length && (czyObrys(plan) || !!plan.pomieszczenie);
+  const srodek = { x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 };
+  if (zamkniety) {
+    const w = czyObrys(plan) ? plan.sciany!.obrys! : obrysZProstokata(plan);
+    return !wWielokacie(srodek, w);
+  }
+  // Otwarty pokój: za ścianą = po jej zewnętrznej stronie w zasięgu jej długości.
+  const rogi = [
+    { x: rr.x0, z: rr.z0 },
+    { x: rr.x1, z: rr.z0 },
+    { x: rr.x1, z: rr.z1 },
+    { x: rr.x0, z: rr.z1 },
+  ];
+  for (const s of sc) {
+    const t = rogi.map((p) => (p.x - s.x) * s.dx + (p.z - s.z) * s.dz);
+    if (Math.max(...t) <= 0 || Math.min(...t) >= s.dlugosc) continue;
+    if (rogi.some((p, i) => t[i] > 0 && t[i] < s.dlugosc && (p.x - s.x) * s.nx + (p.z - s.z) * s.nz < 0)) return true;
+  }
+  return false;
+}

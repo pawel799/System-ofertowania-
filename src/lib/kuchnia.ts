@@ -14,7 +14,7 @@ import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
-import { parseUstawieniaScian, type UstawieniaScian } from "./sciany";
+import { parseUstawieniaScian, type UstawieniaScian, mebelZaSciana } from "./sciany";
 
 export type UkladKuchni = "ciag" | "L";
 export type Strefa = "dolna" | "gorna" | "wysoka" | "blat" | "polka";
@@ -961,6 +961,20 @@ export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   const meble = sumaMebli(plan, cennik);
   const dodatki = wycenDodatki(plan.dodatki, cennik, { meble, mb: metryBiezace(plan) }).reduce((s, d) => s + d.kwota, 0);
   return Math.max(1, meble + dodatki);
+}
+
+/**
+ * Położenie mebla przy przeciąganiu bez przechodzenia przez ściany: kandydat, a gdy stałby za ścianą –
+ * przesunięcie tylko wzdłuż jednej osi (mebel „ślizga się” po ścianie), a w ostateczności ostatnie dobre miejsce.
+ */
+export function wPokoju(plan: PlanKuchni, e: ElementKuchni, kandydat: { x: number; z: number }, ostatnia: { x: number; z: number }) {
+  const dobre = (p: { x: number; z: number }) => !mebelZaSciana(plan, rect({ ...e, x: p.x, z: p.z }));
+  if (dobre(kandydat)) return kandydat;
+  const poX = { x: kandydat.x, z: ostatnia.z };
+  const poZ = { x: ostatnia.x, z: kandydat.z };
+  // Najpierw oś, w której ruch był większy.
+  const kolejnosc = Math.abs(kandydat.x - ostatnia.x) >= Math.abs(kandydat.z - ostatnia.z) ? [poX, poZ] : [poZ, poX];
+  return kolejnosc.find(dobre) ?? ostatnia;
 }
 
 export function wystajePozaSciany(plan: PlanKuchni) {

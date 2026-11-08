@@ -169,3 +169,18 @@ Tekstury rysowane w przeglądarce (`src/components/kuchnia/teksturyPokoju.ts`, b
 - krawędź podłogi bez ściany (pokój bez wymiarów, otwarta przestrzeń) łagodnie przechodzi w tło;
 - wokół pokoju podłoże w kolorze tła (bez linii horyzontu) z samymi cieniami;
 - wierzch sufitu: jednolita płyta stropowa (bez fug), spód sufitu – tynk w kolorze sufitu.
+
+## Meble nie stoją za ścianami
+
+`mebelZaSciana(plan, rect)` (`src/lib/sciany.ts`):
+- żadna ściana pokoju nie może przecinać mebla (mebel dosunięty do ściany – w porządku, luz 1 cm);
+- pokój zamknięty (obrys albo prostokąt z wymiarami, bez otwartych ścian) – środek mebla w środku pokoju,
+  więc mebel nie stanie też w „wyciętym” narożniku pokoju w kształcie L;
+- pokój otwarty (sama ściana A / A i B, ściana usunięta jako otwarta przestrzeń) – mebel nie stoi za żadną ścianą na jej długości.
+
+Pilnowane w dwóch miejscach:
+- **przeciąganie** (rzut i 3D, `wPokoju` w `src/lib/kuchnia.ts`): mebel ślizga się po ścianie, a gdy nie da się – zostaje
+  w ostatnim dobrym miejscu; strzałki zatrzymują się na ścianie;
+- **strażnik planu** (`useHistoria` z `walidacja` w `KreatorApp.tsx`): każda zmiana – obrót, wymiary, katalog, przykład,
+  przesunięcie lub usunięcie ściany, kształt pokoju – która postawiłaby mebel za ścianą, jest odrzucana z komunikatem.
+  Mebel, który stał za ścianą już wcześniej (stary projekt) i się nie zmienia, nie blokuje innych zmian.

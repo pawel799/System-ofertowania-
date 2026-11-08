@@ -14,6 +14,7 @@ import {
   type ElementKuchni,
   type PlanKuchni,
   type Strefa,
+  wPokoju,
 } from "@/lib/kuchnia";
 import {
   czyObrys,
@@ -25,6 +26,7 @@ import {
   ruchScianki,
   scianaZPolaczeniami,
   scianyPokoju,
+  mebelZaSciana,
   wGranicachPokoju,
   zasiegScian,
   type ScianaDodatkowa,
@@ -127,6 +129,7 @@ export function przesunMebel(plan: PlanKuchni, e: ElementKuchni, dx: number, dz:
   const przyc = przyciagnij(plan, e, e.x + dx, e.z + dz);
   const przy = wGranicachPokoju(plan, rect({ ...e, ...przyc }), przyc.x, przyc.z);
   if (przy.x === e.x && przy.z === e.z) return null;
+  if (mebelZaSciana(plan, rect({ ...e, ...przy }))) return { blad: "Mebel nie może stać za ścianą." };
   const kandydat = { ...e, x: przy.x, z: przy.z };
   if (kolizjaZInnymi(plan, kandydat)) return { blad: undefined };
   const wOtworze = meblaWOtworze(plan, kandydat);
@@ -716,7 +719,10 @@ export default function RzutKuchni({ plan, zaznaczony, wymiary, onWybierz, onPrz
                   const oryginal = planRef.current.elementy.find((el) => el.id === drag.id);
                   const przyc = oryginal ? przyciagnij(planRef.current, oryginal, suroweX, suroweZ) : { x: suroweX, z: suroweZ };
                   // Mebel nie wychodzi za ściany pokoju (A, a z wymiarami pokoju także B, C, D).
-                  const przy = oryginal ? wGranicachPokoju(planRef.current, rect({ ...oryginal, ...przyc }), przyc.x, przyc.z) : przyc;
+                  const przyW = oryginal ? wGranicachPokoju(planRef.current, rect({ ...oryginal, ...przyc }), przyc.x, przyc.z) : przyc;
+                  // Nigdy przez ścianę: mebel ślizga się po niej albo zostaje w ostatnim dobrym miejscu.
+                  const poprzednie = ostatnie.current ?? (oryginal ? { x: oryginal.x, z: oryginal.z } : przyW);
+                  const przy = oryginal ? wPokoju(planRef.current, oryginal, przyW, poprzednie) : przyW;
                   const nastepne = { id: drag.id, x: przy.x, z: przy.z };
                   ostatnie.current = nastepne;
                   setPodglad(nastepne);
