@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Rubik } from "next/font/google";
 import "./globals.css";
 import { SKRYPT_MOTYWU } from "@/lib/motywSkrypt";
-import InfoCookies from "@/components/InfoCookies";
+import { SKRYPT_ZGOD } from "@/lib/zgodySkrypt";
+import ZgodyCookies from "@/components/ZgodyCookies";
 
 // Rubik to jedyny globalny font strony (tylko grubość 400, z polskimi znakami).
 const rubik = Rubik({
@@ -24,13 +25,15 @@ export default function RootLayout({
   return (
     <html lang="pl" suppressHydrationWarning>
       <head>
+        {/* Google Consent Mode v2: domyślnie „denied” PRZED jakimkolwiek tagiem + zapisany wybór (src/lib/zgody.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: SKRYPT_ZGOD }} />
         {/* Motyw jasny / ciemny z localStorage przed pierwszym malowaniem (src/lib/motyw.ts). */}
         <script dangerouslySetInnerHTML={{ __html: SKRYPT_MOTYWU }} />
       </head>
       <body className={`${rubik.className} antialiased`}>
         {children}
-        {/* Informacja o niezbędnych plikach cookies (src/components/InfoCookies.tsx). */}
-        <InfoCookies />
+        {/* Baner i ustawienia zgód na cookies (Consent Mode v2). */}
+        <ZgodyCookies />
       </body>
     </html>
   );

@@ -237,6 +237,7 @@ export const POLITYKA: LegalSection[] = [
       "Rozliczenia: dane z faktur – w celu wystawienia faktur i prowadzenia księgowości (art. 6 ust. 1 lit. c RODO – obowiązek prawny wynikający z przepisów podatkowych i o rachunkowości).",
       "Formularze na oprzut.app: imię, e-mail i/lub telefon, nazwa firmy, treść wiadomości – w celu odpowiedzi i przedstawienia oferty na Twoje żądanie (art. 6 ust. 1 lit. b RODO) oraz prowadzenia korespondencji (art. 6 ust. 1 lit. f RODO).",
       "Bezpieczeństwo: adres IP i dane techniczne przeglądarki – w celu ochrony przed nadużyciami (limity prób logowania i wysyłki formularzy, ochrona przed botami Cloudflare Turnstile) oraz ustalenia, dochodzenia lub obrony roszczeń (art. 6 ust. 1 lit. f RODO).",
+      "Statystyki odwiedzin i pomiar reklam (Google Analytics 4, Google Ads) – wyłącznie za Twoją zgodą wyrażoną w banerze cookies (art. 6 ust. 1 lit. a RODO w związku z art. 399 ust. 1 Prawa komunikacji elektronicznej). Zgodę możesz wycofać w każdej chwili („Ustawienia cookies” na dole strony); wycofanie nie wpływa na zgodność z prawem wcześniejszego przetwarzania.",
       "Wiadomości e-mail związane z kontem (np. link do zmiany hasła, powiadomienia o ofertach, zmiany regulaminu) – w ramach świadczenia usług (art. 6 ust. 1 lit. b RODO). Nie wysyłamy newslettera ani reklam.",
       "Podanie danych jest dobrowolne, ale bez nich nie założymy konta, nie wystawimy faktury ani nie odpowiemy na wiadomość.",
     ],
@@ -246,6 +247,7 @@ export const POLITYKA: LegalSection[] = [
     items: [
       "Dane konta – do czasu jego usunięcia; następnie do 30 dni (możliwość wydania danych na żądanie firmy).",
       "Wiadomości z formularzy – 180 dni od wysłania (usuwane automatycznie), chyba że wcześniej zawrzemy umowę.",
+      "Rejestr decyzji dotyczących cookies (bez danych identyfikujących) – 3 lata; wybór zapisany w Twojej przeglądarce – 12 miesięcy.",
       "Faktury i dane rozliczeniowe – 5 lat od końca roku kalendarzowego, w którym upłynął termin płatności podatku (przepisy podatkowe).",
       "Adresy IP do zabezpieczeń – od 30 minut do 1 godziny (liczniki prób); sesja logowania – do 30 dni lub do wylogowania.",
       "Dane potrzebne do obrony roszczeń – do upływu terminu przedawnienia roszczeń.",
@@ -256,6 +258,7 @@ export const POLITYKA: LegalSection[] = [
     items: [
       "Cloudflare, Inc. – hosting serwisu, baza danych, przechowywanie plików, ochrona przed botami (Turnstile). Cloudflare może przetwarzać dane poza Europejskim Obszarem Gospodarczym, w tym w USA – na podstawie decyzji Komisji Europejskiej stwierdzającej odpowiedni stopień ochrony (EU-US Data Privacy Framework, w którym Cloudflare uczestniczy) oraz standardowych klauzul umownych.",
       "Dostawca serwera VPS, z którego wysyłamy wiadomości e-mail – w zakresie adresu odbiorcy i treści wiadomości.",
+      "Google Ireland Limited i Google LLC – tylko jeśli wyrazisz zgodę na pliki analityczne lub marketingowe (Google Analytics 4, Google Ads). Google może przetwarzać dane w USA – na podstawie decyzji Komisji Europejskiej w sprawie EU-US Data Privacy Framework. W zakresie reklam Google może działać jako odrębny administrator (policies.google.com/privacy).",
       "Biuro rachunkowe i operator płatności (jeśli płacisz online) – w zakresie danych do rozliczeń.",
       "Organy publiczne – wyłącznie, gdy wymagają tego przepisy.",
       "Wszyscy dostawcy działają na podstawie umów powierzenia i przetwarzają dane tylko na nasze polecenie.",
@@ -273,7 +276,7 @@ export const POLITYKA: LegalSection[] = [
   {
     title: "Pliki cookies i pamięć przeglądarki",
     items: [
-      "Serwis używa wyłącznie niezbędnych plików cookies i pamięci przeglądarki: do utrzymania sesji logowania, ochrony przed botami i zapamiętania ustawień wybranych przez Ciebie (np. motyw jasny/ciemny). Nie używamy cookies reklamowych, analitycznych ani narzędzi śledzących.",
+      "Niezbędne pliki cookies i pamięć przeglądarki służą do utrzymania sesji logowania, ochrony przed botami i zapamiętania Twoich ustawień. Pliki analityczne i marketingowe (Google) zapisujemy wyłącznie za Twoją zgodą, a sygnały zgody przekazujemy Google przez Consent Mode v2 – domyślnie wszystkie są ustawione na „odmowa”.",
       "Szczegóły i lista plików: Polityka cookies (oprzut.app/polityka-cookies).",
     ],
   },
@@ -281,7 +284,7 @@ export const POLITYKA: LegalSection[] = [
     title: "Bezpieczeństwo",
     items: [
       "Stosujemy szyfrowane połączenia (HTTPS), skróty haseł (PBKDF2), oddzielenie danych poszczególnych firm, ograniczenie liczby prób logowania i nagłówki bezpieczeństwa przeglądarki. Linki do ofert mają losowe identyfikatory, mogą mieć PIN i termin ważności.",
-      "Pliki potrzebne do działania serwisu (np. dekoder modeli 3D, czcionki) wczytujemy z własnego serwera, bez przekazywania Twojego adresu IP zewnętrznym dostawcom treści.",
+      "Pliki potrzebne do działania serwisu (np. dekoder modeli 3D, czcionki) wczytujemy z własnego serwera – bez Twojej zgody przeglądarka nie łączy się z serwerami Google ani innych dostawców reklam i statystyk.",
     ],
   },
   {
@@ -301,45 +304,73 @@ export const COOKIES: LegalSection[] = [
     title: "Czym są pliki cookies i pamięć przeglądarki",
     items: [
       "Pliki cookies to małe pliki tekstowe zapisywane przez stronę w Twojej przeglądarce. Podobnie działa pamięć przeglądarki (localStorage), w której strona może zapisać ustawienia na Twoim urządzeniu. Polityka opisuje jedno i drugie.",
-      `Podmiotem zapisującym pliki i korzystającym z nich jest ${admin()}, a w zakresie ochrony przed botami – również Cloudflare, Inc.`,
+      `Podmiotem zapisującym pliki i korzystającym z nich jest ${admin()}; w zakresie ochrony przed botami – również Cloudflare, Inc., a za Twoją zgodą – Google (Google Ireland Limited i Google LLC).`,
     ],
   },
   {
-    title: "Używamy tylko niezbędnych plików – bez zgody, bez śledzenia",
+    title: "Kategorie plików i zgoda",
     items: [
-      "Serwis używa wyłącznie plików niezbędnych do świadczenia usługi, o którą prosisz (zalogowanie, bezpieczeństwo, zapamiętanie ustawień, które sam wybierasz). Zgodnie z art. 399 ust. 3 ustawy – Prawo komunikacji elektronicznej takie pliki nie wymagają zgody; informujemy o nich na tej stronie.",
-      "Nie używamy plików reklamowych, analitycznych, statystycznych ani mediów społecznościowych. Nie śledzimy Cię między stronami i nie tworzymy profili. Gdybyśmy kiedyś chcieli dodać takie narzędzia, zapytamy Cię wcześniej o zgodę.",
+      "Niezbędne – logowanie, bezpieczeństwo, zapamiętanie Twoich ustawień i wyboru dotyczącego cookies. Nie wymagają zgody (art. 399 ust. 3 ustawy – Prawo komunikacji elektronicznej); bez nich serwis nie działa.",
+      "Analityczne – statystyki odwiedzin (Google Analytics 4). Tylko za Twoją zgodą (art. 399 ust. 1 Prawa komunikacji elektronicznej, art. 6 ust. 1 lit. a RODO).",
+      "Marketingowe – pomiar skuteczności reklam i dopasowanie reklam (Google Ads): przekazanie Google danych o wizycie w celach reklamowych. Tylko za Twoją zgodą.",
+      "Przy pierwszej wizycie wybierasz w banerze: „Akceptuj wszystkie”, „Odrzuć wszystkie” albo „Ustawienia” (wybór kategorii). Odmowa jest tak samo łatwa jak zgoda, a brak zgody nie ogranicza korzystania z serwisu.",
+      "Zgodę możesz w każdej chwili zmienić albo wycofać – link „Ustawienia cookies” na dole każdej strony albo przycisk na górze tej strony. Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania przed wycofaniem; usuwamy wtedy pliki Google z naszej domeny.",
+      "Zapytamy ponownie po 12 miesiącach albo gdy zmienią się kategorie lub dostawcy.",
     ],
   },
   {
-    title: "Lista plików cookies i wpisów w pamięci przeglądarki",
-    items: ["Poniżej wszystkie pliki i wpisy, które serwis może zapisać na Twoim urządzeniu."],
+    title: "Google Consent Mode v2",
+    items: [
+      "Stosujemy Google Consent Mode v2. Zanim załaduje się jakikolwiek tag Google, wszystkie sygnały zgody są ustawione na „odmowa” (ad_storage, ad_user_data, ad_personalization, analytics_storage). Po Twojej decyzji przekazujemy Google tylko to, na co się zgodziłeś.",
+      "Tagi Google (Google Analytics, Google Ads, Google Tag Manager) ładujemy dopiero po zgodzie na pliki analityczne lub marketingowe. Bez zgody przeglądarka nie łączy się z serwerami Google.",
+      "Rejestrujemy Twoją decyzję (losowy identyfikator, wersja zgody, wybrane kategorie, data) – żeby wykazać, że zgoda została udzielona (art. 7 ust. 1 RODO). Rejestr nie zawiera adresu IP ani danych pozwalających Cię zidentyfikować i jest przechowywany 3 lata.",
+    ],
+  },
+  {
+    title: "Pliki niezbędne",
+    items: ["Zapisywane zawsze – bez nich serwis nie działa."],
     tabela: {
       naglowki: ["Nazwa", "Rodzaj", "Cel", "Ważność"],
       wiersze: [
         ["so_sesja", "cookie (HttpOnly, Secure)", "Sesja zalogowania do panelu firmy – tylko po zalogowaniu", "30 dni lub do wylogowania"],
         ["Pliki Cloudflare Turnstile (np. cf_clearance) i __cf_bm", "cookie Cloudflare", "Ochrona formularzy logowania, rejestracji i serwisu przed botami i atakami", "do 30 minut – 1 roku (ustala Cloudflare)"],
+        ["oprzut:zgody", "pamięć przeglądarki", "Twój wybór dotyczący cookies (kategorie, wersja, data)", "12 miesięcy"],
         ["motyw", "pamięć przeglądarki", "Wybrany motyw: jasny albo ciemny", "do usunięcia przez Ciebie"],
         ["studio-kuchnie:panel-sesja, studio-kuchnie:panel-token", "pamięć przeglądarki", "Znacznik zalogowania (żeby nie migało okno logowania); kod administratora – tylko u administratora", "do wylogowania"],
         ["op-rzut:samouczek-kreatora", "pamięć przeglądarki", "Czy samouczek kreatora był już pokazany", "do usunięcia przez Ciebie"],
         ["kr-katalog-*", "pamięć przeglądarki", "Które kategorie katalogu w kreatorze są rozwinięte", "do usunięcia przez Ciebie"],
         ["oferta:obroc-telefon-zamkniete", "pamięć przeglądarki", "Zamknięta podpowiedź „obróć telefon” na stronie oferty", "do usunięcia przez Ciebie"],
         ["oprzut-produkcja-v1", "pamięć przeglądarki", "Lista formatek w module rozkroju – zapis roboczy w Twojej przeglądarce", "do usunięcia przez Ciebie"],
-        ["oprzut:cookies-info", "pamięć przeglądarki", "Zamknięta informacja o plikach cookies", "do usunięcia przez Ciebie"],
+      ],
+    },
+  },
+  {
+    title: "Pliki zapisywane tylko za Twoją zgodą",
+    items: [
+      "Zapisywane wyłącznie po zgodzie na daną kategorię i tylko wtedy, gdy narzędzie jest włączone w serwisie. Dostawca: Google Ireland Limited (Irlandia) i Google LLC (USA) – przekazanie danych do USA na podstawie decyzji Komisji Europejskiej w sprawie EU-US Data Privacy Framework, w którym Google uczestniczy. Zasady Google: policies.google.com/privacy.",
+    ],
+    tabela: {
+      naglowki: ["Nazwa", "Kategoria", "Cel", "Ważność"],
+      wiersze: [
+        ["_ga", "analityczne", "Google Analytics 4 – rozróżnienie użytkowników w statystykach", "2 lata"],
+        ["_ga_<identyfikator>", "analityczne", "Google Analytics 4 – stan sesji", "2 lata"],
+        ["_gcl_au", "marketingowe", "Google Ads – pomiar konwersji z reklam", "90 dni"],
+        ["_gcl_aw, _gcl_dc", "marketingowe", "Google Ads – identyfikator kliknięcia reklamy", "90 dni"],
+        ["IDE, test_cookie (domena doubleclick.net)", "marketingowe", "Google – wyświetlanie i pomiar reklam", "do 13 miesięcy"],
       ],
     },
   },
   {
     title: "Jak zarządzać plikami cookies",
     items: [
-      "Możesz w każdej chwili usunąć pliki cookies i dane stron albo zablokować ich zapisywanie w ustawieniach przeglądarki (zwykle: Ustawienia → Prywatność i bezpieczeństwo → Pliki cookie i dane witryn).",
-      "Zablokowanie niezbędnych plików może uniemożliwić zalogowanie się do panelu albo wysłanie formularza (ochrona przed botami). Przeglądanie strony głównej i ofert nadal będzie możliwe.",
+      "Najprościej: link „Ustawienia cookies” na dole strony. Możesz też usunąć pliki cookies i dane stron albo zablokować ich zapisywanie w ustawieniach przeglądarki (zwykle: Ustawienia → Prywatność i bezpieczeństwo → Pliki cookie i dane witryn).",
+      "Zablokowanie niezbędnych plików może uniemożliwić zalogowanie się do panelu albo wysłanie formularza (ochrona przed botami).",
     ],
   },
   {
-    title: "Kuchnia 3D osadzona na stronach firm",
+    title: "Oferty firm i kuchnia 3D osadzona na stronach firm",
     items: [
-      "Firma może osadzić podgląd 3D z OP RZUT na swojej stronie (ramka). W ramce mogą zostać zapisane wpisy pamięci przeglądarki z tabeli powyżej (np. podpowiedź „obróć telefon”). Za informację o plikach na swojej stronie odpowiada ta firma.",
+      "Na stronach ofert, które firmy wysyłają swoim klientom (oprzut.app/oferta/…), oraz w kuchni 3D osadzonej na stronach firm nie ładujemy żadnych narzędzi analitycznych ani marketingowych – zapisywane są wyłącznie pliki niezbędne z tabeli powyżej. Za informację o plikach na stronie firmy odpowiada ta firma.",
     ],
   },
   {

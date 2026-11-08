@@ -6,15 +6,19 @@ export default function LegalDoc({
   eyebrow,
   title,
   sections,
+  dodatek,
 }: {
   eyebrow: string;
   title: string;
   sections: LegalSection[];
+  /** Treść pod nagłówkiem (np. przycisk ustawień cookies). */
+  dodatek?: React.ReactNode;
 }) {
   return (
     <div className="mx-auto max-w-6xl">
       <PageIntro eyebrow={eyebrow} title={title}>
         <p className="text-sm text-stone-500">Ostatnia aktualizacja: {LEGAL_UPDATED}.</p>
+        {dodatek}
       </PageIntro>
 
       <div className="mt-14 grid gap-12 md:grid-cols-[220px_minmax(0,1fr)]">

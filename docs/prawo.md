@@ -13,15 +13,35 @@ Treść dokumentów: `src/content/prawne.ts`. Strony: `/regulamin`, `/umowa-powi
 | Dowód akceptacji: wersja dokumentów, data, e-mail | RODO art. 7 / rozliczalność | `firm.akceptacja` (`WERSJA_DOKUMENTOW`) |
 | Polityka prywatności: role (administrator / podmiot przetwarzający), cele, podstawy, okresy, odbiorcy, transfer poza EOG, prawa | RODO art. 13–14 | `/polityka-prywatnosci` |
 | Klauzule informacyjne przy formularzach | RODO art. 13 | `/kontakt`, formularz na ofercie (administratorem jest firma) |
-| Polityka cookies z listą wszystkich plików i wpisów localStorage | Prawo komunikacji elektronicznej, art. 399 | `/polityka-cookies` |
-| Informacja o cookies (nie zgoda – tylko niezbędne pliki) | art. 399 ust. 3 PKE | `src/components/InfoCookies.tsx` |
+| Polityka cookies z listą wszystkich plików (niezbędne i za zgodą) | Prawo komunikacji elektronicznej, art. 399 | `/polityka-cookies` |
+| Baner zgód: „Akceptuj wszystkie” / „Odrzuć wszystkie” na pierwszym ekranie (równorzędne), „Ustawienia” z kategoriami | art. 399 ust. 1 PKE, RODO art. 7, wytyczne EDPB 03/2022 | `src/components/ZgodyCookies.tsx` |
+| Google Consent Mode v2: `consent default` = denied w `<head>` przed tagami, `consent update` po decyzji | wymogi Google dla EOG (od marca 2024) | `src/lib/zgodySkrypt.ts`, `src/lib/zgody.ts` |
+| Zmiana i wycofanie zgody w każdej chwili („Ustawienia cookies” w stopce i w polityce) | RODO art. 7 ust. 3 | stopka, `/polityka-cookies` |
+| Rejestr zgód bez danych osobowych (losowe id, wersja, kategorie, data; 3 lata) | RODO art. 7 ust. 1 | `functions/api/zgody.ts` (KV: `zgoda:*`) |
 | Punkt kontaktowy i zgłaszanie nielegalnych treści, uzasadnienie decyzji | Akt o usługach cyfrowych (DSA), art. 11, 12, 16, 17 | `/regulamin` § 8 |
 | Ceny netto z informacją o VAT (usługa dla firm) | | `/cennik` |
 | Bez zewnętrznych zasobów przekazujących IP: dekoder Draco z `/draco/` (wcześniej Google gstatic), czcionka wbudowana przy budowaniu | RODO (minimalizacja, transfer) | `src/lib/draco.ts`, `public/_headers` |
 
-**Zasada na przyszłość:** dopóki serwis ma tylko niezbędne pliki, wystarcza informacja. Dodanie analityki
-(Google Analytics, Meta Pixel, Hotjar, nawet „anonimowej” statystyki zapisującej pliki) = obowiązek banera
-**zgody** z odmową równie łatwą jak akceptacja, blokowanie skryptów do czasu zgody i aktualizacja polityki.
+## Google Analytics / Google Ads – jak włączyć
+
+Identyfikatory podaje się przy budowaniu (zmienne środowiskowe, wbudowywane w eksport statyczny):
+
+```bash
+NEXT_PUBLIC_GA_ID=G-XXXXXXXXXX npm run build        # GA4 przez gtag.js
+NEXT_PUBLIC_GTM_ID=GTM-XXXXXXX npm run build        # albo Google Tag Manager
+```
+
+- Bez identyfikatora baner i Consent Mode działają, ale żaden tag się nie ładuje.
+- Tryb „basic”: tagi ładują się **dopiero po zgodzie** na analityczne lub marketingowe – bez zgody przeglądarka
+  nie łączy się z Google (tryb „advanced” z pingami bez zgody jest w UE ryzykowny – nie włączamy go).
+- W GTM: tagi GA4/Ads z wbudowanym sprawdzaniem zgody (Consent Overview) – sygnały przychodzą z `dataLayer`.
+- Bez tagów i banera: linki ofert firm (`/oferta/<link>` – klienci firm, których administratorem jest firma)
+  i kuchnia osadzana u firm (`/osadz`). Tylko `/oferta/demo` i `/oferta/modul` są naszymi stronami.
+- Nowe narzędzie (np. Meta Pixel, Hotjar): dopisać do kategorii w `ZgodyCookies.tsx`, ładować w `zaladujTagi()`
+  dopiero po zgodzie, dopisać pliki do tabeli w polityce cookies, dodać domeny do CSP w `public/_headers`
+  i podnieść `WERSJA_ZGOD` w `src/lib/zgodyStale.ts` (wszyscy zostaną zapytani ponownie).
+- Google Ads w EOG wymaga przekazywania sygnałów Consent Mode v2 – to jest zrobione. Certyfikowany CMP Google
+  jest wymagany tylko dla wydawców wyświetlających reklamy (AdSense, Ad Manager) – tego nie robimy.
 
 ## Co musicie zrobić sami (bez tego nie startujcie)
 

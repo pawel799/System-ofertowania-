@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "./Logo";
 import { liniaRejestrowa } from "@/content/firma";
+import { LinkUstawienZgod } from "../ZgodyCookies";
 
 /* Stopka strony: czarna, logo po lewej, linki po prawej, prawa autorskie na dole. */
 
@@ -63,6 +64,12 @@ export default function SiteFooter() {
                     </Link>
                   </li>
                 ))}
+                {col.title === "Dokumenty" ? (
+                  <li>
+                    {/* Zmiana i wycofanie zgody na cookies – tak samo łatwe jak jej udzielenie. */}
+                    <LinkUstawienZgod className="rounded-sm text-stone-300 transition-colors duration-150 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40" />
+                  </li>
+                ) : null}
               </ul>
             </div>
           ))}
