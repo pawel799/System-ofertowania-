@@ -7,6 +7,7 @@
  *   - limit 5 rejestracji na godzinę z jednego IP.
  * Odpowiedź: { user, firm } + ciasteczko sesji (od razu zalogowany).
  */
+import { WERSJA_DOKUMENTOW } from "../../../src/content/prawne";
 import { cleanNip, formatNip, isValidNip } from "../../../src/components/panel/company";
 import { isPlanId, TRIAL_DAYS, type PlanId } from "../../../src/lib/plans";
 import { bumpLimit, checkPasswordRules, clientIp, createSession, hashPassword, iterationsFor, requireTurnstile } from "../../_lib/auth";
@@ -45,7 +46,7 @@ export const onRequestPost = handle(async (ctx) => {
   const email = normEmail(typeof b.email === "string" ? b.email : "");
   if (!EMAIL_RE.test(email) || email.length > 200) throw new HttpError(400, "invalid_email", "Wpisz poprawny adres e-mail.");
   const password = checkPasswordRules(b.haslo);
-  if (b.zgoda !== true) throw new HttpError(400, "terms", "Zaakceptuj regulamin, żeby założyć konto.");
+  if (b.zgoda !== true) throw new HttpError(400, "terms", "Zaakceptuj regulamin wraz z umową powierzenia, żeby założyć konto.");
   const plan: PlanId = isPlanId(b.plan) ? b.plan : "pracownia";
 
   await bumpLimit(kv, `rate:reg:${clientIp(ctx)}`, 5, 3600, "Za dużo rejestracji z tego adresu. Spróbuj za godzinę.");
@@ -67,6 +68,7 @@ export const onRequestPost = handle(async (ctx) => {
     trialEnds: new Date(now.getTime() + TRIAL_DAYS * 86400_000).toISOString(),
     paidUntil: null,
     billing: { provider: "manual" },
+    akceptacja: { wersja: WERSJA_DOKUMENTOW, at: now.toISOString(), email },
     createdAt: now.toISOString(),
   };
   const user: User = {

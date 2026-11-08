@@ -144,6 +144,21 @@ export default function OfferView({
                 ) : null}
               </div>
             ) : null}
+            {/* Dokumenty serwisu – dostępne dla klienta przed skorzystaniem z usługi (ustawa o świadczeniu usług drogą elektroniczną). */}
+            <p className="oferta-dokumenty pointer-events-auto mt-4 text-[11px] text-stone-200 [text-shadow:0_1px_3px_rgba(0,0,0,0.85)]">
+              Serwis OP RZUT ·{" "}
+              <a href="/regulamin" target="_blank" rel="noopener" className="underline-offset-2 hover:text-stone-100 hover:underline">
+                Regulamin
+              </a>{" "}
+              ·{" "}
+              <a href="/polityka-prywatnosci" target="_blank" rel="noopener" className="underline-offset-2 hover:text-stone-100 hover:underline">
+                Prywatność
+              </a>{" "}
+              ·{" "}
+              <a href="/polityka-cookies" target="_blank" rel="noopener" className="underline-offset-2 hover:text-stone-100 hover:underline">
+                Cookies
+              </a>
+            </p>
           </section>
           <PrzyciskPelnegoEkranu className="oferta-pelny-wejdz-desk pointer-events-auto ml-auto hidden self-end desk:inline-flex" />
         </div>

@@ -1,7 +1,7 @@
 import PageIntro from "./PageIntro";
 import { LEGAL_UPDATED, type LegalSection } from "@/content/prawne";
 
-/* Dokument prawny (regulamin, polityka): spis treści i paragrafy. Treść w src/content/prawne.ts. */
+/* Dokument prawny (regulamin, polityki, umowa powierzenia): spis treści, paragrafy i tabela (np. lista cookies). Treść w src/content/prawne.ts. */
 export default function LegalDoc({
   eyebrow,
   title,
@@ -41,6 +41,32 @@ export default function LegalDoc({
                   <li key={t}>{t}</li>
                 ))}
               </ol>
+              {s.tabela ? (
+                <div className="mt-6 overflow-x-auto rounded-lg border border-white/10">
+                  <table className="w-full min-w-[560px] border-collapse text-left text-sm">
+                    <thead className="bg-white/[0.04] text-stone-300">
+                      <tr>
+                        {s.tabela.naglowki.map((n) => (
+                          <th key={n} scope="col" className="px-3 py-2.5 font-medium">
+                            {n}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="text-stone-400">
+                      {s.tabela.wiersze.map((w) => (
+                        <tr key={w[0]} className="border-t border-white/10 align-top">
+                          {w.map((k, j) => (
+                            <td key={j} className={j === 0 ? "px-3 py-2.5 font-mono text-[12.5px] text-stone-300" : "px-3 py-2.5"}>
+                              {k}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </section>
           ))}
         </article>

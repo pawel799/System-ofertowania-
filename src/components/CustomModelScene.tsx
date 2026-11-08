@@ -1,5 +1,6 @@
 "use client";
 
+import { DRACO } from "@/lib/draco";
 import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
@@ -34,7 +35,7 @@ function Loading() {
 
 function Model({ model, onKolor }: { model: PublicModel; onKolor?: (hex: string | null) => void }) {
   // Drugi argument: dekoder Draco, trzeci: meshopt (pliki z panelu są skompresowane meshopt).
-  const { scene } = useGLTF(model.url, true, true);
+  const { scene } = useGLTF(model.url, DRACO, true);
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const invalidate = useThree((s) => s.invalidate);
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height));

@@ -1,5 +1,6 @@
 "use client";
 
+import { DRACO } from "@/lib/draco";
 import {
   Component,
   Suspense,
@@ -107,7 +108,7 @@ const trackDownloadProgress: ExtendLoader = (loader) => {
 
 // Startujemy pobieranie od razu po załadowaniu tego modułu.
 // Drugi argument (true) = dekoder Draco, trzeci (true) = dekoder meshopt.
-useGLTF.preload(MODEL_URL, true, true, trackDownloadProgress);
+useGLTF.preload(MODEL_URL, DRACO, true, trackDownloadProgress);
 
 function Loader() {
   const progress = useSyncExternalStore(
@@ -143,7 +144,7 @@ function KitchenModel({
   onOrbitStart: () => void;
   onOrbitEnd: () => void;
 }) {
-  const { scene } = useGLTF(MODEL_URL, true, true, trackDownloadProgress);
+  const { scene } = useGLTF(MODEL_URL, DRACO, true, trackDownloadProgress);
   const camera = useThree((state) => state.camera);
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);

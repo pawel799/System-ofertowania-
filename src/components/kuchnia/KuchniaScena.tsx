@@ -1,5 +1,6 @@
 "use client";
 
+import { DRACO } from "@/lib/draco";
 import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { ContactShadows, OrbitControls, useGLTF } from "@react-three/drei";
@@ -521,7 +522,7 @@ function ModelBryla({
   /** Okucia tego mebla (id); brak = okucia oferty. */
   kolorUchwytu?: string;
 }) {
-  const { scene } = useGLTF(model.url, true, true);
+  const { scene } = useGLTF(model.url, DRACO, true);
   // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
   const uchwyt = useUchwytModelu(scene);
   // Drzwi, klapy, szuflady i drzwi przesuwne na pivotach (ruchomeGlb.ts) + aliasy ról dla kawałków uchwytów.

@@ -25,7 +25,9 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Dokumenty",
     links: [
       { href: "/regulamin", label: "Regulamin" },
+      { href: "/umowa-powierzenia", label: "Umowa powierzenia" },
       { href: "/polityka-prywatnosci", label: "Polityka prywatności" },
+      { href: "/polityka-cookies", label: "Polityka cookies" },
     ],
   },
 ];

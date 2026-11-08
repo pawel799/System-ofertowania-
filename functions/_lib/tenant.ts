@@ -47,6 +47,8 @@ export type Firm = {
   billing?: FirmBilling | null;
   /** Prośba o zmianę planu z panelu (do obsłużenia ręcznie albo przez płatność online). */
   planRequest?: { plan: PlanId; period: "month" | "year"; at: string; by: string } | null;
+  /** Akceptacja regulaminu i umowy powierzenia przy rejestracji: wersja dokumentów, kiedy i kto (dowód zawarcia umowy). */
+  akceptacja?: { wersja: string; at: string; email: string } | null;
   createdAt: string;
   updatedAt?: string;
 };

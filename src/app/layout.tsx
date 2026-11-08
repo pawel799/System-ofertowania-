@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Rubik } from "next/font/google";
 import "./globals.css";
 import { SKRYPT_MOTYWU } from "@/lib/motywSkrypt";
+import InfoCookies from "@/components/InfoCookies";
 
 // Rubik to jedyny globalny font strony (tylko grubość 400, z polskimi znakami).
 const rubik = Rubik({
@@ -26,7 +27,11 @@ export default function RootLayout({
         {/* Motyw jasny / ciemny z localStorage przed pierwszym malowaniem (src/lib/motyw.ts). */}
         <script dangerouslySetInnerHTML={{ __html: SKRYPT_MOTYWU }} />
       </head>
-      <body className={`${rubik.className} antialiased`}>{children}</body>
+      <body className={`${rubik.className} antialiased`}>
+        {children}
+        {/* Informacja o niezbędnych plikach cookies (src/components/InfoCookies.tsx). */}
+        <InfoCookies />
+      </body>
     </html>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { DRACO } from "@/lib/draco";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
@@ -41,7 +42,7 @@ function TaggedModel({
   onElements: (list: Element[]) => void;
   onPick: (name: string, add: boolean) => void;
 }) {
-  const gltf = useGLTF(url, true, true) as unknown as { scene: Object3D; parser?: { associations?: Associations } };
+  const gltf = useGLTF(url, DRACO, true) as unknown as { scene: Object3D; parser?: { associations?: Associations } };
   const { scene } = gltf;
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const controls = useThree((s) => s.controls) as unknown as { target: Vector3; update: () => void } | null;

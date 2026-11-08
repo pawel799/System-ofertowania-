@@ -245,8 +245,8 @@ export default function RequestDialog({ code, summary: base }: { code?: string; 
               </p>
             ) : null}
 <p className="text-[11px] leading-relaxed text-stone-500">
-              Administratorem danych jest {brand.name}. Dane wykorzystamy tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO) i usuniemy po 180 dniach. Szczegóły i Twoje prawa:{" "}
-              <a href="/polityka-prywatnosci" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-stone-800">polityka prywatności</a>.
+              Administratorem danych jest {brand.name}. Firma wykorzysta je tylko do odpowiedzi na to zgłoszenie (art. 6 ust. 1 lit. b i f RODO); zgłoszenie jest usuwane po 180 dniach. Dane przechowuje w imieniu firmy serwis OP RZUT (podmiot przetwarzający). Twoje prawa:{" "}
+              <a href="/polityka-prywatnosci#par-2" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-stone-800">polityka prywatności</a>.
             </p>
             <button
               type="submit"

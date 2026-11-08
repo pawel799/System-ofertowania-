@@ -1,5 +1,6 @@
 "use client";
 
+import { DRACO } from "@/lib/draco";
 import { useJasnaStrona } from "@/lib/motyw";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -26,7 +27,7 @@ const SWAY = 0.24; // radiany w każdą stronę
 const PERIOD = 40; // sekundy na pełne wahnięcie
 
 function Kitchen({ still, onReady }: { still: boolean; onReady?: () => void }) {
-  const { scene } = useGLTF(MODEL_URL, true, true);
+  const { scene } = useGLTF(MODEL_URL, DRACO, true);
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
 

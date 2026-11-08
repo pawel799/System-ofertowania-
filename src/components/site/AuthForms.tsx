@@ -91,7 +91,7 @@ export function RegisterForm() {
     if (f.name.trim().length < 2) next.name = "Wpisz imię i nazwisko.";
     if (!EMAIL.test(f.email.trim())) next.email = "Wpisz adres e-mail, np. jan@firma.pl.";
     if (f.password.length < 8) next.password = "Hasło musi mieć co najmniej 8 znaków.";
-    if (!f.terms) next.terms = "Zaakceptuj regulamin, żeby założyć konto.";
+    if (!f.terms) next.terms = "Zaakceptuj regulamin wraz z umową powierzenia, żeby założyć konto.";
     setErrors(next);
     if (Object.keys(next).length) return;
     if (TURNSTILE_SITE_KEY && !token) return setSendError("Potwierdź, że nie jesteś robotem.");
@@ -150,9 +150,13 @@ export function RegisterForm() {
             <Link href="/regulamin" className="text-stone-200 underline underline-offset-4">
               regulamin
             </Link>{" "}
-            i{" "}
+            wraz z{" "}
+            <Link href="/umowa-powierzenia" className="text-stone-200 underline underline-offset-4">
+              umową powierzenia przetwarzania danych
+            </Link>{" "}
+            i oświadczam, że zakładam konto jako przedsiębiorca (w imieniu firmy). Zasady przetwarzania moich danych opisuje{" "}
             <Link href="/polityka-prywatnosci" className="text-stone-200 underline underline-offset-4">
-              politykę prywatności
+              polityka prywatności
             </Link>
             .
           </span>
