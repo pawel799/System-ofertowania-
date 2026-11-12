@@ -22,6 +22,9 @@ export const ROLE_LABEL: Record<ModelRole, string> = {
 
 /** Węzły „Korpus” / „…_Korpus” (biblioteka modeli, eksport z Blendera) – boki i obudowa, gdy nie są oznaczone ręcznie. */
 const KORPUS_RE = /(^|_)korpus$/i;
+/** Materiał „Korpus” (biblioteka; nie „AGD_korpus” – obudowy sprzętu zostają bez zmian). */
+const MATERIAL_KORPUSU_RE = /^korpus(\.\d+)?$/i;
+const materialKorpusu = (m: Material | Material[]) => !Array.isArray(m) && MATERIAL_KORPUSU_RE.test(m.name);
 
 export type PublicModel = {
   id: string;
@@ -113,9 +116,12 @@ export function meshRoles(root: Object3D, tags: Record<string, ModelRole>) {
   const roles = new Map<Mesh, ModelRole>();
   // Najpierw elementy wyżej w drzewie, potem niżej: dokładniejsze oznaczenie wygrywa.
   const depth = (o: Object3D | null): number => (o?.parent ? 1 + depth(o.parent) : 0);
-  // Najpierw węzły „Korpus” bez oznaczenia (najsłabsze), potem oznaczenia od góry drzewa.
+  // Najpierw korpus bez oznaczenia (najsłabsze): węzły „…Korpus” i siatki z materiałem „Korpus” (biblioteka nazywa tak
+  // też wierzchy, nadstawki i barierki – „Wierzch”, „Barierka” – które inaczej nie zmieniały koloru z bokami).
+  // Potem oznaczenia od góry drzewa – dokładniejsze wygrywają.
   root.traverse((o) => {
     if (o.name && KORPUS_RE.test(o.name) && !tags[o.name]) for (const m of meshesOf(root, o.name)) roles.set(m, "korpus");
+    if (o instanceof Mesh && !roles.has(o) && materialKorpusu(o.material)) roles.set(o, "korpus");
   });
   const named = Object.keys(tags)
     .map((name) => ({ name, node: root.getObjectByName(name) }))

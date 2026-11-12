@@ -57,3 +57,9 @@ PONOWNE GENEROWANIE
   Blender 4.x/5.x: Scripting → otwórz meble_blender.py → Run Script
   albo:  blender -b -P meble_blender.py -- /sciezka/do/folderu
   Kolory i wymiary są na górze skryptu, lista modeli w MODELS.
+
+KOLORY BOKÓW (rola „korpus”)
+  Aplikacja zmienia kolor boków i obudowy na elementach o nazwie kończącej się na „Korpus” ORAZ na wszystkich
+  siatkach z materiałem „Korpus” (np. „Wierzch”, „Barierka”, „Nadstawka_Wierzch” – wcześniej zostawały w starym
+  kolorze). Materiał „AGD_korpus” (obudowy piekarnika, mikrofali, okapu) celowo się nie zmienia.
+  Logika: src/components/modelRoles.ts (meshRoles).
