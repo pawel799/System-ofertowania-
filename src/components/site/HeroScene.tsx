@@ -8,6 +8,7 @@ import { Environment, useGLTF } from "@react-three/drei";
 import { Box3, Timer, Vector3 } from "three";
 import { prepareKitchenModel } from "../kitchenMaterials";
 import { installFrontSwap } from "../frontMaterials";
+import { useKitchenModelUrl } from "@/lib/protectedModel";
 
 /*
  * Tło strony głównej: ta sama kuchnia co w ofercie, kamera sama powoli kołysze się
@@ -16,7 +17,6 @@ import { installFrontSwap } from "../frontMaterials";
  * Wspólne z ofertą są tylko pliki (model, HDRI) i prepareKitchenModel, które działa raz na model.
  */
 
-const MODEL_URL = "/models/kitchen-opt.glb"; // jak w KitchenGlbScene
 const HDRI_URL = "/hdri/lebombo_2k.hdr";
 
 const CAMERA_START = new Vector3(0.3, 2.45, 2.85);
@@ -27,7 +27,7 @@ const SWAY = 0.24; // radiany w każdą stronę
 const PERIOD = 40; // sekundy na pełne wahnięcie
 
 function Kitchen({ still, onReady }: { still: boolean; onReady?: () => void }) {
-  const { scene } = useGLTF(MODEL_URL, DRACO, true);
+  const { scene } = useGLTF(useKitchenModelUrl(), DRACO, true);
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
 

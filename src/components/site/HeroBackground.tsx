@@ -30,10 +30,24 @@ function hasWebGL() {
   }
 }
 
+type NetInfo = { saveData?: boolean; effectiveType?: string };
+
+/**
+ * Czy wczytywać scenę 3D w tle hero. Model ma ~8 MB, a HDR ~6 MB, więc nie na telefonie,
+ * nie przy oszczędzaniu danych i nie na wolnym łączu (tam zostaje kadr; model wczyta się
+ * dopiero w pokazie kreatora niżej).
+ */
+function canLoadScene() {
+  const net = (navigator as Navigator & { connection?: NetInfo }).connection;
+  if (net?.saveData || /(^|-)2g$|3g/.test(net?.effectiveType ?? "")) return false;
+  return window.matchMedia("(min-width: 768px) and (pointer: fine)").matches;
+}
+
 /*
  * Tło hero. Pod spodem zawsze statyczny kadr (public/strona/hero-poster.webp) – widać go,
  * zanim model się wczyta, i zostaje, gdy WebGL nie działa albo scena się wysypie.
- * Gdy hero zjedzie z ekranu (sekcje niżej), scena przestaje się renderować.
+ * Scena startuje dopiero po załadowaniu strony, w wolnej chwili przeglądarki, żeby nie opóźniać
+ * pierwszego wyświetlenia. Gdy hero zjedzie z ekranu (sekcje niżej), scena przestaje się renderować.
  */
 export default function HeroBackground() {
   const box = useRef<HTMLDivElement>(null);
@@ -42,7 +56,21 @@ export default function HeroBackground() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setWebgl(hasWebGL());
+    if (!canLoadScene() || !hasWebGL()) return;
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    let t = 0;
+    const start = () => {
+      t = w.requestIdleCallback ? w.requestIdleCallback(() => setWebgl(true), { timeout: 2500 }) : window.setTimeout(() => setWebgl(true), 600);
+    };
+    if (document.readyState === "complete") start();
+    else window.addEventListener("load", start, { once: true });
+    return () => {
+      window.removeEventListener("load", start);
+      window.clearTimeout(t);
+    };
+  }, []);
+
+  useEffect(() => {
     const el = box.current;
     if (!el) return;
     const io = new IntersectionObserver(([e]) => setOffscreen(!e.isIntersecting));

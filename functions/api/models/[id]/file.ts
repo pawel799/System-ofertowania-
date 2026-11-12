@@ -8,6 +8,11 @@ import { handle, HttpError, param, store } from "../../../_lib/offers";
 import { MAIN_FIRM, scoped } from "../../../_lib/tenant";
 
 export const onRequestGet = handle(async (ctx) => {
+  // Plik ładuje tylko skrypt strony (fetch z tej samej domeny). Wpisanie adresu w pasku,
+  // link "pobierz" albo osadzenie na innej stronie dostają 403. Utrudnia to pobranie, nie uniemożliwia.
+  const site = ctx.request.headers.get("sec-fetch-site");
+  const dest = ctx.request.headers.get("sec-fetch-dest");
+  if (site !== "same-origin" || dest !== "empty") throw new HttpError(403, "forbidden", "Brak dostępu.");
   const id = modelId(param(ctx, "id"));
   const root = store(ctx.env);
   // Modele firm z kontami leżą w ich przestrzeni KV; brak wpisu = firma "main".
@@ -22,7 +27,8 @@ export const onRequestGet = handle(async (ctx) => {
     headers: {
       "content-type": "model/gltf-binary",
       "content-length": String(obj.size),
-      "cache-control": "public, max-age=31536000, immutable",
+      "cache-control": "private, max-age=31536000, immutable",
+      vary: "sec-fetch-site, sec-fetch-dest",
       etag,
     },
   });

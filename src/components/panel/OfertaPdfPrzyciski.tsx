@@ -39,6 +39,7 @@ export function OfertaPdfPrzyciski({
   ujecie,
   modele,
   projekt,
+  bezCennikaFirmy = false,
 }: {
   id: string;
   title: string;
@@ -58,9 +59,11 @@ export function OfertaPdfPrzyciski({
   /** Modele w planie (oznaczenia ról) – PDF pokazuje tylko materiały, które projekt ma. */
   modele?: readonly { id: string; tags: Record<string, string> }[];
   projekt?: TypProjektu;
+  /** Test kreatora bez konta: cennik domyślny, bez zapytania o cennik firmy. */
+  bezCennikaFirmy?: boolean;
 }) {
   const brand = useBrand();
-  const { cennik, blad } = useCennik();
+  const { cennik, blad } = useCennik(!bezCennikaFirmy);
   const katalog = useKatalog();
   const busy = useRef(false);
 

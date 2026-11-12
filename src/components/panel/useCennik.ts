@@ -4,12 +4,19 @@ import { useEffect, useState } from "react";
 import { DEFAULT_CENNIK, type ModulCennik } from "@/lib/modul";
 import { cennikApi } from "./offerApi";
 
-/** Cennik modułów firmy. Gdy API nie odpowie — cennik domyślny i flaga `blad`. */
-export function useCennik() {
+/**
+ * Cennik modułów firmy. Gdy API nie odpowie — cennik domyślny i flaga `blad`.
+ * zFirmy = false (test kreatora bez konta): bez zapytania, od razu cennik domyślny.
+ */
+export function useCennik(zFirmy = true) {
   const [cennik, setCennik] = useState<ModulCennik>(DEFAULT_CENNIK);
   const [gotowy, setGotowy] = useState(false);
   const [blad, setBlad] = useState(false);
   useEffect(() => {
+    if (!zFirmy) {
+      setGotowy(true);
+      return;
+    }
     let alive = true;
     cennikApi
       .get()
@@ -26,6 +33,6 @@ export function useCennik() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [zFirmy]);
   return { cennik, gotowy, blad };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { planPokazowy } from "@/lib/pokaz";
+import { projektDoLinku, projektZLinku } from "@/lib/projektWLinku";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { dopasuj, podobienstwo } from "@/lib/szukaj";
@@ -122,7 +123,11 @@ function scianyZKolorem(sc: UstawieniaScian | undefined, kolor: string | null): 
   return Object.keys(out).length ? { sciany: out } : {};
 }
 
-export default function KreatorApp() {
+/**
+ * test = test kreatora bez konta (/kreator): bez logowania i bez zapisu na serwerze,
+ * start od kuchni pokazowej, projekt można zapisać w linku (src/lib/projektWLinku.ts).
+ */
+export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   const [auth, setAuth] = useState(false);
   const [gotowe, setGotowe] = useState(false);
   const [lokalnie, setLokalnie] = useState(false);
@@ -173,7 +178,7 @@ export default function KreatorApp() {
   const zamknijBiblioteke = useCallback(() => setBiblioteka(false), []);
   const waski = useWaski();
   const telefon = useTelefon();
-  const { cennik, blad: cennikBlad, gotowy: cennikGotowy } = useCennik();
+  const { cennik, blad: cennikBlad, gotowy: cennikGotowy } = useCennik(!test);
   const ujecie = useRef<KuchniaUjecie | null>(null);
   const ustawUjecie = useCallback((u: KuchniaUjecie | null) => {
     ujecie.current = u;
@@ -198,6 +203,45 @@ export default function KreatorApp() {
   }, [resetPlan]);
 
   const wczytaj = useCallback(async () => {
+    if (test) {
+      // Test bez konta: nic z API. Projekt z linku (jeśli jest i jest poprawny), inaczej kuchnia pokazowa.
+      setKatalogStore([]);
+      setLokalnie(false);
+      const zLinku = await projektZLinku(window.location.hash);
+      let wczytany = false;
+      if (zLinku) {
+        try {
+          const p = parseKuchnia(zLinku.plan);
+          setTyp(parseTypProjektu(zLinku.typ) ?? "kuchnia");
+          resetPlan(p);
+          zresetujSciany(p.sciany?.kolor);
+          setTitle(zLinku.title);
+          if (FRONTS.some((f) => f.id === zLinku.front)) setFrontId(zLinku.front);
+          if (COUNTERTOPS.some((c) => c.id === zLinku.countertop)) setCountertopId(zLinku.countertop);
+          if (HARDWARE.some((h) => h.id === zLinku.hardware)) setHardwareId(zLinku.hardware);
+          setKrok("meble");
+          wczytany = true;
+          toast("Wczytano projekt z linku", { desc: "Dane były tylko w adresie – nic nie pobraliśmy z serwera." });
+        } catch {
+          toast("Link do projektu jest uszkodzony", { type: "err", desc: "Pokazuję kuchnię przykładową." });
+        }
+      }
+      if (!zLinku && window.location.hash.startsWith("#projekt=")) {
+        toast("Link do projektu jest uszkodzony", { type: "err", desc: "Pokazuję kuchnię przykładową." });
+      }
+      if (!wczytany) {
+        const pokaz = planPokazowy();
+        setTyp("kuchnia");
+        resetPlan(pokaz);
+        zresetujSciany(pokaz.sciany?.kolor);
+        setTitle("Kuchnia w L – dąb i grafit");
+        setKrok("meble");
+      }
+      setSamouczek(false);
+      setAuth(false);
+      setGotowe(true);
+      return;
+    }
     const id = new URLSearchParams(window.location.search).get("id");
     if (!hasLogin() && process.env.NODE_ENV !== "development") {
       setAuth(true);
@@ -265,7 +309,7 @@ export default function KreatorApp() {
     } finally {
       setGotowe(true);
     }
-  }, [wczytajOferte, resetPlan]);
+  }, [wczytajOferte, resetPlan, test]);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -278,6 +322,35 @@ export default function KreatorApp() {
     setHardware(hardware);
     setPaletteStore(palettes);
   }, [front, countertop, hardware, palettes]);
+
+  // Test bez konta: projekt na bieżąco w linku (#projekt=…), bez zaśmiecania historii.
+  useEffect(() => {
+    if (!test || !gotowe) return;
+    let alive = true;
+    const t = window.setTimeout(() => {
+      void projektDoLinku({ typ, title, plan, front, countertop, hardware }).then((hash) => {
+        if (alive) window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+      });
+    }, 400);
+    return () => {
+      alive = false;
+      window.clearTimeout(t);
+    };
+  }, [test, gotowe, typ, title, plan, front, countertop, hardware]);
+
+  const kopiujLinkProjektu = async () => {
+    const hash = await projektDoLinku({ typ, title, plan, front, countertop, hardware });
+    const url = `${window.location.origin}${window.location.pathname}${hash}`;
+    window.history.replaceState(null, "", url);
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("Skopiowano link do projektu", {
+        desc: url.length > 8000 ? "Projekt jest duży – link może się nie zmieścić w niektórych komunikatorach." : "Kto go otworzy, zobaczy ten sam projekt. Nic nie trafiło na serwer.",
+      });
+    } catch {
+      toast("Nie udało się skopiować", { type: "err", desc: "Skopiuj adres z paska przeglądarki." });
+    }
+  };
 
   const element = plan.elementy.find((e) => e.id === zaznaczony) ?? null;
   const wywiad: Wywiad = plan.wywiad ?? wywiadDomyslny(typ);
@@ -490,6 +563,9 @@ export default function KreatorApp() {
   };
 
   const wyslijNaSerwer = async (o: Offer, nowa: boolean) => {
+    if (test) {
+      throw new ApiError(0, "test", "To test kreatora: nic nie zapisujemy na serwerze. Załóż konto, żeby zapisać ofertę i wysłać link klientowi.");
+    }
     try {
       return nowa ? await panelApi.create(o) : await panelApi.update(o);
     } catch (e) {
@@ -800,7 +876,7 @@ export default function KreatorApp() {
     const cofanieWOknie = !modal || modal.hasAttribute("data-cofanie");
     if (mod && k === "s") {
       e.preventDefault();
-      if (!modal && !zapisuje && !auth) void zapisz();
+      if (!modal && !zapisuje && !auth && !test) void zapisz();
       return;
     }
     if (wPolu) return;
@@ -880,14 +956,23 @@ export default function KreatorApp() {
         </header>
         <div className="kr-telefon" role="status">
           <h1>Kreator działa na komputerze</h1>
-          <p className="lede">Na telefonie możesz przeglądać oferty, podgląd 3D i wysyłać linki klientom. Projekty tworzysz i zmieniasz na większym ekranie.</p>
+          <p className="lede">
+            {test
+              ? "Otwórz tę stronę na komputerze albo tablecie, żeby wypróbować kreator. Na telefonie zobaczysz przykładową ofertę z kuchnią 3D."
+              : "Na telefonie możesz przeglądać oferty, podgląd 3D i wysyłać linki klientom. Projekty tworzysz i zmieniasz na większym ekranie."}
+          </p>
+          {test ? (
+            <a className="btn btn-ghost" href="/oferta/demo">
+              Przykładowa oferta 3D
+            </a>
+          ) : null}
           {offer?.link ? (
             <a className="btn btn-ghost" href={`/oferta/${offer.link.slug}`}>
               Podgląd tej oferty
             </a>
           ) : null}
-          <a className="btn btn-ink" href="/panel">
-            Przejdź do ofert
+          <a className="btn btn-ink" href={test ? "/rejestracja" : "/panel"}>
+            {test ? "Załóż konto" : "Przejdź do ofert"}
           </a>
         </div>
         <Toaster />
@@ -897,7 +982,7 @@ export default function KreatorApp() {
   return (
     <div className="pnl kreator" data-kiosk={kiosk ? "" : undefined} data-pelny={pelny ?? undefined} data-katalog={(kiosk || pelny === "rzut") && katalogKiosk ? "" : undefined}>
       <header className="top">
-        <a className="btn btn-plain" href="/panel" aria-label="Wróć do ofert">
+        <a className="btn btn-plain" href={test ? "/" : "/panel"} aria-label={test ? "Strona główna" : "Wróć do ofert"}>
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M10 3 5 8l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -909,6 +994,11 @@ export default function KreatorApp() {
         </div>
         <span className="grow" />
         {lokalnie ? <span className="sample">Dane demo</span> : null}
+        {test ? (
+          <span className="sample" title="Nic nie wysyłamy na serwer. Projekt zapisuje się tylko w linku.">
+            Test bez konta
+          </span>
+        ) : null}
         <button type="button" className="btn btn-plain" aria-label="Cofnij" title="Cofnij (Ctrl+Z)" disabled={!moznaCofnac} onClick={cofnij}>
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M5.5 3 2.5 6l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -962,12 +1052,28 @@ export default function KreatorApp() {
             ?
           </span>
         </button>
-        <button type="button" className="btn btn-ink" data-tour="zapisz" disabled={zapisuje || auth} onClick={() => void zapisz()}>
-          Zapisz ofertę
-        </button>
-        <span className="kr-bez-kiosku kr-contents">
-          <LogoutButton />
-        </span>
+        {test ? (
+          <>
+            <button type="button" className="btn btn-ghost" onClick={() => void kopiujLinkProjektu()} title="Projekt zapisuje się w linku – nic nie trafia na serwer">
+              <span className="hide-sm">Kopiuj link do projektu</span>
+              <span className="kr-tylko-sm" aria-hidden>
+                Link
+              </span>
+            </button>
+            <a className="btn btn-ink" href="/rejestracja">
+              Załóż konto
+            </a>
+          </>
+        ) : (
+          <>
+            <button type="button" className="btn btn-ink" data-tour="zapisz" disabled={zapisuje || auth} onClick={() => void zapisz()}>
+              Zapisz ofertę
+            </button>
+            <span className="kr-bez-kiosku kr-contents">
+              <LogoutButton />
+            </span>
+          </>
+        )}
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
 
@@ -1349,6 +1455,7 @@ export default function KreatorApp() {
                       ujecie={ujecie}
                       modele={modeleSceny}
                       projekt={typ}
+                      bezCennikaFirmy={test}
                     />
                   </section>
 

@@ -42,10 +42,9 @@ import { usePalettes } from "./paletteStore";
 import { useKatalog } from "./katalogStore";
 import { tloDlaKoloru, tloMotywu } from "./tloSceny";
 import { useJasnaStrona } from "@/lib/motyw";
+import { getModelProgress, preloadKitchenModel, subscribeModelProgress, useKitchenModelUrl } from "@/lib/protectedModel";
 
-const MODEL_URL = "/models/kitchen-opt.glb";
-
-const MODEL_BYTES_FALLBACK = 18_440_100;
+// Model jest zaszyfrowany (public/models/kitchen.enc); adres blob: daje src/lib/protectedModel.ts.
 
 const HDRI_URL = "/hdri/lebombo_2k.hdr";
 
@@ -65,55 +64,15 @@ const ROOM_MAX = new Vector3(1.8, 2.95, 2.85);
 // Na szerokim ekranie przesuwamy obraz w lewo, bo prawą stronę zasłania panel.
 const LENS_SHIFT = 0.1;
 
-/* ---------- Postęp pobierania modelu (w bajtach, nie w liczbie plików) ---------- */
+/* ---------- Postęp pobierania modelu (w bajtach) – z protectedModel ---------- */
 
-let downloadProgress = 0;
-const progressListeners = new Set<() => void>();
-
-function setDownloadProgress(value: number) {
-  downloadProgress = value;
-  progressListeners.forEach((listener) => listener());
-}
-
-function subscribeProgress(listener: () => void) {
-  progressListeners.add(listener);
-  return () => {
-    progressListeners.delete(listener);
-  };
-}
-
-type ExtendLoader = NonNullable<Parameters<typeof useGLTF.preload>[3]>;
-
-// Podpina się pod loader GLTF, żeby dostać zdarzenia "progress" z pobierania.
-const trackDownloadProgress: ExtendLoader = (loader) => {
-  const patched = loader as typeof loader & { __progressPatched?: boolean };
-  if (patched.__progressPatched) return;
-  patched.__progressPatched = true;
-
-  const originalLoad = patched.load.bind(patched);
-  patched.load = (url, onLoad, onProgress, onError) =>
-    originalLoad(
-      url,
-      onLoad,
-      (event) => {
-        if (String(url).includes(MODEL_URL)) {
-          const total = event.total || MODEL_BYTES_FALLBACK;
-          setDownloadProgress(Math.min(1, event.loaded / total));
-        }
-        onProgress?.(event);
-      },
-      onError,
-    );
-};
-
-// Startujemy pobieranie od razu po załadowaniu tego modułu.
-// Drugi argument (true) = dekoder Draco, trzeci (true) = dekoder meshopt.
-useGLTF.preload(MODEL_URL, DRACO, true, trackDownloadProgress);
+// Startujemy pobieranie od razu po załadowaniu tego modułu (strona oferty potrzebuje modelu zawsze).
+if (typeof window !== "undefined") preloadKitchenModel();
 
 function Loader() {
   const progress = useSyncExternalStore(
-    subscribeProgress,
-    () => downloadProgress,
+    subscribeModelProgress,
+    getModelProgress,
     () => 0,
   );
   const percent = Math.floor(progress * 100);
@@ -144,7 +103,7 @@ function KitchenModel({
   onOrbitStart: () => void;
   onOrbitEnd: () => void;
 }) {
-  const { scene } = useGLTF(MODEL_URL, DRACO, true, trackDownloadProgress);
+  const { scene } = useGLTF(useKitchenModelUrl(), DRACO, true);
   const camera = useThree((state) => state.camera);
   const gl = useThree((state) => state.gl);
   const invalidate = useThree((state) => state.invalidate);

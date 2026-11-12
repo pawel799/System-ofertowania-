@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { HOME } from "@/content/strona-glowna";
 import HeroBackground from "@/components/site/HeroBackground";
 import Logo, { BRAND_NAME } from "@/components/site/Logo";
 import SiteFooter from "@/components/site/SiteFooter";
 import HomeHeader from "@/components/site/home/HomeHeader";
+import KreatorShow from "@/components/site/home/KreatorShow";
 import MediaSlot from "@/components/site/home/MediaSlot";
 import { nr, Section, SectionHead } from "@/components/site/home/Section";
 import StepsShowcase from "@/components/site/home/StepsShowcase";
 import { btn } from "@/components/site/styles";
-import PrzelacznikMotywu from "@/components/motyw/PrzelacznikMotywu";
 
 export const metadata: Metadata = {
   title: BRAND_NAME,
@@ -41,14 +42,15 @@ export default function HomePage() {
             <HeroBackground />
           </div>
           <div aria-hidden className="absolute inset-0 -z-10 bg-black/80" />
-          {/* Motyw jasny / ciemny – pasek u góry pokazuje się dopiero po przewinięciu. */}
-          <PrzelacznikMotywu className={`${btn("ghost", "sm")} absolute right-6 top-[calc(1.25rem+env(safe-area-inset-top,0px))] w-9 !px-0 md:right-10`} />
 
-          <div className="flex flex-col items-center px-6 text-center">
+          <div className="flex flex-col items-center px-6 pb-28 pt-24 text-center">
             <Logo size="lg" />
             <h1 className="mt-10 max-w-3xl text-balance text-4xl leading-[1.05] text-stone-50 md:text-6xl">{HOME.hero.title}</h1>
             <p className="mt-5 max-w-xl text-balance text-base leading-relaxed text-stone-300 md:text-lg">{HOME.hero.lead}</p>
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <Link href={HOME.hero.tryCta.href} className={`${btn("ghost")} min-w-40`}>
+                {HOME.hero.tryCta.label}
+              </Link>
               <Link href="/oferta/demo" className={`${btn("ghost")} min-w-40`}>
                 Zobacz przykładową ofertę
               </Link>
@@ -58,14 +60,18 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* Jak to działa: duży, wyraźny przycisk przewijający do pierwszej sekcji. */}
           <a
             href={`#${steps.id}`}
-            className="group absolute bottom-[calc(2rem+env(safe-area-inset-bottom,0px))] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3 rounded-sm text-[11px] uppercase tracking-[0.25em] text-stone-400 transition-colors duration-150 hover:text-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="hero-in group absolute bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))] left-1/2 flex h-14 items-center gap-3 rounded-full border border-white/30 bg-white/10 pl-7 pr-3 text-base font-medium text-stone-50 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] backdrop-blur-md transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-white/60 hover:bg-white/20 active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 md:h-16 md:pl-8 md:text-lg"
+            style={{ "--d": "320ms", translate: "-50% 0" } as CSSProperties}
           >
             {HOME.scrollHint}
-            <svg viewBox="0 0 16 16" fill="none" aria-hidden className="h-4 w-4">
-              <path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-stone-50 text-stone-950 md:h-10 md:w-10">
+              <svg viewBox="0 0 16 16" fill="none" aria-hidden className="nudge h-4 w-4">
+                <path d="M8 3v10m0 0 4-4m-4 4-4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
           </a>
         </section>
 
@@ -88,6 +94,9 @@ export default function HomePage() {
           <SectionHead eyebrow={steps.eyebrow} title={steps.title} lead={steps.lead} />
           <StepsShowcase steps={steps.items} />
         </Section>
+
+        {/* Kreator na żywo: pokaz przy przewijaniu */}
+        <KreatorShow />
 
         {/* Przykładowa oferta */}
         <Section>

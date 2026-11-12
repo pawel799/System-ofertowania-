@@ -55,3 +55,6 @@ next-env.d.ts
 # foldery z paczkami zmian (OPIS.txt, zmiany.diff, pliki/) – nie do repo
 /promo-layout/
 /pkt*/
+
+# Oryginały modeli 3D (na stronie tylko wersja zaszyfrowana, scripts/szyfruj-model.mjs)
+modele-zrodlowe/

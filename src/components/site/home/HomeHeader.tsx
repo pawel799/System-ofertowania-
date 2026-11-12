@@ -8,24 +8,19 @@ import { btn } from "../styles";
 import PrzelacznikMotywu from "../../motyw/PrzelacznikMotywu";
 
 /*
- * Pasek strony głównej: schowany, dopóki widać hero (tam są już logo i przyciski),
- * wysuwa się po zjechaniu niżej. Podświetla kotwicę sekcji, która jest na ekranie.
+ * Stały pasek strony głównej: widoczny od pierwszego ekranu. Nad hero jest przezroczysty,
+ * po zjechaniu dostaje tło (zmiana koloru, bez ruchu). Podświetla kotwicę sekcji na ekranie,
+ * na telefonie sekcje są w rozwijanym menu.
  */
 export default function HomeHeader({ heroId }: { heroId: string }) {
-  const [shown, setShown] = useState(false);
+  const [solid, setSolid] = useState(false);
   const [active, setActive] = useState("");
   const [menu, setMenu] = useState(false);
 
   useEffect(() => {
     const hero = document.getElementById(heroId);
     if (!hero) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        setShown(!e.isIntersecting);
-        if (e.isIntersecting) setMenu(false);
-      },
-      { rootMargin: "-80px 0px 0px 0px" },
-    );
+    const io = new IntersectionObserver(([e]) => setSolid(!e.isIntersecting), { rootMargin: "-64px 0px 0px 0px", threshold: 0.92 });
     io.observe(hero);
     return () => io.disconnect();
   }, [heroId]);
@@ -47,8 +42,8 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-30 border-b border-white/10 bg-tlo/85 px-6 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md transition-[transform,opacity,visibility] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none md:px-10 ${
-        shown ? "visible translate-y-0 opacity-100" : "invisible -translate-y-full opacity-0"
+      className={`fixed inset-x-0 top-0 z-40 border-b px-4 pt-[env(safe-area-inset-top,0px)] transition-[background-color,border-color] duration-200 ease-out sm:px-6 md:px-10 ${
+        solid || menu ? "border-white/10 bg-tlo/90 backdrop-blur-md" : "border-transparent bg-gradient-to-b from-black/60 to-transparent"
       }`}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6">
@@ -69,6 +64,9 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
         </nav>
         <div className="flex items-center gap-2">
           <PrzelacznikMotywu className={`${btn("ghost", "sm")} w-9 !px-0`} />
+          <Link href={HOME.hero.tryCta.href} className={`${btn("ghost", "sm")} hidden md:inline-flex`}>
+            Wypróbuj kreator
+          </Link>
           <Link href="/panel" className={`${btn("ghost", "sm")} hidden sm:inline-flex`}>
             Wejdź do panelu
           </Link>
@@ -104,6 +102,11 @@ export default function HomeHeader({ heroId }: { heroId: string }) {
                 </a>
               </li>
             ))}
+            <li className="md:hidden">
+              <Link href={HOME.hero.tryCta.href} className="block py-3 text-base text-stone-50">
+                {HOME.hero.tryCta.label}
+              </Link>
+            </li>
             <li className="sm:hidden">
               <Link href="/panel" className="block py-3 text-base text-stone-200 hover:text-stone-50">
                 Wejdź do panelu

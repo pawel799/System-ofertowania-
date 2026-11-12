@@ -31,15 +31,18 @@ export const HOME = {
   hero: {
     title: "Oferty mebli na wymiar w 3D",
     lead: "Wysyłasz klientowi link do mebla w 3D – kuchni, szafy czy komody. Ogląda go w przeglądarce, zmienia materiały, widzi cenę i zostawia uwagi.",
+    /** Test kreatora bez konta (/kreator). */
+    tryCta: { href: "/kreator", label: "Wypróbuj kreator bez konta" } satisfies Link,
   },
 
   /** Przewijanie pod przyciskami w hero (prowadzi do pierwszej sekcji). */
   scrollHint: "Jak to działa",
 
-  /** Kotwice w pasku, który pojawia się po zjechaniu z hero. Id sekcji – patrz niżej. */
+  /** Kotwice w stałym pasku u góry. Id sekcji – patrz niżej. */
   nav: [
     { href: "#meble", label: "Meble" },
     { href: "#jak-to-dziala", label: "Jak to działa" },
+    { href: "#kreator", label: "Kreator" },
     { href: "#funkcje", label: "Funkcje" },
     { href: "#dla-kogo", label: "Dla kogo" },
     { href: "#cennik", label: "Cennik" },
@@ -98,6 +101,22 @@ export const HOME = {
         media: { src: "/strona/krok-3-klient.webp", alt: "Strona oferty u klienta: kuchnia 3D z paskiem materiałów" } as Media,
       },
     ],
+  },
+
+  /** Pokaz kreatora przy przewijaniu (src/components/site/home/KreatorShow.tsx). */
+  kreator: {
+    id: "kreator",
+    eyebrow: "Kreator na żywo",
+    title: "Od szafki do arkusza płyty i linku dla klienta",
+    lead: "Przewiń i zobacz, jak wygląda praca w kreatorze: dodajesz szafki, system składa je w 3D, rozkłada formatki na płytach, a klient dostaje kuchnię do obracania. Każdy krok gra sam – wystarczy patrzeć.",
+    steps: [
+      { title: "Dodajesz szafki", text: "Typ, szerokość, wysokość, głębokość. Szafki z szufladami liczą dna i tyły same." },
+      { title: "Formatki liczą się same", text: "Boki, wieńce, półki, plecy i fronty z oklejaniem. Bez Excela i kalkulatora." },
+      { title: "Rozkrój na płytach", text: "Formatki układają się na arkuszach 2800 × 2070 z rzazem piły. Widzisz liczbę płyt i odpad." },
+      { title: "Materiały na modelu 3D", text: "Fronty i blat zmieniasz jednym kliknięciem, a kuchnia w 3D od razu to pokazuje." },
+      { title: "Link dla klienta", text: "Klient ogląda kuchnię na telefonie, przelicza cenę i zostawia uwagi. Ty dostajesz listę do zakładu." },
+    ],
+    cta: { href: "/kreator", label: "Wypróbuj kreator – bez konta i bez wysyłania danych" } satisfies Link,
   },
 
   demo: {
