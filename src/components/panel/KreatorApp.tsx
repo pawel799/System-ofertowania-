@@ -45,6 +45,7 @@ import {
   wstawPrzykladMebli,
   wystajePozaSciany,
   wycenianyElement,
+  opisPozaWycena,
   zmienWymiar,
   type ElementKuchni,
   type Obrot,
@@ -1144,7 +1145,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                         <b>{p.nazwa}</b>
                         <span className="mono">
                           {p.w}×{p.h}×{p.d} cm
-                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennikOferty)) : "AGD, poza ceną"}` : ""}
+                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennikOferty)) : opisPozaWycena(p)}` : ""}
                         </span>
                       </button>
                     ))}
@@ -1640,7 +1641,7 @@ function BibliotekaModeli({
                   <b>{wpis.nazwa}</b>
                   <span className="mono">
                     {wpis.w}×{wpis.h}×{wpis.d} cm
-                    {cennik ? ` · ${poza ? "AGD, poza ceną" : formatPln(modulCena(wpis, cennik))}` : ""}
+                    {cennik ? ` · ${poza ? opisPozaWycena({ rodzaj }) : formatPln(modulCena(wpis, cennik))}` : ""}
                   </span>
                 </button>
               );

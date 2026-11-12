@@ -7,7 +7,7 @@
  * blokuje zapis, gdy coś nie ma sensu (np. drążek w szafie 40 cm, półka 120 cm bez przegrody).
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { cenaElementu, limityElementu, MEBLE, RODZAJ_LABEL, rodzajElementu, wycenianyElement, type ElementKuchni, type NowyElement, type RodzajElementu, type Strefa } from "@/lib/kuchnia";
+import { cenaElementu, limityElementu, MEBLE, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, WYPOSAZENIE, wycenianyElement, type ElementKuchni, type NowyElement, type RodzajElementu, type Strefa } from "@/lib/kuchnia";
 import { wpisPoId } from "@/lib/bibliotekaModeli";
 import type { ModulCennik } from "@/lib/modul";
 import {
@@ -46,6 +46,8 @@ export type ElementOkna = NowyElement;
 /** Odpowiednik modelu 3D z biblioteki jako moduł na wymiar (z edytowalnym wnętrzem). */
 export function naWymiar(el: ElementOkna): ElementOkna | null {
   if (el.zrodlo !== "model") return null;
+  // Telewizor czy sofa nie mają odpowiednika „na wymiar”.
+  if (el.rodzaj && WYPOSAZENIE.has(el.rodzaj)) return null;
   const wpis = el.modelId ? wpisPoId(el.modelId) : undefined;
   const nazwa = `${el.nazwa}`.toLowerCase();
   let rodzaj: RodzajElementu | null = null;
@@ -437,7 +439,7 @@ export function KreatorWnetrze({
               </>
             ) : null}
             <p className="mono kr-hint">
-              {el.w} × {el.h} × {el.d} cm · {cena != null ? `${formatPln(cena)} netto` : wycenianyElement(el) ? "" : "AGD, poza ceną"}
+              {el.w} × {el.h} × {el.d} cm · {cena != null ? `${formatPln(cena)} netto` : wycenianyElement(el) ? "" : opisPozaWycena(el)}
             </p>
             {ocena.bledy.length ? (
               <ul className="kr-wn-bledy" role="alert">

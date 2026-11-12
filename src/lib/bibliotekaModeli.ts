@@ -2,13 +2,16 @@
  * Biblioteka modeli GLB.
  * Kuchnia: seed/modele-kuchnia-50 (mk01–mk50). 01–46 wstawia kreator, 47–50 są modelem całej oferty.
  * Szafy, szafki i komody: seed/modele-szafy-komody-100 (ms001–ms100). Wszystkie wstawia kreator jak moduły.
+ * Wyposażenie: seed/modele-wyposazenie-32 (mw01–mw32) – telewizory, sofy, łóżka, biurko, sprzęt wolnostojący, łazienka, dekoracje.
+ *   Do wizualizacji: poza wyceną i formatkami, bez kolorów mebli. Bez tekstur i znaków firmowych.
  * Id są w id-map.json i spełniają ASSET_ID_RE. Po seedzie te same id wracają z GET /api/models.
  */
 import type { RodzajElementu, Strefa } from "./kuchnia";
 import mapaKuchnia from "../../seed/modele-kuchnia-50/id-map.json";
 import mapaMeble from "../../seed/modele-szafy-komody-100/id-map.json";
+import mapaWyposazenie from "../../seed/modele-wyposazenie-32/id-map.json";
 
-export type GrupaBiblioteki = "dolne" | "gorne" | "slupki" | "blaty" | "agd" | "dodatki" | "szafy" | "szafki" | "komody";
+export type GrupaBiblioteki = "dolne" | "gorne" | "slupki" | "blaty" | "agd" | "dodatki" | "szafy" | "szafki" | "komody" | "wyposazenie";
 export type UzycieModelu = "modul" | "kuchnia";
 
 export type WpisModelu = {
@@ -25,6 +28,8 @@ export type WpisModelu = {
   w: number;
   h: number;
   d: number;
+  /** Wysokość spodu nad podłogą [cm] – rzeczy na ścianie, które nie wiszą na 145 cm jak szafki górne (telewizor, obraz, grzejnik). */
+  odPodlogi?: number;
 };
 
 export const GRUPY_BIBLIOTEKI: { id: GrupaBiblioteki; label: string }[] = [
@@ -37,9 +42,10 @@ export const GRUPY_BIBLIOTEKI: { id: GrupaBiblioteki; label: string }[] = [
   { id: "szafy", label: "Szafy" },
   { id: "szafki", label: "Szafki" },
   { id: "komody", label: "Komody" },
+  { id: "wyposazenie", label: "Wyposażenie i dekoracje" },
 ];
 
-export const WPISY_MODELI: readonly WpisModelu[] = [...mapaKuchnia.modele, ...mapaMeble.modele] as WpisModelu[];
+export const WPISY_MODELI: readonly WpisModelu[] = [...mapaKuchnia.modele, ...mapaMeble.modele, ...mapaWyposazenie.modele] as WpisModelu[];
 
 const poId = new Map(WPISY_MODELI.map((w) => [w.id, w]));
 if (poId.size !== WPISY_MODELI.length) {
@@ -48,6 +54,12 @@ if (poId.size !== WPISY_MODELI.length) {
 
 export function wpisPoId(id: string): WpisModelu | undefined {
   return poId.get(id);
+}
+
+/** Wysokość spodu nad podłogą [cm] dla modelu z biblioteki, który ma ją ustaloną; null = wynika ze strefy. */
+export function odPodlogiElementu(el: { zrodlo?: string; modelId?: string }): number | null {
+  if (el.zrodlo !== "model" || !el.modelId) return null;
+  return poId.get(el.modelId)?.odPodlogi ?? null;
 }
 
 export function podzielModele<T extends { id: string }>(models: readonly T[]) {

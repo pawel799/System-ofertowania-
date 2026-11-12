@@ -9,7 +9,7 @@
  *
  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
  */
-import { MEBLE, rect, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { CzescMebla } from "@/lib/kolory";
 import { frontyElementu } from "../rysunek/rysunekTechniczny";
@@ -268,7 +268,7 @@ const NOZKI = new Set(["szafka", "szuflady", "narozna", "zlew", "piekarnik", "lo
 /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
 function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
   const out: Blat[] = [];
-  const dolne = plan.elementy.filter((e) => e.strefa === "dolna" && !MEBLE.has(rodzajElementu(e)));
+  const dolne = plan.elementy.filter((e) => e.strefa === "dolna" && !MEBLE.has(rodzajElementu(e)) && !WYPOSAZENIE.has(rodzajElementu(e)));
   type Odc = { a0: number; a1: number; d: number; nazwy: string[] };
   const ciagi = new Map<string, Odc[]>();
   for (const e of dolne) {
@@ -317,7 +317,7 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
     const mat = (c: CzescMebla) => zrodlo.material(el, c);
     const uchwyt = zrodlo.uchwyt?.(el) ?? null;
     if (el.zrodlo === "model") {
-      pominiete.push({ mebel, powod: "gotowy model 3D – formatki z modelu (zakładka „Z modelu 3D”)" });
+      pominiete.push({ mebel, powod: WYPOSAZENIE.has(r) ? "wyposażenie – nie jest meblem do wykonania" : "gotowy model 3D – formatki z modelu (zakładka „Z modelu 3D”)" });
       continue;
     }
     if (r === "piekarnik") piekarnik(z, mebel, el, mat, u, uchwyt);

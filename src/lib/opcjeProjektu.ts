@@ -12,7 +12,7 @@
  * Ukryta grupa nie dolicza dopłaty (pricing.ts → totalPrice).
  */
 import { wpisPoId } from "./bibliotekaModeli";
-import { MEBLE, rodzajElementu, type ElementKuchni, type PlanKuchni } from "./kuchnia";
+import { MEBLE, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "./kuchnia";
 import { kategoriaWnetrza, wnetrzeDomyslne } from "./wnetrze";
 import { czesciMebla } from "./kolory";
 
@@ -49,6 +49,8 @@ function grupyModulu(el: ElementKuchni): GrupyMaterialow {
 
 /** Model 3D w projekcie: z oznaczeń; gdy modelu nie ma na liście – z grupy biblioteki. */
 function grupyModelu(el: ElementKuchni, modele: ReadonlyMap<string, ModelZTagami>): GrupyMaterialow {
+  // Telewizor, sofa, pralka… – nie mają frontów, blatu ani uchwytów do wyboru.
+  if (WYPOSAZENIE.has(rodzajElementu(el))) return { front: false, blat: false, okucia: false };
   const r = role(el.modelId ? modele.get(el.modelId) : undefined);
   if (r) return { front: r.has("front"), blat: r.has("blat"), okucia: r.has("uchwyt") };
   const wpis = el.modelId ? wpisPoId(el.modelId) : undefined;
@@ -65,7 +67,7 @@ export function grupyElementu(el: ElementKuchni, modele: ReadonlyMap<string, Mod
   // Model: boki, gdy ma oznaczony korpus albo jest z biblioteki mebli (węzeł „Korpus”).
   const r = el.zrodlo === "model" ? role(el.modelId ? modele.get(el.modelId) : undefined) : null;
   const wpis = el.modelId ? wpisPoId(el.modelId) : undefined;
-  const korpusModelu = !!r?.has("korpus") || (!!wpis && wpis.grupa !== "agd" && wpis.grupa !== "blaty" && wpis.grupa !== "dodatki");
+  const korpusModelu = !WYPOSAZENIE.has(rodzajElementu(el)) && (!!r?.has("korpus") || (!!wpis && wpis.grupa !== "agd" && wpis.grupa !== "blaty" && wpis.grupa !== "dodatki" && wpis.grupa !== "wyposazenie"));
   return { ...g, korpus: el.zrodlo === "model" ? korpusModelu : pola.korpus > 0, srodek: el.zrodlo === "model" ? false : pola.srodek > 0 };
 }
 

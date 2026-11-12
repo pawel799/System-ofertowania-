@@ -6,7 +6,7 @@ import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, cenaElementu, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
+import { bazaKuchni, cenaElementu, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -1126,7 +1126,7 @@ export default function PanelApp() {
                     <span className="mono">
                       {e.w}×{e.h}×{e.d} cm
                     </span>
-                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(cenaElementu(e, cennik) ?? 0) : "AGD, poza ceną"}</span>
+                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(cenaElementu(e, cennik) ?? 0) : opisPozaWycena(e)}</span>
                   </li>
                 ))}
               </ul>

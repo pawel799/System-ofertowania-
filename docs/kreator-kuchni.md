@@ -224,6 +224,24 @@ SEED_CONFIRM=kuchnia-modele node seed/modele-szafy-komody-100/seed.mjs --remote
 
 Ten sam bucket R2 `kuchnia-modele` i KV firmy `main` co biblioteka kuchni. Klucze: `model:<id>` i `modelowner:<id>` → `main`. Plik: `models/<id>/<wersja>.glb`.
 
+## Biblioteka wyposażenia
+
+Trzecia paczka: `seed/modele-wyposazenie-32/` (32 GLB, id `mw01`–`mw32`). Telewizory, sofy, narożnik, fotel, stolik, lampa, dywan, roślina, obraz, zasłony, lustro, łóżka, biurko, krzesło biurowe, monitor, laptop, stół i krzesło, pralka, suszarka, lodówka side by side, kuchenka, ekspres, czajnik, WC, wanna, kabina, grzejnik. Służą do wizualizacji – żeby projekt wyglądał jak pokój.
+
+- **Bez znaków firmowych:** same bryły i jednolite kolory, żadnych tekstur, obrazków ani napisów. `seed.mjs --check` odrzuca plik z teksturą.
+- Grupa katalogu **„Wyposażenie i dekoracje”** jest we wszystkich rodzajach projektu; sprzęt wolnostojący (pralka, lodówka, kuchenka, ekspres, czajnik) jest w grupie AGD.
+- Rodzaj `wyposazenie`: poza wyceną (dopisek „wyposażenie, poza ceną”), bez formatek, bez blatu nad sobą, bez kolorów mebli, bez karty z rysunkiem w PDF oferty. Rodzaj `dekoracja` (dywan, zasłony): to samo, a do tego z niczym nie koliduje i nie blokuje okien (`WYPOSAZENIE` w `src/lib/kuchnia.ts`).
+- Rzeczy na ścianie mają w `id-map.json` pole `odPodlogi` [cm] – spód telewizora 55″ jest na 95 cm, obrazu na 120 cm, grzejnika na 12 cm (`odPodlogiElementu` w `src/lib/bibliotekaModeli.ts`, używane w `yElementu` i `wysokoscMebla`). Bez tego wisiałyby na 145 cm jak szafki górne.
+- Strefa `blat` = stoi na meblu pod spodem (telewizor na podstawie, monitor, laptop, ekspres, czajnik): na szafce kuchennej na blacie, na komodzie, szafce RTV albo biurku wprost na meblu.
+
+```
+node seed/modele-wyposazenie-32/seed.mjs --check
+node seed/modele-wyposazenie-32/seed.mjs --local
+SEED_CONFIRM=kuchnia-modele node seed/modele-wyposazenie-32/seed.mjs --remote
+```
+
+Modele pokażą się w kreatorze dopiero po wgraniu do R2/KV (`GET /api/models`). Nowe modele dopisuje się w `wyposazenie_gen.py` (opis w `README.txt` paczki).
+
 ## Lokalnie
 
 ```

@@ -3,7 +3,8 @@
  * Otwór musi się zmieścić na ścianie, nie może nachodzić na inny otwór, a mebel nie może stać w drzwiach
  * ani zasłaniać okna (słupek, szafka górna na wysokości okna, szafka wyższa niż parapet).
  */
-import { rect, rodzajElementu, type ElementKuchni, type PlanKuchni } from "./kuchnia";
+import { odPodlogiElementu } from "./bibliotekaModeli";
+import { rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "./kuchnia";
 import { LIMITY_SCIANY, scianaNachodzi, scianaPoId, scianyPokoju, wysokoscOtworu, wysokoscPokoju, wysokoscSciany, type ScianaDodatkowa, type Sciana, type ScianaPokoju } from "./sciany";
 import type { Otwor } from "./wywiad";
 
@@ -19,6 +20,11 @@ const nazwaOtworu = (o: Otwor) => (o.rodzaj === "okno" ? "Okno" : "Drzwi");
 /** Pionowy zasięg mebla [cm od podłogi] – w przybliżeniu jak w 3D. */
 export function wysokoscMebla(e: ElementKuchni): { y0: number; y1: number } | null {
   const r = rodzajElementu(e);
+  // Dywan i zasłony nie zasłaniają okien ani drzwi; wyposażenie stojące na meblu – jak inne rzeczy na blacie.
+  if (r === "dekoracja") return null;
+  const odPodlogi = odPodlogiElementu(e);
+  if (odPodlogi !== null) return { y0: odPodlogi, y1: odPodlogi + e.h };
+  if (WYPOSAZENIE.has(r) && e.strefa !== "gorna" && e.strefa !== "polka") return e.strefa === "blat" ? null : { y0: 0, y1: e.h };
   if (e.strefa === "gorna") return { y0: DOL_GORNYCH, y1: DOL_GORNYCH + e.h };
   if (e.strefa === "polka") return { y0: DOL_GORNYCH, y1: DOL_GORNYCH + 72 };
   if (e.strefa === "blat") return r === "bateria" ? { y0: 90, y1: 90 + e.h } : null;

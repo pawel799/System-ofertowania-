@@ -6,6 +6,7 @@ import {
   dlugoscRzedu,
   limityElementu,
   RODZAJ_LABEL,
+  opisPozaWycena,
   rodzajElementu,
   STREFA_LABEL,
   type ElementKuchni,
@@ -178,7 +179,7 @@ export function KreatorWlasciwosci({
       <p className="lede">
         {element.w} × {element.h} × {element.d} cm <span className="faint">(szer. × wys. × gł.)</span>
         {rzad != null ? ` · rząd ${rzad} cm` : ""}
-        {agd ? " · AGD, poza ceną" : cena != null ? ` · ${formatPln(cena)} netto` : ""}
+        {agd ? ` · ${opisPozaWycena(element)}` : cena != null ? ` · ${formatPln(cena)} netto` : ""}
       </p>
       {maWnetrze(element) ? (
         <p className="kr-wn-skrot">

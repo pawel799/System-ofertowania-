@@ -2,7 +2,8 @@
  * Wysokości w scenie 3D (metry). Rzut zostaje w centymetrach.
  * Półka ścienna dosuwa się górą do szafek górnych obok, blat leży na szafce dolnej.
  */
-import { nachodzi, rect, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { odPodlogiElementu } from "@/lib/bibliotekaModeli";
+import { MEBLE, nachodzi, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 
 /** Dół szafek górnych nad blatem [m]. */
 export const Y_GORNA = 1.45;
@@ -11,12 +12,20 @@ const GORNA_TYPOWA = 0.72;
 
 export function poziomBlatu(plan: PlanKuchni, el: ElementKuchni) {
   const r = rect(el);
-  const pod = plan.elementy.filter((e) => e.strefa === "dolna" && nachodzi(r, rect(e)));
+  const pod = plan.elementy.filter((e) => e.strefa === "dolna" && rodzajElementu(e) !== "dekoracja" && nachodzi(r, rect(e)));
   if (!pod.length) return 0.72 + BLAT_NAD_KORPUSEM;
+  // Telewizor, monitor, czajnik: na szafce kuchennej stoją na blacie, na komodzie, szafce RTV albo biurku – wprost na meblu.
+  if (WYPOSAZENIE.has(rodzajElementu(el))) {
+    const bezBlatu = (e: ElementKuchni) => MEBLE.has(rodzajElementu(e)) || WYPOSAZENIE.has(rodzajElementu(e));
+    return Math.max(...pod.map((e) => e.h / 100 + (bezBlatu(e) ? 0 : BLAT_NAD_KORPUSEM)));
+  }
   return Math.max(...pod.map((e) => e.h / 100)) + BLAT_NAD_KORPUSEM;
 }
 
 export function yElementu(el: ElementKuchni, plan: PlanKuchni) {
+  // Model z ustaloną wysokością zawieszenia (telewizor, obraz, grzejnik).
+  const odPodlogi = odPodlogiElementu(el);
+  if (odPodlogi !== null) return odPodlogi / 100;
   if (el.strefa === "gorna") return Y_GORNA;
   if (el.strefa === "blat") {
     const poziom = poziomBlatu(plan, el);

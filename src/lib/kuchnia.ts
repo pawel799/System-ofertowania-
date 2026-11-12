@@ -47,7 +47,11 @@ export type RodzajElementu =
   | "komoda"
   | "regal"
   | "rtv"
-  | "umywalka";
+  | "umywalka"
+  // Wyposażenie i dekoracje z biblioteki modeli (telewizor, sofa, łóżko, pralka…): do wizualizacji, poza wyceną i formatkami.
+  | "wyposazenie"
+  // Dekoracja, która niczego nie blokuje: dywan pod meblami, zasłony przy oknie.
+  | "dekoracja";
 
 export const RODZAJE: readonly RodzajElementu[] = [
   "szafka",
@@ -73,10 +77,18 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "regal",
   "rtv",
   "umywalka",
+  "wyposazenie",
+  "dekoracja",
 ];
 
 /** Rodzaje mebli spoza kuchni: własne widełki wymiarów (szafa do 4 m szerokości, do sufitu), bez blatu kuchennego. */
 export const MEBLE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["szafa", "szafa-przesuwna", "komoda", "regal", "rtv", "umywalka"]);
+
+/**
+ * Wyposażenie pokoju z biblioteki modeli – tego stolarz nie robi: bez ceny, bez formatek, bez blatu i kolorów mebli.
+ * Dekoracja (dywan, zasłony) z niczym nie koliduje i nie zasłania okien.
+ */
+export const WYPOSAZENIE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["wyposazenie", "dekoracja"]);
 
 export type ElementKuchni = {
   id: string;
@@ -161,6 +173,8 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   regal: "Regał",
   rtv: "Szafka RTV",
   umywalka: "Szafka pod umywalkę",
+  wyposazenie: "Wyposażenie",
+  dekoracja: "Dekoracja",
 };
 
 export type GrupaPresetu = "dolne" | "gorne" | "polki" | "slupki" | "agd" | "szafy" | "komody" | "regaly" | "lazienka";
@@ -512,7 +526,9 @@ export function konfliktElementow(
     return false;
   }
   // Płyta blatu leży pod płytą grzewczą, zlewem i mikrofalówką — nie wypycha ich z rzędu.
-  const naBlacie = new Set<RodzajElementu>(["zlewozmywak", "bateria", "plyta-indukcja", "plyta-gaz", "mikrofalowka"]);
+  // Dywan leży pod meblami, zasłony wiszą przy oknie – niczego nie wypychają.
+  if (ar === "dekoracja" || br === "dekoracja") return false;
+  const naBlacie = new Set<RodzajElementu>(["zlewozmywak", "bateria", "plyta-indukcja", "plyta-gaz", "mikrofalowka", "wyposazenie"]);
   if ((ar === "blat" && naBlacie.has(br)) || (br === "blat" && naBlacie.has(ar))) return false;
   return konfliktStref(a.strefa, b.strefa);
 }
@@ -909,7 +925,12 @@ export const URZADZENIA_POZA_WYCENA: ReadonlySet<RodzajElementu> = new Set<Rodza
   "okap",
   "okap-podszafkowy",
   "lodowka",
+  "wyposazenie",
+  "dekoracja",
 ]);
+
+/** Dopisek zamiast ceny przy elemencie, który nie wchodzi do wyceny. */
+export const opisPozaWycena = (el: { rodzaj?: RodzajElementu }) => (WYPOSAZENIE.has(rodzajElementu(el)) ? "wyposażenie, poza ceną" : "AGD, poza ceną");
 
 export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
 

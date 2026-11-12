@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaElementu, katElementu, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaElementu, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -29,7 +29,7 @@ export type PdfDane = {
   blatNazwa: string;
   okuciaNazwa: string;
   /** cena null = urządzenie AGD, nie wchodzi do sumy. */
-  pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number | null }[];
+  pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number | null; poza?: string }[];
   /** Suma mebli (pozycje z ceną). */
   sumaPozycji: number;
   /** Dodatki do ceny (transport, montaż, rabat…) z kwotą – cenaKoncowa. */
@@ -126,6 +126,7 @@ export function danePdf(args: {
     h: e.h,
     d: e.d,
     cena: cenaElementu(e, cennikPlyty),
+    poza: opisPozaWycena(e),
   }));
   // Meble, dodatki i płyta – ta sama funkcja co cena w kreatorze i na serwerze (cenaKoncowa).
   const cena = cenaKoncowa({ plan: args.plan, cennik: args.cennik, zl: pln });
@@ -207,7 +208,7 @@ export function pdfHtml(d: PdfDane) {
   const wiersze = d.pozycje
     .map(
       (p, i) =>
-        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${p.cena === null ? '<span class="muted">AGD, poza ceną</span>' : esc(pln(p.cena))}</td></tr>`,
+        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${p.cena === null ? `<span class="muted">${esc(p.poza ?? "AGD, poza ceną")}</span>` : esc(pln(p.cena))}</td></tr>`,
     )
     .join("");
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
@@ -221,9 +222,11 @@ export function pdfHtml(d: PdfDane) {
   const karty = d.plan.elementy.length
     ? `<section class="karty"><h2>Elementy – zdjęcia i rysunki</h2><div class="karty-siatka">${d.plan.elementy
         .map((e, i) => {
+          // Telewizor, sofa czy dywan to tło wizualizacji – bez karty z rysunkiem technicznym.
+          if (WYPOSAZENIE.has(rodzajElementu(e))) return "";
           const p = d.pozycje[i];
           const foto = d.zdjeciaElementow[i];
-          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p ? ` · ${p.cena === null ? "AGD, poza ceną" : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
+          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p ? ` · ${p.cena === null ? esc(p.poza ?? "AGD, poza ceną") : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
         })
         .join("")}</div></section>`
     : "";
@@ -333,7 +336,7 @@ ${rysunek}
 /** Treść maila z ofertą PDF — osobna od maila z linkiem 3D. */
 export function pdfTekst(d: PdfDane) {
   const linie = d.pozycje.map(
-    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${p.cena === null ? "AGD, poza ceną" : pln(p.cena).replaceAll("\u00a0", " ")}`,
+    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${p.cena === null ? (p.poza ?? "AGD, poza ceną") : pln(p.cena).replaceAll("\u00a0", " ")}`,
   );
   const plnSp = (n: number) => pln(n).replaceAll("\u00a0", " ");
   return [

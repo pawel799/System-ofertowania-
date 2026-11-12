@@ -12,7 +12,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { GRUPY_BIBLIOTEKI, podzielModele } from "@/lib/bibliotekaModeli";
 import OPISY from "@/lib/bibliotekaOpisy.json";
-import { GRUPY_PRESETOW, PRESETY, RODZAJ_LABEL, wycenianyElement, type NowyElement, type RodzajElementu } from "@/lib/kuchnia";
+import { GRUPY_PRESETOW, opisPozaWycena, PRESETY, RODZAJ_LABEL, wycenianyElement, type NowyElement, type RodzajElementu } from "@/lib/kuchnia";
 import { modulCena, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 import type { ModelMeta } from "./offerApi";
@@ -138,7 +138,7 @@ export function KreatorBiblioteka({
 
   const cena = (p: Pozycja) => {
     if (!cennik) return "";
-    return wycenianyElement(p.element) ? `${formatPln(modulCena(p.element, cennik))} netto` : "AGD, poza ceną";
+    return wycenianyElement(p.element) ? `${formatPln(modulCena(p.element, cennik))} netto` : opisPozaWycena(p.element);
   };
 
   return (
@@ -159,7 +159,7 @@ export function KreatorBiblioteka({
             className="input"
             value={fraza}
             onChange={(e) => setFraza(e.target.value)}
-            placeholder="Szukaj: komoda, szuflady, lustro, 80 cm…"
+            placeholder="Szukaj: komoda, szuflady, telewizor, sofa, 80 cm…"
             aria-label="Szukaj w bibliotece"
           />
           <div className="kr-choice" role="radiogroup" aria-label="Grupa" data-przewijanie={przewijanie ? "" : undefined}>

@@ -24,11 +24,11 @@ export function parseTypProjektu(v: unknown): TypProjektu | undefined {
 
 /** Grupy katalogu pokazywane najpierw dla danego projektu (reszta po „Pokaż wszystkie”). */
 export const GRUPY_TYPU: Record<TypProjektu, { presety: readonly GrupaPresetu[]; biblioteka: readonly GrupaBiblioteki[] }> = {
-  kuchnia: { presety: ["dolne", "gorne", "polki", "slupki", "agd"], biblioteka: ["dolne", "gorne", "slupki", "blaty", "agd", "dodatki"] },
-  szafa: { presety: ["szafy", "regaly"], biblioteka: ["szafy", "szafki"] },
-  komoda: { presety: ["komody", "regaly"], biblioteka: ["komody", "szafki"] },
-  lazienka: { presety: ["lazienka"], biblioteka: ["szafki"] },
-  inne: { presety: ["szafy", "komody", "regaly", "lazienka", "dolne", "gorne", "polki", "slupki", "agd"], biblioteka: ["szafy", "szafki", "komody", "dolne", "gorne", "slupki", "blaty", "agd", "dodatki"] },
+  kuchnia: { presety: ["dolne", "gorne", "polki", "slupki", "agd"], biblioteka: ["dolne", "gorne", "slupki", "blaty", "agd", "dodatki", "wyposazenie"] },
+  szafa: { presety: ["szafy", "regaly"], biblioteka: ["szafy", "szafki", "wyposazenie"] },
+  komoda: { presety: ["komody", "regaly"], biblioteka: ["komody", "szafki", "wyposazenie"] },
+  lazienka: { presety: ["lazienka"], biblioteka: ["szafki", "wyposazenie"] },
+  inne: { presety: ["szafy", "komody", "regaly", "lazienka", "dolne", "gorne", "polki", "slupki", "agd"], biblioteka: ["szafy", "szafki", "komody", "dolne", "gorne", "slupki", "blaty", "agd", "dodatki", "wyposazenie"] },
 };
 
 /**
