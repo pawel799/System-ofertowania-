@@ -98,7 +98,7 @@ function widthText(p: number) {
 const SCENE_BG_DARK = "#100f0d";
 const SCENE_BG_LIGHT = "#ece9e4";
 
-const LINK_URL = "system-ofertowania.pages.dev/oferta/k7Rp2xQa9m";
+const LINK_URL = "oprzut.app/oferta/k7Rp2xQa9m";
 const fmt = (n: number, d = 0) => n.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
 const GROUPED = groupParts(PARTS);
 const SHEET = LAYOUT[0].sheets[0];
@@ -301,7 +301,8 @@ function Mock({ p, pressed }: { p: number; pressed: string }) {
 
 type Net = { saveData?: boolean; effectiveType?: string };
 
-export default function KreatorShow() {
+/** inline: bez własnego nagłówka i obramowania – film wstawiony pod nagłówek innej sekcji („Jak to działa”). */
+export default function KreatorShow({ inline = false }: { inline?: boolean }) {
   const k = HOME.kreator;
   const section = useRef<HTMLDivElement>(null);
   const mockBox = useRef<HTMLDivElement>(null);
@@ -507,8 +508,8 @@ export default function KreatorShow() {
     // Statyczne klatki zamiast pokazu przewijanego.
     const frames = [0.19, 0.34, 0.55, 0.76, 0.98];
     return (
-      <section id={k.id} className="scroll-mt-16 border-t border-white/10 pt-24 md:pt-32">
-        {head}
+      <section id={k.id} className={inline ? "scroll-mt-16" : "scroll-mt-16 border-t border-white/10 pt-24 md:pt-32"}>
+        {inline ? null : head}
         <ol className="mx-auto mt-14 grid max-w-6xl gap-10 px-6 md:grid-cols-2 md:px-10 xl:px-0">
           {k.steps.map((s, i) => (
             <li key={s.title}>
@@ -529,8 +530,8 @@ export default function KreatorShow() {
   }
 
   return (
-    <section id={k.id} className="scroll-mt-16 border-t border-white/10 pt-24 md:pt-32">
-      {head}
+    <section id={k.id} className={inline ? "scroll-mt-16" : "scroll-mt-16 border-t border-white/10 pt-24 md:pt-32"}>
+      {inline ? null : head}
       <div ref={section} className="relative mt-12">
         <div className="relative h-[100svh] max-h-[920px] min-h-[600px] overflow-hidden">
           {/* Scena 3D na całą sekcję */}
