@@ -103,12 +103,12 @@ export const HOME = {
     ],
   },
 
-  /** Pokaz kreatora przy przewijaniu (src/components/site/home/KreatorShow.tsx). */
+  /** Pokaz kreatora grający sam (src/components/site/home/KreatorShow.tsx). */
   kreator: {
     id: "kreator",
     eyebrow: "Kreator na żywo",
     title: "Od szafki do arkusza płyty i linku dla klienta",
-    lead: "Przewiń i zobacz, jak wygląda praca w kreatorze: dodajesz szafki, system składa je w 3D, rozkłada formatki na płytach, a klient dostaje kuchnię do obracania. Każdy krok gra sam – wystarczy patrzeć.",
+    lead: "Zobacz, jak wygląda praca w kreatorze: dodajesz szafki, system składa je w 3D, rozkłada formatki na płytach, a klient dostaje kuchnię do obracania. Pokaz gra sam jak film – wystarczy patrzeć, a kliknięciem w krok przeskoczysz do niego.",
     steps: [
       { title: "Dodajesz szafki", text: "Typ, szerokość, wysokość, głębokość. Szafki z szufladami liczą dna i tyły same." },
       { title: "Formatki liczą się same", text: "Boki, wieńce, półki, plecy i fronty z oklejaniem. Bez Excela i kalkulatora." },
