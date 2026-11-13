@@ -1,7 +1,7 @@
 "use client";
 
 /*
- * Scena 3D pokazu kreatora. Wszystko sterowane przewinięciem (progress.ts), bez stanu Reacta:
+ * Scena 3D pokazu kreatora. Wszystko sterowane postępem pokazu (progress.ts), bez stanu Reacta:
  *  - formatki zlatują się i składają w trzy szafki, gdy kursor je dodaje,
  *  - w fazie rozkroju te same formatki lecą łukiem na arkusze płyt leżące na podłodze,
  *  - w fazie materiałów pokazujemy prawdziwy model kuchni i zmieniamy mu fronty
@@ -301,7 +301,7 @@ function Director({ kitchenReady, kitchenShown, piecesHidden }: {
   return null;
 }
 
-export default function ShowScene({ loadKitchen, small }: { loadKitchen: boolean; small: boolean }) {
+export default function ShowScene({ loadKitchen, small, background = "#100f0d" }: { loadKitchen: boolean; small: boolean; background?: string }) {
   const [kitchenReady, setKitchenReady] = useState(false);
   const onReady = useCallback(() => setKitchenReady(true), []);
   const kitchenShown = useRef(false);
@@ -318,7 +318,7 @@ export default function ShowScene({ loadKitchen, small }: { loadKitchen: boolean
       gl={{ antialias: true, toneMappingExposure: 1.1, powerPreference: "high-performance" }}
       camera={{ position: [2.4, 1.7, 2.9], fov: small ? 50 : 40, near: 0.05, far: 60 }}
     >
-      <color attach="background" args={["#100f0d"]} />
+      <color attach="background" args={[background]} />
       <hemisphereLight args={["#fff6ea", "#2a2622", 1.1]} />
       <directionalLight position={[3, 5, 4]} intensity={2.4} color="#fff1e0" />
       <directionalLight position={[-4, 3, -2]} intensity={0.6} color="#c9d6ff" />

@@ -1,20 +1,23 @@
 "use client";
 
 /*
- * "Kreator na żywo": przyklejony pokaz sterowany przewinięciem.
+ * "Kreator na żywo": pokaz grający sam jak film, gdy sekcja jest na ekranie (bez przewijania i myszki).
+ * Pauza, kliknięcie kroku przeskakuje do niego, na końcu odtwarza się od nowa.
  * Po lewej kroki, po prawej scena 3D (formatki składają się w szafki, lecą na arkusze,
  * potem prawdziwy model kuchni) i makieta kreatora, po której jeździ kursor i klika.
  *
- * Wydajność: postęp liczony raz na klatkę (rAF), kursor i scena czytają go bez renderu Reacta,
+ * Wydajność: postęp z zegara liczony raz na klatkę (rAF), kursor i scena czytają go bez renderu Reacta,
  * makieta renderuje się tylko przy zmianie zaokrąglonego postępu. Scena 3D (three.js)
  * doczytuje się dopiero, gdy sekcja zbliża się do ekranu; model kuchni (~8 MB) tylko na
  * szybkim łączu i bez trybu oszczędzania danych.
- * Ograniczony ruch: bez przyklejania i kursora – pięć statycznych klatek makiety.
+ * Ograniczony ruch: bez odtwarzania i kursora – pięć statycznych klatek makiety.
+ * Motyw jasny: jasne tło sceny 3D, reszta przez odwróconą skalę kolorów (data-strona="ciemna").
  */
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Component, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { FRONTS } from "@/components/catalog";
+import { useJasnaStrona } from "@/lib/motyw";
 import { HOME } from "@/content/strona-glowna";
 import { CABINET_LABEL } from "./kreator/silnik/model";
 import { edgeCode, groupParts, materialLabel } from "./kreator/silnik/parts";
@@ -67,8 +70,20 @@ const CLICKS: { at: number; t: string }[] = [
   { at: COPY_AT, t: "copy" },
 ];
 const CLICK_LEN = 0.012;
-/** Ile sekund gra sama każda faza (szafki, formatki, rozkrój, materiały, link). */
-const PHASE_SECONDS = [4.5, 3, 4, 4.5, 4];
+/** Ile sekund trwa każda faza filmu (szafki, formatki, rozkrój, materiały, link). */
+const PHASE_SECONDS = [7, 4.5, 5.5, 7, 6];
+/** Pauza na ostatniej klatce przed odtworzeniem od nowa. */
+const END_HOLD = 2.5;
+const PHASE_START = PHASE_SECONDS.reduce<number[]>((acc, s, i) => [...acc, acc[i] + s], [0]);
+const TOTAL = PHASE_START[PHASE_SECONDS.length];
+/** Czas filmu (s) -> postęp pokazu 0–1. */
+function progressAt(t: number) {
+  if (t >= TOTAL) return 1;
+  let i = 0;
+  while (i < PHASE_SECONDS.length - 1 && t >= PHASE_START[i + 1]) i++;
+  const local = (t - PHASE_START[i]) / PHASE_SECONDS[i];
+  return PHASES[i] + (PHASES[i + 1] - PHASES[i]) * local;
+}
 const pressedAt = (p: number) => CLICKS.find((c) => p >= c.at && p < c.at + CLICK_LEN)?.t ?? "";
 
 /** Wpisywanie szerokości górnej szafki: 600 -> 8 -> 80 -> 800. */
@@ -78,6 +93,10 @@ function widthText(p: number) {
   const s = "800".slice(0, Math.max(1, Math.ceil(t * 3)));
   return s;
 }
+
+/** Tło sceny 3D: ciemny i jasny motyw (jak bg-tlo2 strony). */
+const SCENE_BG_DARK = "#100f0d";
+const SCENE_BG_LIGHT = "#ece9e4";
 
 const LINK_URL = "system-ofertowania.pages.dev/oferta/k7Rp2xQa9m";
 const fmt = (n: number, d = 0) => n.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -297,6 +316,9 @@ export default function KreatorShow() {
   const [reduced, setReduced] = useState(false);
   const [kitchen, setKitchen] = useState(false);
   const [small, setSmall] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const light = useJasnaStrona();
+  const clockRef = useRef({ t: 0, visible: false, paused: false });
   const kitchenAllowed = useRef(false);
   // Ostatnia funkcja klatki: wołana też po renderze makiety, bo cel kursora może dopiero się pojawić.
   const frameRef = useRef<() => void>(() => undefined);
@@ -341,13 +363,25 @@ export default function KreatorShow() {
     return () => ro.disconnect();
   }, [reduced]);
 
-  // Przewijanie -> postęp, kursor, klatka makiety. Raz na klatkę.
+  // Pokaz gra jak film: zegar biegnie, gdy co najmniej połowa sceny jest na ekranie, karta jest widoczna
+  // i nikt nie wcisnął pauzy. Na końcu krótka pauza i od nowa. Raz na klatkę.
   useEffect(() => {
     if (reduced) return;
     let raf = 0;
     let lastQ = -1;
     let lastPressed = "";
+    let lastTick = 0;
     const cur = { x: MOCK_W * 0.7, y: MOCK_H * 0.8 };
+    const clock = clockRef.current;
+
+    const io = new IntersectionObserver(
+      ([e]) => {
+        clock.visible = e.intersectionRatio >= 0.5;
+        kick();
+      },
+      { threshold: [0, 0.5, 1] },
+    );
+    if (section.current) io.observe(section.current);
 
     const targetOf = (t: string) => {
       const root = mockRoot.current;
@@ -359,33 +393,21 @@ export default function KreatorShow() {
       return { x: (r.left - o.left + r.width * 0.55) / s, y: (r.top - o.top + r.height * 0.6) / s };
     };
 
-    let phaseNow = -1;
-    let enteredAt = 0;
+    const playing = () => clock.visible && !clock.paused && !document.hidden;
 
     const frame = () => {
       raf = 0;
-      const el = section.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const total = rect.height - window.innerHeight;
-      const scrollP = Math.min(1, Math.max(0, total > 0 ? -rect.top / total : 0));
-
-      // Przewinięcie wybiera fazę, a w jej obrębie pokaz gra sam (kursor, kliknięcia, 3D).
-      // Zegar fazy rusza, gdy scena jest przyklejona i karta jest widoczna.
       const now = performance.now();
-      const engaged = rect.top <= 1 && rect.bottom >= window.innerHeight - 1 && !document.hidden;
-      const ph = phaseOf(scrollP);
-      if (ph !== phaseNow || !engaged) {
-        phaseNow = ph;
-        enteredAt = now;
+      if (playing()) {
+        clock.t += lastTick ? Math.min(0.1, (now - lastTick) / 1000) : 0;
+        if (clock.t >= TOTAL + END_HOLD) clock.t = 0;
+        lastTick = now;
+        raf = requestAnimationFrame(frame);
+      } else {
+        lastTick = 0;
       }
-      const a = PHASES[ph];
-      const b = PHASES[ph + 1];
-      const local = span(scrollP, a, b);
-      const timed = engaged ? (now - enteredAt) / 1000 / PHASE_SECONDS[ph] : 0;
-      const p = a + (b - a) * Math.min(0.999, Math.max(local, timed));
+      const p = progressAt(clock.t);
       setProgress(p);
-      if (engaged && timed < 1 && local < 0.999) raf = requestAnimationFrame(frame);
 
       const nq = Math.floor(p * 500) / 500;
       if (nq !== lastQ) {
@@ -432,23 +454,32 @@ export default function KreatorShow() {
         canvasWrap.current.style.clipPath =
           phone > 0 ? `inset(${phone * top}% ${phone * side}% ${phone * bottom}% ${phone * side}% round ${phone * 36}px)` : "";
       }
-      if (bar.current) bar.current.style.transform = `scaleX(${scrollP})`;
+      if (bar.current) bar.current.style.transform = `scaleX(${Math.min(1, clock.t / TOTAL)})`;
     };
-    const onScroll = () => {
+    function kick() {
       if (!raf) raf = requestAnimationFrame(frame);
-    };
-    frameRef.current = onScroll;
-    document.addEventListener("visibilitychange", onScroll);
+    }
+    frameRef.current = kick;
+    document.addEventListener("visibilitychange", kick);
+    window.addEventListener("resize", kick);
     frame();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-      document.removeEventListener("visibilitychange", onScroll);
+      io.disconnect();
+      window.removeEventListener("resize", kick);
+      document.removeEventListener("visibilitychange", kick);
     };
   }, [reduced]);
+
+  const togglePause = () => {
+    clockRef.current.paused = !clockRef.current.paused;
+    setPaused(clockRef.current.paused);
+    frameRef.current();
+  };
+  const jumpTo = (i: number) => {
+    clockRef.current.t = PHASE_START[i];
+    frameRef.current();
+  };
 
   // Po renderze nowej klatki makiety (np. pojawiły się próbki frontów) kursor mierzy cel jeszcze raz.
   useEffect(() => frameRef.current(), [q]);
@@ -500,13 +531,13 @@ export default function KreatorShow() {
   return (
     <section id={k.id} className="scroll-mt-16 border-t border-white/10 pt-24 md:pt-32">
       {head}
-      <div ref={section} className="relative mt-12 h-[400vh] lg:h-[440vh]">
-        <div className="sticky top-0 h-[100svh] overflow-hidden">
-          {/* Scena 3D na cały ekran */}
-          <div ref={canvasWrap} className="absolute inset-0 bg-[#100f0d]">
+      <div ref={section} className="relative mt-12">
+        <div className="relative h-[100svh] max-h-[920px] min-h-[600px] overflow-hidden">
+          {/* Scena 3D na całą sekcję */}
+          <div ref={canvasWrap} className="absolute inset-0" style={{ background: light ? SCENE_BG_LIGHT : SCENE_BG_DARK }}>
             {near ? (
               <SceneBoundary>
-                <ShowScene loadKitchen={kitchen} small={small} />
+                <ShowScene loadKitchen={kitchen} small={small} background={light ? SCENE_BG_LIGHT : SCENE_BG_DARK} />
               </SceneBoundary>
             ) : null}
           </div>
@@ -526,7 +557,8 @@ export default function KreatorShow() {
             {k.steps.map((s, i) => {
               const on = i === phase;
               return (
-                <li key={s.title} aria-current={on ? "step" : undefined} className={`${on ? "block" : "hidden"} relative lg:block lg:py-4 lg:pl-6`}>
+                <li key={s.title} aria-current={on ? "step" : undefined} className={`${on ? "block" : "hidden"} relative lg:block`}>
+                  <button type="button" onClick={() => jumpTo(i)} className="block w-full text-left lg:py-4 lg:pl-6" aria-label={`Pokaż krok ${i + 1}: ${s.title}`}>
                   <span aria-hidden className="absolute inset-y-0 left-0 hidden w-px bg-white/15 lg:block" />
                   <span
                     aria-hidden
@@ -541,6 +573,7 @@ export default function KreatorShow() {
                   <span className={`mt-1 block max-w-md text-sm leading-relaxed transition-colors duration-200 ${on ? "text-stone-300" : "text-stone-600"}`}>
                     {s.text}
                   </span>
+                  </button>
                 </li>
               );
             })}
@@ -549,7 +582,7 @@ export default function KreatorShow() {
           {/* Makieta kreatora z kursorem */}
           <div
             ref={mockBox}
-            className="absolute inset-x-3 bottom-4 z-10 h-[38%] sm:inset-x-6 lg:bottom-[5%] lg:left-auto lg:right-[3%] lg:h-[40%] lg:w-[38%] xl:right-[max(2.5rem,calc((100vw-72rem)/2))]"
+            className="absolute inset-x-3 bottom-14 z-10 h-[36%] sm:inset-x-6 lg:bottom-[8%] lg:left-auto lg:right-[3%] lg:h-[46%] lg:w-[42%] xl:right-[max(2.5rem,calc((100vw-72rem)/2))]"
           >
             <div
               ref={mockRoot}
@@ -571,9 +604,27 @@ export default function KreatorShow() {
             </div>
           </div>
 
-          {/* Pasek postępu przewinięcia */}
-          <div aria-hidden className="absolute inset-x-0 bottom-0 z-10 h-0.5 bg-white/10">
-            <div ref={bar} className="h-0.5 origin-left bg-stone-100" style={{ transform: "scaleX(0)" }} />
+          {/* Sterowanie jak w filmie: pauza i pasek postępu */}
+          <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-3 px-3 pb-3 sm:px-6 lg:px-[3%] xl:px-[max(2.5rem,calc((100vw-72rem)/2))]">
+            <button
+              type="button"
+              onClick={togglePause}
+              aria-label={paused ? "Odtwórz pokaz" : "Zatrzymaj pokaz"}
+              className="grid size-8 shrink-0 place-items-center rounded-full border border-white/15 bg-black/40 text-stone-100 backdrop-blur transition-colors hover:bg-black/60"
+            >
+              {paused ? (
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden>
+                  <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden>
+                  <path d="M4 2.5h2.6v11H4zM9.4 2.5H12v11H9.4z" fill="currentColor" />
+                </svg>
+              )}
+            </button>
+            <div aria-hidden className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/15">
+              <div ref={bar} className="h-0.5 origin-left bg-stone-100" style={{ transform: "scaleX(0)" }} />
+            </div>
           </div>
         </div>
       </div>
