@@ -532,7 +532,7 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
   return (
     <section id={k.id} className={inline ? "scroll-mt-16" : "scroll-mt-16 border-t border-white/10 pt-24 md:pt-32"}>
       {inline ? null : head}
-      <div ref={section} className="relative mt-12">
+      <div ref={section} className={inline ? "relative" : "relative mt-12"}>
         <div className="relative h-[100svh] max-h-[920px] min-h-[600px] overflow-hidden">
           {/* Scena 3D na całą sekcję */}
           <div ref={canvasWrap} className="absolute inset-0" style={{ background: light ? SCENE_BG_LIGHT : SCENE_BG_DARK }}>

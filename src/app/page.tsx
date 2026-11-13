@@ -75,6 +75,15 @@ export default function HomePage() {
           </a>
         </section>
 
+        {/* Jak to działa: od razu pod strzałką film z kreatorem (gra sam), potem nagłówek i trzy kroki */}
+        <section id={steps.id} className="scroll-mt-16">
+          <KreatorShow inline />
+          <div className="mx-auto max-w-6xl px-6 pb-24 md:px-10 md:pb-32 xl:px-0">
+            <SectionHead eyebrow={steps.eyebrow} title={steps.title} lead={steps.lead} />
+            <StepsShowcase steps={steps.items} />
+          </div>
+        </section>
+
         {/* Nie tylko kuchnie */}
         <Section id={meble.id}>
           <SectionHead eyebrow={meble.eyebrow} title={meble.title} lead={meble.lead} />
@@ -88,17 +97,6 @@ export default function HomePage() {
             ))}
           </ul>
         </Section>
-
-        {/* Jak to działa: nagłówek, od razu film z kreatorem (gra sam), potem trzy kroki */}
-        <section id={steps.id} className="scroll-mt-16 border-t border-white/10 pt-24 md:pt-32">
-          <div className="mx-auto max-w-6xl px-6 md:px-10 xl:px-0">
-            <SectionHead eyebrow={steps.eyebrow} title={steps.title} lead={steps.lead} />
-          </div>
-          <KreatorShow inline />
-          <div className="mx-auto max-w-6xl px-6 pb-24 md:px-10 md:pb-32 xl:px-0">
-            <StepsShowcase steps={steps.items} />
-          </div>
-        </section>
 
         {/* Przykładowa oferta */}
         <Section>
