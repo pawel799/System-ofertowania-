@@ -118,7 +118,6 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
   const pods = podsumowanie(d);
   const h: string[] = [];
   h.push(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Formatki i rozkrój · ${esc(meta.tytul)}</title><style>${CSS}</style></head><body>`);
-  h.push(`<div class="btns"><button onclick="print()">Drukuj / zapisz PDF</button></div>`);
   h.push(`<h1>Formatki i rozkrój</h1><div class="meta">${esc(meta.firma)} · ${esc(meta.kod)} · ${esc(meta.tytul)} · ${esc(meta.data)}</div>`);
   h.push(`<h2>Zestawienie płyt</h2><table><thead><tr><th>Materiał</th><th class="n">Grubość</th><th class="n">Formatek</th><th class="n">m²</th><th class="n">Arkusze ${u.arkusz.dl}×${u.arkusz.szer}</th><th class="n">Odpad</th><th class="n">Okleina mb</th></tr></thead><tbody>`);
   for (const p of pods) {

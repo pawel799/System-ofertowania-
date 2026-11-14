@@ -1,5 +1,5 @@
 /*
- * Oferta handlowa jako HTML do druku (przeglądarka → „Zapisz jako PDF”).
+ * Oferta handlowa jako HTML (pdfPlik.ts zamienia go w pobierany plik PDF).
  * Bez serwerowego renderu 3D: opcjonalnie jeden zrzut sceny z przeglądarki.
  * To nie jest lista formatek ani rozkrój.
  */
@@ -95,7 +95,7 @@ export function danePdf(args: {
   link3dPin?: boolean;
   zdjecie: string | null;
   /** Ujęcia 3D do PDF (KuchniaUjecie.zdjecia) – brak = tylko zdjecie. */
-  zdjecia?: { widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> } | null;
+  zdjecia?: { glowne?: string; widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> } | null;
   /** Modele użyte w planie (oznaczenia ról: front, blat, uchwyt). */
   modele?: readonly { id: string; tags: Record<string, string> }[];
   projekt?: TypProjektu;
@@ -160,7 +160,8 @@ export function danePdf(args: {
     link3dWazny: args.link3d ? (args.link3dWazny ?? null) : null,
     link3dPin: !!args.link3d && !!args.link3dPin,
     data: new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" }),
-    zdjecie: obraz(args.zdjecie),
+    // Pierwsza strona: najlepszy szeroki kadr (KuchniaScena → zdjecia().glowne), inaczej bieżący widok.
+    zdjecie: obraz(args.zdjecia?.glowne ?? null) ?? obraz(args.zdjecie),
     widoki: (args.zdjecia?.widoki ?? []).flatMap((w) => (obraz(w.jpeg) ? [{ nazwa: w.nazwa, jpeg: w.jpeg }] : [])),
     zdjeciaElementow: args.plan.elementy.map((e) => obraz(args.zdjecia?.elementy[e.id] ?? null)),
     cennikUwaga: args.cennikUwaga,
@@ -265,7 +266,7 @@ export function pdfHtml(d: PdfDane) {
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .sum td { font-weight: 650; border-bottom: 0; padding-top: 10px; }
   .muted { color: #78716c; }
-  .shot { display: block; width: 100%; max-height: 280px; object-fit: contain; margin: 12px 0; background: #141311; }
+  .shot { display: block; width: 100%; max-height: 300px; object-fit: cover; margin: 12px 0; background: #141311; }
   .note { margin-top: 16px; color: #44403c; font-size: 12px; }
   .link { word-break: break-all; }
   .qr { display: flex; gap: 14px; align-items: center; margin: 0 0 12px; padding: 10px 12px; border: 1px solid #e7e5e4; border-radius: 8px; break-inside: avoid; }
@@ -328,7 +329,6 @@ ${link}
 ${widoki}
 ${karty}
 ${rysunek}
-<script>window.addEventListener("load", () => setTimeout(() => window.print(), 200));</script>
 </body>
 </html>`;
 }
@@ -356,7 +356,7 @@ export function pdfTekst(d: PdfDane) {
     ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
     `Razem netto: ${plnSp(d.razem)}`,
     "",
-    "Plik PDF (układ do druku) zapiszesz przyciskiem „Pobierz PDF” w panelu: w oknie drukowania wybierz „Zapisz jako PDF” i dołącz go do tej wiadomości.",
+    "Plik PDF z ofertą pobierzesz w panelu przyciskiem „Pobierz PDF” – dołącz go do tej wiadomości.",
     ...(d.link3d
       ? [`${d.slowa.biernik.charAt(0).toUpperCase()}${d.slowa.biernik.slice(1)} w 3D otworzysz z kodu QR w pliku PDF albo tutaj: ${d.link3d}${d.link3dWazny ? ` (link ważny do ${d.link3dWazny})` : ""}.`]
       : ["Podgląd interaktywny 3D wysyłamy osobno."]),
@@ -381,22 +381,4 @@ export function qrSvg(text: string) {
   for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + m} ${r + m}h1v1h-1z`;
   const size = n + 2 * m;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" role="img" aria-label="Kod QR do podglądu 3D"><rect width="${size}" height="${size}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
-}
-
-/** Okno PDF otwierane od razu po kliknięciu (inaczej przeglądarka je zablokuje); treść dochodzi po utworzeniu linku. */
-export function oknoPdf() {
-  return window.open("", "_blank");
-}
-
-export function wpiszPdf(w: Window, html: string) {
-  if (w.closed) return false;
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  return true;
-}
-
-export function otworzPdf(html: string) {
-  const w = oknoPdf();
-  return w ? wpiszPdf(w, html) : false;
 }

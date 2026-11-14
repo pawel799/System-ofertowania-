@@ -554,6 +554,6 @@ export const RT_CSS = `
 /** Samodzielny dokument (okno „Rysunek techniczny”: druk albo zapis do PDF). */
 export function rysunekTechnicznyDokument(plan: PlanKuchni, meta: MetaRysunku, drukuj = false): string {
   return `<!DOCTYPE html><html lang="pl"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Rysunek techniczny ${esc(meta.id)}</title>
-<style>@page { size: A4 landscape; margin: 10mm; } body { margin: 16px; color: #1c1917; font: 13px/1.45 "Segoe UI", system-ui, sans-serif; } .rt-arkusz:first-child { break-before: auto; page-break-before: auto; } @media screen { .rt-arkusz { margin-bottom: 28px; } }${RT_CSS}</style></head>
+<style>@page { size: A4 landscape; margin: 10mm; } body { margin: 16px; color: #1c1917; font: 13px/1.45 "Segoe UI", system-ui, sans-serif; } .rt-arkusz:first-child { break-before: auto; page-break-before: auto; } @media screen { .rt-arkusz { margin-bottom: 28px; } }${RT_CSS} .rt-rys svg, .rt-sciana .rt-rys svg { max-height: 140mm; }</style></head>
 <body>${rysunekTechnicznyHtml(plan, meta)}${drukuj ? `<script>window.addEventListener("load", () => setTimeout(() => window.print(), 200));</script>` : ""}</body></html>`;
 }

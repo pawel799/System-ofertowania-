@@ -32,7 +32,8 @@ import Sciany, { type EdycjaOtworow } from "./Sciany";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
 
 /** Zdjęcia do PDF oferty: kilka ujęć całości i każdy mebel osobno (klucz: id elementu). */
-export type ZdjeciaOferty = { widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> };
+/** glowne – najlepszy kadr całości (szeroki, na pierwszą stronę PDF); widoki – kilka ujęć; elementy – każdy mebel osobno. */
+export type ZdjeciaOferty = { glowne?: string; widoki: { nazwa: string; jpeg: string }[]; elementy: Record<string, string> };
 export type KuchniaUjecie = { jpeg: () => string | null; zdjecia?: () => ZdjeciaOferty | null };
 
 const BLAT: Record<string, string> = {
@@ -406,48 +407,145 @@ function Ujecie({ aktywne, onUjecie, plan }: { aktywne: boolean; onUjecie?: (u: 
           ukryte.push(o);
         }
       };
-      const vHalf = (camera.fov * Math.PI) / 360;
       const aspekt = gl.domElement.width / Math.max(1, gl.domElement.height);
-      const proporcja = 4 / 3;
-      // Kąty widzenia w kadrze 4:3 (kadr wycina środek płótna): pionowy hv i poziomy hh.
-      const hh = aspekt >= proporcja ? Math.atan(Math.tan(vHalf) * proporcja) : Math.atan(Math.tan(vHalf) * aspekt);
-      const hv = aspekt >= proporcja ? vHalf : Math.atan(Math.tan(hh) / proporcja);
-      const half = Math.min(hv, hh);
-      /** Odległość, z której pudełko (szer. × wys. widziane z kamery, gł. w stronę kamery) mieści się w kadrze. */
-      const odl = (szer: number, wys: number, glab: number) => Math.max(szer / 2 / Math.tan(hh), wys / 2 / Math.tan(hv)) * 1.12 + glab / 2;
-      const zrob = (poz: Vector3, patrz: Vector3, maxW: number) => {
+      /** Ile szerokości / wysokości płótna (w NDC) zostaje po wycięciu kadru o danej proporcji (kadr()). */
+      const okno = (proporcja: number) => (aspekt >= proporcja ? { x: proporcja / aspekt, y: 1 } : { x: 1, y: aspekt / proporcja });
+      const rogi = (b: Box3) => {
+        const out: Vector3[] = [];
+        for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) out.push(new Vector3(x, y, z));
+        return out;
+      };
+      const ustaw = (poz: Vector3, patrz: Vector3) => {
         camera.position.copy(poz);
         camera.lookAt(patrz);
         camera.updateMatrixWorld();
+      };
+      /** Rzut punktów w kadrze: zasięg w NDC (−1…1 kadru) albo null, gdy coś jest za kamerą. */
+      const zasieg = (pkt: Vector3[], o: { x: number; y: number }) => {
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const p of pkt) {
+          const v = p.clone().applyMatrix4(camera.matrixWorldInverse);
+          if (v.z > -camera.near) return null;
+          v.applyMatrix4(camera.projectionMatrix);
+          x0 = Math.min(x0, v.x / o.x); x1 = Math.max(x1, v.x / o.x);
+          y0 = Math.min(y0, v.y / o.y); y1 = Math.max(y1, v.y / o.y);
+        }
+        return { x0, x1, y0, y1 };
+      };
+      /**
+       * Kamera w kierunku `kier` od celu, tak blisko, jak się da, żeby całe pudełko mieściło się w kadrze z marginesem
+       * (szukanie połówkowe po odległości). Zwraca wypełnienie kadru (0…1) – im większe, tym lepszy kadr.
+       */
+      const dopasuj = (pudlo: Box3, kier: Vector3, proporcja: number, margines = 0.86) => {
+        const cel = pudlo.getCenter(new Vector3());
+        const pkt = rogi(pudlo);
+        const o = okno(proporcja);
+        const miesci = (d: number) => {
+          ustaw(cel.clone().addScaledVector(kier, d), cel);
+          const z = zasieg(pkt, o);
+          return z && z.x0 >= -margines && z.x1 <= margines && z.y0 >= -margines && z.y1 <= margines ? z : null;
+        };
+        let lo = 0.2;
+        let hi = 60;
+        for (let i = 0; i < 22; i++) {
+          const mid = (lo + hi) / 2;
+          if (miesci(mid)) hi = mid;
+          else lo = mid;
+        }
+        const z = miesci(hi);
+        // Środek kadru na środku rzutu (pudełko w perspektywie nie jest symetryczne) – przesunięcie celu.
+        if (z) {
+          const dx = (z.x0 + z.x1) / 2;
+          const dy = (z.y0 + z.y1) / 2;
+          const prawo = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+          const gora = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+          const tanV = Math.tan((camera.fov * Math.PI) / 360);
+          const sh = cel.clone().addScaledVector(prawo, dx * tanV * camera.aspect * o.x * hi).addScaledVector(gora, dy * tanV * o.y * hi);
+          ustaw(sh.clone().addScaledVector(kier, hi), sh);
+        }
+        return { wypelnienie: z ? ((z.x1 - z.x0) * (z.y1 - z.y0)) / 4 : 0, poz: camera.position.clone(), cel: camera.getWorldDirection(new Vector3()).add(camera.position) };
+      };
+      // Ściany między kamerą a pokojem obniżone do cokołu (jak w podglądzie) – nic nie zasłania mebli.
+      const sciany = scianyPokoju(p);
+      const stanScian = sciany.map((sc) => {
+        const g = scene.getObjectByName(`sciana-${sc.id}`);
+        return { sc, pelna: g?.children[0], cokol: g?.children[1], v: [g?.children[0]?.visible, g?.children[1]?.visible] as const };
+      });
+      const przytnij = (poz: Vector3) => {
+        for (const { sc, pelna, cokol } of stanScian) {
+          const zew = (poz.x * 100 - sc.x) * sc.nx + (poz.z * 100 - sc.z) * sc.nz < 0;
+          if (pelna) pelna.visible = !zew;
+          if (cokol) cokol.visible = zew;
+        }
+      };
+      const zrob = (poz: Vector3, patrz: Vector3, proporcja: number, maxW: number) => {
+        ustaw(poz, patrz);
+        przytnij(poz);
         gl.render(scene, camera);
         return kadr(gl.domElement, proporcja, maxW);
       };
+      const kierunek = (azymut: number, wzniesienie: number) =>
+        new Vector3(Math.sin(azymut) * Math.cos(wzniesienie), Math.sin(wzniesienie), Math.cos(azymut) * Math.cos(wzniesienie));
       try {
         const meble = new Box3();
         const grupy = new Map<string, Object3D>();
+        // Kierunek, w którym patrzą fronty (ważony szerokością mebla) – najlepszy kadr widzi fronty.
+        const fronty = new Vector3();
         for (const e of p.elementy) {
           const g = scene.getObjectByName(`el-${e.id}`);
           if (!g) continue;
           grupy.set(e.id, g);
           meble.expandByObject(g);
+          const kat = ((e.rot + (e.kat ?? 0)) * Math.PI) / 180;
+          fronty.add(new Vector3(Math.sin(kat), 0, Math.cos(kat)).multiplyScalar(e.w));
         }
         if (meble.isEmpty()) return null;
-        const srodek = meble.getCenter(new Vector3());
-        const r = meble.getSize(new Vector3());
-        const skos = Math.hypot(r.x, r.z);
+        if (fronty.lengthSq() < 1e-6) fronty.set(0, 0, 1);
+        fronty.normalize();
         ukryj(scene.getObjectByName("wymiary"));
+        // Kandydaci: co 10° dookoła, dwa wzniesienia. Ocena: jak bardzo widać fronty i jak wypełniony jest kadr.
+        const SZEROKI = 2.4;
+        const proporcja = 4 / 3;
+        type Kadr = { az: number; ocena: number; poz: Vector3; cel: Vector3 };
+        const kandydaci: Kadr[] = [];
+        for (let st = 0; st < 360; st += 10) {
+          const az = (st * Math.PI) / 180;
+          for (const wz of [0.3, 0.45]) {
+            const k = kierunek(az, wz);
+            const naFronty = new Vector3(k.x, 0, k.z).normalize().dot(fronty);
+            if (naFronty < 0.2) continue;
+            const d = dopasuj(meble, k, proporcja);
+            kandydaci.push({ az, ocena: naFronty * 0.55 + d.wypelnienie * 0.45 + (wz === 0.3 ? 0.03 : 0), poz: d.poz, cel: d.cel });
+          }
+        }
+        kandydaci.sort((a, b) => b.ocena - a.ocena);
         const widoki: ZdjeciaOferty["widoki"] = [];
-        // Z przodu (na ścianę A), skos z lewej i z prawej (kamera lekko z góry), z góry bez ścian.
-        const dPrzod = odl(r.x, r.y, r.z);
-        widoki.push({ nazwa: "Z przodu", jpeg: zrob(new Vector3(srodek.x, srodek.y + dPrzod * 0.12, srodek.z + dPrzod), srodek, 1100) });
-        const dSkos = odl(skos, r.y * 1.3, skos * 0.5);
-        widoki.push({ nazwa: "Z lewej", jpeg: zrob(new Vector3(srodek.x - dSkos * 0.62, srodek.y + dSkos * 0.38, srodek.z + dSkos * 0.68), srodek, 1100) });
-        widoki.push({ nazwa: "Z prawej", jpeg: zrob(new Vector3(srodek.x + dSkos * 0.62, srodek.y + dSkos * 0.38, srodek.z + dSkos * 0.68), srodek, 1100) });
+        let glowne: string | undefined;
+        const najlepszy = kandydaci[0];
+        if (najlepszy) {
+          // Kadr główny: szeroki, z tego samego kierunku co najlepszy.
+          const kg = new Vector3().subVectors(najlepszy.poz, najlepszy.cel).normalize();
+          const dg = dopasuj(meble, kg, SZEROKI, 0.9);
+          glowne = zrob(dg.poz, dg.cel, SZEROKI, 1600);
+          widoki.push({ nazwa: "Widok główny", jpeg: zrob(najlepszy.poz, najlepszy.cel, proporcja, 1100) });
+          // Dwa kolejne najlepsze kadry z wyraźnie innych stron (różnica kierunku co najmniej 40°).
+          const roznica = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+          const wybrane = [najlepszy];
+          for (const k of kandydaci) {
+            if (wybrane.length >= 3) break;
+            if (wybrane.every((w) => roznica(w.az, k.az) >= (40 * Math.PI) / 180)) wybrane.push(k);
+          }
+          for (const k of wybrane.slice(1)) {
+            const strona = Math.sin(k.az - najlepszy.az) < 0 ? "Z prawej" : "Z lewej";
+            widoki.push({ nazwa: strona, jpeg: zrob(k.poz, k.cel, proporcja, 1100) });
+          }
+        }
+        // Z góry: ściany jako niski mur (widać kształt pokoju), kadr dopasowany do mebli.
+        const gora = dopasuj(meble, new Vector3(0, 1, 0.08).normalize(), proporcja);
+        widoki.push({ nazwa: "Z góry", jpeg: zrob(gora.poz, gora.cel, proporcja, 1100) });
         ukryj(scene.getObjectByName("sciany"));
         ukryj(scene.getObjectByName("woda"));
-        const dGora = odl(r.x, r.z, r.y);
-        widoki.push({ nazwa: "Z góry", jpeg: zrob(new Vector3(srodek.x, srodek.y + dGora, srodek.z + dGora * 0.06), srodek, 1100) });
-        // Każdy mebel osobno: reszta i ściany ukryte, kamera na wprost frontu, lekko z góry i z boku.
+        // Każdy mebel osobno: reszta i ściany ukryte, na wprost frontu, lekko z góry i z boku, kadr dopasowany.
         const elementy: Record<string, string> = {};
         for (const e of p.elementy) {
           const g = grupy.get(e.id);
@@ -460,22 +558,20 @@ function Ujecie({ aktywne, onUjecie, plan }: { aktywne: boolean; onUjecie?: (u: 
             }
           });
           const box = new Box3().setFromObject(g);
-          const c = box.getCenter(new Vector3());
-          const r = Math.max(box.getSize(new Vector3()).length() * 0.5, 0.2);
-          const d = (r / Math.sin(Math.max(0.2, half))) * 1.02;
           const kat = ((e.rot + (e.kat ?? 0)) * Math.PI) / 180;
-          const fx = Math.sin(kat);
-          const fz = Math.cos(kat);
-          // Lekko z boku: 20° w prawo od osi frontu.
-          const bok = 0.36;
-          const poz = new Vector3(c.x + (fx + fz * bok) * d * 0.93, c.y + d * 0.28, c.z + (fz - fx * bok) * d * 0.93);
-          elementy[e.id] = zrob(poz, c, 560);
+          const k = kierunek(kat + 0.35, 0.28);
+          const d = dopasuj(box, k, proporcja, 0.8);
+          elementy[e.id] = zrob(d.poz, d.cel, proporcja, 560);
           inne.forEach((o) => (o.visible = true));
         }
-        return { widoki, elementy };
+        return { glowne, widoki, elementy };
       } catch {
         return null;
       } finally {
+        stanScian.forEach(({ pelna, cokol, v }) => {
+          if (pelna) pelna.visible = !!v[0];
+          if (cokol) cokol.visible = !!v[1];
+        });
         ukryte.forEach((o) => (o.visible = true));
         camera.position.copy(pozycja);
         camera.quaternion.copy(kwaternion);

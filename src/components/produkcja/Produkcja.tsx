@@ -3,18 +3,19 @@
 /*
  * Produkcja: formatki do cięcia, okleina, okucia, blaty i rozkrój płyt.
  * Źródło: projekt z kreatora, lista wklejona z innego programu (KD Max, PRO100, Excel) albo model 3D (OBJ z PRO100, 3DS, GLB).
- * Wszystko liczy się w przeglądarce. Wydruk / PDF w nowym oknie, CSV dla hurtowni albo piły.
+ * Wszystko liczy się w przeglądarce. Plik PDF (pobieranie, bez okna drukowania), CSV dla hurtowni albo piły.
  */
 import { useEffect, useMemo, useState } from "react";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { Seg, toast } from "../panel/ui";
-import { oknoPdf, wpiszPdf } from "../panel/ofertaPdf";
+import { pobierzPdf } from "../panel/pdfPlik";
 import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
 import { rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
 import { importujListe, type WynikImportu } from "./importListy";
+import { formatkiProjektow, type ProjektDoRozkroju } from "./zrodloOferty";
 import { csvFormatek, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
 
-type Zrodlo = "projekt" | "lista" | "model";
+type Zrodlo = "ostatnie" | "projekt" | "lista" | "model";
 type Ustawienia = UstawieniaFormatek & UstawieniaRozkroju;
 
 const KLUCZ = "oprzut-produkcja-v1";
@@ -65,8 +66,26 @@ function Liczba({ id, label, value, onChange, min, max, jedn = "mm" }: { id: str
   );
 }
 
-export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuchni; zrodlo: ZrodloMaterialow }; meta: MetaProdukcji }) {
-  const [zrodlo, setZrodlo] = useState<Zrodlo>(projekt?.plan.elementy.length ? "projekt" : "lista");
+/** Ostatnie projekty firmy (strona /panel/rozkroj): wczytywanie, lista albo błąd. */
+export type OstatnieProjekty = { stan: "wczytuje" } | { stan: "gotowe"; projekty: ProjektDoRozkroju[] } | { stan: "blad"; tekst: string };
+
+export default function Produkcja({
+  projekt,
+  ostatnie,
+  meta,
+}: {
+  projekt?: { plan: PlanKuchni; zrodlo: ZrodloMaterialow };
+  /** Rozkrój z kilku ostatnich projektów naraz – źródło domyślne, gdy jest. */
+  ostatnie?: OstatnieProjekty;
+  meta: MetaProdukcji;
+}) {
+  const [zrodlo, setZrodlo] = useState<Zrodlo>(ostatnie ? "ostatnie" : projekt?.plan.elementy.length ? "projekt" : "lista");
+  /** Projekty odznaczone w rozkroju z ostatnich (domyślnie wszystkie są w rozkroju). */
+  const [bezProjektow, setBezProjektow] = useState<Set<string>>(() => new Set());
+  const wybrane = useMemo(
+    () => (ostatnie?.stan === "gotowe" ? ostatnie.projekty.filter((p) => !bezProjektow.has(p.id)) : []),
+    [ostatnie, bezProjektow],
+  );
   const [u, setU] = useState<Ustawienia>(DOMYSLNE);
   const [tekst, setTekst] = useState("");
   const [model, setModel] = useState<{ stan: "pusty" } | { stan: "wczytuje"; nazwa: string } | { stan: "gotowy"; nazwa: string; wynik: WynikImportu } | { stan: "blad"; tekst: string }>({ stan: "pusty" });
@@ -87,10 +106,11 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
   const zListy = useMemo(() => (tekst.trim() ? importujListe(tekst) : null), [tekst]);
 
   const dane: (DaneProdukcji & { uwagi?: string[] }) | null = useMemo(() => {
+    if (zrodlo === "ostatnie") return wybrane.length ? formatkiProjektow(wybrane, u) : null;
     if (zrodlo === "projekt") return projekt ? formatkiProjektu(projekt.plan, projekt.zrodlo, u) : null;
     if (zrodlo === "lista") return zListy;
     return model.stan === "gotowy" ? model.wynik : null;
-  }, [zrodlo, projekt, u, zListy, model]);
+  }, [zrodlo, projekt, wybrane, u, zListy, model]);
 
   const materialy = useMemo(() => (dane?.materialy ?? []).map((m) => (m.klucz in sloje ? { ...m, sloje: sloje[m.klucz] } : m)), [dane, sloje]);
   const daneM = useMemo(() => (dane ? { ...dane, materialy } : null), [dane, materialy]);
@@ -140,14 +160,18 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
     setTekst(t);
   };
 
-  const wydruk = () => {
-    if (!daneM) return;
-    const w = oknoPdf();
-    if (!w) {
-      toast("Przeglądarka zablokowała okno", { type: "err", desc: "Zezwól na wyskakujące okna dla tej strony." });
-      return;
+  const [sklada, setSklada] = useState(false);
+  const wydruk = async () => {
+    if (!daneM || sklada) return;
+    setSklada(true);
+    try {
+      await pobierzPdf(produkcjaDokument(daneM, wyniki, { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze }, meta), { nazwa: `Formatki ${meta.kod || "projekt"}`, margines: 12 });
+      toast("PDF pobrany", { desc: "Formatki i rozkrój są w folderze Pobrane." });
+    } catch (e) {
+      toast("Nie udało się zapisać PDF", { type: "err", desc: e instanceof Error && e.message ? e.message : "Spróbuj jeszcze raz." });
+    } finally {
+      setSklada(false);
     }
-    wpiszPdf(w, produkcjaDokument(daneM, wyniki, { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze }, meta));
   };
 
   const csv = () => {
@@ -166,6 +190,7 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
   const arkuszy = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.length, 0);
   const sztuk = daneM ? daneM.formatki.reduce((s, f) => s + f.ilosc, 0) : 0;
   const opcje: { value: Zrodlo; label: string }[] = [
+    ...(ostatnie ? [{ value: "ostatnie" as const, label: "Ostatnie projekty" }] : []),
     ...(projekt ? [{ value: "projekt" as const, label: "Z projektu" }] : []),
     { value: "lista", label: "Wklej listę" },
     { value: "model", label: "Z modelu 3D" },
@@ -179,10 +204,54 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
         <button type="button" className="btn btn-ghost" onClick={csv} disabled={!daneM?.formatki.length}>
           Pobierz CSV
         </button>
-        <button type="button" className="btn btn-ink" onClick={wydruk} disabled={!daneM?.formatki.length}>
-          Drukuj / PDF
+        <button type="button" className="btn btn-ink" onClick={() => void wydruk()} disabled={!daneM?.formatki.length || sklada} aria-busy={sklada}>
+          {sklada ? "Przygotowuję PDF…" : "Pobierz PDF"}
         </button>
       </div>
+
+      {zrodlo === "ostatnie" && ostatnie ? (
+        <section className="pr-zrodlo">
+          {ostatnie.stan === "wczytuje" ? (
+            <p className="faint" role="status">
+              <span className="spin" aria-hidden /> Pobieram ostatnie projekty…
+            </p>
+          ) : ostatnie.stan === "blad" ? (
+            <p className="err">{ostatnie.tekst}</p>
+          ) : !ostatnie.projekty.length ? (
+            <p className="lede">Nie ma jeszcze projektów z meblami z kreatora. Złóż ofertę w kreatorze – jej formatki pojawią się tu same.</p>
+          ) : (
+            <>
+              <p className="lede">
+                Rozkrój z {ostatnie.projekty.length === 1 ? "ostatniego projektu" : `${ostatnie.projekty.length} ostatnich projektów`} – ten sam materiał tnie się
+                z tych samych arkuszy. Odznacz projekt, którego nie chcesz ciąć.
+              </p>
+              <ul className="pr-projekty">
+                {ostatnie.projekty.map((p) => (
+                  <li key={p.id}>
+                    <label className="pr-check">
+                      <input
+                        type="checkbox"
+                        checked={!bezProjektow.has(p.id)}
+                        onChange={(e) =>
+                          setBezProjektow((s) => {
+                            const n = new Set(s);
+                            if (e.target.checked) n.delete(p.id);
+                            else n.add(p.id);
+                            return n;
+                          })
+                        }
+                      />
+                      <span>
+                        <b>{p.id}</b> · {p.nazwa} <span className="faint">· {p.plan.elementy.length} poz.</span>
+                      </span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </section>
+      ) : null}
 
       {zrodlo === "lista" ? (
         <section className="pr-zrodlo">
@@ -241,7 +310,7 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
           <Liczba id="pr-ark-sz" label="Arkusz – szerokość" value={u.arkusz.szer} min={300} max={3000} onChange={(v) => zmien({ arkusz: { ...u.arkusz, szer: v } })} />
           <Liczba id="pr-rzaz" label="Rzaz piły" value={u.rzaz} min={0} max={10} onChange={(v) => zmien({ rzaz: v })} />
           <Liczba id="pr-obrz" label="Obrzeże arkusza" value={u.obrzeze} min={0} max={50} onChange={(v) => zmien({ obrzeze: v })} />
-          {zrodlo === "projekt" ? (
+          {zrodlo === "projekt" || zrodlo === "ostatnie" ? (
             <>
               <Liczba id="pr-szcz" label="Szczelina frontów" value={u.szczelina} min={0} max={10} onChange={(v) => zmien({ szczelina: v })} />
               <Liczba id="pr-nawis" label="Nawis blatu" value={u.nawisBlatu} min={0} max={100} onChange={(v) => zmien({ nawisBlatu: v })} />
@@ -266,7 +335,13 @@ export default function Produkcja({ projekt, meta }: { projekt?: { plan: PlanKuc
 
       {!daneM || !daneM.formatki.length ? (
         <p className="empty">
-          {zrodlo === "projekt"
+          {zrodlo === "ostatnie"
+            ? ostatnie?.stan === "gotowe" && ostatnie.projekty.length
+              ? wybrane.length
+                ? "Wybrane projekty nie mają mebli z płyty."
+                : "Zaznacz co najmniej jeden projekt."
+              : ""
+            : zrodlo === "projekt"
             ? "Projekt nie ma mebli z płyty. Dodaj szafki w kroku „Meble”."
             : zrodlo === "lista"
               ? "Wklej listę formatek albo wczytaj plik – tabela i rozkrój pojawią się tutaj."

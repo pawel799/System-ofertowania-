@@ -1,7 +1,7 @@
 "use client";
 
 import { slowaProjektu, type TypProjektu } from "@/lib/projekt";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { Palette } from "../palettes";
 import type { KuchniaUjecie } from "../kuchnia/KuchniaTlo";
@@ -10,7 +10,8 @@ import { toast } from "./ui";
 import { useCennik } from "./useCennik";
 import { useKatalog } from "../katalogStore";
 import type { MaterialySnapshot } from "../katalogFirmy";
-import { danePdf, oknoPdf, pdfHtml, pdfTekst, wpiszPdf } from "./ofertaPdf";
+import { danePdf, pdfHtml, pdfTekst } from "./ofertaPdf";
+import { pobierzPdf } from "./pdfPlik";
 import { rysunekTechnicznyDokument } from "../rysunek/rysunekTechniczny";
 
 /** Link 3D do kodu QR w PDF (zawsze aktywny – w razie potrzeby utworzony przy generowaniu). */
@@ -66,11 +67,14 @@ export function OfertaPdfPrzyciski({
   const { cennik, blad } = useCennik(!bezCennikaFirmy);
   const katalog = useKatalog();
   const busy = useRef(false);
+  /** Który plik właśnie się składa (przycisk pokazuje postęp). */
+  const [sklada, setSklada] = useState<"oferta" | "rysunek" | null>(null);
+  const tytul = () => title.trim() || slowaProjektu(projekt).nazwa;
 
   const zloz = (zeZdjeciem: boolean, link: LinkDoPdf | null) =>
     danePdf({
       id: link?.id ?? id,
-      title: title.trim() || slowaProjektu(projekt).nazwa,
+      title: tytul(),
       client: client.trim(),
       contact: contact.trim(),
       firma: brand.name,
@@ -108,24 +112,17 @@ export function OfertaPdfPrzyciski({
   const pobierz = async () => {
     if (busy.current) return;
     busy.current = true;
-    // Okno od razu po kliknięciu – po await przeglądarka uznałaby je za wyskakujące.
-    const w = oknoPdf();
-    if (!w) {
-      busy.current = false;
-      toast("Przeglądarka zablokowała okno PDF", {
-        type: "err",
-        desc: "Zezwól na wyskakujące okna dla tej strony i kliknij „Pobierz PDF” jeszcze raz.",
-      });
-      return;
-    }
+    setSklada("oferta");
     try {
       const l = await link();
-      if (!wpiszPdf(w, pdfHtml(zloz(true, l)))) return;
-      toast("Okno PDF otwarte", {
-        desc: l ? "Kod QR prowadzi do kuchni w 3D. W oknie drukowania wybierz „Zapisz jako PDF”." : "W oknie drukowania wybierz „Zapisz jako PDF”.",
-      });
+      const d = zloz(true, l);
+      await pobierzPdf(pdfHtml(d), { nazwa: `Oferta ${d.id} ${d.title}`, margines: 14 });
+      toast("PDF pobrany", { desc: l ? "Plik jest w folderze Pobrane. Kod QR w pliku prowadzi do projektu w 3D." : "Plik jest w folderze Pobrane." });
+    } catch (e) {
+      toast("Nie udało się zapisać PDF", { type: "err", desc: e instanceof Error && e.message ? e.message : "Spróbuj jeszcze raz." });
     } finally {
       busy.current = false;
+      setSklada(null);
     }
   };
 
@@ -149,28 +146,34 @@ export function OfertaPdfPrzyciski({
     window.location.href = href;
   };
 
-  /** Rysunek techniczny (rzut, widoki ścian z wymiarami) w osobnym oknie – druk albo zapis do PDF. Jest też w PDF oferty. */
-  const rysunek = () => {
-    const w = oknoPdf();
-    if (!w) {
-      toast("Przeglądarka zablokowała okno", { type: "err", desc: "Zezwól na wyskakujące okna dla tej strony." });
-      return;
+  /** Rysunek techniczny (rzut, widoki ścian z wymiarami) jako osobny PDF (strony poziome). Jest też w PDF oferty. */
+  const rysunek = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setSklada("rysunek");
+    try {
+      const data = new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
+      await pobierzPdf(rysunekTechnicznyDokument(plan, { firma: brand.name, id, tytul: tytul(), data }), { nazwa: `Rysunek techniczny ${id}`, orientacja: "pozioma", margines: 10 });
+      toast("Rysunek techniczny pobrany", { desc: "Plik PDF jest w folderze Pobrane." });
+    } catch (e) {
+      toast("Nie udało się zapisać PDF", { type: "err", desc: e instanceof Error && e.message ? e.message : "Spróbuj jeszcze raz." });
+    } finally {
+      busy.current = false;
+      setSklada(null);
     }
-    const data = new Date().toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric" });
-    wpiszPdf(w, rysunekTechnicznyDokument(plan, { firma: brand.name, id, tytul: title.trim() || slowaProjektu(projekt).nazwa, data }));
   };
 
   return (
     <div className="actions">
-      <button type="button" className="btn btn-ink" onClick={() => void pobierz()}>
-        Pobierz PDF
+      <button type="button" className="btn btn-ink" onClick={() => void pobierz()} disabled={!!sklada} aria-busy={sklada === "oferta"}>
+        {sklada === "oferta" ? "Przygotowuję PDF…" : "Pobierz PDF"}
       </button>
       <button type="button" className="btn btn-ghost" onClick={() => void wyslij()}>
         Wyślij ofertę PDF
       </button>
       {plan.elementy.length ? (
-        <button type="button" className="btn btn-ghost" onClick={rysunek}>
-          Rysunek techniczny
+        <button type="button" className="btn btn-ghost" onClick={() => void rysunek()} disabled={!!sklada} aria-busy={sklada === "rysunek"}>
+          {sklada === "rysunek" ? "Przygotowuję…" : "Rysunek techniczny"}
         </button>
       ) : null}
     </div>

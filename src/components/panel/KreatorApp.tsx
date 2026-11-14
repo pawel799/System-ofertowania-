@@ -13,8 +13,7 @@ import { setFront } from "../frontStore";
 import { setHardware } from "../hardwareStore";
 import { setPalettes as setPaletteStore } from "../paletteStore";
 import { setKatalog as setKatalogStore, useKatalog } from "../katalogStore";
-import { findMaterial, opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
-import { koloryMebla, uchwytMebla } from "@/lib/kolory";
+import { opcjeMaterialu, type KatalogPozycja } from "../katalogFirmy";
 import type { ScianaDodatkowa, ScianaPokoju, UstawieniaScian } from "@/lib/sciany";
 import FormatkiOkno from "../produkcja/FormatkiOkno";
 import { useHistoria } from "./useHistoria";
@@ -22,7 +21,8 @@ import { useTelefon } from "./telefon";
 import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju, WyborPodlogi } from "./KreatorScian";
 import { zastosujZmianePokoju, zProstokatem, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
 import { czyObrys, mebelZaSciana, scianyPokojuWszystkie } from "@/lib/sciany";
-import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
+import type { ZrodloMaterialow } from "../produkcja/formatki";
+import { zrodloMaterialow } from "../produkcja/zrodloOferty";
 import { useBrand } from "@/lib/brand";
 import type { Palette } from "../palettes";
 import { formatPln } from "../pricing";
@@ -416,22 +416,10 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   const edycjaKolorow = useMemo(() => edycjaKolorowScian(setPlan), [setPlan]);
   const zamknijFormatki = useCallback(() => setFormatki(false), []);
   // Materiały do formatek: kolory mebli (fronty, boki, środek) i okucia z katalogu firmy – jak w PDF oferty.
-  const zrodloProdukcji = useMemo<ZrodloMaterialow>(() => {
-    const ctx = { palettes, katalog };
-    return {
-      material: (el, czesc) => {
-        const id = koloryMebla(el, front, planCeny.kolory)[czesc];
-        const m = findMaterial("front", id, ctx);
-        const nazwa = m?.name ?? id;
-        return { klucz: id, nazwa, grubosc: m?.thicknessMm ?? 18, sloje: m?.finish === "struktura" || DREWNO_RE.test(nazwa), rodzaj: "plyta" };
-      },
-      uchwyt: (el) => {
-        const m = findMaterial("hardware", uchwytMebla(el, hardware), ctx);
-        return { nazwa: m?.name ?? "uchwyt", bez: !!m?.bezUchwytu };
-      },
-      blat: findMaterial("countertop", countertop, ctx)?.name,
-    };
-  }, [palettes, katalog, front, hardware, countertop, planCeny.kolory]);
+  const zrodloProdukcji = useMemo<ZrodloMaterialow>(
+    () => zrodloMaterialow({ palettes, katalog }, { front, hardware, countertop, kolory: planCeny.kolory }),
+    [palettes, katalog, front, hardware, countertop, planCeny.kolory],
+  );
   const modeleSceny = useMemo(
     () => models.filter((m) => plan.elementy.some((e) => e.modelId === m.id)).map(toPublicModel),
     [models, plan.elementy],
@@ -1442,7 +1430,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
 
                   <section className="kr-card">
                     <h3>Oferta PDF</h3>
-                    <p className="lede">Handlowa: pozycje, wymiary i ceny, z kodem QR do podglądu 3D. Pobranie zapisuje ofertę i w razie potrzeby tworzy link. W oknie drukowania wybierz „Zapisz jako PDF”.</p>
+                    <p className="lede">Handlowa: pozycje, wymiary i ceny, z kodem QR do podglądu 3D. Pobranie zapisuje ofertę i w razie potrzeby tworzy link. Plik od razu się pobiera.</p>
                     <OfertaPdfPrzyciski
                       id={offer?.id ?? "SZKIC"}
                       title={title}

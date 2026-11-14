@@ -715,7 +715,7 @@ export default function PanelApp() {
         <section className="side">
           <h2>Oferta PDF</h2>
           <p className="lede">
-            Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój — z kodem QR do podglądu 3D. Gdy oferta nie ma działającego linku, utworzy się przy pobraniu (ustawienia z „Link dla klienta”). Zapis: w oknie drukowania wybierz „Zapisz jako PDF”.
+            Pozycje, wymiary i ceny — oferta handlowa, nie rozkrój — z kodem QR do podglądu 3D. Gdy oferta nie ma działającego linku, utworzy się przy pobraniu (ustawienia z „Link dla klienta”). Plik od razu się pobiera.
           </p>
           <OfertaPdfPrzyciski
             id={offer.id}

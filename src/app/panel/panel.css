@@ -730,6 +730,7 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .pr-tab .n { text-align: right; font-variant-numeric: tabular-nums; }
 .pnl .pr-tab .mono { font-family: var(--font-geist-mono), ui-monospace, monospace; font-size: 11.5px; white-space: nowrap; }
 .pnl .pr-check { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.pnl .pr-projekty { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .pnl .pr-mat { border-top: 1px solid var(--g3); padding-top: 8px; }
 .pnl .pr-mat > summary { cursor: pointer; font-size: 13.5px; font-weight: 600; padding: 2px 0 8px; }
 .pnl .pr-arkusze { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; margin-top: 10px; }
