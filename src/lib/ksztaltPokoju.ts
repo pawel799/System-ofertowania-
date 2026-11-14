@@ -6,7 +6,7 @@
  * przejście prostokąt ↔ obrys) przenoszą je po położeniu w pokoju na ścianę, na której teraz leżą (przeniesNaSciany).
  * Po każdej zmianie: wymiary pokoju = prostokąt opisany, ściana A (i B, gdy biegnie wzdłuż osi z) = długości z obrysu.
  */
-import type { PlanKuchni } from "./kuchnia";
+import { rect, type PlanKuchni } from "./kuchnia";
 import {
   czyObrys,
   krawedzieObrysu,
@@ -142,9 +142,32 @@ export function zastosujObrys(p: PlanKuchni, obrys: Punkt[], topologia: boolean)
 }
 
 /** Prostokąt → pokój o dowolnym kształcie (te same ściany, okna i drzwi zostają na miejscach). */
+/**
+ * Pokój „bez wymiarów” (sama ściana A, w L też B) jako zwykły prostokąt z 4 ścianami: szerokość ściany A,
+ * co najmniej 300 cm w głąb (w L – długość ściany B) i miejsce na wszystkie meble, które już stoją.
+ */
+export function pomieszczenieDomyslne(p: PlanKuchni): { szer: number; dlug: number } {
+  let x1 = 0;
+  let z1 = 0;
+  for (const e of p.elementy) {
+    const r = rect(e);
+    x1 = Math.max(x1, r.x1);
+    z1 = Math.max(z1, r.z1);
+  }
+  return {
+    szer: Math.min(2000, Math.max(p.scianaA, 120, Math.ceil(x1))),
+    dlug: Math.min(2000, Math.max(p.uklad === "L" ? p.scianaB : 0, 300, Math.ceil(z1))),
+  };
+}
+
+/** Plan zawsze z pokojem: bez obrysu i bez wymiarów pokoju – domyślny prostokąt (4 ściany), nawet gdy nikt go nie zmieni. */
+export function zProstokatem(p: PlanKuchni): PlanKuchni {
+  return czyObrys(p) || p.pomieszczenie ? p : { ...p, pomieszczenie: pomieszczenieDomyslne(p) };
+}
+
 export function naObrys(p: PlanKuchni): Wynik {
   if (czyObrys(p)) return { plan: p };
-  const baza: PlanKuchni = p.pomieszczenie ? p : { ...p, pomieszczenie: { szer: Math.max(p.scianaA, 120), dlug: Math.max(p.uklad === "L" ? p.scianaB : 0, 300) } };
+  const baza: PlanKuchni = p.pomieszczenie ? p : { ...p, pomieszczenie: pomieszczenieDomyslne(p) };
   return zastosujObrys(baza, obrysZProstokata(baza), true);
 }
 

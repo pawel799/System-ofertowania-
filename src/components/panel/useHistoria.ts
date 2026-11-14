@@ -18,16 +18,18 @@ const rowne = (a: unknown, b: unknown) => a === b || JSON.stringify(a) === JSON.
 /**
  * walidacja – strażnik zmian: zwraca komunikat, gdy zmiana jest niedozwolona (np. mebel za ścianą); wtedy plan
  * zostaje bez zmian, a onOdrzucone dostaje komunikat (raz – updater Reacta może się wykonać dwa razy).
+ * normalizuj – poprawka każdej nowej wartości (start, setPlan, reset), np. domyślny pokój-prostokąt.
  */
-export function useHistoria<T>(start: () => T, opcje: { walidacja?: (stary: T, nowy: T) => string | null; onOdrzucone?: (komunikat: string) => void } = {}) {
-  const [stan, setStan] = useState<Stan<T>>(() => ({ teraz: start(), wstecz: [], naprzod: [], t: 0 }));
+export function useHistoria<T>(start: () => T, opcje: { walidacja?: (stary: T, nowy: T) => string | null; onOdrzucone?: (komunikat: string) => void; normalizuj?: (v: T) => T } = {}) {
+  const [stan, setStan] = useState<Stan<T>>(() => ({ teraz: opcje.normalizuj ? opcje.normalizuj(start()) : start(), wstecz: [], naprzod: [], t: 0 }));
   const opcjeRef = useRef(opcje);
   opcjeRef.current = opcje;
   const odrzucone = useRef<string | null>(null);
 
   const ustaw = useCallback((next: SetStateAction<T>) => {
     setStan((s) => {
-      const v = typeof next === "function" ? (next as (p: T) => T)(s.teraz) : next;
+      const surowa = typeof next === "function" ? (next as (p: T) => T)(s.teraz) : next;
+      const v = opcjeRef.current.normalizuj ? opcjeRef.current.normalizuj(surowa) : surowa;
       if (rowne(v, s.teraz)) return s;
       const blad = opcjeRef.current.walidacja?.(s.teraz, v) ?? null;
       if (blad) {
@@ -47,7 +49,7 @@ export function useHistoria<T>(start: () => T, opcje: { walidacja?: (stary: T, n
     });
   }, []);
 
-  const reset = useCallback((v: T) => setStan({ teraz: v, wstecz: [], naprzod: [], t: 0 }), []);
+  const reset = useCallback((v: T) => setStan({ teraz: opcjeRef.current.normalizuj ? opcjeRef.current.normalizuj(v) : v, wstecz: [], naprzod: [], t: 0 }), []);
 
   const cofnij = useCallback(() => {
     setStan((s) => {

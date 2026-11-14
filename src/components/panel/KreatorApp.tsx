@@ -20,7 +20,7 @@ import FormatkiOkno from "../produkcja/FormatkiOkno";
 import { useHistoria } from "./useHistoria";
 import { useTelefon } from "./telefon";
 import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju, WyborPodlogi } from "./KreatorScian";
-import { zastosujZmianePokoju, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
+import { zastosujZmianePokoju, zProstokatem, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
 import { czyObrys, mebelZaSciana, scianyPokojuWszystkie } from "@/lib/sciany";
 import { DREWNO_RE, type ZrodloMaterialow } from "../produkcja/formatki";
 import { useBrand } from "@/lib/brand";
@@ -139,6 +139,8 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   const historia = useHistoria<PlanKuchni>(() => pustyPlan("ciag"), {
     walidacja: mebleZaScianami,
     onOdrzucone: (k) => toast("Mebel nie może stać za ścianą", { type: "err", desc: k }),
+    // Pokój domyślnie prostokątny (4 ściany) – także w ofercie, w której autor nie ruszał ścian.
+    normalizuj: zProstokatem,
   });
   const { wartosc: plan, ustaw: setPlan, reset: resetPlan, cofnij, ponow, moznaCofnac, moznaPonowic } = historia;
   const [client, setClient] = useState("");
