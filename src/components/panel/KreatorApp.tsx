@@ -889,6 +889,20 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   }, []);
   /** Pełny ekran samego edytora (rzut) albo samego podglądu 3D – osobno od kiosku. */
   const [pelny, setPelny] = useState<"rzut" | "3d" | null>(null);
+  // Pasek przycisków nad sceną 3D zasłania jej górę – model kadrujemy pod nim (wysokość mierzona na żywo).
+  const [gora3d, setGora3d] = useState(0);
+  const obserwator3d = useRef<ResizeObserver | null>(null);
+  // Ref jako funkcja: pasek pojawia się później (po wczytaniu, z widokiem 3D) – mierzymy, gdy trafi na stronę.
+  const narzedzia3dRef = useCallback((el: HTMLDivElement | null) => {
+    obserwator3d.current?.disconnect();
+    obserwator3d.current = null;
+    if (!el) return;
+    const mierz = () => setGora3d(Math.round(el.offsetTop + el.offsetHeight + 8));
+    mierz();
+    if (typeof ResizeObserver === "undefined") return;
+    obserwator3d.current = new ResizeObserver(mierz);
+    obserwator3d.current.observe(el);
+  }, []);
   const pelnyEkranApi = async () => {
     try {
       if (document.fullscreenEnabled && !document.fullscreenElement) {
@@ -1322,7 +1336,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                     onWyjdz={wyjdzPelny}
                   />
                 ) : null}
-                <div className="kr-narzedzia3d">
+                <div className="kr-narzedzia3d" ref={narzedzia3dRef}>
                   {pelny !== "3d" ? (
                     <button type="button" className="btn btn-ghost kr-otworz" onClick={() => wejdzPelny("3d")} title="Sam podgląd 3D na pełnym ekranie">
                       <IkonaPelnyEkran /> Pełny ekran
@@ -1342,6 +1356,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                   zdjecie
                   wymiary={wymiary}
                   onUjecie={ustawUjecie}
+                  zaslonieteGora={gora3d}
                 />
               </div>
             )}

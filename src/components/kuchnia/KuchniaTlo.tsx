@@ -36,6 +36,8 @@ export default function KuchniaTlo({
   onPodgladMebla?: (p: { id: string; x: number; z: number; zly: string | null } | null) => void;
   /** Piksele sceny zasłonięte od dołu przez nakładkę – kadr nad nią. */
   zasloniete?: number;
+  /** Piksele zasłonięte od góry (pasek przycisków w kreatorze) – kadr pod nim. */
+  zaslonieteGora?: number;
   /** Kreator: własny kolor klikniętej ściany. */
   edycjaKolorow?: EdycjaKolorowScian;
   className?: string;

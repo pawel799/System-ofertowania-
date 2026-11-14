@@ -14,8 +14,9 @@ import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
 import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
-import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type Me, type ModelMeta } from "./offerApi";
+import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, panelAuth, type DomainView, type Me, type ModelMeta } from "./offerApi";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
+import { listaDomen, normalizujDomene, type SprawdzenieDomeny } from "@/lib/domena";
 import { LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
@@ -875,8 +876,8 @@ const USLUGI: Record<Usluga, { przycisk: string; tytul: string; opis: string; po
     przycisk: "Zamów domenę",
     tytul: "Zamów domenę",
     opis: "Kupimy i skonfigurujemy domenę dla Twojej firmy (np. twojafirma.pl) i podepniemy pod nią linki do ofert.",
-    pole: "Jaka domena? (możesz podać kilka propozycji)",
-    placeholder: "np. kuchnie-kowalski.pl, kowalskimeble.pl",
+    pole: "Uwagi (opcjonalnie)",
+    placeholder: "np. wolę końcówkę .pl, domena ma być na firmę",
   },
   strona: {
     przycisk: "Zamów dedykowaną stronę internetową",
@@ -890,7 +891,36 @@ const USLUGI: Record<Usluga, { przycisk: string; tytul: string; opis: string; po
 /** Przyciski „Zamów domenę” i „Zamów stronę” – zgłoszenie trafia do nas (właściciel systemu), jak formularz kontaktu. */
 function ZamowUslugi({ me }: { me: Me | null }) {
   const [usluga, setUsluga] = useState<Usluga | null>(null);
-  const [f, setF] = useState({ imie: "", kontakt: "", uwagi: "" });
+  const [f, setF] = useState({ imie: "", kontakt: "", uwagi: "", domeny: "" });
+  /** Wyniki sprawdzenia domen (czy już istnieją) – po nazwie wpisanej przez użytkownika. */
+  const [domeny, setDomeny] = useState<Record<string, SprawdzenieDomeny | "sprawdzam" | "blad">>({});
+  const wpisane = listaDomen(f.domeny);
+  useEffect(() => {
+    if (usluga !== "domena") return;
+    const doSprawdzenia = listaDomen(f.domeny)
+      .map((d) => normalizujDomene(d))
+      .filter((d): d is string => !!d && !(d in domeny));
+    if (!doSprawdzenia.length) return;
+    const t = window.setTimeout(() => {
+      for (const d of doSprawdzenia) {
+        setDomeny((s) => ({ ...s, [d]: "sprawdzam" }));
+        fetch(`/api/domena?d=${encodeURIComponent(d)}`, { headers: panelAuth(), cache: "no-store" })
+          .then((r) => (r.ok && (r.headers.get("content-type") ?? "").includes("json") ? (r.json() as Promise<SprawdzenieDomeny>) : Promise.reject()))
+          .then((w) => setDomeny((s) => ({ ...s, [d]: w })))
+          .catch(() => setDomeny((s) => ({ ...s, [d]: "blad" })));
+      }
+    }, 600);
+    return () => window.clearTimeout(t);
+  }, [f.domeny, usluga, domeny]);
+  /** Stan jednej wpisanej domeny do listy pod polem. */
+  const stanDomeny = (wpis: string) => {
+    const d = normalizujDomene(wpis);
+    if (!d) return { wpis, stan: "zla" as const };
+    const w = domeny[d];
+    if (!w || w === "sprawdzam") return { wpis, stan: "sprawdzam" as const };
+    if (w === "blad" || w.zajeta === null) return { wpis, stan: "nieznana" as const };
+    return { wpis, stan: w.zajeta ? ("zajeta" as const) : ("wolna" as const) };
+  };
   const [bledy, setBledy] = useState<Partial<Record<keyof typeof f, string>>>({});
   const [busy, setBusy] = useState(false);
   const [wyslane, setWyslane] = useState<Usluga | null>(null);
@@ -898,7 +928,7 @@ function ZamowUslugi({ me }: { me: Me | null }) {
     setUsluga(u);
     setWyslane(null);
     setBledy({});
-    setF((s) => ({ imie: s.imie || me?.user?.name || "", kontakt: s.kontakt || me?.user?.email || "", uwagi: "" }));
+    setF((s) => ({ imie: s.imie || me?.user?.name || "", kontakt: s.kontakt || me?.user?.email || "", uwagi: "", domeny: "" }));
   };
   const wyslij = async (e: FormEvent) => {
     e.preventDefault();
@@ -907,7 +937,16 @@ function ZamowUslugi({ me }: { me: Me | null }) {
     if (!f.imie.trim()) b.imie = "Podaj imię i nazwisko.";
     const kontakt = f.kontakt.trim();
     if (!EMAIL_RE.test(kontakt) && !isPhone(kontakt)) b.kontakt = "Podaj e-mail albo telefon (min. 9 cyfr).";
-    if (f.uwagi.trim().length < 3) b.uwagi = usluga === "domena" ? "Wpisz, jaką domenę chcesz." : "Napisz kilka słów o stronie.";
+    if (usluga === "strona" && f.uwagi.trim().length < 3) b.uwagi = "Napisz kilka słów o stronie.";
+    if (usluga === "domena") {
+      const stany = wpisane.map(stanDomeny);
+      const zla = stany.find((x) => x.stan === "zla");
+      const zajeta = stany.find((x) => x.stan === "zajeta");
+      if (!wpisane.length) b.domeny = "Wpisz domenę, np. kuchnie-kowalski.pl.";
+      else if (zla) b.domeny = `„${zla.wpis}” to nie jest poprawna nazwa domeny (np. kuchnie-kowalski.pl).`;
+      else if (zajeta) b.domeny = `Domena ${zajeta.wpis} jest już zajęta – usuń ją albo wpisz inną.`;
+      else if (stany.some((x) => x.stan === "sprawdzam")) b.domeny = "Sprawdzam, czy domeny są wolne – chwilę.";
+    }
     setBledy(b);
     if (Object.keys(b).length) return;
     setBusy(true);
@@ -916,7 +955,14 @@ function ZamowUslugi({ me }: { me: Me | null }) {
       imie: f.imie.trim(),
       ...(EMAIL_RE.test(kontakt) ? { email: kontakt } : { telefon: kontakt }),
       firma: me?.firm?.name ?? "",
-      uwagi: `[Zamówienie z panelu: ${USLUGI[usluga].tytul}]${me?.firm ? ` Firma: ${me.firm.name} (${me.firm.id}).` : ""}\n${f.uwagi.trim()}`,
+      uwagi: `[Zamówienie z panelu: ${USLUGI[usluga].tytul}]${me?.firm ? ` Firma: ${me.firm.name} (${me.firm.id}).` : ""}${
+        usluga === "domena"
+          ? `\nDomeny: ${wpisane
+              .map(stanDomeny)
+              .map((x) => `${x.wpis} (${x.stan === "wolna" ? "wolna w DNS" : "nie sprawdzono"})`)
+              .join(", ")}`
+          : ""
+      }\n${f.uwagi.trim()}`.trim(),
     });
     setBusy(false);
     if (err) return void toast("Nie wysłano zamówienia", { type: "err", desc: err });
@@ -971,6 +1017,35 @@ function ZamowUslugi({ me }: { me: Me | null }) {
             {pole("imie", "Imię i nazwisko", "input")}
             {pole("kontakt", "E-mail albo telefon", "input")}
           </div>
+          {usluga === "domena" ? (
+            <div className="field">
+              {pole("domeny", "Jaka domena? (możesz wpisać kilka, po przecinku)", "input", "np. kuchnie-kowalski.pl, kowalskimeble.pl")}
+              {wpisane.length ? (
+                <ul className="zam-domeny" aria-live="polite">
+                  {wpisane.map((w) => {
+                    const x = stanDomeny(w);
+                    return (
+                      <li key={w} data-stan={x.stan}>
+                        <span className="mono">{w}</span>
+                        <b>
+                          {x.stan === "wolna"
+                            ? "wolna"
+                            : x.stan === "zajeta"
+                              ? "zajęta – wybierz inną"
+                              : x.stan === "zla"
+                                ? "zła nazwa"
+                                : x.stan === "sprawdzam"
+                                  ? "sprawdzam…"
+                                  : "nie udało się sprawdzić"}
+                        </b>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+              <p className="faint zam-uwaga-mala">Sprawdzamy, czy domena już istnieje. Ostatecznie dostępność potwierdza rejestrator przy zakupie.</p>
+            </div>
+          ) : null}
           {pole("uwagi", USLUGI[usluga].pole, "textarea", USLUGI[usluga].placeholder)}
           {usluga === "strona" ? <p className="faint zam-uwaga-mala">Cena strony nie obejmuje opłat za korzystanie z systemu.</p> : null}
           <div className="actions">

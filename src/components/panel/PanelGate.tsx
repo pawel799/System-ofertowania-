@@ -57,7 +57,7 @@ export function LogoutButton() {
 export function PanelBrand() {
   const brand = useBrand();
   return (
-    <div className="logo">
+    <div className="logo" title={brand.name}>
       {brand.logo ? (
         // eslint-disable-next-line @next/next/no-img-element -- logo z KV jako data URL
         <img src={brand.logo} alt="" className="logo-img" />
@@ -69,7 +69,8 @@ export function PanelBrand() {
           <path d="M26 38 L13.5 50.5" fill="none" className="logo-kreska" strokeWidth="7" strokeLinecap="butt" />
         </svg>
       )}
-      {brand.name}
+      {/* Długa nazwa firmy (np. pełna nazwa spółki) skraca się „…” – nagłówek nie rozpycha strony w bok. */}
+      <span className="logo-nazwa">{brand.name}</span>
     </div>
   );
 }
@@ -117,6 +118,9 @@ export function PanelState({
             </a>
             <a className="btn btn-plain bez-telefonu" href="/panel/rozkroj">
               Rozkrój
+            </a>
+            <a className="btn btn-plain bez-telefonu" href="/panel/szybka">
+              Szybka oferta
             </a>
             <a className="btn btn-plain" href="/panel/ustawienia">
               Ustawienia
