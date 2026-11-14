@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "pages:dev": "npx -y wrangler@4 pages dev out --kv OFFERS --r2 MODELS",
+    "pages:dev": "wrangler pages dev out --kv OFFERS --r2 MODELS",
     "seed:modele:check": "node seed/modele-kuchnia-50/seed.mjs --check",
     "seed:szafy:check": "node seed/modele-szafy-komody-100/seed.mjs --check",
-    "seed:wyposazenie:check": "node seed/modele-wyposazenie-32/seed.mjs --check"
+    "seed:wyposazenie:check": "node seed/modele-wyposazenie-32/seed.mjs --check",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@gltf-transform/core": "^4.5.1",
@@ -30,6 +31,7 @@
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
@@ -38,6 +40,7 @@
     "eslint-config-next": "^14.2.35",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.10",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.156.0"
   }
 }

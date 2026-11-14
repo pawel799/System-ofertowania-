@@ -1,0 +1,67 @@
+# Testy E2E przy każdym pushu i pull requeście: budowa strony, wrangler pages dev (lokalne KV, atrapa poczty)
+# i Playwright (e2e/*.spec.ts): rejestracja z potwierdzeniem e-maila, przypomnienia o okresie próbnym,
+# szybka oferta → kreator, PDF z kreatora, rozkrój.
+#
+# Wdrożenie po zielonych testach (opcjonalne): ustaw w GitHub → Settings → Secrets and variables → Actions
+#   sekrety CLOUDFLARE_API_TOKEN (uprawnienie „Cloudflare Pages: Edit”) i CLOUDFLARE_ACCOUNT_ID,
+#   zmienną CF_PAGES_PROJECT (nazwa projektu Pages) i – jeśli strona ich używa – zmienne NEXT_PUBLIC_*,
+# a w Cloudflare Pages wyłącz automatyczne wdrożenia z gałęzi main (Settings → Builds → Branch control).
+# Wtedy popsuty kod nie trafi na stronę. Bez tych ustawień wdrażanie zostaje po stronie Cloudflare.
+name: Testy
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: testy-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typy i lint
+        run: npx tsc --noEmit -p . && npm run lint
+      - name: Budowa strony (bez klucza Turnstile – formularze w testach nie czekają na captchę)
+        run: npm run build
+      - name: Przeglądarka do testów
+        run: npx playwright install --with-deps chromium
+      - name: Testy E2E
+        run: npm run test:e2e
+      - name: Raport po błędzie
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wyniki-testow
+          path: test-results
+          retention-days: 7
+
+  wdrozenie:
+    needs: e2e
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.CF_PAGES_PROJECT != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Budowa strony (ze zmiennymi produkcji)
+        env:
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
+          NEXT_PUBLIC_GA_ID: ${{ vars.NEXT_PUBLIC_GA_ID }}
+          NEXT_PUBLIC_GTM_ID: ${{ vars.NEXT_PUBLIC_GTM_ID }}
+        run: npm run build
+      - name: Wdrożenie na Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler pages deploy out --project-name "${{ vars.CF_PAGES_PROJECT }}" --branch main --commit-hash "${{ github.sha }}"

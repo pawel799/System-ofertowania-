@@ -58,3 +58,8 @@ next-env.d.ts
 
 # Oryginały modeli 3D (na stronie tylko wersja zaszyfrowana, scripts/szyfruj-model.mjs)
 modele-zrodlowe/
+
+# testy E2E
+/test-results/
+/playwright-report/
+/.wrangler/
