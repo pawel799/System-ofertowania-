@@ -6,7 +6,7 @@ import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, cenaPozycji, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
+import { bazaKuchni, cenaOgolnaPlanu, cenaPozycji, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -1162,7 +1162,7 @@ export default function PanelApp() {
                     <span className="mono">
                       {e.w}×{e.h}×{e.d} cm
                     </span>
-                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(cenaPozycji(e, offer.kuchnia!, cennik) ?? 0) : opisPozaWycena(e)}</span>
+                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? (cenaOgolnaPlanu(offer.kuchnia!) !== undefined ? "w cenie zabudowy" : formatPln(cenaPozycji(e, offer.kuchnia!, cennik) ?? 0)) : opisPozaWycena(e)}</span>
                   </li>
                 ))}
               </ul>

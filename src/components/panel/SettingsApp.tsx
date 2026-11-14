@@ -14,7 +14,8 @@ import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
 import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
-import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
+import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type Me, type ModelMeta } from "./offerApi";
+import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
 import { LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
@@ -145,7 +146,7 @@ export default function SettingsApp() {
           ) : tab === "firmy" ? (
             <AdminFirmsTab onAuthError={onAuthError} />
           ) : (
-            <DomainTab onAuthError={onAuthError} />
+            <DomainTab onAuthError={onAuthError} me={me} />
           )
         ) : null}
       </main>
@@ -711,7 +712,7 @@ function PaletteEditor({
 
 /* ---------- Własna domena ---------- */
 
-function DomainTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
+function DomainTab({ onAuthError, me }: { onAuthError: (e: unknown) => boolean; me: Me | null }) {
   const [view, setView] = useState<DomainView | null>(null);
   const [host, setHost] = useState("");
   const [error, setError] = useState("");
@@ -750,6 +751,8 @@ function DomainTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
         : "Czeka na rekord CNAME";
 
   return (
+    <>
+    <ZamowUslugi me={me} />
     <section className="set-card set-card-wide">
       <h2>Własna domena linków</h2>
       <p className="lede">
@@ -858,6 +861,127 @@ function DomainTab({ onAuthError }: { onAuthError: (e: unknown) => boolean }) {
             </HoldButton>
           </div>
         </>
+      ) : null}
+    </section>
+    </>
+  );
+}
+
+/* ---------- Zamówienia u nas: domena i strona internetowa ze spiętym systemem ---------- */
+
+type Usluga = "domena" | "strona";
+const USLUGI: Record<Usluga, { przycisk: string; tytul: string; opis: string; pole: string; placeholder: string }> = {
+  domena: {
+    przycisk: "Zamów domenę",
+    tytul: "Zamów domenę",
+    opis: "Kupimy i skonfigurujemy domenę dla Twojej firmy (np. twojafirma.pl) i podepniemy pod nią linki do ofert.",
+    pole: "Jaka domena? (możesz podać kilka propozycji)",
+    placeholder: "np. kuchnie-kowalski.pl, kowalskimeble.pl",
+  },
+  strona: {
+    przycisk: "Zamów dedykowaną stronę internetową",
+    tytul: "Dedykowana strona internetowa ze spiętym systemem",
+    opis: "Zrobimy stronę Twojej firmy połączoną z systemem: kuchnia 3D do konfiguracji, prośby o wycenę i pomiar prosto do panelu, oferty pod Twoim adresem.",
+    pole: "Czego potrzebujesz? (branża, przykładowe strony, które Ci się podobają, termin)",
+    placeholder: "np. stolarnia z Krakowa, kuchnie i szafy na wymiar, galeria realizacji, formularz wyceny",
+  },
+};
+
+/** Przyciski „Zamów domenę” i „Zamów stronę” – zgłoszenie trafia do nas (właściciel systemu), jak formularz kontaktu. */
+function ZamowUslugi({ me }: { me: Me | null }) {
+  const [usluga, setUsluga] = useState<Usluga | null>(null);
+  const [f, setF] = useState({ imie: "", kontakt: "", uwagi: "" });
+  const [bledy, setBledy] = useState<Partial<Record<keyof typeof f, string>>>({});
+  const [busy, setBusy] = useState(false);
+  const [wyslane, setWyslane] = useState<Usluga | null>(null);
+  const otworz = (u: Usluga) => {
+    setUsluga(u);
+    setWyslane(null);
+    setBledy({});
+    setF((s) => ({ imie: s.imie || me?.user?.name || "", kontakt: s.kontakt || me?.user?.email || "", uwagi: "" }));
+  };
+  const wyslij = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!usluga) return;
+    const b: typeof bledy = {};
+    if (!f.imie.trim()) b.imie = "Podaj imię i nazwisko.";
+    const kontakt = f.kontakt.trim();
+    if (!EMAIL_RE.test(kontakt) && !isPhone(kontakt)) b.kontakt = "Podaj e-mail albo telefon (min. 9 cyfr).";
+    if (f.uwagi.trim().length < 3) b.uwagi = usluga === "domena" ? "Wpisz, jaką domenę chcesz." : "Napisz kilka słów o stronie.";
+    setBledy(b);
+    if (Object.keys(b).length) return;
+    setBusy(true);
+    const err = await wyslijZapytanie({
+      typ: "kontakt",
+      imie: f.imie.trim(),
+      ...(EMAIL_RE.test(kontakt) ? { email: kontakt } : { telefon: kontakt }),
+      firma: me?.firm?.name ?? "",
+      uwagi: `[Zamówienie z panelu: ${USLUGI[usluga].tytul}]${me?.firm ? ` Firma: ${me.firm.name} (${me.firm.id}).` : ""}\n${f.uwagi.trim()}`,
+    });
+    setBusy(false);
+    if (err) return void toast("Nie wysłano zamówienia", { type: "err", desc: err });
+    setWyslane(usluga);
+    setUsluga(null);
+    toast("Zamówienie wysłane", { desc: "Odezwiemy się z wyceną na podany kontakt." });
+  };
+  const pole = (k: keyof typeof f, label: string, el: "input" | "textarea", placeholder?: string) => (
+    <div className="field">
+      <label htmlFor={`zam-${k}`}>{label}</label>
+      {el === "input" ? (
+        <input id={`zam-${k}`} className="input" value={f[k]} placeholder={placeholder} aria-invalid={bledy[k] ? true : undefined} onChange={(e) => setF((s) => ({ ...s, [k]: e.target.value }))} />
+      ) : (
+        <textarea id={`zam-${k}`} className="input" rows={3} value={f[k]} placeholder={placeholder} aria-invalid={bledy[k] ? true : undefined} onChange={(e) => setF((s) => ({ ...s, [k]: e.target.value }))} />
+      )}
+      {bledy[k] ? (
+        <p className="err" role="alert">
+          {bledy[k]}
+        </p>
+      ) : null}
+    </div>
+  );
+  return (
+    <section className="set-card set-card-wide zam-uslugi">
+      <h2>Domena i strona internetowa</h2>
+      <p className="lede">Nie masz domeny albo strony? Zrobimy to za Ciebie i połączymy z systemem.</p>
+      <div className="zam-karty">
+        {(Object.keys(USLUGI) as Usluga[]).map((u) => (
+          <div key={u} className="zam-karta" data-aktywna={usluga === u ? "" : undefined}>
+            <b>{USLUGI[u].tytul}</b>
+            <p>{USLUGI[u].opis}</p>
+            {u === "strona" ? (
+              <p className="zam-uwaga" role="note">
+                <strong>Uwaga:</strong> cena strony nie obejmuje opłat za korzystanie z systemu (abonament OP RZUT płatny osobno).
+              </p>
+            ) : null}
+            <button type="button" className={u === "strona" ? "btn btn-ink" : "btn btn-ghost"} onClick={() => otworz(u)} aria-expanded={usluga === u}>
+              {USLUGI[u].przycisk}
+            </button>
+            {wyslane === u ? (
+              <p className="zam-ok" role="status">
+                Wysłane – odezwiemy się z wyceną.
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      {usluga ? (
+        <form className="zam-form" onSubmit={(e) => void wyslij(e)} noValidate aria-label={USLUGI[usluga].tytul}>
+          <h3>{USLUGI[usluga].tytul}</h3>
+          <div className="grid2">
+            {pole("imie", "Imię i nazwisko", "input")}
+            {pole("kontakt", "E-mail albo telefon", "input")}
+          </div>
+          {pole("uwagi", USLUGI[usluga].pole, "textarea", USLUGI[usluga].placeholder)}
+          {usluga === "strona" ? <p className="faint zam-uwaga-mala">Cena strony nie obejmuje opłat za korzystanie z systemu.</p> : null}
+          <div className="actions">
+            <button type="button" className="btn btn-plain" onClick={() => setUsluga(null)}>
+              Anuluj
+            </button>
+            <button type="submit" className="btn btn-ink" disabled={busy}>
+              {busy ? "Wysyłanie…" : "Wyślij zamówienie"}
+            </button>
+          </div>
+        </form>
       ) : null}
     </section>
   );

@@ -32,7 +32,7 @@ import { PoleCm } from "./KreatorWlasciwosci";
 import { Seg, toast, Toaster, Tooltips } from "./ui";
 import { useCennik } from "./useCennik";
 import MiniRzut from "./MiniRzut";
-import { WyborCen } from "./KreatorCena";
+import { PoleCeny, WyborCen } from "./KreatorCena";
 
 /** Rodzaje do wyboru (bez „inne” – tam nie ma propozycji). */
 const TYPY: TypProjektu[] = ["kuchnia", "szafa", "komoda", "lazienka"];
@@ -68,6 +68,10 @@ export default function SzybkaOfertaApp() {
   /** Ceny: wpisywane ręcznie w kreatorze (domyślnie) albo gotowe z cennika. */
   const [ceny, setCeny] = useState<TrybCen>("reczne");
   const zCennika = ceny === "cennik";
+  /** Ceny ręczne: kwota całej zabudowy (puste = suma cen pozycji wpisanych w kreatorze). */
+  const [cenaOgolna, setCenaOgolna] = useState<number | undefined>(undefined);
+  const [bladKlienta, setBladKlienta] = useState(false);
+  const klientRef = useRef<HTMLInputElement>(null);
   const { cennik, gotowy, blad } = useCennik(!auth);
   const bazowe = useRef<ParametrySzybkiej>(p);
 
@@ -112,11 +116,25 @@ export default function SzybkaOfertaApp() {
 
   const typ = p.typ;
   const dalej = () => {
-    if (!pozycje.length) return void toast("Nic się nie zmieściło", { type: "err", desc: "Wydłuż zabudowę albo zmień wyposażenie." });
+    // Opis czyta się z opóźnieniem – przy „Dalej” stosujemy go od razu (inaczej „łazienka” wpisana tuż przed
+    // kliknięciem przechodziła jako poprzedni rodzaj, np. kuchnia).
+    const r = opis.trim() ? rozpoznaj(opis, bazowe.current) : null;
+    const pTeraz = r ? r.p : p;
+    const planTeraz = r ? planSzybkiej(pTeraz) : plan;
+    if (r) {
+      setP(r.p);
+      setRozpoznane(r.rozpoznane);
+    }
+    if (!klient.client.trim()) {
+      setBladKlienta(true);
+      klientRef.current?.focus();
+      return void toast("Wpisz klienta", { type: "err", desc: "Imię i nazwisko albo nazwa firmy – pod tym zapiszesz ofertę." });
+    }
+    if (!planTeraz.elementy.length) return void toast("Nic się nie zmieściło", { type: "err", desc: "Wydłuż zabudowę albo zmień wyposażenie." });
     const dane: SzybkaDoKreatora = {
-      typ,
-      plan,
-      title: klient.title.trim() || `${TYP_PROJEKTU[typ].label}${p.uklad === "L" && typ === "kuchnia" ? " w L" : ""} ${p.scianaA} cm`,
+      typ: pTeraz.typ,
+      plan: ceny === "reczne" && cenaOgolna !== undefined ? { ...planTeraz, cenaOgolna } : planTeraz,
+      title: klient.title.trim() || `${TYP_PROJEKTU[pTeraz.typ].label}${pTeraz.uklad === "L" && pTeraz.typ === "kuchnia" ? " w L" : ""} ${pTeraz.scianaA} cm`,
       client: klient.client.trim(),
       contact: klient.contact.trim(),
       ceny,
@@ -126,7 +144,7 @@ export default function SzybkaOfertaApp() {
     } catch {
       return void toast("Nie przeniesiono projektu", { type: "err", desc: "Przeglądarka nie pozwala zapisać danych strony (tryb prywatny?)." });
     }
-    window.location.href = `/panel/kreator?typ=${typ}&z=szybka`;
+    window.location.href = `/panel/kreator?typ=${pTeraz.typ}&z=szybka`;
   };
 
   return (
@@ -366,10 +384,30 @@ export default function SzybkaOfertaApp() {
           </div>
           <div className="so-klient">
             <WyborCen tryb={ceny} onTryb={setCeny} />
+            {!zCennika ? (
+              <PoleCeny id="so-cena-ogolna" label="Cena całej zabudowy netto (opcjonalnie – puste = suma cen pozycji)" wartosc={cenaOgolna} onZmiana={setCenaOgolna} />
+            ) : null}
             <div className="grid2">
               <div className="field">
-                <label htmlFor="so-klient">Klient</label>
-                <input id="so-klient" className="input" autoComplete="off" value={klient.client} onChange={(e) => setKlient((k) => ({ ...k, client: e.target.value }))} placeholder="Imię i nazwisko" />
+                <label htmlFor="so-klient">Klient (wymagany)</label>
+                <input
+                  id="so-klient"
+                  ref={klientRef}
+                  className="input"
+                  autoComplete="off"
+                  required
+                  value={klient.client}
+                  aria-invalid={bladKlienta && !klient.client.trim() ? true : undefined}
+                  aria-describedby={bladKlienta && !klient.client.trim() ? "so-klient-blad" : undefined}
+                  onChange={(e) => setKlient((k) => ({ ...k, client: e.target.value }))}
+                  onBlur={() => setBladKlienta(true)}
+                  placeholder="Imię i nazwisko albo firma"
+                />
+                {bladKlienta && !klient.client.trim() ? (
+                  <p id="so-klient-blad" className="err" role="alert">
+                    Wpisz klienta – bez tego nie przejdziesz dalej.
+                  </p>
+                ) : null}
               </div>
               <div className="field">
                 <label htmlFor="so-kontakt">E-mail lub telefon</label>

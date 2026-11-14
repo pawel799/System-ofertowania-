@@ -148,6 +148,11 @@ export type PlanKuchni = {
   sciany?: UstawieniaScian;
   /** Ceny mebli wpisywane ręcznie albo z cennika (TrybCen). Brak = cennik. */
   ceny?: TrybCen;
+  /**
+   * Ceny ręczne: kwota całej zabudowy netto [zł] (bez dodatków i dopłat za materiały). Jest – liczy się ona,
+   * a ceny pozycji są tylko informacją; brak – suma cen wpisanych przy pozycjach.
+   */
+  cenaOgolna?: number;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -969,20 +974,30 @@ export function cenaPozycji(el: ElementKuchni, plan: Pick<PlanKuchni, "ceny" | "
   return cenaElementu(el, zPlyta ? cennik : cennikZPlyta(cennik, plan.plyta));
 }
 
-/** Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze i płytą oferty. */
-export function pozycjeKuchniZCena(plan: PlanKuchni, cennik: ModulCennik) {
+/** Kwota całej zabudowy wpisana ręcznie (tylko przy cenach ręcznych); undefined = suma pozycji. */
+export const cenaOgolnaPlanu = (plan: Pick<PlanKuchni, "ceny" | "cenaOgolna">) => (trybCen(plan) === "reczne" ? plan.cenaOgolna : undefined);
+
+/**
+ * Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze i płytą oferty.
+ * Przy cenie ogólnej pozycje bez kwot (klient widzi jedną cenę całości).
+ */
+export function pozycjeKuchniZCena(plan: PlanKuchni, cennik: ModulCennik): (ModulItem & { cena?: number })[] {
   const c = cennikZPlyta(cennik, plan.plyta);
-  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaPozycji(e, plan, c, true) ?? 0 }));
+  const ogolna = cenaOgolnaPlanu(plan) !== undefined;
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, ...(ogolna ? {} : { cena: cenaPozycji(e, plan, c, true) ?? 0 }) }));
 }
 
-/** Suma mebli (bez AGD i dodatków): ceny wpisane ręcznie albo z cennika z płytą wybraną w ofercie. */
+/** Suma mebli (bez AGD i dodatków): cena ogólna, ceny wpisane przy pozycjach albo z cennika z płytą oferty. */
 export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
+  const ogolna = cenaOgolnaPlanu(plan);
+  if (ogolna !== undefined) return ogolna;
   const c = cennikZPlyta(cennik, plan.plyta);
   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
 
-/** Pozycje bez wpisanej ceny (ceny ręczne) – do podpowiedzi „uzupełnij ceny”. */
-export const bezCeny = (plan: PlanKuchni) => (trybCen(plan) === "reczne" ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : []);
+/** Pozycje bez wpisanej ceny (ceny ręczne bez ceny ogólnej) – do podpowiedzi „uzupełnij ceny”. */
+export const bezCeny = (plan: PlanKuchni) =>
+  trybCen(plan) === "reczne" && plan.cenaOgolna === undefined ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : [];
 
 /**
  * Metry bieżące zabudowy [m] (dla dodatków „za mb”, np. montaż): szerokość mebli stojących
@@ -1060,6 +1075,12 @@ function jedno<T extends string>(v: unknown, lista: readonly T[], pole: string):
 }
 
 /** Walidacja planu z panelu. Rzuca Error z polskim komunikatem. Ceny nie przyjmuje. */
+/** Kwota wpisana ręcznie: 0–1 000 000 zł, do grosza. */
+function cenaReczna(v: unknown, pole: string): number {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0 || v > MAX_CENA_RECZNA) blad(`${pole}: cena od 0 do 1 000 000 zł.`);
+  return Math.round((v as number) * 100) / 100;
+}
+
 export function parseKuchnia(v: unknown): PlanKuchni {
   if (!v || typeof v !== "object" || Array.isArray(v)) blad("Plan kuchni ma zły format.");
   const o = v as Record<string, unknown>;
@@ -1122,11 +1143,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     } catch (err) {
       blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
     }
-    let cena: number | undefined;
-    if (e.cena !== undefined && e.cena !== null) {
-      if (typeof e.cena !== "number" || !Number.isFinite(e.cena) || e.cena < 0 || e.cena > MAX_CENA_RECZNA) blad(`„${nazwa}”: cena od 0 do 1 000 000 zł.`);
-      cena = Math.round((e.cena as number) * 100) / 100;
-    }
+    const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
     return {
       id,
       nazwa,
@@ -1188,6 +1205,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(kolory ? { kolory } : {}),
     ...(sciany ? { sciany } : {}),
     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
+    ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

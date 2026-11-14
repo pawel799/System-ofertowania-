@@ -77,7 +77,7 @@ export function cenaKoncowa(args: {
       klucz: "meble",
       rodzaj: "meble",
       nazwa: "Meble na wymiar",
-      opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : trybCen(plan) === "reczne" ? "ceny pozycji wpisane ręcznie" : undefined,
+      opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : trybCen(plan) === "reczne" ? (plan.cenaOgolna !== undefined ? "cena całej zabudowy" : "ceny pozycji wpisane ręcznie") : undefined,
       kwota: meble,
     });
     for (const d of dodatkiWycenione) {

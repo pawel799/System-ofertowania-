@@ -212,6 +212,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     setKrok("meble");
   }, [resetPlan]);
 
+  const daneSzybkiej = useRef<SzybkaDoKreatora | null>(null);
   /**
    * Nowa oferta z gotowego projektu (?gotowy=id) albo z szybkiej oferty (?z=szybka, dane w sessionStorage):
    * plan z meblami, od razu krok „Meble” – każdy element poprawisz na rzucie i w oknie elementu.
@@ -220,12 +221,18 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     const q = new URLSearchParams(window.location.search);
     let dane: SzybkaDoKreatora | null = null;
     if (q.get("z") === "szybka") {
+      // Dane z sessionStorage czytamy raz (potem znikają); ponowne wczytanie (React w trybie deweloperskim
+      // uruchamia efekt dwa razy) bierze je z pamięci, zamiast zaczynać pusty projekt.
       try {
-        dane = JSON.parse(sessionStorage.getItem(KLUCZ_SZYBKIEJ) ?? "null") as SzybkaDoKreatora | null;
-        sessionStorage.removeItem(KLUCZ_SZYBKIEJ);
+        const zapis = sessionStorage.getItem(KLUCZ_SZYBKIEJ);
+        if (zapis) {
+          daneSzybkiej.current = JSON.parse(zapis) as SzybkaDoKreatora;
+          sessionStorage.removeItem(KLUCZ_SZYBKIEJ);
+        }
       } catch {
-        dane = null;
+        /* bez danych – pusty projekt */
       }
+      dane = daneSzybkiej.current;
     } else {
       const g = gotowyPoId(q.get("gotowy"));
       if (g) dane = { typ: g.typ, plan: planSzybkiej(g.parametry), title: g.nazwa, client: "", contact: "" };
@@ -319,10 +326,11 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
         // Ceny: domyślnie wpisywane ręcznie (?ceny=cennik – gotowe z cennika).
-        resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
         setKoloryProjektu(null);
         zresetujSciany(null);
         if (!samouczekWidziany()) setSamouczek(true);
+        // Gotowy projekt / szybka oferta (bez samouczka) albo pusty projekt.
+        if (!startZGotowego()) resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
         if (id) toast("Nie ma takiej oferty", { type: "err", desc: "Zaczynam nowy projekt." });
         // Nowa kuchnia: materiały startowe z katalogu firmy (gdy go ma), inaczej zestaw wbudowany.
         const kat = { palettes: pakiety, katalog: katalogFirmy };
@@ -330,7 +338,6 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         setCountertopId(opcjeMaterialu("countertop", kat)[0]?.id ?? COUNTERTOPS[0].id);
         setHardwareId(opcjeMaterialu("hardware", kat)[0]?.id ?? HARDWARE[0].id);
         // Prezentacja: /panel/kreator?pokaz=1 – gotowa kuchnia pokazowa (src/lib/pokaz.ts), bez samouczka.
-        startZGotowego();
         if (new URLSearchParams(window.location.search).get("pokaz") === "1") {
           const pokaz = planPokazowy();
           setTyp("kuchnia");
@@ -353,10 +360,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         setLokalnie(true);
         const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
         if (found) wczytajOferte(found);
-        else {
-          resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
-          startZGotowego();
-        }
+        else if (!startZGotowego()) resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
       } else {
         toast("Nie wczytano kreatora", { type: "err", desc: err?.message ?? "Sprawdź połączenie." });
       }
@@ -1458,7 +1462,17 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                       <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
                     </div>
                   ) : null}
-                  <KreatorCena plan={plan} onTryb={ustawTrybCen} onCena={ustawCene} cennik={cennik} plytaId={plytaId} setPlytaId={setPlytaId} dodatki={dodatki ?? []} setDodatki={setDodatki} cena={cena} />
+                  <KreatorCena
+                    plan={plan}
+                    onTryb={ustawTrybCen}
+                    onCena={ustawCene}
+                    onCenaOgolna={(n) =>
+                      setPlan((p) => {
+                        const { cenaOgolna: _o, ...reszta } = p;
+                        void _o;
+                        return n === undefined ? reszta : { ...reszta, cenaOgolna: n };
+                      })
+                    } cennik={cennik} plytaId={plytaId} setPlytaId={setPlytaId} dodatki={dodatki ?? []} setDodatki={setDodatki} cena={cena} />
                 </div>
               ) : (
                 <div className="kr-krok" data-krok="oferta">

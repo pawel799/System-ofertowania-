@@ -150,8 +150,11 @@ export function KreatorCena({
   plan,
   onTryb,
   onCena,
+  onCenaOgolna,
 }: {
   plan: PlanKuchni;
+  /** Kwota całej zabudowy (undefined = suma cen pozycji). */
+  onCenaOgolna: (n: number | undefined) => void;
   onTryb: (t: TrybCen) => void;
   /** Cena pozycji wpisana ręcznie (undefined = wyczyszczona). */
   onCena: (id: string, n: number | undefined) => void;
@@ -182,13 +185,25 @@ export function KreatorCena({
 
   const reczne = trybCen(plan) === "reczne";
   const doWyceny = plan.elementy.filter(wycenianyElement);
-  const brakCen = doWyceny.filter((e) => e.cena === undefined).length;
+  const ogolna = plan.cenaOgolna;
+  const brakCen = ogolna === undefined ? doWyceny.filter((e) => e.cena === undefined).length : 0;
+  const sumaPozycji = doWyceny.reduce((s, e) => s + (e.cena ?? 0), 0);
   return (
     <>
       <WyborCen tryb={trybCen(plan)} onTryb={onTryb} />
       {reczne ? (
         <div className="field">
-          <span className="lab">Ceny pozycji (netto)</span>
+          <PoleCeny id="k-cena-ogolna" label="Cena całej zabudowy netto (opcjonalnie)" wartosc={ogolna} onZmiana={onCenaOgolna} />
+          <p className="kr-hint" data-cena-ogolna>
+            {ogolna !== undefined
+              ? `Liczy się cena całości: ${formatPln(ogolna)}. Ceny pozycji poniżej są tylko dla Ciebie – klient widzi jedną kwotę.`
+              : `Puste – cena to suma pozycji poniżej (teraz ${formatPln(sumaPozycji)}).`}
+          </p>
+        </div>
+      ) : null}
+      {reczne ? (
+        <div className="field">
+          <span className="lab">Ceny pozycji (netto){ogolna !== undefined ? " – informacyjnie" : ""}</span>
           {doWyceny.length ? (
             <ol className="kr-ceny-lista" aria-label="Ceny pozycji">
               {plan.elementy.map((e, i) =>

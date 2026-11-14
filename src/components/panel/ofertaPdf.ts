@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaPozycji, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaOgolnaPlanu, cenaPozycji, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -118,6 +118,7 @@ export function danePdf(args: {
     const u = e.kolory.uchwyt ? `, okucia ${findMaterial("hardware", uchwytMebla(e, args.hardware), mctx)?.name ?? e.kolory.uchwyt}` : "";
     return ` · fronty ${nazwaKoloru(k.front)}, boki ${nazwaKoloru(k.korpus)}, środek ${nazwaKoloru(k.srodek)}${u}`;
   };
+  const ogolna = cenaOgolnaPlanu(args.plan) !== undefined;
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
@@ -125,8 +126,9 @@ export function danePdf(args: {
     w: e.w,
     h: e.h,
     d: e.d,
-    cena: cenaPozycji(e, args.plan, cennikPlyty, true),
-    poza: opisPozaWycena(e),
+    // Cena ogólna (ceny ręczne): jedna kwota całości – pozycje „w cenie zabudowy”.
+    cena: ogolna ? null : cenaPozycji(e, args.plan, cennikPlyty, true),
+    poza: ogolna && wycenianyElement(e) ? "w cenie zabudowy" : opisPozaWycena(e),
   }));
   // Meble, dodatki i płyta – ta sama funkcja co cena w kreatorze i na serwerze (cenaKoncowa).
   const cena = cenaKoncowa({ plan: args.plan, cennik: args.cennik, zl: pln });
