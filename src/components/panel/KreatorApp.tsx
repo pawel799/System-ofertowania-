@@ -20,6 +20,7 @@ import { useHistoria } from "./useHistoria";
 import { useTelefon } from "./telefon";
 import KreatorScian, { edycjaKolorowScian, PrzelacznikSufitu, SciankiDzialowe, ScianyPokoju, WyborPodlogi } from "./KreatorScian";
 import { zastosujZmianePokoju, zProstokatem, type ZmianaPokoju } from "@/lib/ksztaltPokoju";
+import { gotowyPoId, KLUCZ_SZYBKIEJ, planSzybkiej, type SzybkaDoKreatora } from "@/lib/szybkaOferta";
 import { czyObrys, mebelZaSciana, scianyPokojuWszystkie } from "@/lib/sciany";
 import type { ZrodloMaterialow } from "../produkcja/formatki";
 import { zrodloMaterialow } from "../produkcja/zrodloOferty";
@@ -205,6 +206,45 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     setKrok("meble");
   }, [resetPlan]);
 
+  /**
+   * Nowa oferta z gotowego projektu (?gotowy=id) albo z szybkiej oferty (?z=szybka, dane w sessionStorage):
+   * plan z meblami, od razu krok „Meble” – każdy element poprawisz na rzucie i w oknie elementu.
+   */
+  const startZGotowego = useCallback(() => {
+    const q = new URLSearchParams(window.location.search);
+    let dane: SzybkaDoKreatora | null = null;
+    if (q.get("z") === "szybka") {
+      try {
+        dane = JSON.parse(sessionStorage.getItem(KLUCZ_SZYBKIEJ) ?? "null") as SzybkaDoKreatora | null;
+        sessionStorage.removeItem(KLUCZ_SZYBKIEJ);
+      } catch {
+        dane = null;
+      }
+    } else {
+      const g = gotowyPoId(q.get("gotowy"));
+      if (g) dane = { typ: g.typ, plan: planSzybkiej(g.parametry), title: g.nazwa, client: "", contact: "" };
+    }
+    if (!dane?.plan) return false;
+    let plan: PlanKuchni;
+    try {
+      plan = parseKuchnia(dane.plan);
+    } catch {
+      toast("Nie wczytano projektu", { type: "err", desc: "Zaczynam pusty projekt." });
+      return false;
+    }
+    setTyp(parseTypProjektu(dane.typ) ?? "kuchnia");
+    resetPlan(plan);
+    if (dane.title) setTitle(dane.title);
+    if (dane.client) setClient(dane.client);
+    if (dane.contact) setContact(dane.contact);
+    setSamouczek(false);
+    setKrok("meble");
+    toast(q.get("z") === "szybka" ? "Projekt z szybkiej oferty" : `Gotowy projekt: ${dane.title}`, {
+      desc: "Kliknij element, żeby zmienić wymiary albo wnętrze. Materiały wybierzesz w kroku „Materiały”.",
+    });
+    return true;
+  }, [resetPlan]);
+
   const wczytaj = useCallback(async () => {
     if (test) {
       // Test bez konta: nic z API. Projekt z linku (jeśli jest i jest poprawny), inaczej kuchnia pokazowa.
@@ -282,6 +322,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         setCountertopId(opcjeMaterialu("countertop", kat)[0]?.id ?? COUNTERTOPS[0].id);
         setHardwareId(opcjeMaterialu("hardware", kat)[0]?.id ?? HARDWARE[0].id);
         // Prezentacja: /panel/kreator?pokaz=1 – gotowa kuchnia pokazowa (src/lib/pokaz.ts), bez samouczka.
+        startZGotowego();
         if (new URLSearchParams(window.location.search).get("pokaz") === "1") {
           const pokaz = planPokazowy();
           setTyp("kuchnia");
@@ -302,17 +343,16 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         const list = loadOffers() ?? [];
         setIstniejace(list);
         setLokalnie(true);
-        if (id) {
-          const found = list.find((o) => offerKey(o.id) === id || o.id === id);
-          if (found) wczytajOferte(found);
-        }
+        const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
+        if (found) wczytajOferte(found);
+        else startZGotowego();
       } else {
         toast("Nie wczytano kreatora", { type: "err", desc: err?.message ?? "Sprawdź połączenie." });
       }
     } finally {
       setGotowe(true);
     }
-  }, [wczytajOferte, resetPlan, test]);
+  }, [wczytajOferte, resetPlan, test, startZGotowego]);
 
   useEffect(() => {
     setOrigin(window.location.origin);

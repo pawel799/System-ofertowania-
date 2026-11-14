@@ -63,6 +63,8 @@ import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from ".
 import { usePanelOffers } from "./usePanelOffers";
 import { WersjeOferty } from "./WersjeOferty";
 import EdycjaOferty from "./EdycjaOferty";
+import MiniRzut from "./MiniRzut";
+import { gotoweDlaTypu, planSzybkiej } from "@/lib/szybkaOferta";
 import {
   CopyButton,
   Counter,
@@ -787,6 +789,12 @@ export default function PanelApp() {
           </svg>
           <span className="hide-sm">Rozkrój</span>
         </a>
+        <a className="btn btn-plain bez-telefonu" href="/panel/szybka" data-tip="Opisz, czego chce klient – elementy i cena od razu">
+          <svg viewBox="0 0 16 16" fill="none" aria-hidden>
+            <path d="M9 1.8 3.5 9h4l-1 5.2L12.5 7h-4l.5-5.2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+          </svg>
+          <span className="hide-sm">Szybka oferta</span>
+        </a>
         <a className="btn btn-ghost bez-telefonu" href="/panel/kreator" data-tip="Złóż kuchnię z modułów albo modeli firmy">
           <svg viewBox="0 0 16 16" fill="none" aria-hidden>
             <path d="M2.5 13.5 8 3l5.5 10.5H2.5Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
@@ -1366,7 +1374,7 @@ function NewOfferDialog({
   const [closing, setClosing] = useState(false);
   const [error, setError] = useState("");
   // Najpierw: co projektujemy, potem: kreator krok po kroku albo gotowy model (ten formularz).
-  const [krok, setKrok] = useState<"typ" | "sposob" | "formularz">("typ");
+  const [krok, setKrok] = useState<"typ" | "sposob" | "gotowe" | "formularz">("typ");
   const [projekt, setProjekt] = useState<TypProjektu>("kuchnia");
   const [type, setType] = useState<ClientType>("private");
   const [company, setCompany] = useState<CompanyForm>(EMPTY_COMPANY);
@@ -1589,10 +1597,38 @@ function NewOfferDialog({
                   <span>Wymiary pomieszczenia, okna i instalacje, moduły z wnętrzem (półki, szuflady, drążki), materiały, PDF i link 3D.</span>
                   <em>Zalecane</em>
                 </a>
+                {projekt !== "inne" ? (
+                  <a className="no-sposob" href={`/panel/szybka?typ=${projekt}`}>
+                    <b>Szybka oferta</b>
+                    <span>Opisz słowami, czego chce klient („kuchnia w L 3,6 × 2,8, zmywarka 45”), doklikaj resztę – elementy i cena wypisują się od razu.</span>
+                  </a>
+                ) : null}
+                <button type="button" className="no-sposob" onClick={() => setKrok("gotowe")}>
+                  <b>Z gotowego projektu</b>
+                  <span>Gotowy układ z meblami na start ({gotoweDlaTypu(projekt).length} do wyboru). Każdy element zmienisz potem w kreatorze.</span>
+                </button>
                 <button type="button" className="no-sposob" onClick={() => setKrok("formularz")}>
                   <b>Z gotowego modelu albo kwoty</b>
                   <span>Wybierasz gotowy model 3D (albo własny GLB z PRO100) i wpisujesz cenę zabudowy.</span>
                 </button>
+              </div>
+            </div>
+          ) : krok === "gotowe" ? (
+            <div className="no-krok swap-in" key="gotowe">
+              <p className="lede">
+                {TYP_PROJEKTU[projekt].label}: gotowe projekty. Wybierz i dopasuj w kreatorze – wymiary, wnętrze i kolory każdego elementu.{" "}
+                <button type="button" className="btn btn-plain no-wstecz" onClick={() => setKrok("sposob")}>
+                  Wstecz
+                </button>
+              </p>
+              <div className="no-gotowe">
+                {gotoweDlaTypu(projekt).map((g) => (
+                  <a key={g.id} className="so-gotowy" href={`/panel/kreator?typ=${g.typ}&gotowy=${g.id}`}>
+                    <MiniRzut plan={planSzybkiej(g.parametry)} etykieta={`Rzut: ${g.nazwa}`} />
+                    <b>{g.nazwa}</b>
+                    <span>{g.opis}</span>
+                  </a>
+                ))}
               </div>
             </div>
           ) : (
