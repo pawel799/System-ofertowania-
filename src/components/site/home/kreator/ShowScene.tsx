@@ -11,7 +11,7 @@
 import { Component, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Environment, useGLTF } from "@react-three/drei";
-import { Box3, Color, Group, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Quaternion, Vector3 } from "three";
+import { Box3, Color, Group, Material, Matrix4, Mesh, MeshStandardMaterial, PerspectiveCamera, Quaternion, Vector3, type Object3D } from "three";
 import { FRONTS } from "@/components/catalog";
 import { prepareKitchenModel } from "@/components/kitchenMaterials";
 import { installFrontSwap } from "@/components/frontMaterials";
@@ -220,6 +220,21 @@ function Kitchen({ onReady, shown }: { onReady: () => void; shown: MutableRefObj
   const { clone, offset } = useMemo(() => {
     prepareKitchenModel(scene);
     const c = scene.clone(true);
+    // clone() kopiuje userData przez JSON: oryginalny materiał frontu (zapisany przez podmianę w tle hero)
+    // stałby się zwykłym obiektem, a siatka mogłaby mieć wariant z hero. Przywracamy prawdziwe oryginały.
+    const src: Object3D[] = [];
+    const dst: Object3D[] = [];
+    scene.traverse((o) => src.push(o));
+    c.traverse((o) => dst.push(o));
+    src.forEach((o, i) => {
+      const d = dst[i];
+      const original = o.userData.frontOriginal;
+      if (!d) return;
+      if (original instanceof Material) {
+        d.userData.frontOriginal = original;
+        if (d instanceof Mesh) d.material = original;
+      } else delete d.userData.frontOriginal;
+    });
     const box = new Box3().setFromObject(c);
     const center = box.getCenter(new Vector3());
     return { clone: c, offset: [-center.x, -box.min.y, -center.z] as [number, number, number] };

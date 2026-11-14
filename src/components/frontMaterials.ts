@@ -1,7 +1,7 @@
 import {
+  Material,
   Mesh,
   MeshStandardMaterial,
-  type Material,
   type Object3D,
   type Texture,
 } from "three";
@@ -58,9 +58,9 @@ export function installFrontSwap(root: Object3D, onChange: () => void) {
     if (!(object instanceof Mesh) || Array.isArray(object.material)) return;
     // Oryginał trzymamy w userData: scena z useGLTF jest w pamięci podręcznej
     // i przy ponownym montowaniu siatka mogłaby mieć jeszcze klon.
-    const original =
-      (object.userData.frontOriginal as Material | undefined) ??
-      object.material;
+    // instanceof: po clone() userData to kopia JSON, a nie materiał.
+    const saved = object.userData.frontOriginal;
+    const original = saved instanceof Material ? saved : object.material;
     if (
       original instanceof MeshStandardMaterial &&
       original.name === OAK_MATERIAL &&

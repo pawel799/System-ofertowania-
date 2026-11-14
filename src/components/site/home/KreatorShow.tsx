@@ -545,7 +545,7 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
           {/* Przyciemnienie pod tekstem: góra na telefonie, lewa strona na komputerze */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-transparent lg:bg-gradient-to-r lg:from-black/85 lg:via-black/25 lg:via-30% lg:to-transparent lg:to-45%"
+            className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/85 via-black/40 via-30% to-transparent to-50% lg:bg-gradient-to-r lg:from-black/90 lg:via-black/75 lg:via-30% lg:to-transparent lg:to-50%"
           />
           <span
             className={`pointer-events-none absolute left-1/2 top-[calc(22%+0.75rem)] z-10 -translate-x-1/2 rounded-full border border-white/15 bg-black/50 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-stone-200 backdrop-blur transition-opacity duration-300 lg:top-[calc(9%+0.75rem)] ${phase === 4 ? "opacity-100" : "opacity-0"}`}
