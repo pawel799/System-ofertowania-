@@ -901,14 +901,21 @@ export default function PanelApp() {
               <h1>{offer.title}</h1>
             </div>
             <div className="m-edycja">
-              <button type="button" className="btn btn-ghost" onClick={() => setEdycja(true)} data-tip="Tytuł, klient, kontakt">
-                Edytuj ofertę
-              </button>
               {offer.kuchnia ? (
-                <a className="btn btn-plain bez-telefonu" href={`/panel/kreator?id=${offerKey(offer.id)}`} data-tip="Układ, meble, materiały i dodatki">
-                  W kreatorze
-                </a>
-              ) : null}
+                <>
+                  {/* Oferta z kreatora: edycja = kreator z meblami, materiałami, cenami i dodatkami (krok „Meble”). */}
+                  <a className="btn btn-ink bez-telefonu" href={`/panel/kreator?id=${offerKey(offer.id)}`} data-tip="Meble, wymiary, materiały, ceny i dodatki">
+                    Edytuj ofertę
+                  </a>
+                  <button type="button" className="btn btn-plain" onClick={() => setEdycja(true)} data-tip="Tytuł, klient, kontakt">
+                    Dane klienta
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn btn-ghost" onClick={() => setEdycja(true)} data-tip="Tytuł, klient, kontakt">
+                  Edytuj ofertę
+                </button>
+              )}
             </div>
             <button
               ref={statusBtnRef}

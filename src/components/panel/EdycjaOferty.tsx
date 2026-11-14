@@ -92,7 +92,7 @@ export default function EdycjaOferty({ offer, onZapisz, onClose }: { offer: Offe
         <div className="m-pad">
           <div className="m-top">
             <h2 id="ed-tytul" style={{ fontSize: 15 }}>
-              Edytuj ofertę <span className="mono faint">{offer.id}</span>
+              {offer.kuchnia ? "Dane klienta i tytuł" : "Edytuj ofertę"} <span className="mono faint">{offer.id}</span>
             </h2>
           </div>
           {pole("title", "Tytuł oferty", { ref: true, placeholder: "Np. Kuchnia w L – dąb i grafit" })}
