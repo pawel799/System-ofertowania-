@@ -13,6 +13,7 @@ import { PowiadomieniaTab } from "./PowiadomieniaTab";
 import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
+import { BledyTab } from "./BledyTab";
 import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, panelAuth, type DomainView, type Me, type ModelMeta } from "./offerApi";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
@@ -31,7 +32,7 @@ const ModelTagger = dynamic(() => import("./ModelTagger"), {
   loading: () => <p className="lede">Wczytywanie edytora…</p>,
 });
 
-type Tab = "firma" | "cennik" | "models" | "palettes" | "katalog" | "domain" | "osadzanie" | "powiadomienia" | "konto" | "zespol" | "plan" | "firmy";
+type Tab = "firma" | "cennik" | "models" | "palettes" | "katalog" | "domain" | "osadzanie" | "powiadomienia" | "konto" | "zespol" | "plan" | "firmy" | "bledy";
 const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "firma", label: "Firma" },
   { value: "cennik", label: "Cennik modułów" },
@@ -42,7 +43,7 @@ const BASE_TABS: { value: Tab; label: string }[] = [
   { value: "osadzanie", label: "Na stronie" },
   { value: "powiadomienia", label: "Powiadomienia" },
 ];
-const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "katalog", "domain", "osadzanie", "powiadomienia", "konto", "zespol", "plan", "firmy"];
+const ALL_TABS: Tab[] = ["firma", "cennik", "models", "palettes", "katalog", "domain", "osadzanie", "powiadomienia", "konto", "zespol", "plan", "firmy", "bledy"];
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : "Coś poszło nie tak.");
 const sizeText = (n: number) =>
@@ -76,7 +77,7 @@ export default function SettingsApp() {
     const list = [...BASE_TABS];
     if (me?.role === "owner" || me?.role === "member")
       list.push({ value: "konto", label: "Konto" }, { value: "zespol", label: "Zespół" }, { value: "plan", label: "Plan" });
-    if (me?.role === "admin") list.push({ value: "firmy", label: "Firmy" });
+    if (me?.role === "admin") list.push({ value: "firmy", label: "Firmy" }, { value: "bledy", label: "Błędy" });
     return list;
   }, [me]);
 
@@ -147,6 +148,8 @@ export default function SettingsApp() {
             <PlanTab me={me} onAuthError={onAuthError} />
           ) : tab === "firmy" ? (
             <AdminFirmsTab onAuthError={onAuthError} />
+          ) : tab === "bledy" ? (
+            <BledyTab onAuthError={onAuthError} />
           ) : (
             <DomainTab onAuthError={onAuthError} me={me} />
           )

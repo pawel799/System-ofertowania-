@@ -10,6 +10,7 @@
  *   openseen:<slug>:<ip> -> otwarcie już policzone (30 min), żeby odświeżanie nie zaśmiecało historii
  */
 
+import { zapiszBlad } from "./bledy";
 import { parseTypProjektu, type TypProjektu } from "../../src/lib/projekt";
 import type { PlanKuchni } from "../../src/lib/kuchnia";
 import { parseKuchnia } from "../../src/lib/kuchnia";
@@ -219,6 +220,13 @@ export function handle(fn: (ctx: Ctx) => Promise<Response>) {
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.code, message: e.message, ...e.extra }, e.status);
       console.error(e);
+      // Błąd serwera do podglądu w panelu administratora (Ustawienia → Błędy) – bez przerywania odpowiedzi.
+      if (ctx.env?.OFFERS) {
+        const err = e instanceof Error ? e : new Error(String(e));
+        const zapis = zapiszBlad(ctx.env.OFFERS, { zrodlo: "serwer", msg: err.message, stack: err.stack, sciezka: `${ctx.request.method} ${new URL(ctx.request.url).pathname}` }).catch(() => {});
+        if (ctx.waitUntil) ctx.waitUntil(zapis);
+        else await zapis;
+      }
       return fail(500, "server_error", "Błąd serwera.");
     }
   };

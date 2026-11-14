@@ -394,7 +394,12 @@ export const teamApi = {
 
 export type AdminFirm = FirmInfo & { users: string[] };
 
+/** Błąd z produkcji (functions/_lib/bledy.ts) – zakładka „Błędy” administratora. */
+export type BladProdukcji = { id: string; zrodlo: "przegladarka" | "serwer"; msg: string; stack: string; sciezki: string[]; ile: number; pierwszy: string; ostatnio: string; ua?: string };
+
 export const adminApi = {
+  bledy: () => call<{ bledy: BladProdukcji[] }>("GET", "/api/bledy", { headers: panelAuth() }).then((r) => r.bledy),
+  usunBledy: (id?: string) => call<{ ok: true }>("DELETE", `/api/bledy${id ? `?id=${encodeURIComponent(id)}` : ""}`, { headers: panelAuth() }),
   firms: () => call<{ firms: AdminFirm[] }>("GET", "/api/admin/firms", { headers: panelAuth() }).then((r) => r.firms),
   updateFirm: (id: string, patch: Partial<Pick<FirmInfo, "plan" | "status" | "trialEnds" | "paidUntil">>) =>
     call<{ firm: FirmInfo }>("PUT", `/api/admin/firms/${encodeURIComponent(id)}`, { body: patch, headers: panelAuth() }).then((r) => r.firm),

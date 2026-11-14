@@ -4,6 +4,7 @@ import "./globals.css";
 import { SKRYPT_MOTYWU } from "@/lib/motywSkrypt";
 import { SKRYPT_ZGOD } from "@/lib/zgodySkrypt";
 import ZgodyCookies from "@/components/ZgodyCookies";
+import ZbieranieBledow from "@/components/ZbieranieBledow";
 
 // Rubik to jedyny globalny font strony (tylko grubość 400, z polskimi znakami).
 const rubik = Rubik({
@@ -34,6 +35,8 @@ export default function RootLayout({
         {children}
         {/* Baner i ustawienia zgód na cookies (Consent Mode v2). */}
         <ZgodyCookies />
+        {/* Błędy JavaScript do podglądu w panelu administratora (Ustawienia → Błędy). */}
+        <ZbieranieBledow />
       </body>
     </html>
   );

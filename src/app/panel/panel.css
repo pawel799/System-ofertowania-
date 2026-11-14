@@ -1038,3 +1038,13 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .zam-domeny li[data-stan="wolna"] b { color: var(--green, #2f7d4f); }
 .pnl .zam-domeny li[data-stan="zajeta"] b, .pnl .zam-domeny li[data-stan="zla"] b { color: var(--red); }
 .pnl .zam-domeny li[data-stan="sprawdzam"] b, .pnl .zam-domeny li[data-stan="nieznana"] b { color: var(--text-2); font-weight: 500; }
+/* ---------- Ustawienia → Błędy (administrator) ---------- */
+.pnl .bledy-lista { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pnl .bledy-lista li { position: relative; padding: 10px 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); display: flex; flex-direction: column; gap: 4px; }
+.pnl .bledy-gora { display: flex; align-items: baseline; gap: 8px; padding-right: 96px; }
+.pnl .bledy-msg { font-weight: 600; font-size: 13.5px; overflow-wrap: anywhere; flex: 1; }
+.pnl .bledy-ile { font-size: 13px; color: var(--text-2); }
+.pnl .bledy-meta { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.pnl .bledy-stack { margin: 6px 0 0; padding: 8px 10px; border-radius: 8px; background: var(--g2); font-size: 11.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+.pnl .bledy-lista details summary { cursor: pointer; font-size: 12.5px; color: var(--text-2); }
+.pnl .bledy-usun { position: absolute; top: 8px; right: 8px; height: 28px; font-size: 12px; }
