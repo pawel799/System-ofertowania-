@@ -945,3 +945,4 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .kr-dodatki-bledy { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
 .pnl .kr-dodatki-wlasna .input[aria-invalid="true"], .pnl .kr-dodatki-ilosc .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1.5px var(--red); }
 .pnl .kr-dodatki-wlasna .btn[aria-disabled="true"] { opacity: 0.55; }
+.pnl .m-edycja { display: flex; gap: 6px; margin-left: auto; align-items: center; }

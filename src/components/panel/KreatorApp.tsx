@@ -632,6 +632,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     }
     setZapisuje(true);
     try {
+      const byla = !!offer;
       const saved = await wyslijNaSerwer(zloz(parsed), !offer);
       setOffer(saved);
       setIstniejace((list) => {
@@ -642,7 +643,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
       const url = new URL(window.location.href);
       url.searchParams.set("id", offerKey(saved.id));
       window.history.replaceState(null, "", url);
-      toast("Oferta zapisana", {
+      toast(byla ? "Zmiany zapisane" : "Oferta zapisana", {
         desc: lokalnie ? `${saved.id} · tylko w tej przeglądarce` : `${saved.id} · szafki ${formatPln(saved.base)} netto`,
       });
       return saved;
@@ -1058,7 +1059,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         ) : (
           <>
             <button type="button" className="btn btn-ink" data-tour="zapisz" disabled={zapisuje || auth} onClick={() => void zapisz()}>
-              Zapisz ofertę
+              {offer ? "Zapisz zmiany" : "Zapisz ofertę"}
             </button>
             <span className="kr-bez-kiosku kr-contents">
               <LogoutButton />
@@ -1511,7 +1512,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                   </button>
                 ) : (
                   <button type="button" className="btn btn-ink" disabled={zapisuje || auth} onClick={() => void zapisz()}>
-                    Zapisz ofertę
+                    {offer ? "Zapisz zmiany" : "Zapisz ofertę"}
                   </button>
                 )}
               </div>

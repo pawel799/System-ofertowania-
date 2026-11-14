@@ -62,6 +62,7 @@ import WyborModeluOferty from "./WyborModeluOferty";
 import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import { WersjeOferty } from "./WersjeOferty";
+import EdycjaOferty from "./EdycjaOferty";
 import {
   CopyButton,
   Counter,
@@ -162,6 +163,8 @@ export default function PanelApp() {
   // Telefon: sam podgląd ofert – bez tworzenia (nowa oferta, kreator, rozkrój) i bez zmian w ofercie.
   const telefon = useTelefon();
   const [menu, setMenu] = useState<null | { instant: boolean }>(null);
+  /** Okno „Edytuj ofertę” (dane po utworzeniu oferty – poprawki). */
+  const [edycja, setEdycja] = useState(false);
   // Z ustawień (/panel/ustawienia): wgrane modele, pakiety RAL, własna domena linków.
   const [models, setModels] = useState<ModelMeta[]>([]);
   const [palettes, setPalettes] = useState<Palette[]>([]);
@@ -888,6 +891,16 @@ export default function PanelApp() {
               </div>
               <h1>{offer.title}</h1>
             </div>
+            <div className="m-edycja">
+              <button type="button" className="btn btn-ghost" onClick={() => setEdycja(true)} data-tip="Tytuł, klient, kontakt">
+                Edytuj ofertę
+              </button>
+              {offer.kuchnia ? (
+                <a className="btn btn-plain bez-telefonu" href={`/panel/kreator?id=${offerKey(offer.id)}`} data-tip="Układ, meble, materiały i dodatki">
+                  W kreatorze
+                </a>
+              ) : null}
+            </div>
             <button
               ref={statusBtnRef}
               type="button"
@@ -1104,6 +1117,13 @@ export default function PanelApp() {
                 Uwagi klienta
               </div>
               <p>{offer.comment}</p>
+              {offer.kuchnia ? (
+                <p className="bez-telefonu" style={{ margin: "8px 0 0" }}>
+                  <a className="btn btn-ghost" href={`/panel/kreator?id=${offerKey(offer.id)}`}>
+                    Wprowadź poprawki w kreatorze
+                  </a>
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -1183,6 +1203,16 @@ export default function PanelApp() {
       ) : null}
 
       {newDialog}
+      {edycja ? (
+        <EdycjaOferty
+          offer={offer}
+          onClose={() => setEdycja(false)}
+          onZapisz={(z, opis) => {
+            update(offer.id, (o) => withEvent({ ...o, ...z }, "edit", opis));
+            toast("Zapisano poprawki", { desc: opis });
+          }}
+        />
+      ) : null}
 
       {tokenDialog}
       <Tooltips />
