@@ -7,7 +7,7 @@
  * Logika: src/lib/szybkaOferta.ts (parametry → propozycja.ts).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { bazaKuchni, cenaElementu, opisPozaWycena, wycenianyElement } from "@/lib/kuchnia";
+import { bazaKuchni, cenaElementu, opisPozaWycena, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
 import { TYP_PROJEKTU, parseTypProjektu, type TypProjektu } from "@/lib/projekt";
 import { AGD_IDS, AGD_LABEL, MEBEL_LABEL, MEBLE_SALONU, POTRZEBA_LABEL, POTRZEBY, type Agd } from "@/lib/wywiad";
 import {
@@ -32,6 +32,7 @@ import { PoleCm } from "./KreatorWlasciwosci";
 import { Seg, toast, Toaster, Tooltips } from "./ui";
 import { useCennik } from "./useCennik";
 import MiniRzut from "./MiniRzut";
+import { WyborCen } from "./KreatorCena";
 
 /** Rodzaje do wyboru (bez „inne” – tam nie ma propozycji). */
 const TYPY: TypProjektu[] = ["kuchnia", "szafa", "komoda", "lazienka"];
@@ -64,12 +65,17 @@ export default function SzybkaOfertaApp() {
   const [opis, setOpis] = useState("");
   const [rozpoznane, setRozpoznane] = useState<string[]>([]);
   const [klient, setKlient] = useState({ client: "", contact: "", title: "" });
+  /** Ceny: wpisywane ręcznie w kreatorze (domyślnie) albo gotowe z cennika. */
+  const [ceny, setCeny] = useState<TrybCen>("reczne");
+  const zCennika = ceny === "cennik";
   const { cennik, gotowy, blad } = useCennik(!auth);
   const bazowe = useRef<ParametrySzybkiej>(p);
 
   useEffect(() => {
     if (!hasLogin() && process.env.NODE_ENV !== "development") setAuth(true);
-    const typ = parseTypProjektu(new URLSearchParams(window.location.search).get("typ"));
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("ceny") === "cennik") setCeny("cennik");
+    const typ = parseTypProjektu(q.get("typ"));
     if (typ && typ !== "inne") {
       const d = domyslneSzybkiej(typ);
       setP(d);
@@ -113,6 +119,7 @@ export default function SzybkaOfertaApp() {
       title: klient.title.trim() || `${TYP_PROJEKTU[typ].label}${p.uklad === "L" && typ === "kuchnia" ? " w L" : ""} ${p.scianaA} cm`,
       client: klient.client.trim(),
       contact: klient.contact.trim(),
+      ceny,
     };
     try {
       sessionStorage.setItem(KLUCZ_SZYBKIEJ, JSON.stringify(dane));
@@ -332,22 +339,33 @@ export default function SzybkaOfertaApp() {
                         {e.w}×{e.h}×{e.d}
                       </span>
                     </span>
-                    <span className="mono">{!gotowy ? "…" : wycenianyElement(e) ? formatPln(cenaElementu(e, cennik) ?? 0) : <span className="faint">{opisPozaWycena(e)}</span>}</span>
+                    <span className="mono">
+                      {!wycenianyElement(e) ? <span className="faint">{opisPozaWycena(e)}</span> : !zCennika ? <span className="faint">cena w kreatorze</span> : !gotowy ? "…" : formatPln(cenaElementu(e, cennik) ?? 0)}
+                    </span>
                   </li>
                 ))}
               </ol>
             ) : (
               <p className="lede">Nic się nie zmieściło – wydłuż zabudowę albo zmień wyposażenie.</p>
             )}
-            <div className="so-suma">
-              <span>
-                Razem netto <span className="faint">· {wycenione} {wycenione === 1 ? "pozycja" : wycenione % 10 >= 2 && wycenione % 10 <= 4 && (wycenione % 100 < 10 || wycenione % 100 >= 20) ? "pozycje" : "pozycji"}</span>
-              </span>
-              <b className="mono">{gotowy ? formatPln(razem) : "…"}</b>
-            </div>
-            {blad ? <p className="kr-hint">Nie pobrano cennika firmy – ceny z cennika domyślnego.</p> : <p className="kr-hint">Ceny z cennika modułów {brand.name}. Materiały i dodatki wybierzesz w kreatorze.</p>}
+            {zCennika ? (
+              <>
+                <div className="so-suma">
+                  <span>
+                    Razem netto <span className="faint">· {wycenione} {wycenione === 1 ? "pozycja" : wycenione % 10 >= 2 && wycenione % 10 <= 4 && (wycenione % 100 < 10 || wycenione % 100 >= 20) ? "pozycje" : "pozycji"}</span>
+                  </span>
+                  <b className="mono">{gotowy ? formatPln(razem) : "…"}</b>
+                </div>
+                {blad ? <p className="kr-hint">Nie pobrano cennika firmy – ceny z cennika domyślnego.</p> : <p className="kr-hint">Ceny z cennika modułów {brand.name}. Materiały i dodatki wybierzesz w kreatorze.</p>}
+              </>
+            ) : (
+              <p className="kr-hint so-suma-info">
+                {wycenione} {wycenione === 1 ? "pozycja" : wycenione % 10 >= 2 && wycenione % 10 <= 4 && (wycenione % 100 < 10 || wycenione % 100 >= 20) ? "pozycje" : "pozycji"} do wyceny – swoje kwoty wpiszesz w kreatorze (krok „Materiały”, lista „Ceny pozycji”).
+              </p>
+            )}
           </div>
           <div className="so-klient">
+            <WyborCen tryb={ceny} onTryb={setCeny} />
             <div className="grid2">
               <div className="field">
                 <label htmlFor="so-klient">Klient</label>

@@ -5,7 +5,7 @@
  * rozpoznaj() czyta opis pisany jak do sprzedawcy („kuchnia w L 3,6 x 2,8, zmywarka 45, lodówka wolnostojąca”)
  * i ustawia z niego parametry; resztę doklikuje się w formularzu. Gotowe projekty to te same parametry, nazwane.
  */
-import { pustyPlan, type PlanKuchni, type UkladKuchni } from "./kuchnia";
+import { pustyPlan, type PlanKuchni, type TrybCen, type UkladKuchni } from "./kuchnia";
 import { ulozPropozycje } from "./propozycja";
 import type { TypProjektu } from "./projekt";
 import { wywiadDomyslny, type Agd, type MebelSalonu, type Potrzeba, type Wywiad } from "./wywiad";
@@ -366,4 +366,4 @@ export const gotowyPoId = (id: string | null | undefined) => GOTOWE_PROJEKTY.fin
 
 export const KLUCZ_SZYBKIEJ = "oprzut:szybka-oferta";
 
-export type SzybkaDoKreatora = { typ: TypProjektu; plan: PlanKuchni; title: string; client: string; contact: string };
+export type SzybkaDoKreatora = { typ: TypProjektu; plan: PlanKuchni; title: string; client: string; contact: string; ceny?: TrybCen };

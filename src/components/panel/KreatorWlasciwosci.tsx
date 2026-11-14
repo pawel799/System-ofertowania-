@@ -1,5 +1,6 @@
 "use client";
 
+import { PoleCeny } from "./KreatorCena";
 import { useEffect, useState } from "react";
 import {
   katElementu,
@@ -132,7 +133,10 @@ export function KreatorWlasciwosci({
   onKopiuj,
   onDociagnij,
   onWnetrze,
+  onCena,
 }: {
+  /** Ceny ręczne: pole „Cena netto” zaznaczonego mebla (brak = ceny z cennika). */
+  onCena?: (n: number | undefined) => void;
   plan: PlanKuchni;
   element: ElementKuchni | null;
   cena: number | null;
@@ -176,6 +180,7 @@ export function KreatorWlasciwosci({
         <PoleCm id="k-h" label="Wysokość" value={element.h} min={lim.h.min} max={lim.h.max} onCommit={(n) => onWymiar("h", n)} />
         <PoleCm id="k-d" label="Głębokość" value={element.d} min={lim.d.min} max={lim.d.max} onCommit={(n) => onWymiar("d", n)} />
       </div>
+      {onCena && !agd ? <PoleCeny key={element.id} id="k-cena" label="Cena netto" wartosc={element.cena} onZmiana={onCena} /> : null}
       <p className="lede">
         {element.w} × {element.h} × {element.d} cm <span className="faint">(szer. × wys. × gł.)</span>
         {rzad != null ? ` · rząd ${rzad} cm` : ""}

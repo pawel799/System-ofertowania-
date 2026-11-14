@@ -32,7 +32,10 @@ import { GRUPY_TYPU, parseTypProjektu, TYP_PROJEKTU, type TypProjektu } from "@/
 import { MAX_MODULY, modulCena, type ModulCennik } from "@/lib/modul";
 import {
   bazaKuchni,
-  cenaElementu,
+  bezCeny,
+  cenaPozycji,
+  trybCen,
+  type TrybCen,
   dociagnijRzad,
   dodajElement,
   GRUPY_PRESETOW,
@@ -129,6 +132,9 @@ function scianyZKolorem(sc: UstawieniaScian | undefined, kolor: string | null): 
  * test = test kreatora bez konta (/kreator): bez logowania i bez zapisu na serwerze,
  * start od kuchni pokazowej, projekt można zapisać w linku (src/lib/projektWLinku.ts).
  */
+/** Tryb cen nowego projektu z adresu (?ceny=cennik); domyślnie ceny wpisywane ręcznie. */
+const trybZAdresu = (): TrybCen => (new URLSearchParams(window.location.search).get("ceny") === "cennik" ? "cennik" : "reczne");
+
 export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   const [auth, setAuth] = useState(false);
   const [gotowe, setGotowe] = useState(false);
@@ -227,7 +233,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     if (!dane?.plan) return false;
     let plan: PlanKuchni;
     try {
-      plan = parseKuchnia(dane.plan);
+      plan = { ...parseKuchnia(dane.plan), ceny: dane.ceny ?? trybZAdresu() };
     } catch {
       toast("Nie wczytano projektu", { type: "err", desc: "Zaczynam pusty projekt." });
       return false;
@@ -312,6 +318,8 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
       else {
         // Nowa oferta z panelu: /panel/kreator?typ=szafa. Pierwszy raz – samouczek.
         setTyp(parseTypProjektu(new URLSearchParams(window.location.search).get("typ")) ?? "kuchnia");
+        // Ceny: domyślnie wpisywane ręcznie (?ceny=cennik – gotowe z cennika).
+        resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
         setKoloryProjektu(null);
         zresetujSciany(null);
         if (!samouczekWidziany()) setSamouczek(true);
@@ -345,7 +353,10 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
         setLokalnie(true);
         const found = id ? list.find((o) => offerKey(o.id) === id || o.id === id) : undefined;
         if (found) wczytajOferte(found);
-        else startZGotowego();
+        else {
+          resetPlan({ ...pustyPlan("ciag"), ceny: trybZAdresu() });
+          startZGotowego();
+        }
       } else {
         toast("Nie wczytano kreatora", { type: "err", desc: err?.message ?? "Sprawdź połączenie." });
       }
@@ -476,6 +487,25 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   }, [dodatki, cennikGotowy, offer, cennik]);
   // Cennik z ceną płyty wybranej w ofercie – ceny pozycji w katalogu, oknie elementu i właściwościach.
   const cennikOferty = useMemo(() => cennikZPlyta(cennik, plytaId), [cennik, plytaId]);
+  // Ceny wpisywane ręcznie (domyślnie w nowych projektach) – bez cen z cennika w katalogu i oknie elementu.
+  const reczne = trybCen(plan) === "reczne";
+  const cennikKatalogu = reczne ? null : cennikOferty;
+  const ustawCene = (id: string, n: number | undefined) =>
+    setPlan((p) => ({
+      ...p,
+      elementy: p.elementy.map((e) => {
+        if (e.id !== id) return e;
+        const { cena: _c, ...reszta } = e;
+        void _c;
+        return n === undefined ? reszta : { ...reszta, cena: n };
+      }),
+    }));
+  const ustawTrybCen = (t: TrybCen) => {
+    setPlan((p) => ({ ...p, ceny: t }));
+    toast(t === "reczne" ? "Ceny wpisujesz sam" : "Ceny z cennika", {
+      desc: t === "reczne" ? "Wpisz kwotę każdej pozycji w kroku „Materiały” albo we właściwościach mebla." : "Kwoty liczą się z wymiarów, płyty i wnętrza. Wpisane ceny zostają zapamiętane.",
+    });
+  };
   const cena = useCenaKoncowa({ plan: planCeny, cennik, wybor: { front, countertop, hardware }, grupy, materialy: kCtx });
   const razem = cena.razem;
   // Legenda rzutu: tylko strefy, które są w projekcie; poza kuchnią bez „słupka” i „szafki dolnej”.
@@ -1176,7 +1206,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                         <b>{p.nazwa}</b>
                         <span className="mono">
                           {p.w}×{p.h}×{p.d} cm
-                          {cennik ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennikOferty)) : opisPozaWycena(p)}` : ""}
+                          {cennikKatalogu ? ` · ${wycenianyElement(p) ? formatPln(modulCena(p, cennikKatalogu)) : opisPozaWycena(p)}` : ""}
                         </span>
                       </button>
                     ))}
@@ -1195,7 +1225,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
               <BibliotekaModeli
                 models={models}
                 fraza={szukaj.trim()}
-                cennik={cennikOferty}
+                cennik={cennikKatalogu}
                 onDodaj={otworzNowy}
                 grupy={wszystkieGrupy ? null : GRUPY_TYPU[typ].biblioteka}
               />
@@ -1357,7 +1387,8 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                   <KreatorWlasciwosci
                     plan={plan}
                     element={element}
-                    cena={element ? cenaElementu(element, cennikOferty) : null}
+                    cena={element ? cenaPozycji(element, planCeny, cennikOferty, true) : null}
+                    onCena={reczne && element ? (n) => ustawCene(element.id, n) : undefined}
                     agd={element ? !wycenianyElement(element) : false}
                     onNazwa={(nazwa) => {
                       if (!element) return;
@@ -1427,7 +1458,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                       <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
                     </div>
                   ) : null}
-                  <KreatorCena cennik={cennik} plytaId={plytaId} setPlytaId={setPlytaId} dodatki={dodatki ?? []} setDodatki={setDodatki} cena={cena} />
+                  <KreatorCena plan={plan} onTryb={ustawTrybCen} onCena={ustawCene} cennik={cennik} plytaId={plytaId} setPlytaId={setPlytaId} dodatki={dodatki ?? []} setDodatki={setDodatki} cena={cena} />
                 </div>
               ) : (
                 <div className="kr-krok" data-krok="oferta">
@@ -1537,7 +1568,15 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
               <p>
                 Razem{cena.dodatki ? " z dodatkami" : ""} i materiałami <b>{plan.elementy.length ? formatPln(razem) : "—"}</b>
               </p>
-              {cennikBlad ? <p className="lede">Cennik firmy się nie wczytał — kwota orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika.</p> : null}
+              {reczne && bezCeny(plan).length ? (
+                <p className="lede" data-brak-cen>
+                  Bez ceny: {bezCeny(plan).length} poz. –{" "}
+                  <button type="button" className="btn btn-plain kr-link" onClick={() => setKrok("materialy")}>
+                    wpisz ceny
+                  </button>
+                </p>
+              ) : null}
+              {cennikBlad && !reczne ? <p className="lede">Cennik firmy się nie wczytał — kwota orientacyjna (cennik domyślny). Przy zapisie serwer policzy ją z Twojego cennika.</p> : null}
               <div className="kr-nav">
                 {indeksKroku > 0 ? (
                   <button type="button" className="btn btn-ghost" onClick={() => setKrok(KROKI[indeksKroku - 1])}>
@@ -1571,7 +1610,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
           onClose={zamknijFormatki}
         />
       ) : null}
-      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennikOferty} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
+      {biblioteka && gotowe && !auth ? <KreatorBiblioteka models={models} cennik={cennikKatalogu} onDodaj={otworzNowy} onClose={zamknijBiblioteke} typ={typ} /> : null}
       {okno && gotowe && !auth
         ? (() => {
             const edytowany = okno.tryb === "edycja" ? plan.elementy.find((e) => e.id === okno.id) : null;
@@ -1582,7 +1621,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                 key={okno.tryb === "nowy" ? `n-${start.nazwa}-${start.modelId ?? ""}` : `e-${okno.id}`}
                 tryb={okno.tryb}
                 el={start}
-                cennik={cennikOferty}
+                cennik={cennikKatalogu}
                 wyglad={{
                   ctx: kCtx,
                   front,

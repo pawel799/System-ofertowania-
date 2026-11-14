@@ -7,7 +7,7 @@
  * więc kreator, panel, PDF i strona klienta pokazują tę samą kwotę. W React: useCenaKoncowa (panel/useCenaKoncowa.ts).
  */
 import { wycenDodatki, type DodatekWyceniony } from "./dodatki";
-import { metryBiezace, plytaProjektu, sumaMebli, type PlanKuchni } from "./kuchnia";
+import { metryBiezace, plytaProjektu, sumaMebli, trybCen, type PlanKuchni } from "./kuchnia";
 import { JEDNOSTKA_LABEL, plytaOferty, powierzchniaArkusza, type ModulCennik } from "./modul";
 
 export type SkladnikCeny = {
@@ -58,8 +58,9 @@ export function cenaKoncowa(args: {
   const { plyta: p, cenaM2 } = plytaOferty(cennik, plan.plyta);
   const m2 = plytaProjektu(plan);
   const odpad = cennik.odpadPlyty ?? 0;
+  // Ceny wpisane ręcznie: płyta z cennika nie wpływa na kwotę – bez opisu płyty i arkuszy.
   const plyta =
-    p && !pusty
+    p && !pusty && trybCen(plan) !== "reczne"
       ? {
           nazwa: p.nazwa,
           grubosc: p.grubosc,
@@ -76,7 +77,7 @@ export function cenaKoncowa(args: {
       klucz: "meble",
       rodzaj: "meble",
       nazwa: "Meble na wymiar",
-      opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : undefined,
+      opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : trybCen(plan) === "reczne" ? "ceny pozycji wpisane ręcznie" : undefined,
       kwota: meble,
     });
     for (const d of dodatkiWycenione) {

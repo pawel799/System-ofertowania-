@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaElementu, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaPozycji, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -125,7 +125,7 @@ export function danePdf(args: {
     w: e.w,
     h: e.h,
     d: e.d,
-    cena: cenaElementu(e, cennikPlyty),
+    cena: cenaPozycji(e, args.plan, cennikPlyty, true),
     poza: opisPozaWycena(e),
   }));
   // Meble, dodatki i płyta – ta sama funkcja co cena w kreatorze i na serwerze (cenaKoncowa).

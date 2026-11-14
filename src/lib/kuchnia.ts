@@ -113,7 +113,19 @@ export type ElementKuchni = {
   wnetrze?: Wnetrze;
   /** Własne kolory tego mebla (fronty, boki, środek – kolory.ts). Brak = kolory projektu. */
   kolory?: KoloryMebla;
+  /** Cena netto wpisana ręcznie [zł] – liczy się, gdy plan ma ceny „reczne”. Brak = jeszcze nie wpisana (0 zł). */
+  cena?: number;
 };
+
+/**
+ * Skąd ceny mebli: „reczne” – firma wpisuje kwotę każdej pozycji (domyślnie w nowych projektach, każdy ma inne ceny);
+ * „cennik” – ceny liczone z cennika modułów (wymiary, płyta, front, wnętrze). Brak w planie = cennik (starsze oferty).
+ */
+export type TrybCen = "reczne" | "cennik";
+export const TRYB_CEN_LABEL: Record<TrybCen, string> = { reczne: "Wpisuję swoje ceny", cennik: "Gotowe ceny z cennika" };
+export const trybCen = (plan: { ceny?: TrybCen }): TrybCen => plan.ceny ?? "cennik";
+/** Najwyższa cena jednej pozycji wpisana ręcznie [zł]. */
+export const MAX_CENA_RECZNA = 1_000_000;
 
 export type PlanKuchni = {
   uklad: UkladKuchni;
@@ -134,6 +146,8 @@ export type PlanKuchni = {
   kolory?: KoloryProjektu;
   /** Ściany pokoju w 3D (sciany.ts): kolor (brak = kolor tła sceny), usunięte ściany pokoju, dodatkowe ściany, sufit. */
   sciany?: UstawieniaScian;
+  /** Ceny mebli wpisywane ręcznie albo z cennika (TrybCen). Brak = cennik. */
+  ceny?: TrybCen;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -944,17 +958,31 @@ export function pozycjeKuchni(plan: PlanKuchni): ModulItem[] {
   return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d }));
 }
 
+/**
+ * Cena pozycji w ofercie: przy cenach ręcznych – kwota wpisana przy elemencie (brak = 0 zł), inaczej z cennika
+ * (z płytą oferty i dopłatą za wnętrze). null = urządzenie AGD / wyposażenie poza wyceną.
+ * Przy wielu pozycjach podaj gotowy cennik z płytą (cennikZPlyta), żeby nie liczyć go za każdym razem.
+ */
+export function cenaPozycji(el: ElementKuchni, plan: Pick<PlanKuchni, "ceny" | "plyta">, cennik: ModulCennik, zPlyta = false): number | null {
+  if (!wycenianyElement(el)) return null;
+  if (trybCen(plan) === "reczne") return el.cena ?? 0;
+  return cenaElementu(el, zPlyta ? cennik : cennikZPlyta(cennik, plan.plyta));
+}
+
 /** Pozycje z ceną (strona klienta „Pozycje kuchni”) – ta sama kwota co w sumie, z dopłatą za wnętrze i płytą oferty. */
 export function pozycjeKuchniZCena(plan: PlanKuchni, cennik: ModulCennik) {
   const c = cennikZPlyta(cennik, plan.plyta);
-  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaElementu(e, c) ?? 0 }));
+  return plan.elementy.filter(wycenianyElement).map((e) => ({ nazwa: e.nazwa, w: e.w, h: e.h, d: e.d, cena: cenaPozycji(e, plan, c, true) ?? 0 }));
 }
 
-/** Suma mebli (bez AGD i dodatków) z płytą wybraną w ofercie. */
+/** Suma mebli (bez AGD i dodatków): ceny wpisane ręcznie albo z cennika z płytą wybraną w ofercie. */
 export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
   const c = cennikZPlyta(cennik, plan.plyta);
-  return plan.elementy.reduce((s, e) => s + (cenaElementu(e, c) ?? 0), 0);
+  return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
+
+/** Pozycje bez wpisanej ceny (ceny ręczne) – do podpowiedzi „uzupełnij ceny”. */
+export const bezCeny = (plan: PlanKuchni) => (trybCen(plan) === "reczne" ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : []);
 
 /**
  * Metry bieżące zabudowy [m] (dla dodatków „za mb”, np. montaż): szerokość mebli stojących
@@ -1094,6 +1122,11 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     } catch (err) {
       blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
     }
+    let cena: number | undefined;
+    if (e.cena !== undefined && e.cena !== null) {
+      if (typeof e.cena !== "number" || !Number.isFinite(e.cena) || e.cena < 0 || e.cena > MAX_CENA_RECZNA) blad(`„${nazwa}”: cena od 0 do 1 000 000 zł.`);
+      cena = Math.round((e.cena as number) * 100) / 100;
+    }
     return {
       id,
       nazwa,
@@ -1110,6 +1143,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(kat ? { kat } : {}),
       ...(wnetrze ? { wnetrze } : {}),
       ...(kolory ? { kolory } : {}),
+      ...(cena !== undefined ? { cena } : {}),
     };
   });
   let wywiad: Wywiad | undefined;
@@ -1153,6 +1187,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(dodatki?.length ? { dodatki } : {}),
     ...(kolory ? { kolory } : {}),
     ...(sciany ? { sciany } : {}),
+    ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

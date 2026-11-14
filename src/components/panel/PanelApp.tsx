@@ -6,7 +6,7 @@ import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, cenaElementu, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement } from "@/lib/kuchnia";
+import { bazaKuchni, cenaPozycji, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -64,6 +64,7 @@ import { usePanelOffers } from "./usePanelOffers";
 import { WersjeOferty } from "./WersjeOferty";
 import EdycjaOferty from "./EdycjaOferty";
 import MiniRzut from "./MiniRzut";
+import { WyborCen } from "./KreatorCena";
 import { gotoweDlaTypu, planSzybkiej } from "@/lib/szybkaOferta";
 import {
   CopyButton,
@@ -1141,7 +1142,7 @@ export default function PanelApp() {
             <section className="sec">
               <h2>Pozycje z kreatora</h2>
               <p className="lede">
-                Cena szafek jest liczona na serwerze z cennika modułów. Tu nie da się jej wpisać ręcznie.
+                {offer.kuchnia.ceny === "reczne" ? "Ceny pozycji wpisane ręcznie w kreatorze." : "Cena szafek jest liczona na serwerze z cennika modułów."}
                 <span className="bez-telefonu">
                   {" "}
                   <a href={`/panel/kreator?id=${offerKey(offer.id)}`}>Edytuj w kreatorze</a>.
@@ -1154,7 +1155,7 @@ export default function PanelApp() {
                     <span className="mono">
                       {e.w}×{e.h}×{e.d} cm
                     </span>
-                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(cenaElementu(e, cennik) ?? 0) : opisPozaWycena(e)}</span>
+                    <span>{!cennikGotowy ? "…" : wycenianyElement(e) ? formatPln(cenaPozycji(e, offer.kuchnia!, cennik) ?? 0) : opisPozaWycena(e)}</span>
                   </li>
                 ))}
               </ul>
@@ -1376,6 +1377,8 @@ function NewOfferDialog({
   // Najpierw: co projektujemy, potem: kreator krok po kroku albo gotowy model (ten formularz).
   const [krok, setKrok] = useState<"typ" | "sposob" | "gotowe" | "formularz">("typ");
   const [projekt, setProjekt] = useState<TypProjektu>("kuchnia");
+  /** Ceny mebli w nowym projekcie: wpisywane ręcznie (domyślnie – każdy ma inne) albo gotowe z cennika. */
+  const [ceny, setCeny] = useState<TrybCen>("reczne");
   const [type, setType] = useState<ClientType>("private");
   const [company, setCompany] = useState<CompanyForm>(EMPTY_COMPANY);
   const [lookup, setLookup] = useState<Lookup>({ state: "idle" });
@@ -1591,14 +1594,15 @@ function NewOfferDialog({
                   Zmień rodzaj
                 </button>
               </p>
+              <WyborCen tryb={ceny} onTryb={setCeny} />
               <div className="no-sposoby">
-                <a className="no-sposob" data-polecany="" href={`/panel/kreator?typ=${projekt}`}>
+                <a className="no-sposob" data-polecany="" href={`/panel/kreator?typ=${projekt}&ceny=${ceny}`}>
                   <b>W kreatorze, krok po kroku</b>
                   <span>Wymiary pomieszczenia, okna i instalacje, moduły z wnętrzem (półki, szuflady, drążki), materiały, PDF i link 3D.</span>
                   <em>Zalecane</em>
                 </a>
                 {projekt !== "inne" ? (
-                  <a className="no-sposob" href={`/panel/szybka?typ=${projekt}`}>
+                  <a className="no-sposob" href={`/panel/szybka?typ=${projekt}&ceny=${ceny}`}>
                     <b>Szybka oferta</b>
                     <span>Opisz słowami, czego chce klient („kuchnia w L 3,6 × 2,8, zmywarka 45”), doklikaj resztę – elementy i cena wypisują się od razu.</span>
                   </a>
@@ -1623,7 +1627,7 @@ function NewOfferDialog({
               </p>
               <div className="no-gotowe">
                 {gotoweDlaTypu(projekt).map((g) => (
-                  <a key={g.id} className="so-gotowy" href={`/panel/kreator?typ=${g.typ}&gotowy=${g.id}`}>
+                  <a key={g.id} className="so-gotowy" href={`/panel/kreator?typ=${g.typ}&gotowy=${g.id}&ceny=${ceny}`}>
                     <MiniRzut plan={planSzybkiej(g.parametry)} etykieta={`Rzut: ${g.nazwa}`} />
                     <b>{g.nazwa}</b>
                     <span>{g.opis}</span>

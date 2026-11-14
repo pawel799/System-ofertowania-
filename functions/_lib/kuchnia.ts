@@ -1,6 +1,6 @@
 /*
- * Cena kuchni z kreatora. Panel przysyła układ i wymiary, nigdy kwotę pozycji.
- * Serwer nadpisuje base i moduly sumą z cennika firmy — tak samo jak szafki na wymiar.
+ * Cena kuchni z kreatora. Serwer nadpisuje base sumą pozycji: z cennika firmy (ceny „cennik”) albo z kwot
+ * wpisanych przez firmę przy elementach (ceny „reczne” – plan.ceny, element.cena) – plus dodatki.
  */
 import { bazaKuchni, pozycjeKuchni } from "../../src/lib/kuchnia";
 

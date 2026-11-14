@@ -593,7 +593,7 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .no-sposoby { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
 .pnl .no-sposob { position: relative; }
 .pnl .no-sposob[data-polecany] { box-shadow: inset 0 0 0 1.5px var(--ink); }
-.pnl .no-sposob em { position: absolute; top: 12px; right: 12px; font-style: normal; font-size: 11px; color: var(--accent); }
+.pnl .no-sposob em { order: -1; font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); }
 .pnl .no-typ:active, .pnl .no-sposob:active { transform: scale(0.99); }
 @media (hover: hover) and (pointer: fine) { .pnl .no-typ:hover, .pnl .no-sposob:hover { background: var(--g3); } }
 .pnl .no-wstecz { min-height: 0; padding: 0 4px; font-size: 13px; text-decoration: underline; }
@@ -988,3 +988,24 @@ html[data-motyw="ciemny"] .pnl {
 }
 /* Nowa oferta → gotowe projekty */
 .pnl .no-gotowe { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+/* ---------- ceny mebli: wpisywane ręcznie albo z cennika ---------- */
+.pnl .kr-tryb-cen { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pnl .kr-tryb { font: inherit; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 0; border-radius: 10px; background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--g3); cursor: pointer; }
+.pnl .kr-tryb b { font-size: 13px; font-weight: 600; }
+.pnl .kr-tryb span { font-size: 12px; color: var(--text-2); line-height: 1.35; }
+.pnl .kr-tryb[aria-checked="true"] { box-shadow: inset 0 0 0 2px var(--text); }
+.pnl .kr-tryb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .pnl .kr-tryb[aria-checked="false"]:hover { box-shadow: inset 0 0 0 1px var(--text-3); } }
+.pnl .kr-ceny-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.pnl .kr-ceny-lista li { display: grid; grid-template-columns: minmax(0, 1fr) 120px; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--g3); }
+.pnl .kr-ceny-lista li:first-child { border-top: 0; }
+.pnl .kr-cena-pole { display: flex; flex-direction: column; gap: 3px; }
+.pnl .kr-cena-wej { display: flex; align-items: center; gap: 4px; }
+.pnl .kr-cena-wej .input { min-width: 0; width: 100%; text-align: right; font-variant-numeric: tabular-nums; }
+.pnl .kr-cena-wej i { font-style: normal; font-size: 12px; color: var(--text-2); }
+.pnl .kr-cena-pole .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1.5px var(--red); }
+.pnl .kr-cena-pole .kr-dodatki-blad { grid-column: 1 / -1; }
+.pnl .kr-ceny-lista .kr-cena-pole[data-krotkie] { align-items: stretch; }
+.pnl .kr-link { padding: 0; height: auto; text-decoration: underline; font: inherit; }
+.pnl .so-suma-info { margin: 8px 2px 0; }
+@media (max-width: 520px) { .pnl .kr-tryb-cen { grid-template-columns: 1fr; } }

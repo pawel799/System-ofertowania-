@@ -9,10 +9,86 @@ import type { CenaKoncowa } from "@/lib/cenaKoncowa";
 import { bladIlosciDodatku, bledyWlasnegoDodatku, MAX_NAZWA_DODATKU, wlasnyDodatek, type DodatekOferty } from "@/lib/dodatki";
 import { cenaPlytyM2, JEDNOSTKA_LABEL, JEDNOSTKI, MAX_POZYCJI, plytaOferty, plytyCennika, type JednostkaPozycji, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
+import { MAX_CENA_RECZNA, TRYB_CEN_LABEL, trybCen, wycenianyElement, type PlanKuchni, type TrybCen } from "@/lib/kuchnia";
 
 const liczba = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
 const num = (v: string) => Number(v.replace(/\s/g, "").replace(",", "."));
 const OPIS_JEDNOSTKI: Record<JednostkaPozycji, string> = { kpl: "ryczałt", szt: "za sztukę", mb: "za metr bieżący", proc: "% ceny mebli" };
+
+/** Błąd ceny wpisanej ręcznie (null = dobra). */
+export function bladCeny(txt: string): string | null {
+  if (txt.trim() === "") return null;
+  const n = num(txt);
+  if (!Number.isFinite(n)) return "Wpisz kwotę, np. 1250 albo 1250,50.";
+  if (n < 0 || n > MAX_CENA_RECZNA) return "Cena od 0 do 1 000 000 zł.";
+  return null;
+}
+
+/**
+ * Cena pozycji wpisywana ręcznie (zł netto) – sprawdzana przy wpisywaniu: zła wartość pokazuje błąd i nie trafia
+ * do oferty; puste pole = cena jeszcze niewpisana.
+ */
+export function PoleCeny({ id, label, wartosc, onZmiana, krotkie = false }: { id: string; label: string; wartosc: number | undefined; onZmiana: (n: number | undefined) => void; krotkie?: boolean }) {
+  const [txt, setTxt] = useState(wartosc === undefined ? "" : liczba(wartosc));
+  const [blad, setBlad] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blad) setTxt(wartosc === undefined ? "" : liczba(wartosc));
+    // Tylko zmiana z zewnątrz (inny element, cofnięcie).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wartosc]);
+  return (
+    <label className="kr-cena-pole" htmlFor={id} data-krotkie={krotkie ? "" : undefined}>
+      <span className={krotkie ? "sr-only" : "lab"}>{label}</span>
+      <span className="kr-cena-wej">
+        <input
+          id={id}
+          className="input"
+          inputMode="decimal"
+          placeholder="0"
+          value={txt}
+          aria-invalid={blad ? true : undefined}
+          aria-describedby={blad ? `${id}-blad` : undefined}
+          onChange={(e) => {
+            const v = e.target.value;
+            setTxt(v);
+            const b = bladCeny(v);
+            setBlad(b);
+            if (!b) onZmiana(v.trim() === "" ? undefined : Math.round(num(v) * 100) / 100);
+          }}
+          onBlur={() => {
+            if (blad) {
+              setBlad(null);
+              setTxt(wartosc === undefined ? "" : liczba(wartosc));
+            }
+          }}
+        />
+        <i>zł</i>
+      </span>
+      {blad ? (
+        <span id={`${id}-blad`} className="err kr-dodatki-blad" role="alert">
+          {blad}
+        </span>
+      ) : null}
+    </label>
+  );
+}
+
+/** Wybór: ceny wpisywane ręcznie (domyślnie) albo gotowe z cennika. */
+export function WyborCen({ tryb, onTryb }: { tryb: TrybCen; onTryb: (t: TrybCen) => void }) {
+  return (
+    <div className="field">
+      <span className="lab">Ceny mebli</span>
+      <div className="kr-tryb-cen" role="radiogroup" aria-label="Ceny mebli">
+        {(["reczne", "cennik"] as const).map((t) => (
+          <button key={t} type="button" role="radio" aria-checked={tryb === t} className="kr-tryb" onClick={() => onTryb(t)}>
+            <b>{TRYB_CEN_LABEL[t]}</b>
+            <span>{t === "reczne" ? "Wpisujesz kwotę każdej pozycji – Twoje ceny." : "Liczymy z wymiarów, płyty i wnętrza (cennik modułów)."}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** Ilość dodatku: sprawdzana przy wpisywaniu – zła wartość pokazuje błąd i nie trafia do oferty (zostaje ostatnia dobra). */
 function IloscDodatku({ nazwa, jednostka, wartosc, onZmiana }: { nazwa: string; jednostka: string; wartosc: number; onZmiana: (n: number | undefined) => void }) {
@@ -71,7 +147,14 @@ export function KreatorCena({
   dodatki,
   setDodatki,
   cena,
+  plan,
+  onTryb,
+  onCena,
 }: {
+  plan: PlanKuchni;
+  onTryb: (t: TrybCen) => void;
+  /** Cena pozycji wpisana ręcznie (undefined = wyczyszczona). */
+  onCena: (id: string, n: number | undefined) => void;
   cennik: ModulCennik;
   plytaId: string | undefined;
   setPlytaId: (id: string | undefined) => void;
@@ -97,8 +180,41 @@ export function KreatorCena({
 
   const zmien = (id: string, zmiana: Partial<DodatekOferty>) => setDodatki(dodatki.map((d) => (d.id === id ? { ...d, ...zmiana } : d)));
 
+  const reczne = trybCen(plan) === "reczne";
+  const doWyceny = plan.elementy.filter(wycenianyElement);
+  const brakCen = doWyceny.filter((e) => e.cena === undefined).length;
   return (
     <>
+      <WyborCen tryb={trybCen(plan)} onTryb={onTryb} />
+      {reczne ? (
+        <div className="field">
+          <span className="lab">Ceny pozycji (netto)</span>
+          {doWyceny.length ? (
+            <ol className="kr-ceny-lista" aria-label="Ceny pozycji">
+              {plan.elementy.map((e, i) =>
+                wycenianyElement(e) ? (
+                  <li key={e.id}>
+                    <span className="kr-dodatki-nazwa">
+                      <b>
+                        {i + 1}. {e.nazwa}
+                      </b>
+                      <span className="kr-hint mono">
+                        {e.w}×{e.h}×{e.d} cm
+                      </span>
+                    </span>
+                    <PoleCeny id={`k-cena-${e.id}`} label={`Cena: ${e.nazwa}`} wartosc={e.cena} onZmiana={(n) => onCena(e.id, n)} krotkie />
+                  </li>
+                ) : null,
+              )}
+            </ol>
+          ) : (
+            <p className="kr-hint">Dodaj meble – tu wpiszesz ich ceny.</p>
+          )}
+          {brakCen ? <p className="kr-hint" data-brak-cen>Bez ceny: {brakCen} {brakCen === 1 ? "pozycja" : brakCen < 5 ? "pozycje" : "pozycji"} (liczą się jako 0 zł).</p> : null}
+          <p className="kr-hint">AGD i wyposażenie nie wchodzą do ceny zabudowy. Cenę możesz też wpisać we właściwościach zaznaczonego mebla.</p>
+        </div>
+      ) : null}
+      {!reczne ? (
       <div className="field">
         <label className="lab" htmlFor="k-plyta">
           Płyta korpusów
@@ -123,6 +239,7 @@ export function KreatorCena({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       <div className="field kr-dodatki">
         <span className="lab">Dodatki do ceny</span>
