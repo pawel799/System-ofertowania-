@@ -4,15 +4,65 @@
  * Kreator → krok „Materiały”: płyta korpusów, dodatki do ceny (pozycje z cennika i własne) i rozbicie ceny końcowej.
  * Kwoty liczy cenaKoncowa (src/lib/cenaKoncowa.ts) przez useCenaKoncowa – te same na serwerze, w PDF i u klienta.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CenaKoncowa } from "@/lib/cenaKoncowa";
-import { wlasnyDodatek, type DodatekOferty } from "@/lib/dodatki";
+import { bladIlosciDodatku, bledyWlasnegoDodatku, MAX_NAZWA_DODATKU, wlasnyDodatek, type DodatekOferty } from "@/lib/dodatki";
 import { cenaPlytyM2, JEDNOSTKA_LABEL, JEDNOSTKI, MAX_POZYCJI, plytaOferty, plytyCennika, type JednostkaPozycji, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 
 const liczba = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
 const num = (v: string) => Number(v.replace(/\s/g, "").replace(",", "."));
 const OPIS_JEDNOSTKI: Record<JednostkaPozycji, string> = { kpl: "ryczałt", szt: "za sztukę", mb: "za metr bieżący", proc: "% ceny mebli" };
+
+/** Ilość dodatku: sprawdzana przy wpisywaniu – zła wartość pokazuje błąd i nie trafia do oferty (zostaje ostatnia dobra). */
+function IloscDodatku({ nazwa, jednostka, wartosc, onZmiana }: { nazwa: string; jednostka: string; wartosc: number; onZmiana: (n: number | undefined) => void }) {
+  const [txt, setTxt] = useState(liczba(wartosc));
+  const [blad, setBlad] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blad) setTxt(liczba(wartosc));
+    // Tylko gdy wartość zmieniła się z zewnątrz (np. metry z projektu).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wartosc]);
+  const id = `dod-il-${nazwa.replace(/\W+/g, "-")}`;
+  return (
+    <label className="kr-dodatki-ilosc">
+      <span className="sr-only">
+        {nazwa}: ilość ({jednostka})
+      </span>
+      <input
+        className="input"
+        inputMode="decimal"
+        aria-label={`${nazwa}: ilość`}
+        aria-invalid={blad ? true : undefined}
+        aria-describedby={blad ? id : undefined}
+        value={txt}
+        onChange={(e) => {
+          const v = e.target.value;
+          setTxt(v);
+          if (v.trim() === "") {
+            setBlad(null);
+            return onZmiana(undefined);
+          }
+          const b = bladIlosciDodatku(num(v));
+          setBlad(b);
+          if (!b) onZmiana(num(v));
+        }}
+        onBlur={() => {
+          if (blad) {
+            setBlad(null);
+            setTxt(liczba(wartosc));
+          }
+        }}
+      />
+      <span className="kr-hint">{jednostka}</span>
+      {blad ? (
+        <span id={id} className="err kr-dodatki-blad" role="alert">
+          {blad}
+        </span>
+      ) : null}
+    </label>
+  );
+}
 
 export function KreatorCena({
   cennik,
@@ -33,11 +83,19 @@ export function KreatorCena({
   const wybrana = plytaOferty(cennik, plytaId).plyta;
   const zCennika = (cennik.pozycje ?? []).filter((p) => !dodatki.some((d) => d.id === p.id));
   const [doDodania, setDoDodania] = useState("");
-  const [wlasna, setWlasna] = useState<{ nazwa: string; cena: string; jednostka: JednostkaPozycji } | null>(null);
+  const [wlasna, setWlasna] = useState<{ nazwa: string; cena: string; jednostka: JednostkaPozycji; ruszone: { nazwa?: boolean; cena?: boolean } } | null>(null);
   const pelne = dodatki.length >= MAX_POZYCJI;
+  // Własna pozycja sprawdzana przy wpisywaniu (te same reguły co przy zapisie oferty na serwerze).
+  const bledyWlasnej = wlasna ? bledyWlasnegoDodatku({ nazwa: wlasna.nazwa, cena: wlasna.cena.trim() === "" ? NaN : num(wlasna.cena), jednostka: wlasna.jednostka }) : [];
+  const bladPola = (pole: "nazwa" | "cena") => (wlasna?.ruszone[pole] ? (bledyWlasnej.find((b) => b.pole === pole)?.tekst ?? null) : null);
+  const dodajWlasna = () => {
+    if (!wlasna) return;
+    if (bledyWlasnej.length) return setWlasna({ ...wlasna, ruszone: { nazwa: true, cena: true } });
+    setDodatki([...dodatki, { id: `w${Math.random().toString(36).slice(2, 9)}`, nazwa: wlasna.nazwa.replace(/\s+/g, " ").trim(), cena: Math.round(num(wlasna.cena) * 100) / 100, jednostka: wlasna.jednostka }]);
+    setWlasna(null);
+  };
 
   const zmien = (id: string, zmiana: Partial<DodatekOferty>) => setDodatki(dodatki.map((d) => (d.id === id ? { ...d, ...zmiana } : d)));
-  const wlasnaOk = wlasna && wlasna.nazwa.trim() && Number.isFinite(num(wlasna.cena)) && wlasna.cena.trim() !== "" && (wlasna.jednostka !== "proc" || (num(wlasna.cena) >= -50 && num(wlasna.cena) <= 100));
 
   return (
     <>
@@ -85,21 +143,7 @@ export function KreatorCena({
                     </span>
                   </span>
                   {!d.brak && (d.jednostka === "szt" || d.jednostka === "mb") ? (
-                    <label className="kr-dodatki-ilosc">
-                      <span className="sr-only">{d.nazwa}: ilość ({JEDNOSTKA_LABEL[d.jednostka]})</span>
-                      <input
-                        className="input"
-                        inputMode="decimal"
-                        aria-label={`${d.nazwa}: ilość`}
-                        value={zapis?.ilosc !== undefined ? liczba(zapis.ilosc) : liczba(d.ilosc)}
-                        onChange={(e) => {
-                          const n = num(e.target.value);
-                          if (e.target.value.trim() === "") return zmien(d.id, { ilosc: undefined });
-                          if (Number.isFinite(n) && n >= 0 && n <= 10_000) zmien(d.id, { ilosc: n });
-                        }}
-                      />
-                      <span className="kr-hint">{JEDNOSTKA_LABEL[d.jednostka]}</span>
-                    </label>
+                    <IloscDodatku nazwa={d.nazwa} jednostka={JEDNOSTKA_LABEL[d.jednostka]} wartosc={zapis?.ilosc ?? d.ilosc} onZmiana={(n) => zmien(d.id, { ilosc: n })} />
                   ) : (
                     <span />
                   )}
@@ -140,15 +184,43 @@ export function KreatorCena({
             </>
           ) : null}
           {!wlasna ? (
-            <button type="button" className="btn btn-ghost" disabled={pelne} onClick={() => setWlasna({ nazwa: "", cena: "", jednostka: "kpl" })}>
+            <button type="button" className="btn btn-ghost" disabled={pelne} onClick={() => setWlasna({ nazwa: "", cena: "", jednostka: "kpl", ruszone: {} })}>
               + Własna pozycja
             </button>
           ) : null}
         </div>
+        {pelne ? <p className="kr-hint">Limit {MAX_POZYCJI} pozycji – usuń którąś, żeby dodać nową.</p> : null}
         {wlasna ? (
-          <div className="kr-dodatki-wlasna" role="group" aria-label="Własna pozycja">
-            <input className="input" aria-label="Nazwa pozycji" placeholder="Np. demontaż starej zabudowy" maxLength={80} value={wlasna.nazwa} onChange={(e) => setWlasna({ ...wlasna, nazwa: e.target.value })} />
-            <input className="input" aria-label="Kwota" inputMode="decimal" placeholder={wlasna.jednostka === "proc" ? "%" : "zł"} value={wlasna.cena} onChange={(e) => setWlasna({ ...wlasna, cena: e.target.value })} />
+          <form
+            className="kr-dodatki-wlasna"
+            aria-label="Własna pozycja"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              dodajWlasna();
+            }}
+          >
+            <input
+              className="input"
+              aria-label="Nazwa pozycji"
+              placeholder="Np. demontaż starej zabudowy"
+              maxLength={MAX_NAZWA_DODATKU}
+              value={wlasna.nazwa}
+              aria-invalid={bladPola("nazwa") ? true : undefined}
+              aria-describedby={bladPola("nazwa") ? "dod-blad-nazwa" : undefined}
+              onChange={(e) => setWlasna({ ...wlasna, nazwa: e.target.value })}
+              onBlur={() => setWlasna({ ...wlasna, ruszone: { ...wlasna.ruszone, nazwa: true } })}
+            />
+            <input
+              className="input"
+              aria-label="Kwota"
+              inputMode="decimal"
+              placeholder={wlasna.jednostka === "proc" ? "%" : "zł"}
+              value={wlasna.cena}
+              aria-invalid={bladPola("cena") ? true : undefined}
+              aria-describedby={bladPola("cena") ? "dod-blad-cena" : undefined}
+              onChange={(e) => setWlasna({ ...wlasna, cena: e.target.value, ruszone: { ...wlasna.ruszone, cena: true } })}
+            />
             <select className="input" aria-label="Jednostka" value={wlasna.jednostka} onChange={(e) => setWlasna({ ...wlasna, jednostka: e.target.value as JednostkaPozycji })}>
               {JEDNOSTKI.map((j) => (
                 <option key={j} value={j}>
@@ -156,25 +228,22 @@ export function KreatorCena({
                 </option>
               ))}
             </select>
+            {bladPola("nazwa") || bladPola("cena") ? (
+              <ul className="err kr-dodatki-bledy" role="alert">
+                {bladPola("nazwa") ? <li id="dod-blad-nazwa">{bladPola("nazwa")}</li> : null}
+                {bladPola("cena") ? <li id="dod-blad-cena">{bladPola("cena")}</li> : null}
+              </ul>
+            ) : null}
             <div className="actions">
               <button type="button" className="btn btn-plain" onClick={() => setWlasna(null)}>
                 Anuluj
               </button>
-              <button
-                type="button"
-                className="btn btn-ink"
-                disabled={!wlasnaOk}
-                onClick={() => {
-                  if (!wlasna) return;
-                  setDodatki([...dodatki, { id: `w${Math.random().toString(36).slice(2, 9)}`, nazwa: wlasna.nazwa.trim(), cena: Math.round(num(wlasna.cena) * 100) / 100, jednostka: wlasna.jednostka }]);
-                  setWlasna(null);
-                }}
-              >
+              <button type="submit" className="btn btn-ink" aria-disabled={bledyWlasnej.length > 0 ? true : undefined}>
                 Dodaj pozycję
               </button>
             </div>
             <p className="kr-hint">Ujemna kwota albo procent to rabat.</p>
-          </div>
+          </form>
         ) : null}
       </div>
 

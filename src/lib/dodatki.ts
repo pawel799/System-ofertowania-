@@ -59,6 +59,34 @@ export function wycenDodatki(dodatki: readonly DodatekOferty[] | undefined, cenn
 /** Nowa oferta: pozycje cennika oznaczone „dodawaj do każdej oferty”. */
 export const dodatkiDomyslne = (cennik: ModulCennik): DodatekOferty[] => (cennik.pozycje ?? []).filter((p) => p.domyslna).map((p) => ({ id: p.id }));
 
+/* ---------- walidacja (te same reguły w kreatorze przy wpisywaniu i na serwerze przy zapisie) ---------- */
+
+export const MAX_ILOSC_DODATKU = 10_000;
+export const MAX_NAZWA_DODATKU = 80;
+
+/** Zakres kwoty własnej pozycji: procent od −50 do 100, kwota ±1 000 000 zł. */
+export const zakresCenyDodatku = (j: JednostkaPozycji): [number, number] => (j === "proc" ? [-50, 100] : [-1_000_000, 1_000_000]);
+
+/** Błąd ilości (null = dobra). */
+export function bladIlosciDodatku(n: number): string | null {
+  if (!Number.isFinite(n)) return "Wpisz liczbę, np. 2 albo 3,5.";
+  if (n < 0 || n > MAX_ILOSC_DODATKU) return "Ilość od 0 do 10 000.";
+  return null;
+}
+
+/** Błędy własnej pozycji przy wpisywaniu (pusta tablica = można dodać). */
+export function bledyWlasnegoDodatku(p: { nazwa: string; cena: number; jednostka: JednostkaPozycji }): { pole: "nazwa" | "cena"; tekst: string }[] {
+  const out: { pole: "nazwa" | "cena"; tekst: string }[] = [];
+  const nazwa = p.nazwa.replace(/\s+/g, " ").trim();
+  if (!nazwa) out.push({ pole: "nazwa", tekst: "Podaj nazwę pozycji." });
+  else if (nazwa.length > MAX_NAZWA_DODATKU) out.push({ pole: "nazwa", tekst: `Nazwa do ${MAX_NAZWA_DODATKU} znaków.` });
+  const [min, max] = zakresCenyDodatku(p.jednostka);
+  if (!Number.isFinite(p.cena)) out.push({ pole: "cena", tekst: "Wpisz kwotę, np. 350 albo -200 (rabat)." });
+  else if (p.cena < min || p.cena > max)
+    out.push({ pole: "cena", tekst: p.jednostka === "proc" ? "Procent od −50 do 100." : "Kwota od −1 000 000 do 1 000 000 zł." });
+  return out;
+}
+
 /* ---------- walidacja (serwer) ---------- */
 
 const ID_RE = /^[A-Za-z0-9-]{1,24}$/;
@@ -77,14 +105,14 @@ export function parseDodatki(v: unknown): DodatekOferty[] {
     ids.add(id);
     const out: DodatekOferty = { id };
     if (o.ilosc !== undefined && o.ilosc !== null) {
-      if (typeof o.ilosc !== "number" || !Number.isFinite(o.ilosc) || o.ilosc < 0 || o.ilosc > 10_000) zle(`pozycja ${i + 1}: ilość od 0 do 10 000.`);
+      if (typeof o.ilosc !== "number" || bladIlosciDodatku(o.ilosc)) zle(`pozycja ${i + 1}: ilość od 0 do 10 000.`);
       out.ilosc = zaokr(o.ilosc as number);
     }
     if (wlasnyDodatek(id)) {
-      const nazwa = typeof o.nazwa === "string" ? o.nazwa.replace(/\s+/g, " ").trim().slice(0, 80) : "";
+      const nazwa = typeof o.nazwa === "string" ? o.nazwa.replace(/\s+/g, " ").trim().slice(0, MAX_NAZWA_DODATKU) : "";
       if (!nazwa) zle(`pozycja ${i + 1}: podaj nazwę.`);
       const jednostka = JEDNOSTKI.includes(o.jednostka as JednostkaPozycji) ? (o.jednostka as JednostkaPozycji) : "kpl";
-      const [min, max] = jednostka === "proc" ? [-50, 100] : [-1_000_000, 1_000_000];
+      const [min, max] = zakresCenyDodatku(jednostka);
       if (typeof o.cena !== "number" || !Number.isFinite(o.cena) || o.cena < min || o.cena > max) zle(`„${nazwa}”: kwota od ${min} do ${max}.`);
       Object.assign(out, { nazwa, cena: zaokr(o.cena as number), jednostka });
     }

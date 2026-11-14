@@ -940,3 +940,8 @@ html[data-motyw="ciemny"] .pnl {
   .pnl.kreator .top .kr-pelny span, .pnl.kreator .top .hide-sm { display: none; }
   .pnl.kreator .top .kr-tylko-sm { display: inline; font-weight: 600; }
 }
+.pnl .kr-dodatki-ilosc { flex-wrap: wrap; }
+.pnl .kr-dodatki-blad { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; }
+.pnl .kr-dodatki-bledy { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.pnl .kr-dodatki-wlasna .input[aria-invalid="true"], .pnl .kr-dodatki-ilosc .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1.5px var(--red); }
+.pnl .kr-dodatki-wlasna .btn[aria-disabled="true"] { opacity: 0.55; }
