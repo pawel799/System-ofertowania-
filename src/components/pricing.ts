@@ -2,7 +2,7 @@ import { deltaMaterialu, type KatalogPozycja, type MaterialySnapshot } from "./k
 import type { Palette } from "./palettes";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { doplataKolorow, doplataUchwytow, type KoloryProjektu } from "@/lib/kolory";
-import type { PlanKuchni } from "@/lib/kuchnia";
+import { liczDoplaty, type PlanKuchni } from "@/lib/kuchnia";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)
@@ -43,6 +43,8 @@ export function totalPrice(
     kolory?: KoloryProjektu | null;
   } = {},
 ) {
+  // Ceny wpisane ręcznie bez dopłat za materiały (PlanKuchni.doplaty) – sama kwota oferty.
+  if (!liczDoplaty(extra.plan)) return base;
   const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot };
   const g = extra.grupy;
   const kolorowe = !g || g.front || g.korpus || g.srodek;

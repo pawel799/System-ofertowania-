@@ -34,6 +34,7 @@ import {
   bazaKuchni,
   bezCeny,
   cenaPozycji,
+  liczDoplaty,
   trybCen,
   type TrybCen,
   dociagnijRzad,
@@ -1468,19 +1469,20 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                   {grupy.blat ? (
                     <div className="field">
                       <span className="lab">Blat</span>
-                      <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} />
+                      <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} bezDoplat={!liczDoplaty(plan)} />
                     </div>
                   ) : null}
                   {grupy.okucia ? (
                     <div className="field">
                       <span className="lab">Okucia</span>
-                      <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} />
+                      <Wybor label="Okucia" value={hardware} onChange={setHardwareId} options={opcjeMaterialu("hardware", kCtx, hardware)} bezDoplat={!liczDoplaty(plan)} />
                     </div>
                   ) : null}
                   <KreatorCena
                     plan={plan}
                     onTryb={ustawTrybCen}
                     onCena={ustawCene}
+                    onDoplaty={(wl) => setPlan((p) => ({ ...p, doplaty: wl }))}
                     onCenaOgolna={(n) =>
                       setPlan((p) => {
                         const { cenaOgolna: _o, ...reszta } = p;
@@ -1870,18 +1872,21 @@ function Wybor({
   value,
   onChange,
   options,
+  bezDoplat = false,
 }: {
   label: string;
   value: string;
   onChange: (id: string) => void;
   options: readonly { id: string; name: string; delta: number }[];
+  /** Ceny ręczne bez dopłat za materiały – bez „+1 200 zł” przy opcjach. */
+  bezDoplat?: boolean;
 }) {
   return (
     <div className="kr-choice" role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button key={o.id} type="button" role="radio" className="btn btn-ghost" aria-checked={value === o.id} onClick={() => onChange(o.id)}>
           {o.name}
-          {o.delta ? <i>{`${o.delta > 0 ? "+" : ""}${formatPln(o.delta)}`}</i> : null}
+          {o.delta && !bezDoplat ? <i>{`${o.delta > 0 ? "+" : ""}${formatPln(o.delta)}`}</i> : null}
         </button>
       ))}
     </div>

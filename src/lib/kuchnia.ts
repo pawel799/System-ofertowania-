@@ -153,6 +153,11 @@ export type PlanKuchni = {
    * a ceny pozycji są tylko informacją; brak – suma cen wpisanych przy pozycjach.
    */
   cenaOgolna?: number;
+  /**
+   * Doliczać dopłaty za materiały (fronty, blat, okucia z katalogu)? Brak = przy cenach z cennika tak,
+   * przy cenach wpisanych ręcznie nie (firma podaje kwotę z materiałami). Przełącznik w kroku „Materiały”.
+   */
+  doplaty?: boolean;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -974,6 +979,9 @@ export function cenaPozycji(el: ElementKuchni, plan: Pick<PlanKuchni, "ceny" | "
   return cenaElementu(el, zPlyta ? cennik : cennikZPlyta(cennik, plan.plyta));
 }
 
+/** Czy do ceny doliczać dopłaty za materiały (PlanKuchni.doplaty; brak planu = tak, jak dotąd). */
+export const liczDoplaty = (plan?: Pick<PlanKuchni, "ceny" | "doplaty"> | null) => (plan ? (plan.doplaty ?? trybCen(plan) !== "reczne") : true);
+
 /** Kwota całej zabudowy wpisana ręcznie (tylko przy cenach ręcznych); undefined = suma pozycji. */
 export const cenaOgolnaPlanu = (plan: Pick<PlanKuchni, "ceny" | "cenaOgolna">) => (trybCen(plan) === "reczne" ? plan.cenaOgolna : undefined);
 
@@ -1206,6 +1214,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(sciany ? { sciany } : {}),
     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
     ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),
+    ...(typeof o.doplaty === "boolean" ? { doplaty: o.doplaty } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

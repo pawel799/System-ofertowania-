@@ -6,7 +6,7 @@ import { ModulySection } from "./ModulySection";
 import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./OfertaPdfPrzyciski";
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
-import { bazaKuchni, cenaOgolnaPlanu, cenaPozycji, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
+import { bazaKuchni, cenaOgolnaPlanu, cenaPozycji, liczDoplaty, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -64,6 +64,7 @@ import { usePanelOffers } from "./usePanelOffers";
 import { WersjeOferty } from "./WersjeOferty";
 import EdycjaOferty from "./EdycjaOferty";
 import MiniRzut from "./MiniRzut";
+import PierwszeKroki from "./PierwszeKroki";
 import { WyborCen } from "./KreatorCena";
 import { gotoweDlaTypu, planSzybkiej } from "@/lib/szybkaOferta";
 import {
@@ -347,6 +348,8 @@ export default function PanelApp() {
     ? grupyMaterialow({ plan: offer.kuchnia, modele: models })
     : grupyMaterialow({ model: offerModel ?? null });
   const total = totalPrice(offer, bazaWidok, palettes, { katalog, grupy, plan: offer.kuchnia, kolory: offer.kuchnia?.kolory });
+  // Ceny ręczne bez dopłat za materiały – bez „+1 200 zł” przy materiałach oferty.
+  const zDoplatami = liczDoplaty(offer.kuchnia);
   const mCtx = { palettes, katalog };
   const frontyOferty = opcjeMaterialu("front", mCtx, offer.front);
   const plyty = frontyOferty.filter((f) => f.zrodlo !== "ral");
@@ -829,6 +832,7 @@ export default function PanelApp() {
 
       <div className="shell">
         <aside className="surface s-list" aria-label="Oferty">
+          {store.mode === "api" && !telefon ? <PierwszeKroki offers={offers} onNowa={() => setNewOpen({ instant: false })} /> : null}
           <div className="l-head">
             <label className="search">
               <svg viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -1062,7 +1066,7 @@ export default function PanelApp() {
                       role="radio"
                       aria-checked={offer.front === f.id}
                       aria-label={f.name}
-                      data-tip={`${f.name}${f.delta ? ` · ${f.delta > 0 ? "+" : ""}${formatPln(f.delta)}` : ""}`}
+                      data-tip={`${f.name}${f.delta && zDoplatami ? ` · ${f.delta > 0 ? "+" : ""}${formatPln(f.delta)}` : ""}`}
                       onClick={() => setMaterial("front", f.id)}
                     >
                       <span style={{ background: f.color }} />
@@ -1077,7 +1081,7 @@ export default function PanelApp() {
                       role="radio"
                       aria-checked={offer.front === f.id}
                       aria-label={f.name}
-                      data-tip={`${f.name}${f.delta ? ` · +${formatPln(f.delta)}` : ""}`}
+                      data-tip={`${f.name}${f.delta && zDoplatami ? ` · +${formatPln(f.delta)}` : ""}`}
                       onClick={() => setMaterial("front", f.id)}
                     >
                       <span style={{ background: f.color }} />
@@ -1098,7 +1102,7 @@ export default function PanelApp() {
                     label: (
                       <>
                         {c.name}
-                        {c.delta !== 0 && <span className="delta">{`${c.delta > 0 ? "+" : ""}${formatPln(c.delta)}`}</span>}
+                        {c.delta !== 0 && zDoplatami && <span className="delta">{`${c.delta > 0 ? "+" : ""}${formatPln(c.delta)}`}</span>}
                       </>
                     ),
                   }))}
@@ -1117,7 +1121,7 @@ export default function PanelApp() {
                     label: (
                       <>
                         {h.name}
-                        {h.delta !== 0 && <span className="delta">{`${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}`}</span>}
+                        {h.delta !== 0 && zDoplatami && <span className="delta">{`${h.delta > 0 ? "+" : ""}${formatPln(h.delta)}`}</span>}
                       </>
                     ),
                   }))}

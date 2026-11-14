@@ -11,7 +11,7 @@ import { useKatalogStan } from "./katalogStore";
 import { formatPln, totalPrice } from "./pricing";
 import { CENA_ZAKRES, CENA_ZAKRES_MEBLE } from "@/lib/plans";
 import { WSZYSTKIE_GRUPY, type GrupyMaterialow } from "@/lib/opcjeProjektu";
-import type { PlanKuchni } from "@/lib/kuchnia";
+import { liczDoplaty, type PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "./modelRoles";
 import KoloryMebli, { meblaKolorowe, opisKoloruKlienta } from "./KoloryMebli";
 import { setKoloryProjektu, useKoloryProjektu } from "./koloryStore";
@@ -124,6 +124,8 @@ export default function MaterialsPanel({
   const koloryProjektu = useKoloryProjektu();
   const zKolorami = !!plan && !!onPlan && meblaKolorowe(plan, modele).length > 0;
   const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy, plan, kolory: koloryProjektu });
+  // Dopłaty przy materiałach tylko, gdy oferta je dolicza (ceny ręczne zwykle bez – PlanKuchni.doplaty).
+  const zDoplatami = showPrice && liczDoplaty(plan);
   const selectedCountertop = findMaterial("countertop", countertop, ctx) ?? blaty[0] ?? brak(countertop);
   const selectedHardware = findMaterial("hardware", hardware, ctx) ?? okucia[0] ?? brak(hardware);
   const summary = [
@@ -162,7 +164,7 @@ export default function MaterialsPanel({
               grupy={grupy}
               modele={modele}
               ctx={ctx}
-              showPrice={showPrice}
+              showPrice={zDoplatami}
               hardware={hardware}
               setHardware={grupy.okucia ? setHardware : undefined}
             />
@@ -172,7 +174,7 @@ export default function MaterialsPanel({
                 Fronty
                 <span className="text-sm normal-case tracking-normal text-stone-900">
                   {selectedFront.name}
-                  {showPrice && selectedFront.delta ? (
+                  {zDoplatami && selectedFront.delta ? (
                     <span className="ml-1.5 text-xs tabular-nums text-stone-500">+{formatPln(selectedFront.delta)}</span>
                   ) : null}
                 </span>
@@ -186,8 +188,8 @@ export default function MaterialsPanel({
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      aria-label={`Front: ${swatch.name}${showPrice && swatch.delta ? `, dopłata ${formatPln(swatch.delta)}` : ""}`}
-                      title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
+                      aria-label={`Front: ${swatch.name}${zDoplatami && swatch.delta ? `, dopłata ${formatPln(swatch.delta)}` : ""}`}
+                      title={`${swatch.name}${zDoplatami && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
                       onClick={() => setFront(swatch.id)}
                       className={`h-9 w-9 rounded-full border transition ${
                         selected
@@ -210,7 +212,7 @@ export default function MaterialsPanel({
                         role="radio"
                         aria-checked={selected}
                         aria-label={swatch.name}
-                        title={`${swatch.name}${showPrice && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
+                        title={`${swatch.name}${zDoplatami && swatch.delta ? ` (+${formatPln(swatch.delta)})` : ""}`}
                         onClick={() => setFront(swatch.id)}
                         className={`h-7 w-7 rounded-full border transition ${
                           selected
@@ -232,7 +234,7 @@ export default function MaterialsPanel({
               options={blaty}
               value={countertop}
               onChange={setCountertop}
-              showDelta={showPrice}
+              showDelta={zDoplatami}
             />
           ) : null}
 
@@ -243,7 +245,7 @@ export default function MaterialsPanel({
               options={okucia}
               value={hardware}
               onChange={setHardware}
-              showDelta={showPrice}
+              showDelta={zDoplatami}
             />
           ) : null}
         </div>

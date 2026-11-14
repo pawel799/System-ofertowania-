@@ -7,7 +7,7 @@
  */
 import { useMemo } from "react";
 import { cenaKoncowa, type CenaKoncowa } from "@/lib/cenaKoncowa";
-import type { PlanKuchni } from "@/lib/kuchnia";
+import { liczDoplaty, type PlanKuchni } from "@/lib/kuchnia";
 import type { ModulCennik } from "@/lib/modul";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { deltaMaterialu, findMaterial, type KontekstMaterialow } from "../katalogFirmy";
@@ -64,7 +64,8 @@ export function useCenaKoncowa(args: {
       cenaKoncowa({
         plan,
         cennik,
-        doplaty: doplatyMaterialow({ front, countertop, hardware }, grupy, { palettes, katalog, snapshot }, plan),
+        // Ceny ręczne bez dopłat za materiały (PlanKuchni.doplaty) – w rozbiciu tylko meble i dodatki.
+        doplaty: liczDoplaty(plan) ? doplatyMaterialow({ front, countertop, hardware }, grupy, { palettes, katalog, snapshot }, plan) : [],
         zl: formatPln,
       }),
     [plan, cennik, front, countertop, hardware, grupy, palettes, katalog, snapshot],

@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaOgolnaPlanu, cenaPozycji, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -136,9 +136,11 @@ export function danePdf(args: {
   // Kolory mebli (fronty, boki, środek) – dopłata według powierzchni, jak na stronie klienta (kolory.ts).
   const kolory = doplataKolorow(args.plan.elementy, args.front, args.plan.kolory, (id) => deltaMaterialu("front", id, mctx));
   const kolorowe = grupy.front || grupy.korpus || grupy.srodek;
-  const dopFront = kolorowe ? kolory.kwota : 0;
-  const dopBlat = grupy.blat ? (blat?.delta ?? 0) : 0;
-  const dopOkucia = grupy.okucia ? doplataUchwytow(args.plan.elementy, args.hardware, (id) => deltaMaterialu("hardware", id, mctx)) : 0;
+  // Ceny ręczne bez dopłat za materiały (PlanKuchni.doplaty) – w PDF tylko kwota oferty.
+  const zDoplatami = liczDoplaty(args.plan);
+  const dopFront = zDoplatami && kolorowe ? kolory.kwota : 0;
+  const dopBlat = zDoplatami && grupy.blat ? (blat?.delta ?? 0) : 0;
+  const dopOkucia = zDoplatami && grupy.okucia ? doplataUchwytow(args.plan.elementy, args.hardware, (id) => deltaMaterialu("hardware", id, mctx)) : 0;
   return {
     id: args.id,
     title: args.title,

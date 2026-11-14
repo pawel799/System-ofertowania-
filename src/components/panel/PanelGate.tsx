@@ -4,6 +4,7 @@
  * Ekrany pomocnicze panelu przy pracy z API: wczytywanie, błąd, pusta lista
  * i okno logowania (konto firmy albo kod administratora). Te same klasy co reszta panelu (panel.css).
  */
+import PierwszeKroki from "./PierwszeKroki";
 import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
@@ -215,6 +216,11 @@ export function PanelState({
             </div>
           ) : null}
         </div>
+        {mode === "api" && onNew ? (
+          <div className="pk-pusty">
+            <PierwszeKroki offers={[]} onNowa={onNew} />
+          </div>
+        ) : null}
       </div>
       {children}
     </div>

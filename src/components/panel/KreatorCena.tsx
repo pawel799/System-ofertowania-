@@ -9,7 +9,7 @@ import type { CenaKoncowa } from "@/lib/cenaKoncowa";
 import { bladIlosciDodatku, bledyWlasnegoDodatku, MAX_NAZWA_DODATKU, wlasnyDodatek, type DodatekOferty } from "@/lib/dodatki";
 import { cenaPlytyM2, JEDNOSTKA_LABEL, JEDNOSTKI, MAX_POZYCJI, plytaOferty, plytyCennika, type JednostkaPozycji, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
-import { MAX_CENA_RECZNA, TRYB_CEN_LABEL, trybCen, wycenianyElement, type PlanKuchni, type TrybCen } from "@/lib/kuchnia";
+import { liczDoplaty, MAX_CENA_RECZNA, TRYB_CEN_LABEL, trybCen, wycenianyElement, type PlanKuchni, type TrybCen } from "@/lib/kuchnia";
 
 const liczba = (n: number) => String(Math.round(n * 100) / 100).replace(".", ",");
 const num = (v: string) => Number(v.replace(/\s/g, "").replace(",", "."));
@@ -151,7 +151,10 @@ export function KreatorCena({
   onTryb,
   onCena,
   onCenaOgolna,
+  onDoplaty,
 }: {
+  /** Ceny ręczne: doliczać dopłaty za materiały z katalogu (PlanKuchni.doplaty). */
+  onDoplaty: (wl: boolean) => void;
   plan: PlanKuchni;
   /** Kwota całej zabudowy (undefined = suma cen pozycji). */
   onCenaOgolna: (n: number | undefined) => void;
@@ -199,6 +202,11 @@ export function KreatorCena({
               ? `Liczy się cena całości: ${formatPln(ogolna)}. Ceny pozycji poniżej są tylko dla Ciebie – klient widzi jedną kwotę.`
               : `Puste – cena to suma pozycji poniżej (teraz ${formatPln(sumaPozycji)}).`}
           </p>
+          <label className="kr-check">
+            <input type="checkbox" checked={liczDoplaty(plan)} onChange={(e) => onDoplaty(e.target.checked)} />
+            <span>Doliczaj dopłaty za materiały (fronty, blat, okucia z katalogu)</span>
+          </label>
+          <p className="kr-hint">{liczDoplaty(plan) ? "Dopłaty za wybrane materiały dochodzą do Twoich kwot – klient je widzi przy materiałach." : "Twoje kwoty zawierają materiały – klient nie widzi dopłat przy kolorach i blatach."}</p>
         </div>
       ) : null}
       {reczne ? (
