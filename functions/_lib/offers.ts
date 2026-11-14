@@ -72,6 +72,8 @@ export interface Env {
   BILLING_WEBHOOK_SECRET?: string;
   /** Cloudflare Turnstile (sekret) – weryfikacja anty-bot przy rejestracji i logowaniu. Bez niego – wyłączona. */
   TURNSTILE_SECRET_KEY?: string;
+  /** Sekret do POST /api/zadania (codzienne zadania z GitHub Actions). Bez niego – tylko „przy okazji” ruchu. */
+  CRON_SECRET?: string;
 }
 
 export type Ctx = {

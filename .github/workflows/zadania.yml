@@ -1,0 +1,20 @@
+# Codzienne zadania w tle (maile o końcu okresu próbnego): POST /api/zadania z sekretem.
+# Ustaw w GitHub → Settings → Secrets and variables → Actions: CRON_SECRET (ten sam co w Cloudflare Pages)
+# i opcjonalnie zmienną SITE_URL (domyślnie https://oprzut.app). Bez sekretu krok się pomija –
+# zadania i tak ruszają przy okazji ruchu na stronie (najwyżej raz na godzinę).
+name: Zadania w tle
+on:
+  schedule:
+    - cron: "17 7 * * *" # 8:17 / 9:17 czasu polskiego
+  workflow_dispatch:
+jobs:
+  zadania:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/zadania
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL || 'https://oprzut.app' }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then echo "Brak CRON_SECRET – pomijam."; exit 0; fi
+          curl -fsS -X POST "$SITE_URL/api/zadania" -H "Authorization: Bearer $CRON_SECRET"

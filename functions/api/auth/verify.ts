@@ -9,6 +9,7 @@
  * że to właściciel adresu; rejestracja sama nie loguje (najpierw potwierdzenie, potem logowanie).
  */
 import { bumpLimit, clientIp, createSession } from "../../_lib/auth";
+import { sendWelcome } from "../../_lib/notify";
 import { handle, HttpError, json, readJson, store } from "../../_lib/offers";
 import { getFirm, getUser, isVerified, putUser } from "../../_lib/tenant";
 import { USED_TTL, usedKey, VERIFY_HOURS, VERIFY_TOKEN_RE, verifyKey, type VerifyRecord } from "../../_lib/weryfikacja";
@@ -50,6 +51,12 @@ export const onRequestPost = handle(async (ctx) => {
   await kv.put(await usedKey(token), user.email, { expirationTtl: USED_TTL });
   await kv.delete(key);
   const firm = await getFirm(kv, user.firmId);
+  // Pierwsze potwierdzenie właściciela: mail powitalny (3 kroki na start, koniec okresu próbnego).
+  if (!already && firm && user.role === "owner") {
+    const sending = sendWelcome(ctx.env, { to: user.email, imie: user.name, firma: firm.name, origin: new URL(ctx.request.url).origin, trialEnds: firm.status === "trial" ? (firm.trialEnds ?? null) : null });
+    if (ctx.waitUntil) ctx.waitUntil(sending);
+    else await sending;
+  }
   if (!firm || firm.status === "suspended") return json({ ok: true, email: user.email, already, zalogowany: false });
   const cookie = await createSession(kv, { ...user, emailVerified: true }, ctx.request);
   return json({ ok: true, email: user.email, already, zalogowany: true }, 200, { "set-cookie": cookie });

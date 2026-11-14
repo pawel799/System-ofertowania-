@@ -102,3 +102,65 @@ Link działa przez ${mail.hours} godziny. Do czasu potwierdzenia możesz przygot
     html: `<p ${p}>Dzień dobry ${esc(mail.name)},</p><p ${p}>dziękujemy za założenie konta firmy <b>${esc(mail.firm)}</b> w OP RZUT. Potwierdź, że ten adres e-mail należy do Ciebie:</p><p ${p}><a href="${esc(mail.link)}">Potwierdź adres e-mail</a></p><p style="font-family:Arial,sans-serif;font-size:13px;color:#78716c">Link działa przez ${mail.hours} godziny. Do czasu potwierdzenia możesz przygotowywać oferty, ale nie wyślesz linku klientowi. Jeśli to nie Ty, zignoruj tę wiadomość.</p>`,
   });
 }
+
+const P = 'style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5"';
+const MALY = 'style="font-family:Arial,sans-serif;font-size:13px;color:#78716c;line-height:1.5"';
+const PRZYCISK = (href: string, tekst: string) =>
+  `<p style="margin:20px 0"><a href="${esc(href)}" style="font-family:Arial,sans-serif;font-size:14px;background:#1c1917;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block">${esc(tekst)}</a></p>`;
+const dataPl = (iso: string) => new Date(iso).toLocaleDateString("pl-PL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Warsaw" });
+
+/** Koniec okresu próbnego: 7 dni przed, 2 dni przed, ostatni dzień i dzień po (_lib/zadania.ts). */
+export async function sendTrialReminder(
+  env: Env,
+  m: { to: string[]; imie: string; firma: string; etap: "7" | "2" | "0" | "po"; koniec: string; link: string },
+) {
+  const kiedy = dataPl(m.koniec);
+  const tresc = {
+    "7": {
+      temat: "Okres próbny OP RZUT kończy się za 7 dni",
+      wstep: `okres próbny konta ${m.firma} w OP RZUT kończy się ${kiedy}.`,
+      dalej: "Wybierz plan, żeby oferty, linki dla klientów i zgłoszenia działały bez przerwy. Wszystko, co przygotowałeś, zostaje na koncie.",
+    },
+    "2": {
+      temat: "Zostały 2 dni okresu próbnego OP RZUT",
+      wstep: `za 2 dni (${kiedy}) kończy się okres próbny konta ${m.firma}.`,
+      dalej: "Wybierz plan teraz – zajmie to minutę, a klienci dalej otworzą Twoje oferty w 3D.",
+    },
+    "0": {
+      temat: "Dziś ostatni dzień okresu próbnego OP RZUT",
+      wstep: `dziś (${kiedy}) kończy się okres próbny konta ${m.firma}.`,
+      dalej: "Wybierz plan, żeby jutro wszystko działało jak dziś: kreator, oferty PDF, linki 3D dla klientów i zgłoszenia.",
+    },
+    po: {
+      temat: "Okres próbny OP RZUT się skończył",
+      wstep: `okres próbny konta ${m.firma} skończył się ${kiedy}.`,
+      dalej: "Twoje oferty, cennik i katalog są zapisane. Wybierz plan, żeby dalej z nich korzystać i wysyłać klientom linki.",
+    },
+  }[m.etap];
+  return sendMail(env, {
+    to: m.to,
+    subject: tresc.temat,
+    text: `Dzień dobry ${m.imie},\n\n${tresc.wstep}\n\n${tresc.dalej}\n\nWybierz plan: ${m.link}\n\nPytania? Odpisz na tę wiadomość.\n\nOP RZUT`,
+    html: `<p ${P}>Dzień dobry ${esc(m.imie)},</p><p ${P}>${esc(tresc.wstep)}</p><p ${P}>${esc(tresc.dalej)}</p>${PRZYCISK(m.link, "Wybierz plan")}<p ${MALY}>Pytania? Odpisz na tę wiadomość.</p>`,
+    replyTo: (env.NOTIFY_EMAIL ?? "").split(",")[0]?.trim() || undefined,
+  });
+}
+
+/** Powitanie po potwierdzeniu adresu e-mail: trzy kroki na start i data końca okresu próbnego. */
+export async function sendWelcome(env: Env, m: { to: string; imie: string; firma: string; origin: string; trialEnds: string | null }) {
+  const kroki: [string, string][] = [
+    ["Dane firmy i logo", `${m.origin}/panel/ustawienia?tab=firma`],
+    ["Pierwsza oferta – szybka oferta albo kreator", `${m.origin}/panel/szybka`],
+    ["Link 3D dla klienta – z oferty w panelu", `${m.origin}/panel`],
+  ];
+  const trial = m.trialEnds ? `Okres próbny trwa do ${dataPl(m.trialEnds)} – bez podawania karty.` : "";
+  return sendMail(env, {
+    to: [m.to],
+    subject: "Witaj w OP RZUT – 3 kroki na start",
+    text: `Dzień dobry ${m.imie},\n\nkonto ${m.firma} jest gotowe. Na start:\n\n${kroki.map(([t, l], i) => `${i + 1}. ${t}: ${l}`).join("\n")}\n\n${trial}\n\nPytania? Odpisz na tę wiadomość.\n\nOP RZUT`,
+    html: `<p ${P}>Dzień dobry ${esc(m.imie)},</p><p ${P}>konto <b>${esc(m.firma)}</b> jest gotowe. Na start:</p><ol ${P}>${kroki
+      .map(([t, l]) => `<li><a href="${esc(l)}">${esc(t)}</a></li>`)
+      .join("")}</ol>${trial ? `<p ${P}>${esc(trial)}</p>` : ""}${PRZYCISK(`${m.origin}/panel`, "Otwórz panel")}<p ${MALY}>Pytania? Odpisz na tę wiadomość.</p>`,
+    replyTo: (env.NOTIFY_EMAIL ?? "").split(",")[0]?.trim() || undefined,
+  });
+}
