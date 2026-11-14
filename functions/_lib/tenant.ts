@@ -16,6 +16,9 @@
  *   user:<email>       -> User (JSON, e-mail małymi literami)
  *   sess:<sha256>      -> sesja (JSON), wygasa po 30 dniach
  *   pwreset:<sha256>   -> e-mail, link do zmiany hasła ważny 1 godzinę
+ *   emailverify:<sha256>      -> { email, userId, exp }, link potwierdzający e-mail (ważny 24 h, rekord trzymany 7 dni,
+ *                                żeby wygasły link dał komunikat „wygasł”, a nie „nieprawidłowy”)
+ *   emailverify-used:<sha256> -> e-mail, ślad użytego linku (30 dni) – ponowne kliknięcie mówi „już potwierdzony”
  *   modelowner:<id>    -> id firmy, do której należy model 3D (publiczny plik modelu)
  */
 import type { PlanId } from "../../src/lib/plans";
@@ -65,6 +68,12 @@ export type User = {
   pw: string;
   /** Zmiana hasła unieważnia starsze sesje. */
   pwChangedAt?: string;
+  /**
+   * false = konto po rejestracji czeka na kliknięcie linku z maila. Brak pola = konto sprzed weryfikacji
+   * albo pracownik dodany przez właściciela – traktowane jak potwierdzone.
+   */
+  emailVerified?: boolean;
+  emailVerifiedAt?: string;
   createdAt: string;
   lastLogin?: string;
 };
@@ -168,11 +177,14 @@ export async function firmUsers(kv: KVNamespace, firmId: string): Promise<User[]
   return list.filter((u): u is User => !!u && u.firmId === firmId);
 }
 
+export const isVerified = (u: User) => u.emailVerified !== false;
+
 /** Bez skrótu hasła – to, co może zobaczyć panel. */
 export const userView = (u: User) => ({
   email: u.email,
   name: u.name,
   role: u.role,
+  emailVerified: isVerified(u),
   createdAt: u.createdAt,
   lastLogin: u.lastLogin ?? null,
 });

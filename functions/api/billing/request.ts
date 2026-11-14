@@ -4,7 +4,7 @@
  * a właściciel systemu dostaje maila (NOTIFY_EMAIL), żeby wystawić fakturę.
  */
 import { isPlanId, PLANS } from "../../../src/lib/plans";
-import { panel, requireOwner } from "../../_lib/auth";
+import { panel, requireOwner, requireVerified } from "../../_lib/auth";
 import { sendMail } from "../../_lib/notify";
 import { handle, HttpError, json, readJson, store } from "../../_lib/offers";
 import { firmPlan } from "../../_lib/plan";
@@ -13,6 +13,7 @@ import { firmView, putFirm } from "../../_lib/tenant";
 export const onRequestPost = handle(async (ctx) => {
   const { session } = await panel(ctx);
   requireOwner(session);
+  requireVerified(session, "zamówić plan (na ten adres przyjdą faktury)");
   const fp = await firmPlan(ctx.env, session);
   if (!fp.firm) throw new HttpError(400, "no_firm", "Administrator systemu nie ma planu.");
   const b = (await readJson(ctx.request, 2_000)) as { plan?: unknown; period?: unknown } | null;

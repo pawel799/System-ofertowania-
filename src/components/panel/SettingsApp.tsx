@@ -15,7 +15,7 @@ import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
 import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, type DomainView, type ModelMeta } from "./offerApi";
-import { LoginDialog, PanelBrand } from "./PanelGate";
+import { EmailVerifyBanner, LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
 /*
@@ -118,6 +118,7 @@ export default function SettingsApp() {
         </a>
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
+      {ready && !auth.need ? <EmailVerifyBanner me={me} reload={reloadMe} /> : null}
 
       <main className="surface set-main">
         <Seg label="Ustawienia" value={tab} onChange={pick} options={tabs} />

@@ -85,3 +85,20 @@ export async function sendPasswordReset(env: Env, email: string, link: string) {
     html: `<p style="font-family:Arial,sans-serif;font-size:14px">Ktoś (może Ty) poprosił o zmianę hasła do panelu ofert.</p><p style="font-family:Arial,sans-serif;font-size:14px"><a href="${esc(link)}">Ustaw nowe hasło</a></p><p style="font-family:Arial,sans-serif;font-size:13px;color:#78716c">Link działa przez godzinę. Jeśli to nie Ty, zignoruj tę wiadomość.</p>`,
   });
 }
+
+/** Link potwierdzający adres e-mail po rejestracji konta firmy. */
+export async function sendEmailVerification(env: Env, mail: { email: string; name: string; firm: string; link: string; hours: number }) {
+  const p = 'style="font-family:Arial,sans-serif;font-size:14px"';
+  return sendMail(env, {
+    to: [mail.email],
+    subject: "Potwierdź adres e-mail w OP RZUT",
+    text: `Dzień dobry ${mail.name},
+
+dziękujemy za założenie konta firmy ${mail.firm} w OP RZUT. Potwierdź, że ten adres e-mail należy do Ciebie:
+
+${mail.link}
+
+Link działa przez ${mail.hours} godziny. Do czasu potwierdzenia możesz przygotowywać oferty, ale nie wyślesz linku klientowi. Jeśli to nie Ty, zignoruj tę wiadomość.`,
+    html: `<p ${p}>Dzień dobry ${esc(mail.name)},</p><p ${p}>dziękujemy za założenie konta firmy <b>${esc(mail.firm)}</b> w OP RZUT. Potwierdź, że ten adres e-mail należy do Ciebie:</p><p ${p}><a href="${esc(mail.link)}">Potwierdź adres e-mail</a></p><p style="font-family:Arial,sans-serif;font-size:13px;color:#78716c">Link działa przez ${mail.hours} godziny. Do czasu potwierdzenia możesz przygotowywać oferty, ale nie wyślesz linku klientowi. Jeśli to nie Ty, zignoruj tę wiadomość.</p>`,
+  });
+}

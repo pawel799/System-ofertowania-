@@ -7,7 +7,7 @@
  * Ochrona przed CSRF: SameSite=Lax + sprawdzenie nagłówka Origin przy zmianach.
  */
 import { bearerToken, HttpError, randomId, store, verifyPanelToken, type Ctx, type Env, type KVNamespace } from "./offers";
-import { assertFirmActive, getFirm, getUser, MAIN_FIRM, scoped, type Firm, type Role, type ScopedKV, type User } from "./tenant";
+import { assertFirmActive, getFirm, getUser, isVerified, MAIN_FIRM, scoped, type Firm, type Role, type ScopedKV, type User } from "./tenant";
 
 export type Session = {
   firmId: string;
@@ -15,6 +15,8 @@ export type Session = {
   role: Role | "admin";
   email: string | null;
   name: string | null;
+  /** Adres e-mail potwierdzony linkiem z maila (administrator i dawne konta: zawsze true). */
+  verified: boolean;
 };
 
 const COOKIE = "so_sesja";
@@ -64,7 +66,7 @@ export function checkPasswordRules(password: unknown) {
 
 /* ---------- Sesje ---------- */
 
-async function sha256hex(text: string) {
+export async function sha256hex(text: string) {
   const d = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(text)));
   return Array.from(d, (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -131,11 +133,11 @@ export async function requirePanel(ctx: Ctx): Promise<Session> {
     checkOrigin(ctx.request);
     if (fromCookie.firm) assertFirmActive(fromCookie.firm);
     const u = fromCookie.user;
-    return { firmId: u.firmId, role: u.role, email: u.email, name: u.name };
+    return { firmId: u.firmId, role: u.role, email: u.email, name: u.name, verified: isVerified(u) };
   }
   if (bearerToken(ctx.request)) {
     await verifyPanelToken(ctx);
-    return { firmId: MAIN_FIRM, role: "admin", email: null, name: null };
+    return { firmId: MAIN_FIRM, role: "admin", email: null, name: null, verified: true };
   }
   throw new HttpError(401, "unauthorized", "Zaloguj się do panelu.");
 }
@@ -150,6 +152,21 @@ export function requireOwner(s: Session) {
   if (s.role !== "owner" && s.role !== "admin") {
     throw new HttpError(403, "owner_only", "Tylko właściciel konta firmy może to zmienić.");
   }
+}
+
+/**
+ * Niepotwierdzony e-mail (konto świeżo po rejestracji): panel działa – firma, logo, cennik, modele 3D, szkice ofert –
+ * ale nic nie wychodzi do osób trzecich ani nie angażuje pieniędzy: bez linku dla klienta, maili do klientów,
+ * kont w zespole, własnej domeny, osadzania na stronie i zamawiania planu.
+ * `what` kończy zdanie „Potwierdź adres e-mail, żeby …”.
+ */
+export function requireVerified(s: Session, what: string) {
+  if (s.verified) return;
+  throw new HttpError(
+    403,
+    "email_unverified",
+    `Potwierdź adres e-mail, żeby ${what}. Link jest w mailu wysłanym po rejestracji – nowy wyślesz przyciskiem „Wyślij link ponownie” w panelu.`,
+  );
 }
 
 export function requireAdmin(s: Session) {
