@@ -5,10 +5,12 @@
  *   409 token_used    – link już kliknięty (adres jest potwierdzony),
  *   400 bad_token     – link ucięty, zmyślony albo bardzo stary.
  * Limit: 30 prób na godzinę z IP.
+ * Pierwsze kliknięcie linku potwierdza adres i od razu loguje (ciasteczko sesji) – link z maila dowodzi,
+ * że to właściciel adresu; rejestracja sama nie loguje (najpierw potwierdzenie, potem logowanie).
  */
-import { bumpLimit, clientIp } from "../../_lib/auth";
+import { bumpLimit, clientIp, createSession } from "../../_lib/auth";
 import { handle, HttpError, json, readJson, store } from "../../_lib/offers";
-import { getUser, isVerified, putUser } from "../../_lib/tenant";
+import { getFirm, getUser, isVerified, putUser } from "../../_lib/tenant";
 import { USED_TTL, usedKey, VERIFY_HOURS, VERIFY_TOKEN_RE, verifyKey, type VerifyRecord } from "../../_lib/weryfikacja";
 
 export const onRequestPost = handle(async (ctx) => {
@@ -18,7 +20,7 @@ export const onRequestPost = handle(async (ctx) => {
   const bad = new HttpError(
     400,
     "bad_token",
-    "Ten link jest nieprawidłowy albo bardzo stary. Sprawdź, czy otworzył się w całości, albo zaloguj się do panelu i wyślij nowy.",
+    "Ten link jest nieprawidłowy albo bardzo stary. Sprawdź, czy otworzył się w całości, albo wpisz e-mail i hasło w oknie logowania panelu – pojawi się „Wyślij link ponownie”.",
   );
   if (!VERIFY_TOKEN_RE.test(token)) throw bad;
   await bumpLimit(kv, `rate:verify:${clientIp(ctx)}`, 30, 3600, "Za dużo prób. Spróbuj za godzinę.");
@@ -37,7 +39,7 @@ export const onRequestPost = handle(async (ctx) => {
     throw new HttpError(
       410,
       "token_expired",
-      `Link wygasł – działa przez ${VERIFY_HOURS} godziny od wysłania. Zaloguj się do panelu i kliknij „Wyślij link ponownie”.`,
+      `Link wygasł – działa przez ${VERIFY_HOURS} godziny od wysłania. Wpisz e-mail i hasło w oknie logowania panelu i kliknij „Wyślij link ponownie”.`,
     );
   }
   const user = await getUser(kv, rec.email);
@@ -47,5 +49,8 @@ export const onRequestPost = handle(async (ctx) => {
   if (!already) await putUser(kv, { ...user, emailVerified: true, emailVerifiedAt: new Date().toISOString() });
   await kv.put(await usedKey(token), user.email, { expirationTtl: USED_TTL });
   await kv.delete(key);
-  return json({ ok: true, email: user.email, already });
+  const firm = await getFirm(kv, user.firmId);
+  if (!firm || firm.status === "suspended") return json({ ok: true, email: user.email, already, zalogowany: false });
+  const cookie = await createSession(kv, { ...user, emailVerified: true }, ctx.request);
+  return json({ ok: true, email: user.email, already, zalogowany: true }, 200, { "set-cookie": cookie });
 });

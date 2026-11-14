@@ -350,10 +350,14 @@ export const authApi = {
       throw e;
     }
   },
+  /**
+   * Nowe konto. Gdy poczta działa – bez logowania (verify.sent): najpierw link z maila, który potwierdza adres
+   * i loguje. Bez poczty – od razu zalogowany (user, firm).
+   */
   register: async (data: { firma: string; nip: string; imie: string; email: string; haslo: string; plan?: string; zgoda: boolean; turnstile?: string }) => {
-    const r = await call<{ user: UserInfo; firm: FirmInfo; verify?: { sent: boolean } }>("POST", "/api/auth/register", { body: data });
+    const r = await call<{ user?: UserInfo; firm?: FirmInfo; email?: string; verify?: { sent: boolean } }>("POST", "/api/auth/register", { body: data });
     setToken("");
-    setSessionFlag(true);
+    if (!r.verify?.sent) setSessionFlag(true);
     return r;
   },
   logout: async () => {
@@ -365,7 +369,17 @@ export const authApi = {
   requestReset: (email: string) => call<{ ok: true; mail: boolean }>("POST", "/api/auth/reset", { body: { email } }),
   confirmReset: (token: string, haslo: string) => call<{ ok: true }>("POST", "/api/auth/reset/confirm", { body: { token, haslo } }),
   /** Link z maila po rejestracji (/potwierdz-email?t=…); działa bez logowania. */
-  verifyEmail: (token: string) => call<{ ok: true; email: string; already: boolean }>("POST", "/api/auth/verify", { body: { token } }),
+  verifyEmail: async (token: string) => {
+    const r = await call<{ ok: true; email: string; already: boolean; zalogowany?: boolean }>("POST", "/api/auth/verify", { body: { token } });
+    // Kliknięcie linku loguje (ciasteczko z serwera) – panel nie musi pytać o hasło.
+    if (r.zalogowany) {
+      setToken("");
+      setSessionFlag(true);
+    }
+    return r;
+  },
+  /** Nowy link potwierdzający bez logowania (ekran „Sprawdź skrzynkę”, logowanie przed potwierdzeniem). */
+  verifyAgain: (email: string) => call<{ ok: true }>("POST", "/api/auth/verify/ponownie", { body: { email } }),
   resendVerify: () => call<{ ok: true; email: string; already?: boolean }>("POST", "/api/auth/verify/resend"),
 };
 

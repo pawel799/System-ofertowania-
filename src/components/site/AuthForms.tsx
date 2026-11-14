@@ -47,6 +47,8 @@ export function RegisterForm() {
   const [lookup, setLookup] = useState<"idle" | "loading" | "found" | string>("idle");
   const [sendError, setSendError] = useState("");
   const [busy, setBusy] = useState(false);
+  /** Konto założone, czeka na kliknięcie linku z maila (najpierw potwierdzenie, potem logowanie). */
+  const [czeka, setCzeka] = useState<string | null>(null);
   const fetched = useRef("");
   const [captcha, token, resetCaptcha] = useTurnstile();
 
@@ -99,7 +101,13 @@ export function RegisterForm() {
     setBusy(true);
     setSendError("");
     try {
-      await authApi.register({ firma: f.company.trim(), nip, imie: f.name.trim(), email: f.email.trim(), haslo: f.password, plan, zgoda: true, turnstile: token });
+      const r = await authApi.register({ firma: f.company.trim(), nip, imie: f.name.trim(), email: f.email.trim(), haslo: f.password, plan, zgoda: true, turnstile: token });
+      if (r.verify?.sent) {
+        setCzeka(r.email ?? f.email.trim());
+        setBusy(false);
+        window.scrollTo({ top: 0 });
+        return;
+      }
       window.location.href = "/panel/ustawienia?tab=firma&nowe=1";
     } catch (err) {
       setSendError(errText(err));
@@ -107,6 +115,8 @@ export function RegisterForm() {
       setBusy(false);
     }
   };
+
+  if (czeka) return <SprawdzSkrzynke email={czeka} />;
 
   const nipHint =
     lookup === "loading"
@@ -176,6 +186,39 @@ export function RegisterForm() {
         </a>
       </p>
     </form>
+  );
+}
+
+/** Po rejestracji: konto czeka na potwierdzenie adresu – link z maila potwierdza i loguje. */
+function SprawdzSkrzynke({ email }: { email: string }) {
+  const [stan, setStan] = useState<"" | "wysylam" | "ok" | string>("");
+  const ponownie = async () => {
+    setStan("wysylam");
+    try {
+      await authApi.verifyAgain(email);
+      setStan("ok");
+    } catch (e) {
+      setStan(errText(e));
+    }
+  };
+  return (
+    <Done title="Sprawdź skrzynkę">
+      <p>
+        Wysłaliśmy link na <span className="text-stone-200">{email}</span>. Kliknij go, żeby potwierdzić adres – zalogujesz się od razu i trafisz do
+        panelu. Link działa 24 godziny.
+      </p>
+      <p className="mt-4 text-sm text-stone-500">Nie widzisz maila? Sprawdź folder spam albo oferty. Nowy link można wysłać raz na minutę.</p>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button type="button" className={btn("ghost")} onClick={() => void ponownie()} disabled={stan === "wysylam" || stan === "ok"}>
+          {stan === "wysylam" ? "Wysyłanie…" : stan === "ok" ? "Wysłano – sprawdź skrzynkę" : "Wyślij link ponownie"}
+        </button>
+        {stan && stan !== "wysylam" && stan !== "ok" ? (
+          <span role="alert" className="text-sm text-red-300">
+            {stan}
+          </span>
+        ) : null}
+      </div>
+    </Done>
   );
 }
 
@@ -283,7 +326,7 @@ export function ResetForm() {
 
 type VerifyState =
   | { k: "loading" }
-  | { k: "ok"; email: string; already: boolean }
+  | { k: "ok"; email: string; already: boolean; zalogowany: boolean }
   | { k: "err"; code: string; message: string };
 
 const VERIFY_TITLE: Record<string, string> = {
@@ -306,7 +349,11 @@ export function VerifyEmail() {
     }
     authApi
       .verifyEmail(token)
-      .then((r) => setState({ k: "ok", email: r.email, already: r.already }))
+      .then((r) => {
+        setState({ k: "ok", email: r.email, already: r.already, zalogowany: !!r.zalogowany });
+        // Zalogowany linkiem – po chwili prosto do panelu (pierwszy raz: uzupełnienie firmy).
+        if (r.zalogowany) window.setTimeout(() => (window.location.href = r.already ? "/panel" : "/panel/ustawienia?tab=firma&nowe=1"), 1800);
+      })
       .catch((e) => setState({ k: "err", code: e instanceof ApiError ? e.code : "error", message: errText(e) }));
   }, []);
 
@@ -320,10 +367,11 @@ export function VerifyEmail() {
     return (
       <Done title={state.already ? "Adres jest już potwierdzony" : "Adres e-mail potwierdzony"}>
         <p>
-          Konto <span className="text-stone-200">{state.email}</span> ma pełny dostęp: możesz wysyłać klientom linki do ofert i dodawać zespół.
+          Konto <span className="text-stone-200">{state.email}</span> jest aktywne.{" "}
+          {state.zalogowany ? "Jesteś zalogowany – za chwilę przeniesiemy Cię do panelu." : "Zaloguj się do panelu e-mailem i hasłem."}
         </p>
-        <a href="/panel" className={`${btn("solid")} mt-6`}>
-          Przejdź do panelu
+        <a href={state.zalogowany && !state.already ? "/panel/ustawienia?tab=firma&nowe=1" : "/panel"} className={`${btn("solid")} mt-6`}>
+          {state.zalogowany ? "Przejdź do panelu" : "Zaloguj się do panelu"}
         </a>
       </Done>
     );

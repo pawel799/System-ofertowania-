@@ -43,11 +43,14 @@ Po rejestracji właściciel dostaje mail z linkiem `/potwierdz-email?t=<token>` 
 `functions/_lib/weryfikacja.ts`). Strona wysyła token POST-em do `/api/auth/verify` – skaner linków
 w poczcie (GET bez JavaScriptu) nie zużyje go za klienta. W KV jest tylko skrót tokenu.
 
-Dopóki adres nie jest potwierdzony (`user.emailVerified === false`), panel pokazuje pasek
-„Potwierdź adres e-mail” z przyciskiem **Wyślij link ponownie** (1 mail na minutę, 5 na dobę na konto).
-Konto może wtedy wszystko, co zostaje w jego panelu: dane firmy i logo, cennik, katalog, modele 3D,
-pakiety RAL, kreator i szkice ofert. Nie może tego, co wychodzi do innych ludzi albo angażuje pieniądze
-(`requireVerified` w `auth.ts`, błąd 403 `email_unverified`):
+**Najpierw potwierdzenie, potem logowanie.** Rejestracja nie loguje – strona pokazuje „Sprawdź skrzynkę”
+z przyciskiem **Wyślij link ponownie** (`POST /api/auth/verify/ponownie`, bez logowania). Logowanie konta
+z niepotwierdzonym adresem (dobre hasło) zwraca 403 `email_unverified`; okno logowania pokazuje wtedy ten sam
+przycisk. Kliknięcie linku potwierdza adres i od razu loguje (ciasteczko z `/api/auth/verify`).
+
+Konta, które zalogowały się przed tą zmianą bez potwierdzenia (sesja jeszcze trwa), widzą w panelu pasek
+„Potwierdź adres e-mail” (1 mail na minutę, 5 na dobę na konto) i nie mogą tego, co wychodzi do innych ludzi
+albo angażuje pieniądze (`requireVerified` w `auth.ts`, błąd 403 `email_unverified`):
 
 - link dla klienta (nowa oferta z linkiem, nowy link albo link 3D do QR),
 - przypomnienie mailem do klienta,
@@ -81,15 +84,16 @@ ucięty albo zmyślony – 400 `bad_token`. Każdy ma własny komunikat na stron
 
 | Metoda i adres | Kto | Co robi |
 |---|---|---|
-| `POST /api/auth/register` | każdy | `{ firma, nip, imie, email, haslo, plan?, zgoda }` → konto firmy + właściciela, od razu zalogowany; mail z linkiem potwierdzającym adres |
-| `POST /api/auth/login` | każdy | `{ email, haslo }` → ciasteczko sesji |
+| `POST /api/auth/register` | każdy | `{ firma, nip, imie, email, haslo, plan?, zgoda }` → konto firmy + właściciela i mail z linkiem potwierdzającym; bez logowania (`{ verify: { sent: true }, email }`), a gdy poczta nie jest skonfigurowana – od razu zalogowany |
+| `POST /api/auth/login` | każdy | `{ email, haslo }` → ciasteczko sesji; niepotwierdzony adres – 403 `email_unverified` |
 | `POST /api/auth/logout` | zalogowany | koniec sesji |
 | `GET /api/auth/me` | zalogowany | `{ role, user, firm }` (administrator: `role: "admin"`) |
 | `POST /api/auth/password` | konto | `{ obecne, nowe }` – zmiana hasła |
 | `POST /api/auth/reset` | każdy | `{ email }` → mail z linkiem (gdy jest skonfigurowana poczta – `MAIL_API_URL`, `MAIL_API_KEY`); `{ mail: false }` bez poczty |
 | `POST /api/auth/reset/confirm` | każdy | `{ token, haslo }` – nowe hasło z linku |
-| `POST /api/auth/verify` | każdy | `{ token }` z linku w mailu → adres potwierdzony |
+| `POST /api/auth/verify` | każdy | `{ token }` z linku w mailu → adres potwierdzony i ciasteczko sesji (zalogowany) |
 | `POST /api/auth/verify/resend` | konto | nowy link potwierdzający na adres konta |
+| `POST /api/auth/verify/ponownie` | każdy | `{ email }` → nowy link, gdy konto czeka na potwierdzenie (zawsze `{ ok: true }`) |
 | `GET /api/team`, `POST /api/team` | firma / właściciel | lista kont, nowe konto pracownika `{ email, imie, haslo }` |
 | `PATCH /api/team/:email`, `DELETE /api/team/:email` | właściciel | nowe hasło pracownika, usunięcie konta |
 | `GET /api/admin/firms` | administrator | lista firm z kontami |

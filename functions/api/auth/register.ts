@@ -5,10 +5,11 @@
  *   - okres próbny TRIAL_DAYS dni na wybranym planie,
  *   - Turnstile (gdy ustawiony TURNSTILE_SECRET_KEY),
  *   - limit 5 rejestracji na godzinę z jednego IP,
- *   - mail z linkiem potwierdzającym adres (ważny 24 h, _lib/weryfikacja.ts); do potwierdzenia konto działa
- *     z ograniczeniami (auth.ts → requireVerified). Bez skonfigurowanej poczty nie da się wysłać linku,
- *     więc konto od razu liczy się jako potwierdzone.
- * Odpowiedź: { user, firm, verify: { sent } } + ciasteczko sesji (od razu zalogowany).
+ *   - mail z linkiem potwierdzającym adres (ważny 24 h, _lib/weryfikacja.ts). Najpierw potwierdzenie, potem
+ *     logowanie: rejestracja NIE loguje, logowanie bez potwierdzenia zwraca 403 email_unverified, a kliknięcie
+ *     linku potwierdza adres i loguje (verify.ts). Bez skonfigurowanej poczty nie da się wysłać linku, więc
+ *     konto od razu liczy się jako potwierdzone i rejestracja loguje jak dawniej.
+ * Odpowiedź: { verify: { sent: true }, email } (bez sesji) albo { user, firm, verify: { sent: false } } + ciasteczko.
  */
 import { WERSJA_DOKUMENTOW } from "../../../src/content/prawne";
 import { cleanNip, formatNip, isValidNip } from "../../../src/components/panel/company";
@@ -102,6 +103,8 @@ export const onRequestPost = handle(async (ctx) => {
     await kv.put(`verifyresend:cool:${email}`, "1", { expirationTtl: 60 }); // „Wyślij ponownie” dopiero po minucie
   }
 
+  // Poczta działa: konto czeka na kliknięcie linku – bez sesji (najpierw potwierdzenie, potem logowanie).
+  if (mail) return json({ verify: { sent: true }, email: user.email }, 201);
   const cookie = await createSession(kv, user, ctx.request);
-  return json({ user: userView(user), firm: firmView(firm), verify: { sent: mail } }, 201, { "set-cookie": cookie });
+  return json({ user: userView(user), firm: firmView(firm), verify: { sent: false } }, 201, { "set-cookie": cookie });
 });

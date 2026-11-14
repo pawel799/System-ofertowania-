@@ -234,6 +234,19 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
   const [local, setLocal] = useState("");
   const [busy, setBusy] = useState(false);
   const [captcha, token, resetCaptcha] = useTurnstile("light");
+  /** Dobre hasło, ale adres e-mail niepotwierdzony – przycisk „Wyślij link ponownie”. */
+  const [niepotwierdzony, setNiepotwierdzony] = useState<string | null>(null);
+  const [wyslano, setWyslano] = useState<"" | "wysylam" | "ok" | string>("");
+  const wyslijLink = async () => {
+    if (!niepotwierdzony) return;
+    setWyslano("wysylam");
+    try {
+      await authApi.verifyAgain(niepotwierdzony);
+      setWyslano("ok");
+    } catch (e) {
+      setWyslano(e instanceof Error ? e.message : "Nie udało się wysłać linku.");
+    }
+  };
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -249,6 +262,8 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
     if (mode === "account" && TURNSTILE_SITE_KEY && !token) return setLocal("Potwierdź, że nie jesteś robotem.");
     setBusy(true);
     setLocal("");
+    setNiepotwierdzony(null);
+    setWyslano("");
     try {
       if (mode === "account") await authApi.login(email.trim(), password, token);
       else await authApi.loginWithCode(code);
@@ -257,6 +272,7 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
       onLoggedIn();
     } catch (err) {
       if (mode === "account") resetCaptcha();
+      if (err instanceof ApiError && err.code === "email_unverified") setNiepotwierdzony(typeof err.data?.email === "string" ? err.data.email : email.trim());
       setLocal(err instanceof ApiError && err.status === 401 && mode === "code" ? "Ten kod nie pasuje." : err instanceof Error ? err.message : "Nie udało się zalogować.");
     } finally {
       setBusy(false);
@@ -328,6 +344,21 @@ export function LoginDialog({ error, onLoggedIn }: { error: string; onLoggedIn: 
           )}
           {captcha ? <div style={{ display: mode === "account" ? "block" : "none", marginTop: 10 }}>{captcha}</div> : null}
           {local || error ? <p className="err">{local || error}</p> : null}
+          {niepotwierdzony ? (
+            <p className="faint" style={{ margin: "8px 0 0", fontSize: 12.5 }} role="status">
+              {wyslano === "ok" ? (
+                <>Wysłaliśmy link na {niepotwierdzony} (nowy najwyżej raz na minutę). Kliknij go – zalogujesz się od razu.</>
+              ) : (
+                <>
+                  Nie masz maila?{" "}
+                  <button type="button" className="btn btn-plain" style={{ padding: 0, height: "auto", textDecoration: "underline" }} onClick={() => void wyslijLink()} disabled={wyslano === "wysylam"}>
+                    {wyslano === "wysylam" ? "Wysyłanie…" : "Wyślij link ponownie"}
+                  </button>
+                  {wyslano && wyslano !== "wysylam" ? <span className="err"> {wyslano}</span> : null}
+                </>
+              )}
+            </p>
+          ) : null}
         </div>
         <div className="m-foot">
           <button

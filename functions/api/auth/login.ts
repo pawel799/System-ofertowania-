@@ -1,10 +1,11 @@
 /*
  * POST /api/auth/login – { email, haslo } → ciasteczko sesji.
  * Ochrona: Turnstile (gdy TURNSTILE_SECRET_KEY), stały czas odpowiedzi i 20 błędnych prób na IP i 10 na konto w ciągu 15 minut.
+ * Konto z niepotwierdzonym adresem e-mail (po rejestracji) – 403 email_unverified (dobre hasło, ale najpierw link z maila).
  */
 import { clientIp, createSession, requireTurnstile, verifyDummy, verifyPassword } from "../../_lib/auth";
 import { handle, HttpError, json, readJson, store } from "../../_lib/offers";
-import { assertFirmActive, firmView, getFirm, getUser, normEmail, putUser, userView } from "../../_lib/tenant";
+import { assertFirmActive, firmView, getFirm, getUser, isVerified, normEmail, putUser, userView } from "../../_lib/tenant";
 
 const WINDOW = 15 * 60;
 
@@ -36,9 +37,17 @@ export const onRequestPost = handle(async (ctx) => {
   const firm = await getFirm(kv, user.firmId);
   if (!firm) throw new HttpError(401, "bad_login", "Zły e-mail albo hasło.");
   assertFirmActive(firm);
+  if (userFails) await kv.delete(userKey);
+  if (!isVerified(user)) {
+    throw new HttpError(
+      403,
+      "email_unverified",
+      `Najpierw potwierdź adres e-mail – kliknij link, który wysłaliśmy na ${user.email} (sprawdź też spam).`,
+      { email: user.email },
+    );
+  }
 
   await putUser(kv, { ...user, lastLogin: new Date().toISOString() });
-  if (userFails) await kv.delete(userKey);
   const cookie = await createSession(kv, user, ctx.request);
   return json({ user: userView(user), firm: firmView(firm) }, 200, { "set-cookie": cookie });
 });
