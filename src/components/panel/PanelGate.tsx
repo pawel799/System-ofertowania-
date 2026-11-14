@@ -8,7 +8,7 @@ import PrzelacznikMotywu from "../motyw/PrzelacznikMotywu";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { PanelMode } from "./usePanelOffers";
 import { loadBrand, useBrand } from "@/lib/brand";
-import { ApiError, authApi } from "./offerApi";
+import { ApiError, authApi, type Me } from "./offerApi";
 import { TURNSTILE_SITE_KEY, useTurnstile } from "../Turnstile";
 import { useMe } from "./AccountTabs";
 
@@ -33,6 +33,56 @@ export function PlanNotice() {
     <a className="sample" href="/panel/ustawienia?tab=plan" style={days < 0 ? { color: "var(--red)" } : undefined} data-tip="Plan i płatności">
       {text}
     </a>
+  );
+}
+
+/**
+ * Pasek pod nagłówkiem panelu, dopóki konto nie potwierdziło adresu e-mail (link z maila po rejestracji).
+ * `me` z rodzica (Ustawienia) albo pobierane tutaj. Po powrocie do karty sprawdza ponownie –
+ * link zwykle klika się w innej karcie albo na telefonie.
+ */
+export function EmailVerifyBanner({ me, reload }: { me?: Me | null; reload?: () => void }) {
+  const [own, reloadOwn] = useMe(me === undefined);
+  const m = me === undefined ? own : me;
+  const refresh = reload ?? reloadOwn;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
+  const pending = m?.user?.emailVerified === false;
+
+  useEffect(() => {
+    if (!pending) return;
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [pending, refresh]);
+
+  if (!pending || !m?.user) return null;
+
+  const resend = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const r = await authApi.resendVerify();
+      if (r.already) return refresh();
+      setMsg({ text: `Wysłaliśmy nowy link na ${r.email}. Sprawdź też folder spam.`, err: false });
+    } catch (e) {
+      setMsg({ text: e instanceof Error ? e.message : "Nie udało się wysłać linku.", err: true });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="verify-bar" role="status">
+      <div className="verify-t">
+        <b>Potwierdź adres e-mail {m.user.email}.</b> Kliknij link z maila (działa 24 godziny). Do tego czasu przygotujesz oferty, ale nie wyślesz
+        klientowi linku ani nie dodasz zespołu.
+        {msg ? <span className={msg.err ? "verify-err" : "verify-ok"}> {msg.text}</span> : null}
+      </div>
+      <button type="button" className="btn btn-ghost" onClick={resend} disabled={busy}>
+        {busy ? "Wysyłanie…" : "Wyślij link ponownie"}
+      </button>
+    </div>
   );
 }
 
@@ -138,6 +188,7 @@ export function PanelState({
         ) : null}
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
+      {mode === "api" ? <EmailVerifyBanner /> : null}
       <div style={{ display: "grid", placeItems: "center", minHeight: "60vh", padding: 24, visibility: mode === "loading" && !slow ? "hidden" : undefined }}>
         <div className="surface" role="status" aria-live="polite" style={{ padding: "28px 32px", maxWidth: 440, textAlign: "center" }}>
           <h2 style={{ fontSize: 15, marginBottom: 6 }}>{title}</h2>

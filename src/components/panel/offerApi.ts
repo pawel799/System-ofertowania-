@@ -322,7 +322,15 @@ export type FirmInfo = {
   planRequest?: { plan: PlanId; period: "month" | "year"; at: string; by: string } | null;
   createdAt: string;
 };
-export type UserInfo = { email: string; name: string; role: "owner" | "member"; createdAt: string; lastLogin: string | null };
+export type UserInfo = {
+  email: string;
+  name: string;
+  role: "owner" | "member";
+  createdAt: string;
+  lastLogin: string | null;
+  /** false = konto czeka na kliknięcie linku z maila po rejestracji. */
+  emailVerified?: boolean;
+};
 export type Me = { role: Role; user: UserInfo | null; firm: FirmInfo | null };
 
 export const authApi = {
@@ -343,7 +351,7 @@ export const authApi = {
     }
   },
   register: async (data: { firma: string; nip: string; imie: string; email: string; haslo: string; plan?: string; zgoda: boolean; turnstile?: string }) => {
-    const r = await call<{ user: UserInfo; firm: FirmInfo }>("POST", "/api/auth/register", { body: data });
+    const r = await call<{ user: UserInfo; firm: FirmInfo; verify?: { sent: boolean } }>("POST", "/api/auth/register", { body: data });
     setToken("");
     setSessionFlag(true);
     return r;
@@ -356,6 +364,9 @@ export const authApi = {
   changePassword: (obecne: string, nowe: string) => call<{ ok: true }>("POST", "/api/auth/password", { body: { obecne, nowe } }),
   requestReset: (email: string) => call<{ ok: true; mail: boolean }>("POST", "/api/auth/reset", { body: { email } }),
   confirmReset: (token: string, haslo: string) => call<{ ok: true }>("POST", "/api/auth/reset/confirm", { body: { token, haslo } }),
+  /** Link z maila po rejestracji (/potwierdz-email?t=…); działa bez logowania. */
+  verifyEmail: (token: string) => call<{ ok: true; email: string; already: boolean }>("POST", "/api/auth/verify", { body: { token } }),
+  resendVerify: () => call<{ ok: true; email: string; already?: boolean }>("POST", "/api/auth/verify/resend"),
 };
 
 export const teamApi = {

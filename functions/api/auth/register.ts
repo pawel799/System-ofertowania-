@@ -4,14 +4,19 @@
  *   - jedna firma na NIP i jedno konto na e-mail,
  *   - okres próbny TRIAL_DAYS dni na wybranym planie,
  *   - Turnstile (gdy ustawiony TURNSTILE_SECRET_KEY),
- *   - limit 5 rejestracji na godzinę z jednego IP.
- * Odpowiedź: { user, firm } + ciasteczko sesji (od razu zalogowany).
+ *   - limit 5 rejestracji na godzinę z jednego IP,
+ *   - mail z linkiem potwierdzającym adres (ważny 24 h, _lib/weryfikacja.ts); do potwierdzenia konto działa
+ *     z ograniczeniami (auth.ts → requireVerified). Bez skonfigurowanej poczty nie da się wysłać linku,
+ *     więc konto od razu liczy się jako potwierdzone.
+ * Odpowiedź: { user, firm, verify: { sent } } + ciasteczko sesji (od razu zalogowany).
  */
 import { WERSJA_DOKUMENTOW } from "../../../src/content/prawne";
 import { cleanNip, formatNip, isValidNip } from "../../../src/components/panel/company";
 import { isPlanId, TRIAL_DAYS, type PlanId } from "../../../src/lib/plans";
 import { bumpLimit, checkPasswordRules, clientIp, createSession, hashPassword, iterationsFor, requireTurnstile } from "../../_lib/auth";
 import { BRAND_KEY } from "../../_lib/brand";
+import { mailConfigured } from "../../_lib/notify";
+import { sendVerifyLink } from "../../_lib/weryfikacja";
 import { handle, HttpError, json, randomId, readJson, store } from "../../_lib/offers";
 import {
   EMAIL_RE,
@@ -59,6 +64,7 @@ export const onRequestPost = handle(async (ctx) => {
   }
 
   const now = new Date();
+  const mail = mailConfigured(ctx.env);
   const firm: Firm = {
     id: randomId(12),
     name: firmName,
@@ -80,6 +86,7 @@ export const onRequestPost = handle(async (ctx) => {
     pw: await hashPassword(password, iterationsFor(ctx.env)),
     createdAt: now.toISOString(),
     lastLogin: now.toISOString(),
+    ...(mail ? { emailVerified: false } : {}),
   };
   await putFirm(kv, firm);
   await kv.put(`firmnip:${nip}`, firm.id);
@@ -88,6 +95,13 @@ export const onRequestPost = handle(async (ctx) => {
   // Nazwa firmy od razu jako marka w ofertach (logo można dodać w Ustawieniach).
   await scoped(kv, firm.id).put(BRAND_KEY, JSON.stringify({ name: firmName, logo: null, updatedAt: now.toISOString() }));
 
+  if (mail) {
+    const sending = sendVerifyLink(ctx.env, kv, new URL(ctx.request.url).origin, user, firmName);
+    if (ctx.waitUntil) ctx.waitUntil(sending);
+    else await sending;
+    await kv.put(`verifyresend:cool:${email}`, "1", { expirationTtl: 60 }); // „Wyślij ponownie” dopiero po minucie
+  }
+
   const cookie = await createSession(kv, user, ctx.request);
-  return json({ user: userView(user), firm: firmView(firm) }, 201, { "set-cookie": cookie });
+  return json({ user: userView(user), firm: firmView(firm), verify: { sent: mail } }, 201, { "set-cookie": cookie });
 });

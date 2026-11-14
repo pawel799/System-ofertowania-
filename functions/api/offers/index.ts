@@ -8,7 +8,7 @@
 import { claimSlug, getOffer, handle, HttpError, json, listOffers, offerKey, putOffer, readJson, stampNow, validateOffer } from "../../_lib/offers";
 import { doPrzypomnienia, getPowiadomienia, przypomnijKlientowi, wTle } from "../../_lib/powiadomienia";
 import { mailConfigured } from "../../_lib/notify";
-import { panel } from "../../_lib/auth";
+import { panel, requireVerified } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
 import { checkKatalogRefs, snapshotOferty } from "../../_lib/katalog";
 import { zCenaKuchni } from "../../_lib/kuchnia";
@@ -60,7 +60,10 @@ export const onRequestPost = handle(async (ctx) => {
   if (await getOffer(kv, key)) {
     throw new HttpError(409, "exists", `Oferta ${offer.id} już istnieje. Odśwież listę.`);
   }
-  if (offer.link) await claimSlug(kv, offer.link.slug, key);
+  if (offer.link) {
+    requireVerified(session, "utworzyć link dla klienta");
+    await claimSlug(kv, offer.link.slug, key);
+  }
   const now = new Date().toISOString();
   const saved = { ...zWersjami(offer, null), createdAt: now, updatedAt: now };
   await putOffer(kv, saved);

@@ -17,7 +17,7 @@ import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModel
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, panelAuth, type DomainView, type Me, type ModelMeta } from "./offerApi";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
 import { listaDomen, normalizujDomene, type SprawdzenieDomeny } from "@/lib/domena";
-import { LoginDialog, PanelBrand } from "./PanelGate";
+import { EmailVerifyBanner, LoginDialog, PanelBrand } from "./PanelGate";
 import { HoldButton, Seg, Toaster, Tooltips, toast } from "./ui";
 
 /*
@@ -120,6 +120,7 @@ export default function SettingsApp() {
         </a>
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
+      {ready && !auth.need ? <EmailVerifyBanner me={me} reload={reloadMe} /> : null}
 
       <main className="surface set-main">
         <Seg label="Ustawienia" value={tab} onChange={pick} options={tabs} />

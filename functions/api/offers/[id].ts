@@ -6,7 +6,7 @@
  * Wszystko wymaga tokenu panelu.
  */
 import { claimSlug, getOffer, handle, HttpError, json, KEY_RE, offerKey, param, putOffer, readJson, validateOffer, type Ctx } from "../../_lib/offers";
-import { panel } from "../../_lib/auth";
+import { panel, requireVerified } from "../../_lib/auth";
 import { checkRefs } from "../../_lib/assets";
 import { checkKatalogRefs, snapshotOferty } from "../../_lib/katalog";
 import { zCenaKuchni } from "../../_lib/kuchnia";
@@ -61,6 +61,7 @@ export const onRequestPut = handle(async (ctx) => {
   }
 
   if (newSlug && newSlug !== oldSlug) {
+    requireVerified(session, "utworzyć link dla klienta");
     assertCanWrite(await firmPlan(ctx.env, session)); // nowy link dla klienta – tylko z aktywnym planem
     await claimSlug(kv, newSlug, key);
   }

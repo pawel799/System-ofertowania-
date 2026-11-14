@@ -1,14 +1,15 @@
 "use client";
 
 /*
- * Konta firm na stronie: rejestracja stolarni (/rejestracja) i zmiana hasła (/reset-hasla).
+ * Konta firm na stronie: rejestracja stolarni (/rejestracja), zmiana hasła (/reset-hasla)
+ * i potwierdzenie adresu e-mail linkiem z maila (/potwierdz-email).
  * Logowanie jest w jednym miejscu – okno w panelu (/panel, LoginDialog); /logowanie przekierowuje tam
  * (public/_redirects), więc „Wróć do logowania” zawsze prowadzi do tego samego okna.
  */
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { cleanNip, isValidNip } from "@/components/panel/company";
-import { authApi } from "@/components/panel/offerApi";
+import { ApiError, authApi } from "@/components/panel/offerApi";
 import { isPlanId, PLAN_NAMES, TRIAL_DAYS, type PlanId } from "@/lib/plans";
 import { TURNSTILE_SITE_KEY, useTurnstile } from "@/components/Turnstile";
 import { Done, Field } from "./SiteForms";
@@ -275,5 +276,63 @@ export function ResetForm() {
         </a>
       </p>
     </form>
+  );
+}
+
+/* ---------- Potwierdzenie adresu e-mail (?t=… z maila po rejestracji) ---------- */
+
+type VerifyState =
+  | { k: "loading" }
+  | { k: "ok"; email: string; already: boolean }
+  | { k: "err"; code: string; message: string };
+
+const VERIFY_TITLE: Record<string, string> = {
+  token_used: "Adres jest już potwierdzony",
+  token_expired: "Link wygasł",
+  bad_token: "Ten link nie działa",
+};
+
+export function VerifyEmail() {
+  const [state, setState] = useState<VerifyState>({ k: "loading" });
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (started.current) return; // tryb deweloperski Reacta uruchamia efekt dwa razy – token jest jednorazowy
+    started.current = true;
+    const token = new URLSearchParams(window.location.search).get("t") ?? "";
+    if (!token) {
+      setState({ k: "err", code: "bad_token", message: "W adresie brakuje kodu z maila. Otwórz link z wiadomości jeszcze raz." });
+      return;
+    }
+    authApi
+      .verifyEmail(token)
+      .then((r) => setState({ k: "ok", email: r.email, already: r.already }))
+      .catch((e) => setState({ k: "err", code: e instanceof ApiError ? e.code : "error", message: errText(e) }));
+  }, []);
+
+  if (state.k === "loading")
+    return (
+      <p role="status" className="text-sm text-stone-400">
+        Sprawdzamy link…
+      </p>
+    );
+  if (state.k === "ok")
+    return (
+      <Done title={state.already ? "Adres jest już potwierdzony" : "Adres e-mail potwierdzony"}>
+        <p>
+          Konto <span className="text-stone-200">{state.email}</span> ma pełny dostęp: możesz wysyłać klientom linki do ofert i dodawać zespół.
+        </p>
+        <a href="/panel" className={`${btn("solid")} mt-6`}>
+          Przejdź do panelu
+        </a>
+      </Done>
+    );
+  return (
+    <Done title={VERIFY_TITLE[state.code] ?? "Nie udało się potwierdzić adresu"}>
+      <p>{state.message}</p>
+      <a href="/panel" className={`${btn(state.code === "token_used" ? "solid" : "ghost")} mt-6`}>
+        {state.code === "token_used" ? "Przejdź do panelu" : "Zaloguj się do panelu"}
+      </a>
+    </Done>
   );
 }

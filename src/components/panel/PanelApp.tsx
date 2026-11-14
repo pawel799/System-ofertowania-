@@ -59,7 +59,7 @@ import { pokazWyborModelu } from "@/lib/bibliotekaModeli";
 import { TYP_PROJEKTU, TYPY_PROJEKTU, type TypProjektu } from "@/lib/projekt";
 import { assetsApi, offerKey, panelApi, panelAuth, toPublicModel, type DomainView, type ModelMeta } from "./offerApi";
 import WyborModeluOferty from "./WyborModeluOferty";
-import { LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
+import { EmailVerifyBanner, LoginDialog, LogoutButton, PanelBrand, PanelState, PlanNotice } from "./PanelGate";
 import { usePanelOffers } from "./usePanelOffers";
 import { WersjeOferty } from "./WersjeOferty";
 import EdycjaOferty from "./EdycjaOferty";
@@ -825,6 +825,7 @@ export default function PanelApp() {
         </button>
         <PrzelacznikMotywu className="btn btn-plain" domyslny="system" />
       </header>
+      {store.mode === "api" ? <EmailVerifyBanner /> : null}
 
       <div className="shell">
         <aside className="surface s-list" aria-label="Oferty">

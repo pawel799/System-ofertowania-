@@ -3,7 +3,7 @@
  * Bez skonfigurowanego operatora (BILLING_PROVIDER) – 501, panel pokazuje wtedy prośbę o fakturę.
  */
 import { isPlanId } from "../../../src/lib/plans";
-import { panel, requireOwner } from "../../_lib/auth";
+import { panel, requireOwner, requireVerified } from "../../_lib/auth";
 import { billingProvider } from "../../_lib/billing";
 import { handle, HttpError, json, readJson } from "../../_lib/offers";
 import { firmPlan } from "../../_lib/plan";
@@ -11,6 +11,7 @@ import { firmPlan } from "../../_lib/plan";
 export const onRequestPost = handle(async (ctx) => {
   const { session } = await panel(ctx);
   requireOwner(session);
+  requireVerified(session, "zamówić plan (na ten adres przyjdą faktury)");
   const provider = billingProvider(ctx.env);
   if (!provider) throw new HttpError(501, "payments_off", "Płatności online jeszcze nie działają. Wyślij prośbę o fakturę.");
   const fp = await firmPlan(ctx.env, session);

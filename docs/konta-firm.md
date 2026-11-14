@@ -37,6 +37,31 @@ albo „Mam kod administratora”. `/reset-hasla` i `/rejestracja` wracają do n
   mieści, ale gdyby Cloudflare zwracał błąd 1102 przy logowaniu – plan Workers Paid (5 USD/mies.)
   albo `PASSWORD_ITERATIONS=50000`.
 
+## Potwierdzenie adresu e-mail
+
+Po rejestracji właściciel dostaje mail z linkiem `/potwierdz-email?t=<token>` (ważny 24 godziny,
+`functions/_lib/weryfikacja.ts`). Strona wysyła token POST-em do `/api/auth/verify` – skaner linków
+w poczcie (GET bez JavaScriptu) nie zużyje go za klienta. W KV jest tylko skrót tokenu.
+
+Dopóki adres nie jest potwierdzony (`user.emailVerified === false`), panel pokazuje pasek
+„Potwierdź adres e-mail” z przyciskiem **Wyślij link ponownie** (1 mail na minutę, 5 na dobę na konto).
+Konto może wtedy wszystko, co zostaje w jego panelu: dane firmy i logo, cennik, katalog, modele 3D,
+pakiety RAL, kreator i szkice ofert. Nie może tego, co wychodzi do innych ludzi albo angażuje pieniądze
+(`requireVerified` w `auth.ts`, błąd 403 `email_unverified`):
+
+- link dla klienta (nowa oferta z linkiem, nowy link albo link 3D do QR),
+- przypomnienie mailem do klienta,
+- konta w zespole,
+- własna domena i włączenie mebli 3D na stronie firmy,
+- zamówienie planu (płatność online albo prośba o fakturę) – na ten adres przyjdą faktury.
+
+Okres próbny liczy się od rejestracji, niezależnie od potwierdzenia. Konta sprzed tej zmiany i pracownicy
+dodani przez właściciela nie mają pola `emailVerified` i liczą się jako potwierdzone. Bez skonfigurowanej
+poczty (`MAIL_API_URL`, `MAIL_API_KEY`) linku nie da się wysłać, więc nowe konto od razu jest potwierdzone.
+
+Błędy linku: wygasły – 410 `token_expired`, już użyty – 409 `token_used` („adres jest już potwierdzony”),
+ucięty albo zmyślony – 400 `bad_token`. Każdy ma własny komunikat na stronie `/potwierdz-email`.
+
 ## Klucze globalne w KV
 
 | Klucz | Wartość |
@@ -44,23 +69,27 @@ albo „Mam kod administratora”. `/reset-hasla` i `/rejestracja` wracają do n
 | `firm:<id>` | firma: nazwa, NIP, plan, status, `trialEnds`, `paidUntil`, `billing` |
 | `firmnip:<nip>` | id firmy (jedno konto na NIP) |
 | `firmusers:<id>` | lista e-maili kont firmy |
-| `user:<email>` | konto: imię, rola (`owner`/`member`), skrót hasła |
+| `user:<email>` | konto: imię, rola (`owner`/`member`), skrót hasła, `emailVerified` (`false` = czeka na link) |
 | `sess:<sha256>` | sesja (30 dni) |
 | `pwreset:<sha256>` | e-mail, link do zmiany hasła (1 godzina) |
+| `emailverify:<sha256>` | `{ email, userId, exp }` – link potwierdzający e-mail (ważny 24 h, rekord 7 dni) |
+| `emailverify-used:<sha256>` | e-mail – ślad użytego linku (30 dni) |
 | `modelowner:<id>` | firma, do której należy model 3D |
-| `loginfail:…`, `rate:reg:…`, `rate:reset:…` | liczniki prób |
+| `loginfail:…`, `rate:reg:…`, `rate:reset:…`, `rate:verify:…`, `verifyresend:…` | liczniki prób |
 
 ## Endpointy
 
 | Metoda i adres | Kto | Co robi |
 |---|---|---|
-| `POST /api/auth/register` | każdy | `{ firma, nip, imie, email, haslo, plan?, zgoda }` → konto firmy + właściciela, od razu zalogowany |
+| `POST /api/auth/register` | każdy | `{ firma, nip, imie, email, haslo, plan?, zgoda }` → konto firmy + właściciela, od razu zalogowany; mail z linkiem potwierdzającym adres |
 | `POST /api/auth/login` | każdy | `{ email, haslo }` → ciasteczko sesji |
 | `POST /api/auth/logout` | zalogowany | koniec sesji |
 | `GET /api/auth/me` | zalogowany | `{ role, user, firm }` (administrator: `role: "admin"`) |
 | `POST /api/auth/password` | konto | `{ obecne, nowe }` – zmiana hasła |
 | `POST /api/auth/reset` | każdy | `{ email }` → mail z linkiem (gdy jest skonfigurowana poczta – `MAIL_API_URL`, `MAIL_API_KEY`); `{ mail: false }` bez poczty |
 | `POST /api/auth/reset/confirm` | każdy | `{ token, haslo }` – nowe hasło z linku |
+| `POST /api/auth/verify` | każdy | `{ token }` z linku w mailu → adres potwierdzony |
+| `POST /api/auth/verify/resend` | konto | nowy link potwierdzający na adres konta |
 | `GET /api/team`, `POST /api/team` | firma / właściciel | lista kont, nowe konto pracownika `{ email, imie, haslo }` |
 | `PATCH /api/team/:email`, `DELETE /api/team/:email` | właściciel | nowe hasło pracownika, usunięcie konta |
 | `GET /api/admin/firms` | administrator | lista firm z kontami |

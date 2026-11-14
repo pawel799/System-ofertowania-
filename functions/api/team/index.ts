@@ -4,7 +4,7 @@
  *   POST – nowe konto pracownika (tylko właściciel): { email, imie, haslo }
  *          Hasło startowe przekazujesz pracownikowi; może je zmienić w Ustawieniach → Konto.
  */
-import { checkPasswordRules, hashPassword, iterationsFor, panel, requireOwner } from "../../_lib/auth";
+import { checkPasswordRules, hashPassword, iterationsFor, panel, requireOwner, requireVerified } from "../../_lib/auth";
 import { handle, HttpError, json, randomId, readJson, store } from "../../_lib/offers";
 import { EMAIL_RE, firmEmails, firmUsers, getUser, MAIN_FIRM, normEmail, putUser, setFirmEmails, userView, type User } from "../../_lib/tenant";
 import { assertCanWrite, assertLimit, firmPlan } from "../../_lib/plan";
@@ -19,6 +19,7 @@ export const onRequestPost = handle(async (ctx) => {
   const { session } = await panel(ctx);
   requireOwner(session);
   if (session.firmId === MAIN_FIRM) throw new HttpError(400, "no_firm", "Konta pracowników dodaje się w koncie firmy.");
+  requireVerified(session, "dodawać konta w zespole");
   const kv = store(ctx.env);
   const b = (await readJson(ctx.request, 5_000)) as Record<string, unknown> | null;
   const email = normEmail(typeof b?.email === "string" ? b.email : "");

@@ -2,13 +2,14 @@
  * POST /api/offers/:id/przypomnij – panel: wyślij klientowi teraz przypomnienie o ofercie (e-mail z linkiem).
  * Wymaga linku i adresu e-mail w kontakcie. Limit: 3 na ofertę na dobę.
  */
-import { panel } from "../../../_lib/auth";
+import { panel, requireVerified } from "../../../_lib/auth";
 import { mailConfigured } from "../../../_lib/notify";
 import { getOffer, handle, HttpError, json, KEY_RE, param, putOffer, stampNow } from "../../../_lib/offers";
 import { przypomnijKlientowi } from "../../../_lib/powiadomienia";
 
 export const onRequestPost = handle(async (ctx) => {
-  const { kv } = await panel(ctx);
+  const { session, kv } = await panel(ctx);
+  requireVerified(session, "wysyłać klientom e-maile z panelu");
   const key = param(ctx, "id");
   if (!KEY_RE.test(key)) throw new HttpError(400, "invalid", "Zły identyfikator oferty.");
   const offer = await getOffer(kv, key);
