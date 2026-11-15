@@ -9,17 +9,37 @@ import { useEffect, useMemo, useState } from "react";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { Seg, toast } from "../panel/ui";
 import { pobierzPdf } from "../panel/pdfPlik";
-import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
-import { rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
+import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, wymiaryDoCiecia, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
+import { odpadLaczny, rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
 import { importujListe, type WynikImportu } from "./importListy";
 import { formatkiProjektow, type ProjektDoRozkroju } from "./zrodloOferty";
-import { csvFormatek, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
+import {
+  csvFormatek,
+  dxfRozkroju,
+  etykietyDokument,
+  gotowaTxt,
+  legendaOdpadu,
+  mmTxt,
+  nazwaZGruboscia,
+  numeruj,
+  okleinaTekst,
+  produkcjaDokument,
+  svgArkusza,
+  wymiaryOpis,
+  type DaneProdukcji,
+  type MetaProdukcji,
+} from "./dokument";
 
 type Zrodlo = "ostatnie" | "projekt" | "lista" | "model";
-type Ustawienia = UstawieniaFormatek & UstawieniaRozkroju;
+type Ustawienia = UstawieniaFormatek &
+  Required<UstawieniaRozkroju> & {
+    /** Grubość okleiny odejmowana od wymiaru gotowego na każdej oklejanej krawędzi [mm]; 0 = tniemy wymiar z listy. */
+    okleinaOdejmij: number;
+  };
 
 const KLUCZ = "oprzut-produkcja-v1";
-const DOMYSLNE: Ustawienia = { ...USTAWIENIA_DOMYSLNE, ...ROZKROJ_DOMYSLNY };
+const DOMYSLNE: Ustawienia = { ...USTAWIENIA_DOMYSLNE, ...ROZKROJ_DOMYSLNY, resztka: ROZKROJ_DOMYSLNY.resztka ?? 300, okleinaOdejmij: 0 };
+const GRUBOSCI_OKLEINY = [0.4, 0.8, 1, 2] as const;
 
 function wczytajUstawienia(): Ustawienia {
   try {
@@ -34,6 +54,8 @@ function wczytajUstawienia(): Ustawienia {
       arkusz: { dl: num(z.arkusz?.dl, 2800, 500, 6000), szer: num(z.arkusz?.szer, 2070, 300, 3000) },
       rzaz: num(z.rzaz, 4, 0, 10),
       obrzeze: num(z.obrzeze, 10, 0, 50),
+      resztka: num(z.resztka, DOMYSLNE.resztka, 0, 2000),
+      okleinaOdejmij: num(z.okleinaOdejmij, 0, 0, 3),
     };
   } catch {
     return DOMYSLNE;
@@ -47,21 +69,73 @@ Bok;Biały 18 mm;720;560;2;D1
 Wieniec;Biały 18 mm;564;560;2;D1
 Front;Dąb Halifax 18 mm;717;597;1;dookoła`;
 
-function Liczba({ id, label, value, onChange, min, max, jedn = "mm" }: { id: string; label: string; value: number; onChange: (v: number) => void; min: number; max: number; jedn?: string }) {
-  const [txt, setTxt] = useState(String(value));
-  useEffect(() => setTxt(String(value)), [value]);
+/**
+ * Pole liczby w mm. Wartość spoza zakresu nie jest po cichu ucinana: zostaje komunikat przy polu, do czego ją ograniczono.
+ * `uwaga` – ostrzeżenie o nietypowej (ale dozwolonej) wartości, np. rzaz 0 mm.
+ */
+function Liczba({
+  id,
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  jedn = "mm",
+  dziesietne = 0,
+  uwaga,
+  podpowiedz,
+}: {
+  id: string;
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  jedn?: string;
+  /** Miejsca po przecinku (rzaz 3,2 mm). */
+  dziesietne?: number;
+  uwaga?: string | null;
+  podpowiedz?: string;
+}) {
+  const [txt, setTxt] = useState(mmTxt(value));
+  const [info, setInfo] = useState<string | null>(null);
+  useEffect(() => setTxt(mmTxt(value)), [value]);
   const zatwierdz = () => {
-    const v = Number(txt.replace(",", "."));
-    if (Number.isFinite(v)) onChange(Math.min(max, Math.max(min, Math.round(v))));
-    else setTxt(String(value));
+    const v = Number(txt.trim().replace(",", "."));
+    if (!txt.trim() || !Number.isFinite(v)) {
+      setInfo(`Wpisz liczbę od ${mmTxt(min)} do ${mmTxt(max)} ${jedn}.`);
+      setTxt(mmTxt(value));
+      return;
+    }
+    const p = 10 ** dziesietne;
+    const n = Math.min(max, Math.max(min, Math.round(v * p) / p));
+    setInfo(n !== v ? `${v < min ? "Najmniej" : v > max ? "Najwięcej" : "Przyjęto"} ${mmTxt(n)} ${jedn}${v < min || v > max ? ` (zakres ${mmTxt(min)}–${mmTxt(max)})` : ""}.` : null);
+    onChange(n);
+    setTxt(mmTxt(n));
   };
+  const opis = info ?? uwaga ?? podpowiedz;
   return (
     <label htmlFor={id} className="pr-pole">
       <span>{label}</span>
       <span className="pr-wej">
-        <input id={id} className="input" inputMode="numeric" value={txt} onChange={(e) => setTxt(e.target.value)} onBlur={zatwierdz} onKeyDown={(e) => e.key === "Enter" && zatwierdz()} />
+        <input
+          id={id}
+          className="input"
+          inputMode="decimal"
+          value={txt}
+          aria-invalid={info ? true : undefined}
+          aria-describedby={opis ? `${id}-opis` : undefined}
+          onChange={(e) => setTxt(e.target.value)}
+          onBlur={zatwierdz}
+          onKeyDown={(e) => e.key === "Enter" && zatwierdz()}
+        />
         <i>{jedn}</i>
       </span>
+      {opis ? (
+        <small id={`${id}-opis`} className={info || uwaga ? "pr-pole-uwaga" : "pr-pole-opis"}>
+          {opis}
+        </small>
+      ) : null}
     </label>
   );
 }
@@ -113,7 +187,11 @@ export default function Produkcja({
   }, [zrodlo, projekt, wybrane, u, zListy, model]);
 
   const materialy = useMemo(() => (dane?.materialy ?? []).map((m) => (m.klucz in sloje ? { ...m, sloje: sloje[m.klucz] } : m)), [dane, sloje]);
-  const daneM = useMemo(() => (dane ? { ...dane, materialy } : null), [dane, materialy]);
+  // Wymiar do cięcia: gotowy minus okleina (gdy ustawione) – ten wchodzi do rozkroju, tabel, CSV i PDF.
+  const daneM = useMemo(
+    () => (dane ? { ...dane, materialy, formatki: dane.formatki.map((f) => wymiaryDoCiecia(f, u.okleinaOdejmij)) } : null),
+    [dane, materialy, u.okleinaOdejmij],
+  );
   const nr = useMemo(() => (daneM ? numeruj(daneM) : new Map<string, number>()), [daneM]);
 
   const wyniki = useMemo(() => {
@@ -126,12 +204,13 @@ export default function Produkcja({
         rozkroj(
           f.map((x) => ({ ref: x.id, nr: nr.get(x.id) ?? 0, dl: x.dl, szer: x.szer, ilosc: x.ilosc })),
           m.sloje,
-          { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze },
+          { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze, resztka: u.resztka },
         ),
       );
     }
     return out;
-  }, [daneM, nr, u.arkusz, u.rzaz, u.obrzeze]);
+  }, [daneM, nr, u.arkusz, u.rzaz, u.obrzeze, u.resztka]);
+  const uRozkroju = { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze, resztka: u.resztka };
 
   const wczytajModel = async (files: FileList | null) => {
     const lista = Array.from(files ?? []);
@@ -165,7 +244,7 @@ export default function Produkcja({
     if (!daneM || sklada) return;
     setSklada(true);
     try {
-      await pobierzPdf(produkcjaDokument(daneM, wyniki, { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze }, meta), { nazwa: `Formatki ${meta.kod || "projekt"}`, margines: 12 });
+      await pobierzPdf(produkcjaDokument(daneM, wyniki, { ...uRozkroju, okleinaOdejmij: u.okleinaOdejmij }, meta), { nazwa: `Formatki ${meta.kod || "projekt"}`, margines: 12 });
       toast("PDF pobrany", { desc: "Formatki i rozkrój są w folderze Pobrane." });
     } catch (e) {
       toast("Nie udało się zapisać PDF", { type: "err", desc: e instanceof Error && e.message ? e.message : "Spróbuj jeszcze raz." });
@@ -174,20 +253,36 @@ export default function Produkcja({
     }
   };
 
-  const csv = () => {
-    if (!daneM) return;
-    const blob = new Blob([csvFormatek(daneM)], { type: "text/csv;charset=utf-8" });
+  const [etykiety, setEtykiety] = useState(false);
+  const pdfEtykiet = async () => {
+    if (!daneM || etykiety) return;
+    setEtykiety(true);
+    try {
+      await pobierzPdf(etykietyDokument(daneM, meta), { nazwa: `Etykiety ${meta.kod || "projekt"}`, margines: 0 });
+      toast("Etykiety pobrane", { desc: "A4, 3 × 8 etykiet 70 × 37 mm – jedna na każdą sztukę." });
+    } catch (e) {
+      toast("Nie udało się zapisać etykiet", { type: "err", desc: e instanceof Error && e.message ? e.message : "Spróbuj jeszcze raz." });
+    } finally {
+      setEtykiety(false);
+    }
+  };
+
+  const plik = (tresc: string, typ: string, rozsz: string) => {
+    const blob = new Blob([tresc], { type: typ });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `formatki-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.csv`;
+    a.download = `formatki-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.${rozsz}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
+  const csv = () => daneM && plik(csvFormatek(daneM), "text/csv;charset=utf-8", "csv");
+  const dxf = () => daneM && plik(dxfRozkroju(daneM, wyniki, uRozkroju), "application/dxf", "dxf");
 
   const pods = daneM ? podsumowanie(daneM) : [];
   const arkuszy = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.length, 0);
+  const odpadRazem = odpadLaczny(Array.from(wyniki.values()));
   const sztuk = daneM ? daneM.formatki.reduce((s, f) => s + f.ilosc, 0) : 0;
   const opcje: { value: Zrodlo; label: string }[] = [
     ...(ostatnie ? [{ value: "ostatnie" as const, label: "Ostatnie projekty" }] : []),
@@ -203,6 +298,12 @@ export default function Produkcja({
         <span className="grow" style={{ flex: 1 }} />
         <button type="button" className="btn btn-ghost" onClick={csv} disabled={!daneM?.formatki.length}>
           Pobierz CSV
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={dxf} disabled={!arkuszy} title="Rozkład formatek na arkuszach (mm) do CAD albo programu piły">
+          Pobierz DXF
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => void pdfEtykiet()} disabled={!daneM?.formatki.length || etykiety} aria-busy={etykiety} title="Etykiety 70 × 37 mm z kodem QR do naklejenia na formatki">
+          {etykiety ? "Przygotowuję…" : "Etykiety PDF"}
         </button>
         <button type="button" className="btn btn-ink" onClick={() => void wydruk()} disabled={!daneM?.formatki.length || sklada} aria-busy={sklada}>
           {sklada ? "Przygotowuję PDF…" : "Pobierz PDF"}
@@ -276,6 +377,13 @@ export default function Produkcja({
             )}
           </div>
           {zListy?.uwagi.length ? <p className="faint pr-uwagi">{zListy.uwagi.join(" ")}</p> : null}
+          {zListy?.bledy?.length ? (
+            <ul className="pr-bledy" role="alert" aria-label="Problemy z listą">
+              {zListy.bledy.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
         </section>
       ) : null}
 
@@ -308,8 +416,55 @@ export default function Produkcja({
         <div className="pr-ust-siatka">
           <Liczba id="pr-ark-dl" label="Arkusz – długość" value={u.arkusz.dl} min={500} max={6000} onChange={(v) => zmien({ arkusz: { ...u.arkusz, dl: v } })} />
           <Liczba id="pr-ark-sz" label="Arkusz – szerokość" value={u.arkusz.szer} min={300} max={3000} onChange={(v) => zmien({ arkusz: { ...u.arkusz, szer: v } })} />
-          <Liczba id="pr-rzaz" label="Rzaz piły" value={u.rzaz} min={0} max={10} onChange={(v) => zmien({ rzaz: v })} />
-          <Liczba id="pr-obrz" label="Obrzeże arkusza" value={u.obrzeze} min={0} max={50} onChange={(v) => zmien({ obrzeze: v })} />
+          <Liczba
+            id="pr-rzaz"
+            label="Rzaz piły"
+            value={u.rzaz}
+            min={0}
+            max={10}
+            dziesietne={1}
+            onChange={(v) => zmien({ rzaz: v })}
+            uwaga={
+              u.rzaz === 0
+                ? "Rzaz 0 mm: formatki stykają się bez miejsca na piłę – po cięciu wyjdą za małe."
+                : u.rzaz > 5
+                  ? "Nietypowo szeroki rzaz – piły formatowe mają zwykle 3,2–4,4 mm."
+                  : null
+            }
+          />
+          <Liczba
+            id="pr-obrz"
+            label="Formatowanie arkusza"
+            value={u.obrzeze}
+            min={0}
+            max={50}
+            onChange={(v) => zmien({ obrzeze: v })}
+            uwaga={u.obrzeze === 0 ? "0 mm: cięcie od surowej krawędzi płyty – zwykle odcina się 5–15 mm." : null}
+            podpowiedz="Pas odcinany z każdej surowej krawędzi płyty. To nie jest okleina formatki."
+          />
+          <label htmlFor="pr-okl" className="pr-pole">
+            <span>Wymiary w liście</span>
+            <select id="pr-okl" className="input" value={String(u.okleinaOdejmij)} onChange={(e) => zmien({ okleinaOdejmij: Number(e.target.value) || 0 })}>
+              <option value="0">Do cięcia – bez zmian</option>
+              {GRUBOSCI_OKLEINY.map((g) => (
+                <option key={g} value={String(g)}>
+                  Gotowe – odejmij okleinę {mmTxt(g)} mm
+                </option>
+              ))}
+            </select>
+            <small className="pr-pole-opis">
+              {u.okleinaOdejmij ? `Od każdej oklejanej krawędzi odejmujemy ${mmTxt(u.okleinaOdejmij)} mm.` : "Wymiar z listy idzie na piłę bez odejmowania okleiny."}
+            </small>
+          </label>
+          <Liczba
+            id="pr-resztka"
+            label="Resztka do odłożenia od"
+            value={u.resztka}
+            min={0}
+            max={2000}
+            onChange={(v) => zmien({ resztka: v })}
+            podpowiedz={u.resztka ? `Kawałki o krótszym boku od ${u.resztka} mm są oznaczone jako resztki, mniejsze to odpad.` : "0 – bez wyróżniania resztek."}
+          />
           {zrodlo === "projekt" || zrodlo === "ostatnie" ? (
             <>
               <Liczba id="pr-szcz" label="Szczelina frontów" value={u.szczelina} min={0} max={10} onChange={(v) => zmien({ szczelina: v })} />
@@ -350,9 +505,11 @@ export default function Produkcja({
       ) : (
         <>
           <p className="pr-suma" data-testid="pr-suma">
-            <b>{sztuk}</b> formatek · <b>{arkuszy}</b> {arkuszy === 1 ? "arkusz" : arkuszy < 5 ? "arkusze" : "arkuszy"} · okleina <b>{pl(daneM.formatki.reduce((s, f) => s + okleinaMb(f), 0))}</b> mb
+            <b>{sztuk}</b> formatek · <b>{arkuszy}</b> {arkuszy === 1 ? "arkusz" : arkuszy < 5 ? "arkusze" : "arkuszy"} · odpad łącznie <b>{pl(odpadRazem * 100)}%</b> · okleina{" "}
+            <b>{pl(daneM.formatki.reduce((s, f) => s + okleinaMb(f), 0))}</b> mb
           </p>
-          <div className="pr-tab-wrap">
+          <p className="faint pr-uwagi">{wymiaryOpis(u.okleinaOdejmij)}.</p>
+          <div className="pr-tab-wrap pr-tab-karty">
             <table className="pr-tab">
               <thead>
                 <tr>
@@ -370,15 +527,13 @@ export default function Produkcja({
                   const w = wyniki.get(p.material.klucz);
                   return (
                     <tr key={p.material.klucz}>
-                      <td>
-                        {nazwaZGruboscia(p.material)}
-                      </td>
-                      <td className="n">{p.sztuk}</td>
-                      <td className="n">{pl(p.m2, 2)}</td>
-                      <td className="n">{w?.arkusze.length ?? "–"}</td>
-                      <td className="n">{w ? `${pl(w.odpad * 100)}%` : "–"}</td>
-                      <td className="n">{pl(p.okleinaMb)} mb</td>
-                      <td>
+                      <td data-l="Materiał">{nazwaZGruboscia(p.material)}</td>
+                      <td className="n" data-l="Formatek">{p.sztuk}</td>
+                      <td className="n" data-l="m²">{pl(p.m2, 2)}</td>
+                      <td className="n" data-l="Arkusze">{w?.arkusze.length ?? "–"}</td>
+                      <td className="n" data-l="Odpad">{w ? `${pl(w.odpad * 100)}%` : "–"}</td>
+                      <td className="n" data-l="Okleina">{pl(p.okleinaMb)} mb</td>
+                      <td data-l="Słoje">
                         <label className="pr-check">
                           <input type="checkbox" checked={p.material.sloje} onChange={(e) => setSloje((s) => ({ ...s, [p.material.klucz]: e.target.checked }))} />
                           <span>{p.material.sloje ? "wzdłuż" : "obrót"}</span>
@@ -388,8 +543,22 @@ export default function Produkcja({
                   );
                 })}
               </tbody>
+              {pods.length > 1 ? (
+                <tfoot>
+                  <tr className="pr-razem">
+                    <td data-l="Materiał">Razem</td>
+                    <td className="n" data-l="Formatek">{sztuk}</td>
+                    <td className="n" data-l="m²">{pl(pods.reduce((s, p) => s + p.m2, 0), 2)}</td>
+                    <td className="n" data-l="Arkusze">{arkuszy}</td>
+                    <td className="n" data-l="Odpad łączny">{pl(odpadRazem * 100)}%</td>
+                    <td className="n" data-l="Okleina">{pl(pods.reduce((s, p) => s + p.okleinaMb, 0))} mb</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              ) : null}
             </table>
           </div>
+          <p className="faint pr-uwagi">{legendaOdpadu(odpadRazem)}</p>
 
           {daneM.materialy.map((m) => {
             const lista = daneM.formatki.filter((f) => f.material === m.klucz);
@@ -420,17 +589,23 @@ export default function Produkcja({
                           <td className="n">{nr.get(f.id)}</td>
                           <td>{f.mebel}</td>
                           <td>{f.element}</td>
-                          <td className="n">{f.dl}</td>
-                          <td className="n">{f.szer}</td>
+                          <td className="n">{mmTxt(f.dl)}</td>
+                          <td className="n">{mmTxt(f.szer)}</td>
                           <td className="n">{f.ilosc}</td>
                           <td className="mono">{okleinaTekst(f)}</td>
-                          <td className="faint">{f.uwagi ?? ""}</td>
+                          <td className="faint">{[gotowaTxt(f), f.uwagi ?? ""].filter(Boolean).join(" · ")}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
                 {w?.zaDuze.length ? <p className="err">Za duże na arkusz {u.arkusz.dl}×{u.arkusz.szer}: {w.zaDuze.map((z) => `nr ${z.nr}`).join(", ")}</p> : null}
+                {w?.arkusze.some((a) => a.resztki.length) ? (
+                  <p className="faint pr-uwagi">
+                    Resztki do odłożenia (zakreskowane):{" "}
+                    {w.arkusze.flatMap((a, i) => a.resztki.map((r) => `ark. ${i + 1}: ${mmTxt(r.w)}×${mmTxt(r.h)}`)).join(", ")}
+                  </p>
+                ) : null}
                 {w?.arkusze.length ? (
                   <div className="pr-arkusze">
                     {w.arkusze.map((a, i) => (
@@ -438,7 +613,7 @@ export default function Produkcja({
                         <figcaption>
                           Arkusz {i + 1} <span className="faint">· {a.kawalki.length} formatek</span>
                         </figcaption>
-                        <div dangerouslySetInnerHTML={{ __html: svgArkusza(a, { arkusz: u.arkusz, rzaz: u.rzaz, obrzeze: u.obrzeze }) }} />
+                        <div dangerouslySetInnerHTML={{ __html: svgArkusza(a, uRozkroju) }} />
                       </figure>
                     ))}
                   </div>

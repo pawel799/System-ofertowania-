@@ -5,7 +5,8 @@
  *   płyta korpusu 18 mm, boki na całą wysokość, wieńce między bokami, plecy HDF 3 mm nakładane,
  *   przegrody i półki w kolumnach z wnetrze.ts, fronty z podziału z rysunku minus szczelina.
  * Wymiary formatki: `dl` – wzdłuż słojów (dla płyt bez słojów dłuższy bok, rozkrój może obracać), `szer` – w poprzek.
- * Okleina: d1, d2 – krawędzie długości `dl`; s1, s2 – krawędzie długości `szer`. Wymiary są gotowe (z okleiną).
+ * Okleina: d1, d2 – krawędzie długości `dl`; s1, s2 – krawędzie długości `szer`. Wymiary są gotowe (z okleiną);
+ * przy cięciu można odjąć grubość okleiny (wymiaryDoCiecia).
  *
  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
  */
@@ -43,6 +44,8 @@ export type Formatka = {
   ilosc: number;
   okleina: Okleina;
   uwagi?: string;
+  /** Wymiar gotowy (z okleiną), gdy `dl` × `szer` to wymiar do cięcia po odjęciu okleiny. */
+  gotowe?: { dl: number; szer: number };
 };
 
 export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string };
@@ -343,8 +346,27 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
 /* ---------- podsumowania ---------- */
 
 /** Okleina w metrach bieżących dla jednej formatki (z ilością). */
-export const okleinaMb = (f: Pick<Formatka, "dl" | "szer" | "ilosc" | "okleina">) =>
-  (((f.okleina.d1 ? f.dl : 0) + (f.okleina.d2 ? f.dl : 0) + (f.okleina.s1 ? f.szer : 0) + (f.okleina.s2 ? f.szer : 0)) * f.ilosc) / 1000;
+export const okleinaMb = (f: Pick<Formatka, "dl" | "szer" | "ilosc" | "okleina" | "gotowe">) => {
+  const dl = f.gotowe?.dl ?? f.dl;
+  const szer = f.gotowe?.szer ?? f.szer;
+  return (((f.okleina.d1 ? dl : 0) + (f.okleina.d2 ? dl : 0) + (f.okleina.s1 ? szer : 0) + (f.okleina.s2 ? szer : 0)) * f.ilosc) / 1000;
+};
+
+/** Wymiar w mm do 0,1 mm. */
+export const mm01 = (n: number) => Math.round(n * 10) / 10;
+
+/**
+ * Wymiar do cięcia: gotowy minus grubość okleiny [mm] na każdej oklejanej krawędzi
+ * (S1, S2 skracają długość, D1, D2 – szerokość). 0 = wymiary z listy tniemy bez zmian.
+ */
+export function wymiaryDoCiecia(f: Formatka, grubOkleiny: number): Formatka {
+  if (!grubOkleiny) return f;
+  const ile = (a: boolean, b: boolean) => (a ? 1 : 0) + (b ? 1 : 0);
+  const dl = mm01(f.dl - grubOkleiny * ile(f.okleina.s1, f.okleina.s2));
+  const szer = mm01(f.szer - grubOkleiny * ile(f.okleina.d1, f.okleina.d2));
+  if (dl === f.dl && szer === f.szer) return f;
+  return { ...f, dl, szer, gotowe: { dl: f.dl, szer: f.szer } };
+}
 
 export type PodsumowanieMaterialu = { material: MaterialFormatki; sztuk: number; m2: number; okleinaMb: number };
 

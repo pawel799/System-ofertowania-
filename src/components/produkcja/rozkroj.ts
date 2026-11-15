@@ -1,7 +1,8 @@
 /*
  * Rozkrój formatek na arkusze płyty – cięcie gilotynowe (każde cięcie przez cały kawałek, jak na pile panelowej).
  *
- * Arkusz: `dl` × `szer` mm (słoje wzdłuż `dl`), obrzeże odcinane z każdej strony, rzaz piły między formatkami.
+ * Arkusz: `dl` × `szer` mm (słoje wzdłuż `dl`), formatowanie (pas surowej krawędzi) odcinane z każdej strony,
+ * rzaz piły między formatkami. Wymiary mogą mieć części milimetra (0,1 mm).
  * Formatka leży `dl` wzdłuż arkusza; bez słojów może się obrócić o 90°.
  * Heurystyka: najlepsze dopasowanie krótszego boku (BSSF) w wolnych prostokątach wszystkich otwartych arkuszy,
  * kilka kolejności i reguł podziału – wygrywa wynik z najmniejszą liczbą arkuszy, potem z największym kawałkiem resztek.
@@ -11,24 +12,45 @@ export type UstawieniaRozkroju = {
   arkusz: { dl: number; szer: number };
   /** Szerokość rzazu piły [mm]. */
   rzaz: number;
-  /** Obrzeże odcinane z każdej krawędzi arkusza [mm]. */
+  /**
+   * Formatowanie: pas odcinany z każdej surowej krawędzi arkusza [mm]. Pole nazywa się `obrzeze` z powodów
+   * historycznych (zapisane ustawienia) – to nie jest okleina formatki.
+   */
   obrzeze: number;
+  /** Najkrótszy bok resztki, którą warto odłożyć [mm]; mniejsze kawałki to odpad. 0 = nie wyróżniaj resztek. */
+  resztka?: number;
 };
 
-export const ROZKROJ_DOMYSLNY: UstawieniaRozkroju = { arkusz: { dl: 2800, szer: 2070 }, rzaz: 4, obrzeze: 10 };
+export const ROZKROJ_DOMYSLNY: UstawieniaRozkroju = { arkusz: { dl: 2800, szer: 2070 }, rzaz: 4, obrzeze: 10, resztka: 300 };
 
 export type DoRozkroju = { ref: string; nr: number; dl: number; szer: number; ilosc: number };
 
 /** Położenie formatki na arkuszu: x wzdłuż długości arkusza, y w poprzek; w × h po ewentualnym obrocie. */
 export type Polozenie = { ref: string; nr: number; x: number; y: number; w: number; h: number; obrocona: boolean };
-export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number };
+/** Wolny prostokąt arkusza (po cięciu gilotynowym), np. resztka do odłożenia. */
+export type Prostokat = { x: number; y: number; w: number; h: number };
+export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number; resztki: Prostokat[] };
 export type WynikRozkroju = {
   arkusze: ArkuszRozkroju[];
   /** Formatki większe niż arkusz (po obrzeżu). */
   zaDuze: DoRozkroju[];
   /** Udział odpadu we wszystkich użytych arkuszach (0–1). */
   odpad: number;
+  /** Pole wszystkich użytych arkuszy i pole formatek [mm²] – do odpadu łącznego kilku materiałów. */
+  poleArkuszy: number;
+  poleFormatek: number;
 };
+
+/** Odpad łączny kilku materiałów, ważony powierzchnią arkuszy (0–1). */
+export function odpadLaczny(wyniki: readonly WynikRozkroju[]) {
+  let ark = 0;
+  let f = 0;
+  for (const w of wyniki) {
+    ark += w.poleArkuszy;
+    f += w.poleFormatek;
+  }
+  return ark ? 1 - f / ark : 0;
+}
 
 type Wolny = { x: number; y: number; w: number; h: number };
 type Szt = { ref: string; nr: number; dl: number; szer: number };
@@ -110,8 +132,14 @@ export function rozkroj(lista: readonly DoRozkroju[], sloje: boolean, u: Ustawie
         if (n1 < n0 || (n1 === n0 && r1 < r0)) najlepszy = wynik;
       }
     }
-  const arkusze = (najlepszy ?? []).map((a) => ({ kawalki: a.kawalki, pole: a.pole }));
+  // Resztki: wolne prostokąty, których krótszy bok ≥ progu (prostokąty z cięcia gilotynowego się nie nakładają).
+  const prog = u.resztka ?? 0;
+  const arkusze = (najlepszy ?? []).map((a) => ({
+    kawalki: a.kawalki,
+    pole: a.pole,
+    resztki: prog > 0 ? a.wolne.filter((f) => Math.min(f.w, f.h) >= prog).sort((x, y) => y.w * y.h - x.w * x.h) : [],
+  }));
   const calosc = arkusze.length * u.arkusz.dl * u.arkusz.szer;
   const zajete = arkusze.reduce((s, a) => s + a.pole, 0);
-  return { arkusze, zaDuze, odpad: calosc ? 1 - zajete / calosc : 0 };
+  return { arkusze, zaDuze, odpad: calosc ? 1 - zajete / calosc : 0, poleArkuszy: calosc, poleFormatek: zajete };
 }

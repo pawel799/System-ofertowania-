@@ -3,11 +3,22 @@
  *
  * Kolumny rozpoznajemy po nagłówkach (długość, szerokość, ilość, materiał, nazwa, grubość, okleina, słoje).
  * Bez nagłówka: pierwsze dwie liczby to długość i szerokość, trzecia – ilość, pierwszy tekst – materiał.
- * Liczby z przecinkiem albo kropką. Wymiary w mm; gdy wszystkie są małe (< 300), to raczej centymetry – mnożymy × 10.
+ * Liczby z przecinkiem albo kropką. Wymiary w mm z dokładnością do 0,1 mm (563,5 zostaje 563,5);
+ * gdy wszystkie są małe (< 300), to raczej centymetry – mnożymy × 10.
+ * Wiersze z błędem (wymiar 0, ujemny albo nie-liczba, ilość 0) są pomijane z konkretnym opisem w `bledy`.
  */
-import { BEZ_OKLEINY, DREWNO_RE, HDF, type Formatka, type MaterialFormatki, type Okleina } from "./formatki";
+import { BEZ_OKLEINY, DREWNO_RE, HDF, mm01, type Formatka, type MaterialFormatki, type Okleina } from "./formatki";
 
-export type WynikImportu = { formatki: Formatka[]; materialy: MaterialFormatki[]; uwagi: string[]; pominieteWierszy: number };
+export type WynikImportu = {
+  formatki: Formatka[];
+  materialy: MaterialFormatki[];
+  uwagi: string[];
+  pominieteWierszy: number;
+  /** Konkretne problemy z wierszami („Wiersz 4: …”) – pokazywane przy polu listy. */
+  bledy?: string[];
+};
+
+const plMm = (n: number) => n.toLocaleString("pl-PL", { maximumFractionDigits: 2 });
 
 type Kolumna = "dl" | "szer" | "ilosc" | "material" | "nazwa" | "mebel" | "grubosc" | "okleina" | "d1" | "d2" | "s1" | "s2" | "sloje";
 
@@ -93,11 +104,14 @@ const tak = (s: string) => /^(1|x|tak|t|yes|y|true|✓|v|\+|okl\w*|abs|pcv|pvc)$
 const kluczMaterialu = (nazwa: string, gr: number) => `imp-${nazwa.toLowerCase().replace(/[^a-z0-9ąćęłńóśźż]+/g, "-")}-${gr}`;
 
 export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"): WynikImportu {
-  const linie = tekst
+  // Numery wierszy jak w wklejonym tekście (puste linie też się liczą) – do komunikatów o błędach.
+  const zNumerami = tekst
     .replace(/^﻿/, "")
     .split(/\r?\n/)
-    .map((l) => l.replace(/\s+$/, ""))
-    .filter((l) => l.trim());
+    .map((l, i) => ({ l: l.replace(/\s+$/, ""), nr: i + 1 }))
+    .filter((x) => x.l.trim());
+  const linie = zNumerami.map((x) => x.l);
+  const bledy: string[] = [];
   const uwagi: string[] = [];
   if (!linie.length) return { formatki: [], materialy: [], uwagi: ["Pusta lista."], pominieteWierszy: 0 };
   const sep = separator(linie);
@@ -124,7 +138,14 @@ export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"):
   type Surowa = { dl: number; szer: number; ilosc: number; material: string; gr: number; nazwa: string; mebel: string; okl: Okleina; sloje: boolean | null };
   const surowe: Surowa[] = [];
   let pominiete = 0;
-  for (const w of wiersze.slice(start)) {
+  const opisz = (t: string) => (t.trim() ? `„${t.trim().slice(0, 20)}”` : "puste pole");
+  for (let wi = start; wi < wiersze.length; wi++) {
+    const w = wiersze[wi];
+    const nrW = zNumerami[wi].nr;
+    const blad = (t: string) => {
+      pominiete++;
+      if (bledy.length < 30) bledy.push(`Wiersz ${nrW}: ${t}`);
+    };
     let dl: number, szer: number, ilosc: number, material: string, nazwa: string;
     let mebel = "";
     let gr = NaN;
@@ -134,7 +155,9 @@ export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"):
       const liczby = w.map(liczba).map((n, j) => [n, j] as const).filter(([n]) => !Number.isNaN(n));
       const teksty = w.filter((c) => c && Number.isNaN(liczba(c)));
       if (liczby.length < 2) {
-        pominiete++;
+        // Wiersz samego tekstu (np. tytuł) – pomijamy po cichu, gdy nie ma w nim żadnej liczby.
+        if (liczby.length) blad("potrzebne są dwie liczby – długość i szerokość w mm.");
+        else pominiete++;
         continue;
       }
       [dl, szer] = [liczby[0][0], liczby[1][0]];
@@ -146,12 +169,23 @@ export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"):
       dl = liczba(get("dl"));
       szer = liczba(get("szer"));
       if (Number.isNaN(dl) || Number.isNaN(szer)) {
-        pominiete++;
+        if (w.every((c) => !c.trim())) pominiete++;
+        else blad(Number.isNaN(dl) ? `długość ${opisz(get("dl"))} to nie liczba – podaj wymiar w mm.` : `szerokość ${opisz(get("szer"))} to nie liczba – podaj wymiar w mm.`);
         continue;
       }
-      const il = liczba(get("ilosc"));
+      const ilTekst = get("ilosc");
+      const il = liczba(ilTekst);
+      if (ilTekst.trim() && Number.isNaN(il)) {
+        blad(`ilość ${opisz(ilTekst)} to nie liczba.`);
+        continue;
+      }
       ilosc = Number.isNaN(il) ? 1 : il;
-      material = get("material") || domyslnyMaterial;
+      material = get("material");
+      if (!material && mapa.has("material")) {
+        material = domyslnyMaterial;
+        if (bledy.length < 30) bledy.push(`Wiersz ${nrW}: brak materiału – przyjęto „${domyslnyMaterial}”.`);
+      }
+      material ||= domyslnyMaterial;
       nazwa = get("nazwa");
       mebel = get("mebel");
       gr = liczba(get("grubosc"));
@@ -162,15 +196,22 @@ export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"):
         sloje = /^(1|tak|t|yes|y|true|x|wzdłuż|wzdluz|dł|dl|l|pion|✓)$/.test(s) ? true : /^(0|nie|n|no|false|-|brak|dowolnie|obrót|obrot)$/.test(s) ? false : null;
       }
     }
-    if (dl <= 0 || szer <= 0 || ilosc <= 0) {
-      pominiete++;
+    if (dl <= 0 || szer <= 0) {
+      blad(`wymiar ${plMm(dl <= 0 ? dl : szer)} mm – podaj długość i szerokość większe od zera.`);
       continue;
     }
+    if (ilosc <= 0) {
+      blad(`ilość ${plMm(ilosc)} – podaj co najmniej 1 sztukę.`);
+      continue;
+    }
+    if (!Number.isInteger(ilosc) && bledy.length < 30) bledy.push(`Wiersz ${nrW}: ilość ${plMm(ilosc)} – przyjęto ${Math.max(1, Math.round(ilosc))} szt.`);
+    for (const v of [dl, szer])
+      if (mm01(v) !== v && bledy.length < 30) bledy.push(`Wiersz ${nrW}: ${plMm(v)} mm – przyjęto ${plMm(mm01(v))} mm (dokładność 0,1 mm).`);
     const grZNazwy = /(\d+([.,]\d)?)\s*mm/i.exec(material);
     if (Number.isNaN(gr) && grZNazwy) gr = Number(grZNazwy[1].replace(",", "."));
-    surowe.push({ dl, szer, ilosc: Math.round(ilosc), material, gr: Number.isNaN(gr) ? (/hdf/i.test(material) ? 3 : 18) : gr, nazwa, mebel, okl, sloje });
+    surowe.push({ dl, szer, ilosc: Math.max(1, Math.round(ilosc)), material, gr: Number.isNaN(gr) ? (/hdf/i.test(material) ? 3 : 18) : gr, nazwa, mebel, okl, sloje });
   }
-  if (!surowe.length) return { formatki: [], materialy: [], uwagi: ["Nie znaleziono wierszy z długością i szerokością."], pominieteWierszy: pominiete };
+  if (!surowe.length) return { formatki: [], materialy: [], uwagi: ["Nie znaleziono wierszy z długością i szerokością."], pominieteWierszy: pominiete, bledy };
 
   // Centymetry? Wszystkie wymiary małe – płyta 18 mm nie ma formatek po 30 cm i mniej w całej liście.
   const max = Math.max(...surowe.map((s) => Math.max(s.dl, s.szer)));
@@ -188,13 +229,13 @@ export function importujListe(tekst: string, domyslnyMaterial = "Płyta 18 mm"):
       mebel: s.mebel || "Import",
       element: s.nazwa || `Formatka ${i + 1}`,
       material: klucz,
-      dl: Math.round(s.dl * skala),
-      szer: Math.round(s.szer * skala),
+      dl: mm01(s.dl * skala),
+      szer: mm01(s.szer * skala),
       ilosc: s.ilosc,
       okleina: s.okl,
     };
   });
-  if (pominiete) uwagi.push(`Pominięto ${pominiete} ${pominiete === 1 ? "wiersz" : "wierszy"} bez wymiarów.`);
+  if (pominiete) uwagi.push(`Pominięto ${pominiete} ${pominiete === 1 ? "wiersz" : "wierszy"}${bledy.length ? " – szczegóły niżej" : " bez wymiarów"}.`);
   if (bezNaglowka) uwagi.push("Brak nagłówka – przyjęto: długość, szerokość, ilość w kolejności liczb.");
-  return { formatki, materialy: Array.from(materialy.values()), uwagi, pominieteWierszy: pominiete };
+  return { formatki, materialy: Array.from(materialy.values()), uwagi, pominieteWierszy: pominiete, bledy };
 }

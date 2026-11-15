@@ -13,7 +13,7 @@
 const PX_MM = 96 / 25.4;
 
 /** Elementy, których nie tniemy między stronami (gdy mieszczą się na jednej). */
-const CALE = "tr, thead, figure, img, svg, header, h1, h2, h3, p, li, .karta, .qr, .arkusz, .rt-rys, .rt-tabelka";
+const CALE = "tr, thead, figure, img, svg, header, h1, h2, h3, p, li, .karta, .qr, .arkusz, .etykieta, .rt-rys, .rt-tabelka";
 
 export type OpcjePdf = {
   /** Nazwa pliku (z .pdf albo bez). */

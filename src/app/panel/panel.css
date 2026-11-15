@@ -754,7 +754,41 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .pr-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .pnl .pr-lista li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--g3); font-size: 12.5px; }
 .pnl .pr-lista b { font-weight: 550; white-space: nowrap; font-variant-numeric: tabular-nums; }
-@media (max-width: 640px) { .pnl .pr-body { padding: 12px; } .pnl .modal.pr-okno { height: calc(100dvh - 16px); } }
+.pnl .ark-r { fill: color-mix(in srgb, var(--green) 10%, var(--panel)); }
+.pnl .ark-rl { stroke: color-mix(in srgb, var(--green) 35%, transparent); stroke-width: 6; }
+.pnl .ark-rr { stroke: var(--green); stroke-width: 4; stroke-dasharray: 24 16; }
+.pnl .pr-pole small { font-size: 11.5px; line-height: 1.35; }
+.pnl .pr-pole-opis { color: var(--text-3); }
+.pnl .pr-pole-uwaga { color: var(--amber); }
+.pnl .pr-pole .input[aria-invalid] { box-shadow: inset 0 0 0 1px var(--red); }
+.pnl .pr-bledy { margin: 0; padding: 8px 12px 8px 28px; border-radius: 8px; font-size: 12.5px; color: var(--red); background: color-mix(in srgb, var(--red) 7%, transparent); display: flex; flex-direction: column; gap: 2px; }
+.pnl .pr-tab tfoot td { font-weight: 600; border-top: 1px solid var(--text-2); border-bottom: 0; }
+/* Tabela szersza niż ekran: cień przy krawędzi pokazuje, że da się przewinąć w bok. */
+.pnl .pr-tab-wrap {
+  background:
+    linear-gradient(to right, var(--panel) 30%, transparent) left / 24px 100% no-repeat local,
+    linear-gradient(to left, var(--panel) 30%, transparent) right / 24px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%, rgb(0 0 0 / 0.18), transparent) left / 10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%, rgb(0 0 0 / 0.18), transparent) right / 10px 100% no-repeat scroll;
+}
+.pnl .pr-tab-wrap .pr-tab { min-width: 560px; }
+.pnl .pr-tab th { white-space: nowrap; }
+.pnl .pr-tab .mono { white-space: nowrap; }
+@media (max-width: 640px) {
+  .pnl .pr-body { padding: 12px; }
+  .pnl .modal.pr-okno { height: calc(100dvh - 16px); }
+  /* Podsumowanie materiałów na telefonie: karta na materiał zamiast wąskiej tabeli. */
+  .pnl .pr-tab-karty { background: none; }
+  .pnl .pr-tab-karty .pr-tab { min-width: 0; }
+  .pnl .pr-tab-karty thead { display: none; }
+  .pnl .pr-tab-karty tr { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; padding: 8px 0; border-bottom: 1px solid var(--g3); }
+  .pnl .pr-tab-karty td { border: 0; padding: 0; display: flex; justify-content: space-between; gap: 8px; text-align: left; }
+  .pnl .pr-tab-karty td[data-l]::before { content: attr(data-l); color: var(--text-3); font-weight: 400; }
+  .pnl .pr-tab-karty td:first-child { grid-column: 1 / -1; font-weight: 600; }
+  .pnl .pr-tab-karty td:first-child::before { content: none; }
+  .pnl .pr-tab-karty td:empty { display: none; }
+  .pnl .pr-tab-karty tfoot td { border: 0; }
+}
 
 /* Dodatkowe ściany na rzucie */
 .pnl .kr-sciana-dod polygon { fill: var(--text-2); stroke: var(--text); stroke-width: 0.8; opacity: 0.9; }
