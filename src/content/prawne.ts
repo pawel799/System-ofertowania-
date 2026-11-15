@@ -35,10 +35,14 @@ const admin = () => {
   ];
   return parts.filter(Boolean).join(", ");
 };
-const email = () => FIRMA.email || "adres e-mail podany na stronie /kontakt";
+// Bez adresu e-mail w firma.ts odsyłamy do formularza – strona /kontakt pokazuje formularz, a nie adres,
+// więc dokument nie może kazać szukać tam e-maila, którego nie ma.
+const FORMULARZ = "formularz kontaktowy na stronie oprzut.app/kontakt";
+/** Kanał zgłoszeń do wstawienia po „przez …” / „na …”: adres e-mail albo formularz. */
+const email = () => (FIRMA.email ? `adres e-mail ${FIRMA.email}` : FORMULARZ);
 const kontakt = () => {
   const c = [FIRMA.email && `e-mail: ${FIRMA.email}`, FIRMA.telefon && `tel. ${FIRMA.telefon}`].filter(Boolean).join(", ");
-  return c ? c : "dane kontaktowe podane na stronie /kontakt";
+  return c ? c : FORMULARZ;
 };
 
 /* ===================================================================================================== */
@@ -89,7 +93,7 @@ export const REGULAMIN: LegalSection[] = [
       "Umowa o świadczenie usługi Konta zostaje zawarta z chwilą rejestracji – podania danych Firmy, akceptacji Regulaminu wraz z Umową powierzenia i utworzenia Konta. Umowa jest zawierana na czas nieokreślony.",
       "Konto może założyć wyłącznie przedsiębiorca w celu związanym z prowadzoną działalnością gospodarczą. Osoba rejestrująca Konto w imieniu Firmy oświadcza, że jest do tego upoważniona.",
       "Nowe Konto ma bezpłatny okres próbny wskazany na stronie /cennik. Okres próbny nie przechodzi automatycznie w płatny Plan – dalsze korzystanie wymaga wyboru i opłacenia Planu. Po okresie próbnym bez opłaty Konto działa w trybie tylko do odczytu, a udostępnione Klientom linki działają do końca ich ważności.",
-      "Firma może w każdej chwili rozwiązać umowę, wysyłając prośbę o usunięcie Konta na adres: " + email() + ". Opłacony okres nie podlega zwrotowi, chyba że przepisy stanowią inaczej.",
+      "Firma może w każdej chwili rozwiązać umowę, wysyłając prośbę o usunięcie Konta przez " + email() + ". Opłacony okres nie podlega zwrotowi, chyba że przepisy stanowią inaczej.",
       "Usługodawca może rozwiązać umowę z zachowaniem 30-dniowego okresu wypowiedzenia, a bez wypowiedzenia – gdy Firma rażąco narusza Regulamin (np. zamieszcza treści bezprawne, podejmuje próby włamania), po bezskutecznym wezwaniu do zaprzestania naruszeń, o ile wezwanie jest możliwe.",
       "Po rozwiązaniu umowy Firma może przez 30 dni poprosić o wydanie swoich danych (oferty, zgłoszenia) w formacie elektronicznym. Następnie dane Konta są usuwane, z wyjątkiem danych, które Usługodawca musi przechowywać na podstawie przepisów (np. faktury).",
     ],
@@ -116,7 +120,7 @@ export const REGULAMIN: LegalSection[] = [
   {
     title: "Zgłaszanie nielegalnych treści",
     items: [
-      `Punktem kontaktowym Usługodawcy dla organów państw członkowskich UE, Komisji Europejskiej i odbiorców usług (art. 11 i 12 rozporządzenia (UE) 2022/2065 – Aktu o usługach cyfrowych) jest adres e-mail: ${email()}. Komunikacja odbywa się w języku polskim lub angielskim.`,
+      `Punktem kontaktowym Usługodawcy dla organów państw członkowskich UE, Komisji Europejskiej i odbiorców usług (art. 11 i 12 rozporządzenia (UE) 2022/2065 – Aktu o usługach cyfrowych) jest ${email()}. Komunikacja odbywa się w języku polskim lub angielskim.`,
       "Każdy może zgłosić treść w Serwisie, którą uważa za nielegalną, wysyłając wiadomość na powyższy adres. Zgłoszenie powinno zawierać: uzasadnienie, dlaczego treść jest nielegalna, dokładny adres (URL) treści, imię i nazwisko (lub nazwę) i adres e-mail zgłaszającego (nie dotyczy zgłoszeń o niektórych przestępstwach przeciwko dzieciom) oraz oświadczenie, że zgłoszenie jest dokonywane w dobrej wierze, a zawarte w nim informacje są prawidłowe i kompletne.",
       "Usługodawca potwierdza otrzymanie zgłoszenia, rozpatruje je bez zbędnej zwłoki, w sposób staranny i obiektywny, i informuje zgłaszającego o decyzji. Jeśli treść zostanie usunięta lub dostęp do niej zostanie zablokowany, Usługodawca przekazuje Firmie uzasadnienie decyzji (art. 17 Aktu o usługach cyfrowych). Od decyzji można się odwołać, pisząc na ten sam adres.",
       "Usługodawca nie stosuje zautomatyzowanego moderowania treści.",
@@ -133,7 +137,7 @@ export const REGULAMIN: LegalSection[] = [
   {
     title: "Reklamacje",
     items: [
-      `Reklamacje dotyczące działania Serwisu można zgłaszać na adres: ${email()}. Reklamacja powinna zawierać dane kontaktowe i opis problemu.`,
+      `Reklamacje dotyczące działania Serwisu można zgłaszać przez ${email()}. Reklamacja powinna zawierać dane kontaktowe i opis problemu.`,
       "Usługodawca rozpatruje reklamację w ciągu 14 dni od jej otrzymania i odpowiada e-mailem albo w sposób wskazany przez zgłaszającego.",
     ],
   },

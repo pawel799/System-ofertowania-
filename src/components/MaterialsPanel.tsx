@@ -148,7 +148,8 @@ export default function MaterialsPanel({
     >
       <h2 className="sr-only">Materiały</h2>
 
-      <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
+      {/* Telefon: dolny odstęp na wysokość przyklejonego paska ceny – żadna opcja nie chowa się pod nim. */}
+      <div className="flex flex-col gap-5 px-5 pb-[calc(7rem+env(safe-area-inset-bottom,0px))] pt-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
         <div className="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-4 desk:flex-1 desk:gap-x-8">
           {zKolorami && plan && onPlan ? (

@@ -105,12 +105,12 @@ export default function OfferView({
           className="absolute inset-0 hidden bg-gradient-to-t from-black/75 via-black/0 to-black/55 desk:block"
         />
 
-        <header className="oferta-naglowek absolute inset-x-0 top-0 flex -translate-y-[58svh] [@media(orientation:landscape)_and_(max-height:500px)]:-translate-y-[82svh] items-center justify-between gap-4 bg-tlo/70 px-4 py-3 text-[11px] uppercase tracking-[0.25em] text-stone-300 desk:relative desk:translate-y-0 desk:bg-transparent desk:px-10 desk:py-6">
+        <header className="oferta-naglowek absolute inset-x-0 top-0 flex -translate-y-[58svh] [@media(orientation:landscape)_and_(max-height:500px)]:-translate-y-[82svh] items-center justify-between gap-3 bg-tlo/70 px-4 py-3 text-[11px] uppercase tracking-[0.14em] text-stone-300 sm:gap-4 sm:tracking-[0.25em] desk:relative desk:translate-y-0 desk:bg-transparent desk:px-10 desk:py-6">
           <BrandMark />
           <span className="oferta-kod hidden tabular-nums text-stone-300 sm:inline">{code}</span>
-          <span className="flex items-center gap-2">
+          <span className="flex shrink-0 items-center gap-2">
             <PrzelacznikMotywu className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border border-white/25 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
-            <MeasureButton className="pointer-events-auto rounded-full border border-white/25 px-4 py-2 text-stone-100 transition-colors hover:border-white/60 hover:bg-white/10" />
+            <MeasureButton className="pointer-events-auto whitespace-nowrap rounded-full border border-white/25 px-3 py-2 text-stone-100 sm:px-4 transition-colors hover:border-white/60 hover:bg-white/10" />
           </span>
         </header>
 

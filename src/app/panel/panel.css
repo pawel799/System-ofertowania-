@@ -1000,6 +1000,7 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .so-rozpoznane span { padding: 2px 8px; border-radius: 999px; background: var(--g2, var(--g3)); color: var(--text); }
 .pnl .so-chipy { display: flex; flex-wrap: wrap; gap: 6px; }
 .pnl .so-chip { font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px; border: 0; background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--g3); cursor: pointer; transition: box-shadow 120ms, background 120ms; }
+.pnl a.so-chip { text-decoration: none; display: inline-flex; align-items: center; }
 .pnl .so-chip[aria-pressed="true"] { background: var(--text); color: var(--panel); box-shadow: none; }
 @media (hover: hover) and (pointer: fine) { .pnl .so-chip:not([aria-pressed="true"]):hover { box-shadow: inset 0 0 0 1px var(--text-3); } }
 .pnl .so-chip:focus-visible, .pnl .so-gotowy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1099,3 +1100,7 @@ html[data-motyw="ciemny"] .pnl {
 .pnl .pk-akcja { height: 28px; font-size: 12px; padding: 0 10px; white-space: nowrap; }
 .pnl .pk-pusty { width: min(440px, 100%); margin: 14px auto 0; }
 .pnl .pk-pusty .pk { margin: 0; text-align: left; }
+
+/* Pole poza zakresem: komunikat przy polu zamiast cichego obcięcia wartości. */
+.pnl .kr-hint[data-blad] { color: var(--red); }
+.pnl .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); }

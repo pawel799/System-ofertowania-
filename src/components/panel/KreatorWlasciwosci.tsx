@@ -24,6 +24,7 @@ export function PoleCm({
   max,
   onCommit,
   jedn = "cm",
+  opisMax,
 }: {
   id: string;
   label: string;
@@ -33,16 +34,28 @@ export function PoleCm({
   onCommit: (n: number) => boolean | void;
   /** Jednostka w podpowiedzi zakresu. */
   jedn?: string;
+  /** Skąd górna granica, gdy zależy od innego pola (np. „długość ściany A”) – do komunikatu. */
+  opisMax?: string;
 }) {
   const [tekst, setTekst] = useState(String(value));
+  /** Komunikat przy polu, gdy wpisana wartość była poza zakresem i została poprawiona. */
+  const [blad, setBlad] = useState<string | null>(null);
   useEffect(() => setTekst(String(value)), [value]);
   const zatwierdz = () => {
     const n = Math.round(Number(tekst));
     if (!Number.isFinite(n) || tekst === "") {
+      setBlad(`Wpisz liczbę od ${min} do ${max} ${jedn}.`);
       setTekst(String(value));
       return;
     }
     const v = Math.min(max, Math.max(min, n));
+    setBlad(
+      n < min
+        ? `Wpisano ${n} ${jedn} – najmniej ${min} ${jedn}, przyjęto ${min}.`
+        : n > max
+          ? `Wpisano ${n} ${jedn} – najwięcej ${max} ${jedn}${opisMax ? ` (${opisMax})` : ""}, przyjęto ${max}.`
+          : null,
+    );
     if (onCommit(v) === false) setTekst(String(value));
     else setTekst(String(v));
   };
@@ -57,14 +70,19 @@ export function PoleCm({
         min={min}
         max={max}
         value={tekst}
-        onChange={(e) => setTekst(e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+        aria-invalid={blad ? true : undefined}
+        aria-describedby={`${id}-zakres`}
+        onChange={(e) => {
+          setTekst(e.target.value.replace(/[^\d]/g, "").slice(0, 6));
+          if (blad) setBlad(null);
+        }}
         onBlur={zatwierdz}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
         }}
       />
-      <span className="kr-hint">
-        {min}–{max} {jedn}
+      <span className="kr-hint" id={`${id}-zakres`} data-blad={blad ? "" : undefined} role={blad ? "alert" : undefined}>
+        {blad ?? `${min}–${max} ${jedn}${opisMax ? ` (do ${opisMax})` : ""}`}
       </span>
     </label>
   );

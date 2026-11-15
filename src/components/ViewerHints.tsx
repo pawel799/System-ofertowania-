@@ -1,5 +1,6 @@
 "use client";
 
+import { maWebGL } from "./Bez3D";
 import { useEffect, useState } from "react";
 
 /*
@@ -12,6 +13,8 @@ const ROTATE_KEY = "oferta:obroc-telefon-zamkniete";
 export function DragHint() {
   const [show, setShow] = useState(true);
   useEffect(() => {
+    // Bez WebGL nie ma czego obracać – w tym miejscu stoi komunikat o braku podglądu 3D.
+    if (!maWebGL()) return setShow(false);
     const hide = () => setShow(false);
     window.addEventListener("pointerdown", hide, { once: true });
     window.addEventListener("wheel", hide, { once: true, passive: true });

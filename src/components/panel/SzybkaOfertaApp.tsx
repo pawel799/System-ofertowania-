@@ -199,7 +199,14 @@ export default function SzybkaOfertaApp() {
                   {TYP_PROJEKTU[t].label}
                 </Chip>
               ))}
+              {/* „Inny mebel” nie ma tu gotowej propozycji układu – prowadzi do kreatora z pełnym katalogiem. */}
+              <a className="so-chip" href={`/panel/kreator?typ=inne&ceny=${ceny}`} title={TYP_PROJEKTU.inne.opis}>
+                {TYP_PROJEKTU.inne.label} →
+              </a>
             </div>
+            <p className="kr-hint">
+              Biurko, przedpokój, obudowa wyspy i inne: „{TYP_PROJEKTU.inne.label}” otwiera {TYP_PROJEKTU.inne.kreator.toLowerCase()} ze wszystkimi elementami katalogu.
+            </p>
           </div>
 
           {typ === "kuchnia" ? (
@@ -225,8 +232,8 @@ export default function SzybkaOfertaApp() {
               <PoleCm id="so-wys" label="Wysokość do sufitu" value={p.wysokosc} min={LIMITY_WYSOKOSCI.min} max={LIMITY_WYSOKOSCI.max} onCommit={(n) => zmien((s) => ({ ...s, wysokosc: n }))} />
             </div>
             <div className="kr-dims">
-              <PoleCm id="so-a" label="Zabudowa na ścianie A" value={p.scianaA} min={80} max={p.pokoj.szer} onCommit={(n) => zmien((s) => ({ ...s, scianaA: n }))} />
-              {typ === "kuchnia" && p.uklad === "L" ? <PoleCm id="so-b" label="Zabudowa na ścianie B" value={p.scianaB} min={80} max={p.pokoj.dlug} onCommit={(n) => zmien((s) => ({ ...s, scianaB: n }))} /> : null}
+              <PoleCm id="so-a" label="Zabudowa na ścianie A" value={p.scianaA} min={80} max={p.pokoj.szer} opisMax="szerokości pokoju" onCommit={(n) => zmien((s) => ({ ...s, scianaA: n }))} />
+              {typ === "kuchnia" && p.uklad === "L" ? <PoleCm id="so-b" label="Zabudowa na ścianie B" value={p.scianaB} min={80} max={p.pokoj.dlug} opisMax="długości pokoju" onCommit={(n) => zmien((s) => ({ ...s, scianaB: n }))} /> : null}
             </div>
           </div>
 

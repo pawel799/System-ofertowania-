@@ -74,7 +74,19 @@ function doFormularza(c: ModulCennik): Form {
 const num = (v: string) => Number(v.replace(/\s/g, "").replace(",", "."));
 
 /** Formularz → cennik; null + komunikat, gdy coś jest nie tak. */
-function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
+/**
+ * Formularz → cennik. `podglad` – cennik do przykładowych cen szafek: liczy się także wtedy, gdy własna pozycja
+ * jest jeszcze niedokończona (pozycje nie wpływają na cenę szafki), więc podgląd nie gaśnie po „+ Własna pozycja”.
+ * Całkiem puste wiersze pozycji są pomijane przy zapisie.
+ */
+function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string; podglad: ModulCennik | null; bladPozycji: string } {
+  const bezPozycji = zFormularzaBez({ ...f, pozycje: [] });
+  const pelny = zFormularzaBez(f);
+  const bladPozycji = !pelny.cennik && bezPozycji.cennik ? pelny.blad : "";
+  return { ...pelny, podglad: pelny.cennik ?? bezPozycji.cennik, bladPozycji };
+}
+
+function zFormularzaBez(f: Form): { cennik: ModulCennik | null; blad: string } {
   const kw = (v: string, min = 0, max = 1_000_000) => {
     const n = num(v);
     return Number.isFinite(n) && n >= min && n <= max ? n : NaN;
@@ -96,8 +108,9 @@ function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
   const pozycje = [];
   for (const p of f.pozycje) {
     const nazwa = p.nazwa.trim();
+    if (!nazwa && !p.cena.trim()) continue;
     const cena = p.jednostka === "proc" ? kw(p.cena, -50, 100) : kw(p.cena, -1_000_000, 1_000_000);
-    if (!nazwa) return { cennik: null, blad: "Każda własna pozycja potrzebuje nazwy." };
+    if (!nazwa) return { cennik: null, blad: "Własna pozycja z kwotą potrzebuje nazwy." };
     if (Number.isNaN(cena)) return { cennik: null, blad: `„${nazwa}”: ${p.jednostka === "proc" ? "procent od −50 do 100" : "kwota od −1 000 000 do 1 000 000 zł"}.` };
     pozycje.push({ id: p.id, nazwa, cena, jednostka: p.jednostka, ...(p.domyslna ? { domyslna: true } : {}) });
   }
@@ -130,7 +143,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
   if (err && !form) return <p className="err">{err}</p>;
   if (!form) return <p className="lede">Wczytywanie…</p>;
 
-  const { cennik: parsed, blad } = zFormularza(form);
+  const { cennik: parsed, blad, podglad, bladPozycji } = zFormularza(form);
   const odpad = Number.isFinite(num(form.odpad)) ? num(form.odpad) : 0;
 
   const save = async (e: FormEvent) => {
@@ -342,6 +355,11 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
           ) : (
             <p className="faint">Brak własnych pozycji.</p>
           )}
+          {bladPozycji ? (
+            <p className="err" role="alert">
+              {bladPozycji}
+            </p>
+          ) : null}
           {canEdit ? (
             <div className="cn-stopka">
               <button
@@ -367,7 +385,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
         <section className="set-card">
           <h2>Przykładowe ceny</h2>
           <p className="lede">
-            Szafki z płyty domyślnej{parsed?.plyty?.length ? ` (${parsed.plyty.find((p) => p.id === parsed.plytaDomyslna)?.nazwa})` : ""} – boki, wieniec, półka, listwy – z jednym frontem.
+            Szafki z płyty domyślnej{podglad?.plyty?.length ? ` (${podglad.plyty.find((p) => p.id === podglad.plytaDomyslna)?.nazwa})` : ""} – boki, wieniec, półka, listwy – z jednym frontem.
           </p>
           <table className="cennik-tab" style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
             <thead>
@@ -388,7 +406,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
                     </td>
                     <td>{m2(p.plyta)}</td>
                     <td>{m2(p.front)}</td>
-                    <td style={{ textAlign: "right" }}>{parsed ? formatPln(modulCena(s, parsed)) : "—"}</td>
+                    <td style={{ textAlign: "right" }}>{podglad ? formatPln(modulCena(s, podglad)) : "—"}</td>
                   </tr>
                 );
               })}

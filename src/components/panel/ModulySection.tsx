@@ -31,7 +31,8 @@ export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { modu
     <section className="sec" data-testid="moduly-sec">
       <h2>Szafki na wymiar</h2>
       <p className="lede">
-        Klient zobaczy je w ofercie w podglądzie 3D. Ceny z <a href="/panel/ustawienia?tab=cennik">cennika modułów</a>.
+        Klient zobaczy je w ofercie w podglądzie 3D. Ceny z <a href="/panel/ustawienia?tab=cennik">cennika modułów</a>.{" "}
+        <b>Kwoty szafek nie wchodzą do wyceny netto oferty</b> – klient widzi je osobno, w oknie „Szafki na wymiar”.
       </p>
       {moduly.length ? (
         <ul style={{ listStyle: "none", padding: 0, margin: "8px 0", display: "grid", gap: 6 }}>
@@ -56,7 +57,7 @@ export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { modu
           ))}
           {cennik ? (
             <li style={{ display: "flex", fontSize: 13.5, borderTop: "1px solid rgba(0,0,0,.1)", paddingTop: 6 }}>
-              <span style={{ flex: 1 }}>Razem moduły (netto)</span>
+              <span style={{ flex: 1 }}>Razem szafki (netto) – osobno, poza wyceną oferty</span>
               <b data-testid="moduly-suma">{formatPln(sumaModulow(moduly, cennik))}</b>
             </li>
           ) : null}

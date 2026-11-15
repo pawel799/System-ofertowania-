@@ -10,5 +10,10 @@ export default function BrandMark() {
       // eslint-disable-next-line @next/next/no-img-element -- logo z KV jako data URL
       <img src={brand.logo} alt={brand.name} className="h-7 w-auto max-w-[160px] object-contain" />
     );
-  return <span className="text-stone-100">{brand.name}</span>;
+  // Długa nazwa na telefonie: jedna linia z wielokropkiem (pełna nazwa w podpowiedzi), bez łamania „FIRMA TESTOWA / 5”.
+  return (
+    <span className="min-w-0 truncate whitespace-nowrap text-stone-100" title={brand.name}>
+      {brand.name}
+    </span>
+  );
 }

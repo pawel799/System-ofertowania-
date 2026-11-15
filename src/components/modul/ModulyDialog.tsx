@@ -65,7 +65,7 @@ export default function ModulyDialog(props: Props) {
                     {d.nazwa} · {formatPln(d.kwota)}
                   </span>
                 ))}
-                {suma !== undefined ? <span className="ml-2 font-medium">Razem: {formatPln(suma)}</span> : null}
+                {suma !== undefined ? <span className="ml-2 font-medium" title="Kwota szafek liczona osobno od szacunku oferty">Razem szafki: {formatPln(suma)} <span className="font-normal text-stone-500">(osobno od szacunku)</span></span> : null}
               </div>
             ) : (
               <span className="text-sm font-medium">Ustaw wymiary szafki – cena liczy się sama</span>
