@@ -9,6 +9,7 @@ import { pozycjeKuchniZCena } from "../../../src/lib/kuchnia";
 import { handle, json, publicView } from "../../_lib/offers";
 import { publicBrand, resolvePublic } from "../../_lib/public";
 import { getCennik, pricedModuly } from "../../_lib/modul";
+import { bazaZModulami } from "../../../src/lib/modul";
 import { listKatalog, publicznyKatalog } from "../../_lib/katalog";
 import { cenaKoncowa } from "../../../src/lib/cenaKoncowa";
 
@@ -41,6 +42,8 @@ export const onRequestGet = handle(async (ctx) => {
       brand: await publicBrand(kv),
       // Cena zabudowy z kreatora zawsze z aktualnego cennika (nie ze zrzutu przy zapisie).
       ...(zKreatora && showPrice && cennik ? { base: bazaKuchni(offer.kuchnia!, cennik) } : {}),
+      // Bez kreatora: szafki na wymiar z ceną z cennika wchodzą do szacunku (ta sama suma co w panelu).
+      ...(!zKreatora && showPrice && cennik && offer.moduly?.length ? { base: bazaZModulami(offer.base, offer.moduly, cennik) } : {}),
       // Dodatki do ceny (transport, montaż, rabat…) – są już w base; klient widzi je przy pozycjach.
       ...(zKreatora && showPrice && cennik && offer.kuchnia!.dodatki?.length
         ? {

@@ -10,7 +10,8 @@ const clamp = (v: number, { min: lo, max: hi }: { min: number; max: number }) =>
 
 /** tylkoPodglad – telefon: sama lista, bez dodawania i usuwania. */
 export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { moduly: ModulItem[]; onChange: (m: ModulItem[], label: string) => void; tylkoPodglad?: boolean }) {
-  const [cennik, setCennik] = useState<ModulCennik | null>(null);
+  /** undefined – wczytywanie, null – brak cennika (szafki bez ceny zostają poza sumą). */
+  const [cennik, setCennik] = useState<ModulCennik | null | undefined>(undefined);
   const [nowy, setNowy] = useState({ nazwa: "", w: "60", h: "72", d: "56" });
   useEffect(() => {
     cennikApi.get().then(setCennik).catch(() => setCennik(null));
@@ -32,7 +33,7 @@ export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { modu
       <h2>Szafki na wymiar</h2>
       <p className="lede">
         Klient zobaczy je w ofercie w podglądzie 3D. Ceny z <a href="/panel/ustawienia?tab=cennik">cennika modułów</a>.{" "}
-        <b>Kwoty szafek nie wchodzą do wyceny netto oferty</b> – klient widzi je osobno, w oknie „Szafki na wymiar”.
+        <b>Szafki z ceną z cennika wchodzą do wyceny netto oferty</b> – klient widzi je też pozycja po pozycji w oknie „Szafki na wymiar”.
       </p>
       {moduly.length ? (
         <ul style={{ listStyle: "none", padding: 0, margin: "8px 0", display: "grid", gap: 6 }}>
@@ -42,7 +43,7 @@ export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { modu
               <span className="mono">
                 {m.w}×{m.h}×{m.d} cm
               </span>
-              <span style={{ minWidth: 90, textAlign: "right" }}>{cennik ? formatPln(modulCena(m, cennik)) : "…"}</span>
+              <span style={{ minWidth: 90, textAlign: "right" }}>{cennik ? formatPln(modulCena(m, cennik)) : cennik === null ? "wycena indywidualna" : "…"}</span>
               {tylkoPodglad ? null : (
                 <button
                   type="button"
@@ -57,7 +58,7 @@ export function ModulySection({ moduly, onChange, tylkoPodglad = false }: { modu
           ))}
           {cennik ? (
             <li style={{ display: "flex", fontSize: 13.5, borderTop: "1px solid rgba(0,0,0,.1)", paddingTop: 6 }}>
-              <span style={{ flex: 1 }}>Razem szafki (netto) – osobno, poza wyceną oferty</span>
+              <span style={{ flex: 1 }}>Razem szafki (netto) – doliczone do wyceny oferty</span>
               <b data-testid="moduly-suma">{formatPln(sumaModulow(moduly, cennik))}</b>
             </li>
           ) : null}

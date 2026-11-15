@@ -1,6 +1,7 @@
 /* Szybka oferta → kreator, PDF z kreatora, rozkrój z listy. */
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { modulCena, type ModulCennik } from "../src/lib/modul";
 import { bezCookies, zalogowanaFirma } from "./pomoc";
 
 test("szybka oferta: łazienka trafia do kreatora jako łazienka, klient wymagany", async ({ page }) => {
@@ -72,4 +73,39 @@ test("rozkrój: komunikaty przy złych wierszach, okleina odejmowana, DXF i etyk
   expect(tresc.trimEnd().endsWith("EOF")).toBe(true);
   const [ety] = await Promise.all([page.waitForEvent("download", { timeout: 60_000 }), page.getByRole("button", { name: "Etykiety PDF" }).click()]);
   expect(readFileSync((await ety.path())!).subarray(0, 4).toString()).toBe("%PDF");
+});
+
+test("szafki na wymiar z ceną z cennika wchodzą do wyceny netto (panel i klient)", async ({ page }) => {
+  await zalogowanaFirma(page);
+  const cennik = (await (await page.request.get("/api/settings/cennik")).json()) as ModulCennik | { cennik: ModulCennik };
+  const c = "cennik" in cennik ? cennik.cennik : cennik;
+  const szafka = { nazwa: "Szafka dolna", w: 60, h: 72, d: 56 };
+  const slug = `E2Eszafki${Date.now()}`;
+  const r = await page.request.post("/api/offers", {
+    data: {
+      id: "E2E-SZAFKI/1",
+      title: "Szafki w sumie",
+      client: "Klient E2E",
+      greet: null,
+      contact: "",
+      layout: "L",
+      base: 10_000,
+      front: "dab-naturalny",
+      countertop: "kwarcyt-calacatta",
+      hardware: "mosiadz",
+      moduly: [szafka],
+      status: "wyslany",
+      link: { slug, days: 30, expires: "2099-01-01", pin: null, comments: true, showPrice: true, channel: "email", views: 0 },
+      events: [],
+    },
+  });
+  expect(r.status(), await r.text()).toBe(201);
+  // Klient: szacunek = kwota oferty + szafka z cennika.
+  const pub = (await (await page.request.get(`/api/public/${slug}`)).json()) as { offer: { base: number } };
+  expect(pub.offer.base).toBe(10_000 + modulCena(szafka, c));
+  // Panel: osobny wiersz z kwotą szafek.
+  await page.goto("/panel");
+  await bezCookies(page);
+  await page.getByText("Szafki w sumie").first().click();
+  await expect(page.getByTestId("szafki-w-wycenie")).toContainText(String(modulCena(szafka, c)).replace(/\B(?=(\d{3})+(?!\d))/g, " "));
 });

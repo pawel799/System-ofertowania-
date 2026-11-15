@@ -21,7 +21,7 @@ export const FIRMA = {
   /** Kod i miejscowość, np. "00-001 Warszawa". */
   kodMiasto: "",
   /** Adres e-mail do kontaktu. */
-  email: "",
+  email: "kontakt@oprzut.app",
   /** Telefon, np. "+48 600 000 000". */
   telefon: "",
   /** Godziny pracy biura. */

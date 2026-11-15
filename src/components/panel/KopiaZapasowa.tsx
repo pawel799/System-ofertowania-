@@ -7,6 +7,7 @@
  */
 import { useState } from "react";
 import { bazaKuchni } from "@/lib/kuchnia";
+import { bazaZModulami } from "@/lib/modul";
 import { DEFAULT_CENNIK } from "@/lib/modul";
 import { assetsApi, cennikApi, panelApi } from "./offerApi";
 import { STATUS_LABEL, type Offer } from "./offers";
@@ -38,7 +39,7 @@ export function csvOfert(oferty: readonly Offer[], cennik = DEFAULT_CENNIK) {
     o.client,
     o.contact,
     STATUS_LABEL[o.status] ?? o.status,
-    o.kuchnia?.elementy.length ? bazaKuchni(o.kuchnia, cennik) : o.base,
+    o.kuchnia?.elementy.length ? bazaKuchni(o.kuchnia, cennik) : bazaZModulami(o.base, o.moduly, cennik),
     o.kuchnia?.elementy.length ?? o.moduly?.length ?? "",
     o.link ? `/oferta/${o.link.slug}` : "",
     o.createdAt?.slice(0, 10) ?? "",

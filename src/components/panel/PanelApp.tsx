@@ -7,6 +7,7 @@ import { linkWygasl, OfertaPdfPrzyciski, waznyDo, type LinkDoPdf } from "./Ofert
 import { useCennik } from "./useCennik";
 import KuchniaTlo, { type KuchniaUjecie } from "../kuchnia/KuchniaTlo";
 import { bazaKuchni, cenaOgolnaPlanu, cenaPozycji, liczDoplaty, opisPozaWycena, UKLAD_KUCHNI_LABEL, wycenianyElement, type TrybCen } from "@/lib/kuchnia";
+import { sumaModulow } from "@/lib/modul";
 import dynamic from "next/dynamic";
 import {
   useCallback,
@@ -339,7 +340,9 @@ export default function PanelApp() {
     );
 
   const L = offer.link;
-  const bazaWidok = offer.kuchnia?.elementy.length && cennikGotowy ? bazaKuchni(offer.kuchnia, cennik) : offer.base;
+  // Bez kreatora: kwota oferty + szafki na wymiar z cennika (bazaZModulami – jak u klienta).
+  const szafkiWidok = !offer.kuchnia?.elementy.length && cennikGotowy && offer.moduly?.length ? sumaModulow(offer.moduly, cennik) : 0;
+  const bazaWidok = offer.kuchnia?.elementy.length && cennikGotowy ? bazaKuchni(offer.kuchnia, cennik) : offer.base + szafkiWidok;
   const linkUrl = L ? `${linkOrigin}/oferta/${L.slug}` : "";
   const shortUrl = L ? `${linkOrigin.replace(/^https?:\/\//, "")}/oferta/${L.slug}` : "";
   const offerModel = offer.modelId ? models.find((m) => m.id === offer.modelId) : undefined;
@@ -995,8 +998,14 @@ export default function PanelApp() {
             </div>
             <div>
               <dt>Zabudowa bazowo</dt>
-              <dd>{formatPln(bazaWidok)}</dd>
+              <dd>{formatPln(bazaWidok - szafkiWidok)}</dd>
             </div>
+            {szafkiWidok ? (
+              <div>
+                <dt>Szafki na wymiar</dt>
+                <dd data-testid="szafki-w-wycenie">+{formatPln(szafkiWidok)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt>Kontakt</dt>
               <dd>{offer.contact || "—"}</dd>

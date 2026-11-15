@@ -140,4 +140,12 @@ export function modulCena(m: ModulDims, c: ModulCennik) {
   return Math.round(c.baza + p.plyta * c.plytaM2 + p.front * c.frontM2 + p.mb * c.mb);
 }
 
-export const sumaModulow = (list: ModulItem[], c: ModulCennik) => list.reduce((s, m) => s + modulCena(m, c), 0);
+export const sumaModulow = (list: readonly ModulItem[], c: ModulCennik) => list.reduce((s, m) => s + modulCena(m, c), 0);
+
+/**
+ * Wycena netto oferty bez kreatora: kwota wpisana przy ofercie + szafki na wymiar z ceną z cennika.
+ * Zasada (audyt OR4): szafka z ceną wchodzi do sumy; bez cennika (brak ceny) zostaje poza sumą.
+ * Ta sama funkcja liczy panel, stronę klienta i kopię CSV.
+ */
+export const bazaZModulami = (base: number, moduly: readonly ModulItem[] | undefined, c: ModulCennik | null | undefined) =>
+  base + (c && moduly?.length ? sumaModulow(moduly, c) : 0);

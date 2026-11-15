@@ -38,8 +38,10 @@ const admin = () => {
 // Bez adresu e-mail w firma.ts odsyłamy do formularza – strona /kontakt pokazuje formularz, a nie adres,
 // więc dokument nie może kazać szukać tam e-maila, którego nie ma.
 const FORMULARZ = "formularz kontaktowy na stronie oprzut.app/kontakt";
-/** Kanał zgłoszeń do wstawienia po „przez …” / „na …”: adres e-mail albo formularz. */
+/** Punkt kontaktowy (rzeczownik): adres e-mail albo formularz. */
 const email = () => (FIRMA.email ? `adres e-mail ${FIRMA.email}` : FORMULARZ);
+/** Kanał zgłoszeń z przyimkiem: „na adres e-mail …” albo „przez formularz …”. */
+const kanal = () => (FIRMA.email ? `na adres e-mail ${FIRMA.email}` : `przez ${FORMULARZ}`);
 const kontakt = () => {
   const c = [FIRMA.email && `e-mail: ${FIRMA.email}`, FIRMA.telefon && `tel. ${FIRMA.telefon}`].filter(Boolean).join(", ");
   return c ? c : FORMULARZ;
@@ -93,7 +95,7 @@ export const REGULAMIN: LegalSection[] = [
       "Umowa o świadczenie usługi Konta zostaje zawarta z chwilą rejestracji – podania danych Firmy, akceptacji Regulaminu wraz z Umową powierzenia i utworzenia Konta. Umowa jest zawierana na czas nieokreślony.",
       "Konto może założyć wyłącznie przedsiębiorca w celu związanym z prowadzoną działalnością gospodarczą. Osoba rejestrująca Konto w imieniu Firmy oświadcza, że jest do tego upoważniona.",
       "Nowe Konto ma bezpłatny okres próbny wskazany na stronie /cennik. Okres próbny nie przechodzi automatycznie w płatny Plan – dalsze korzystanie wymaga wyboru i opłacenia Planu. Po okresie próbnym bez opłaty Konto działa w trybie tylko do odczytu, a udostępnione Klientom linki działają do końca ich ważności.",
-      "Firma może w każdej chwili rozwiązać umowę, wysyłając prośbę o usunięcie Konta przez " + email() + ". Opłacony okres nie podlega zwrotowi, chyba że przepisy stanowią inaczej.",
+      "Firma może w każdej chwili rozwiązać umowę, wysyłając prośbę o usunięcie Konta " + kanal() + ". Opłacony okres nie podlega zwrotowi, chyba że przepisy stanowią inaczej.",
       "Usługodawca może rozwiązać umowę z zachowaniem 30-dniowego okresu wypowiedzenia, a bez wypowiedzenia – gdy Firma rażąco narusza Regulamin (np. zamieszcza treści bezprawne, podejmuje próby włamania), po bezskutecznym wezwaniu do zaprzestania naruszeń, o ile wezwanie jest możliwe.",
       "Po rozwiązaniu umowy Firma może przez 30 dni poprosić o wydanie swoich danych (oferty, zgłoszenia) w formacie elektronicznym. Następnie dane Konta są usuwane, z wyjątkiem danych, które Usługodawca musi przechowywać na podstawie przepisów (np. faktury).",
     ],
@@ -137,7 +139,7 @@ export const REGULAMIN: LegalSection[] = [
   {
     title: "Reklamacje",
     items: [
-      `Reklamacje dotyczące działania Serwisu można zgłaszać przez ${email()}. Reklamacja powinna zawierać dane kontaktowe i opis problemu.`,
+      `Reklamacje dotyczące działania Serwisu można zgłaszać ${kanal()}. Reklamacja powinna zawierać dane kontaktowe i opis problemu.`,
       "Usługodawca rozpatruje reklamację w ciągu 14 dni od jej otrzymania i odpowiada e-mailem albo w sposób wskazany przez zgłaszającego.",
     ],
   },
