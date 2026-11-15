@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Bez3D from "../Bez3D";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import type { PublicModel } from "../modelRoles";
 import type { EdycjaMebli, KuchniaUjecie } from "./KuchniaScena";
@@ -44,7 +45,9 @@ export default function KuchniaTlo({
 }) {
   return (
     <div className={className ?? "absolute inset-0"}>
-      <Scena {...props} />
+      <Bez3D>
+        <Scena {...props} />
+      </Bez3D>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, type ReactNode } from "react";
 import { Canvas } from "@react-three/fiber";
+import Bez3D from "../Bez3D";
 import { ContactShadows, Environment, Lightformer, OrbitControls } from "@react-three/drei";
 import Szafka from "./Szafka";
 import { MODUL_LIMITS, modulCena, type ModulCennik } from "@/lib/modul";
@@ -42,21 +43,23 @@ export default function ModulView({ initial, cennik, price, readOnly, embedded, 
   return (
     <div data-strona="jasna" className={`flex ${embedded ? "h-full" : "h-[100dvh]"} flex-col bg-stone-100 text-stone-900 md:flex-row`}>
       <div className="relative min-h-0 flex-1">
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [1.1, 0.9, 1.5], fov: 40 }}>
-          <color attach="background" args={[ciemny ? "#141311" : "#efece7"]} />
-          <ambientLight intensity={0.35} />
-          <directionalLight position={[2, 3, 2]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
-          <Suspense fallback={null}>
-            <Environment resolution={256} environmentIntensity={0.7}>
-              <Lightformer intensity={2} position={[0, 4, 0]} rotation-x={Math.PI / 2} scale={[6, 6, 1]} />
-              <Lightformer intensity={1} position={[-4, 1, 2]} rotation-y={Math.PI / 2} scale={[4, 3, 1]} />
-              <Lightformer intensity={0.8} position={[4, 1, 3]} rotation-y={-Math.PI / 2} scale={[4, 3, 1]} />
-            </Environment>
-            <Szafka {...v} />
-          </Suspense>
-          <ContactShadows position={[0, 0, 0]} opacity={0.45} scale={4} blur={2.2} far={1.5} />
-          <OrbitControls target={[0, v.wysokosc / 200, 0]} enablePan={false} minDistance={0.6} maxDistance={5} maxPolarAngle={Math.PI / 2 - 0.05} makeDefault />
-        </Canvas>
+        <Bez3D>
+          <Canvas shadows dpr={[1, 2]} camera={{ position: [1.1, 0.9, 1.5], fov: 40 }}>
+            <color attach="background" args={[ciemny ? "#141311" : "#efece7"]} />
+            <ambientLight intensity={0.35} />
+            <directionalLight position={[2, 3, 2]} intensity={1.6} castShadow shadow-mapSize={[1024, 1024]} />
+            <Suspense fallback={null}>
+              <Environment resolution={256} environmentIntensity={0.7}>
+                <Lightformer intensity={2} position={[0, 4, 0]} rotation-x={Math.PI / 2} scale={[6, 6, 1]} />
+                <Lightformer intensity={1} position={[-4, 1, 2]} rotation-y={Math.PI / 2} scale={[4, 3, 1]} />
+                <Lightformer intensity={0.8} position={[4, 1, 3]} rotation-y={-Math.PI / 2} scale={[4, 3, 1]} />
+              </Environment>
+              <Szafka {...v} />
+            </Suspense>
+            <ContactShadows position={[0, 0, 0]} opacity={0.45} scale={4} blur={2.2} far={1.5} />
+            <OrbitControls target={[0, v.wysokosc / 200, 0]} enablePan={false} minDistance={0.6} maxDistance={5} maxPolarAngle={Math.PI / 2 - 0.05} makeDefault />
+          </Canvas>
+        </Bez3D>
       </div>
       <aside className="shrink-0 space-y-4 border-t border-stone-300 bg-white p-4 md:w-80 md:border-l md:border-t-0">
         <div>

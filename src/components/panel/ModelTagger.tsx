@@ -1,6 +1,7 @@
 "use client";
 
 import { DRACO } from "@/lib/draco";
+import Bez3D from "../Bez3D";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Canvas, useThree, type ThreeEvent } from "@react-three/fiber";
 import { Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
@@ -229,26 +230,28 @@ export default function ModelTagger({ model, onBack, onSaved }: { model: ModelMe
 
       <div className="tg-body">
         <div className="vp tg-vp">
-          <Canvas
-            frameloop="demand"
-            dpr={[1, 1.5]}
-            camera={{ position: [3, 2, 3], fov: 45 }}
-            onPointerMissed={(e) => e.type === "click" && setSelected(new Set())}
-          >
-            <color attach="background" args={["#0c0b0a"]} />
-            <directionalLight position={[4, 6, 5]} intensity={1.6} />
-            <ambientLight intensity={0.4} />
-            <Suspense
-              fallback={
-                <Html center>
-                  <div style={{ color: "#a8a29e", fontSize: 12, whiteSpace: "nowrap" }}>Wczytywanie modelu…</div>
-                </Html>
-              }
+          <Bez3D>
+            <Canvas
+              frameloop="demand"
+              dpr={[1, 1.5]}
+              camera={{ position: [3, 2, 3], fov: 45 }}
+              onPointerMissed={(e) => e.type === "click" && setSelected(new Set())}
             >
-              <TaggedModel url={modelUrl(model)} tags={tags} selected={selected} onElements={setElements} onPick={onPick} />
-              <Environment files="/hdri/lebombo_2k.hdr" environmentIntensity={0.7} />
-            </Suspense>
-          </Canvas>
+              <color attach="background" args={["#0c0b0a"]} />
+              <directionalLight position={[4, 6, 5]} intensity={1.6} />
+              <ambientLight intensity={0.4} />
+              <Suspense
+                fallback={
+                  <Html center>
+                    <div style={{ color: "#a8a29e", fontSize: 12, whiteSpace: "nowrap" }}>Wczytywanie modelu…</div>
+                  </Html>
+                }
+              >
+                <TaggedModel url={modelUrl(model)} tags={tags} selected={selected} onElements={setElements} onPick={onPick} />
+                <Environment files="/hdri/lebombo_2k.hdr" environmentIntensity={0.7} />
+              </Suspense>
+            </Canvas>
+          </Bez3D>
           <div className="vp-bar">
             <span className="vp-tag">Klik = zaznacz · Shift + klik = kilka · przeciągnij = obrót</span>
           </div>

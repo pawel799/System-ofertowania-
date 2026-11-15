@@ -1,8 +1,8 @@
 "use client";
 
 import { DRACO } from "@/lib/draco";
+import Bez3D from "./Bez3D";
 import {
-  Component,
   Suspense,
   useCallback,
   useEffect,
@@ -10,7 +10,6 @@ import {
   useMemo,
   useState,
   useSyncExternalStore,
-  type ReactNode,
 } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import {
@@ -268,29 +267,6 @@ function Effects({ lowQuality }: { lowQuality: boolean }) {
   );
 }
 
-// Gdy model się nie wczyta (np. brak pliku), pokazujemy komunikat zamiast pustej strony.
-class SceneErrorBoundary extends Component<
-  { children: ReactNode },
-  { failed: boolean }
-> {
-  state = { failed: false };
-
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-
-  render() {
-    if (this.state.failed) {
-      return (
-        <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-[0.25em] text-stone-500">
-          Nie udało się wczytać modelu 3D
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 /**
  * embedded = true: scena wypełnia rodzica (np. podgląd w panelu ofert)
  * zamiast całego okna i nie przesuwa obrazu pod panel boczny.
@@ -322,7 +298,7 @@ export default function KitchenGlbScene({
       data-tlo={tlo.jasne ? "jasne" : "ciemne"}
       style={{ background: tloKolor }}
     >
-      <SceneErrorBoundary>
+      <Bez3D>
         {/* frameloop="demand": nowa klatka tylko przy zmianie (ruch kamery,
             doczytanie modelu), a nie 60 razy na sekundę w bezruchu. */}
         <Canvas
@@ -351,7 +327,7 @@ export default function KitchenGlbScene({
           <Lights />
           <Effects lowQuality={lowQuality} />
         </Canvas>
-      </SceneErrorBoundary>
+      </Bez3D>
     </div>
   );
 }

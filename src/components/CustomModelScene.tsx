@@ -1,7 +1,8 @@
 "use client";
 
 import { DRACO } from "@/lib/draco";
-import { Component, Suspense, useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import Bez3D from "./Bez3D";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { ContactShadows, Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import { Box3, PerspectiveCamera, Sphere, Vector3 } from "three";
@@ -115,30 +116,13 @@ function Model({ model, onKolor }: { model: PublicModel; onKolor?: (hex: string 
   );
 }
 
-class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
-  }
-  render() {
-    if (this.state.failed) {
-      return (
-        <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-[0.25em] text-stone-500">
-          Nie udało się wczytać modelu 3D
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 export default function CustomModelScene({ model, embedded = false }: { model: PublicModel; embedded?: boolean }) {
   const [kolor, setKolor] = useState<string | null>(null);
   const tlo = tloMotywu(tloDlaKoloru(kolor), useJasnaStrona());
   const tloKolor = tlo.jasne ? tlo.tlo : "#0c0b0a";
   return (
     <div className="absolute inset-0 h-full w-full" data-embedded={embedded ? "" : undefined} data-tlo={tlo.jasne ? "jasne" : "ciemne"} style={{ background: tloKolor }}>
-      <Boundary>
+      <Bez3D>
         <Canvas
           frameloop="demand"
           shadows="percentage"
@@ -153,7 +137,7 @@ export default function CustomModelScene({ model, embedded = false }: { model: P
             <Environment files={HDRI_URL} environmentIntensity={0.9} />
           </Suspense>
         </Canvas>
-      </Boundary>
+      </Bez3D>
     </div>
   );
 }
