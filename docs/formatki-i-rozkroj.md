@@ -32,7 +32,9 @@ Blaty: ciągi szafek dolnych wzdłuż ścian, głębokość + nawis (domyślnie 
 Komórki z Excela (tab), CSV (`;` albo `,` z cudzysłowami), TXT.
 - Kolumny rozpoznają się po nagłówkach (PL i EN): długość, szerokość, ilość, materiał, nazwa, mebel, grubość, okleina (jedna kolumna albo D1/D2/S1/S2), słoje.
 - Bez nagłówka: liczby w kolejności długość, szerokość, ilość.
-- Wymiary < 300 traktujemy jako centymetry.
+- Wymiary < 300 traktujemy jako centymetry. Dokładność 0,1 mm (563,5 zostaje 563,5).
+- Zły wiersz (wymiar 0, ujemny albo tekst, ilość 0) jest pomijany z komunikatem „Wiersz N: …” pod polem listy;
+  brak materiału też ma komunikat (przyjmujemy „Płyta 18 mm”).
 - Plik w Windows-1250 też się wczyta.
 - `.xlsx` trzeba zapisać jako CSV albo wkleić komórki.
 
@@ -47,14 +49,26 @@ Komórki z Excela (tab), CSV (`;` albo `,` z cudzysłowami), TXT.
 ## Rozkrój (`rozkroj.ts`)
 
 Cięcie gilotynowe:
-- arkusz domyślnie 2800 × 2070 mm, rzaz 4 mm, obrzeże 10 mm;
+- arkusz domyślnie 2800 × 2070 mm, rzaz 4 mm (co 0,1 mm), formatowanie arkusza 10 mm
+  (pas odcinany z surowej krawędzi płyty; w kodzie i zapisanych ustawieniach pole `obrzeze`);
+- ostrzeżenia przy rzazie 0 i > 5 mm oraz formatowaniu 0; wartość spoza zakresu ma komunikat przy polu;
+- „Wymiary w liście”: do cięcia (bez zmian) albo gotowe minus okleina 0,4 / 0,8 / 1 / 2 mm na każdej oklejanej
+  krawędzi (`wymiaryDoCiecia` w `formatki.ts`; S1/S2 skracają długość, D1/D2 szerokość) – wymiar gotowy w tabeli,
+  CSV i PDF obok wymiaru do cięcia;
+- resztki: wolne prostokąty o krótszym boku od progu (domyślnie 300 mm, 0 = wyłączone) są zakreskowane i wypisane;
 - formatka ze słojami nie obraca się;
 - heurystyka BSSF z kilkoma kolejnościami i regułami podziału; wygrywa najmniej arkuszy, potem największa resztka.
 
 ## Wyniki
 
 - Okno: zestawienie płyt (m², arkusze, odpad, okleina mb), tabele per materiał z numerami, arkusze SVG z tymi samymi numerami, okucia, blaty.
-- **Drukuj / PDF**: osobne okno do druku (`dokument.ts`).
+- Odpad per materiał (dekorów i grubości nie łączy się na arkuszu) + odpad łączny ważony powierzchnią arkuszy, z legendą.
+- **Pobierz PDF** (`dokument.ts`): zestawienie, tabele, arkusze z dużymi numerami (czytelne na wydruku A4).
+- **Etykiety PDF**: A4 3 × 8, etykieta 70 × 37 mm na każdą sztukę: numer, wymiar, materiał, mebel/element, okleina,
+  słoje i kod QR z tymi samymi danymi (bez polskich znaków).
+- **Pobierz DXF**: R12 ASCII, mm; warstwy ARKUSZ, FORMATOWANIE, FORMATKI, RESZTKI, OPISY; materiały jeden pod drugim,
+  arkusze obok siebie.
 - **Pobierz CSV**:
   - kodowanie UTF-8 z BOM, separator `;`;
-  - kolumny: Nr, Materiał, Grubość, Długość, Szerokość, Ilość, Słoje, Okleina D1–S2, Mebel, Element, Uwagi.
+  - kolumny: Nr, Materiał, Grubość, Długość, Szerokość, Ilość, Słoje, Okleina D1–S2, Mebel, Element, Uwagi
+    (+ Długość/Szerokość gotowa, gdy odejmujemy okleinę); liczby z przecinkiem.
