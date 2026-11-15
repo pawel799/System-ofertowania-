@@ -14,12 +14,15 @@ import {
   cenaPlytyM2,
   DEFAULT_CENNIK,
   FORMAT_STANDARD,
+  GRUBOSC_KORPUSU_MIN,
+  GRUBOSC_PLYTY,
   JEDNOSTKA_LABEL,
   JEDNOSTKI,
   MAX_PLYT,
   MAX_POZYCJI,
   modulCena,
   modulPowierzchnie,
+  plytaKorpusowa,
   plytyCennika,
   powierzchniaArkusza,
   type JednostkaPozycji,
@@ -84,10 +87,10 @@ function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
   const plyty = [];
   for (const p of f.plyty) {
     const nazwa = p.nazwa.trim();
-    const o = { id: p.id, nazwa, grubosc: kw(p.grubosc, 8, 40), dl: kw(p.dl, 500, 5600), szer: kw(p.szer, 300, 2800), cenaArkusza: kw(p.cenaArkusza, 0, 100_000) };
+    const o = { id: p.id, nazwa, grubosc: kw(p.grubosc, GRUBOSC_PLYTY.min, GRUBOSC_PLYTY.max), dl: kw(p.dl, 500, 5600), szer: kw(p.szer, 300, 2800), cenaArkusza: kw(p.cenaArkusza, 0, 100_000) };
     if (!nazwa) return { cennik: null, blad: "Każda płyta potrzebuje nazwy." };
     if ([o.grubosc, o.dl, o.szer, o.cenaArkusza].some(Number.isNaN))
-      return { cennik: null, blad: `„${nazwa}”: grubość 8–40 mm, arkusz 500–5600 × 300–2800 mm, cena 0–100 000 zł.` };
+      return { cennik: null, blad: `„${nazwa}”: grubość ${GRUBOSC_PLYTY.min}–${GRUBOSC_PLYTY.max} mm, arkusz 500–5600 × 300–2800 mm, cena 0–100 000 zł.` };
     plyty.push(o);
   }
   const pozycje = [];
@@ -98,9 +101,14 @@ function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
     if (Number.isNaN(cena)) return { cennik: null, blad: `„${nazwa}”: ${p.jednostka === "proc" ? "procent od −50 do 100" : "kwota od −1 000 000 do 1 000 000 zł"}.` };
     pozycje.push({ id: p.id, nazwa, cena, jednostka: p.jednostka, ...(p.domyslna ? { domyslna: true } : {}) });
   }
-  const domyslna = plyty.find((p) => p.id === f.plytaDomyslna) ?? plyty[0];
+  const korpusowe = plyty.filter(plytaKorpusowa);
+  if (!korpusowe.length) return { cennik: null, blad: `Dodaj choć jedną płytę korpusu od ${GRUBOSC_KORPUSU_MIN} mm (HDF jest tylko na plecy i dna).` };
+  const domyslna = plyty.find((p) => p.id === f.plytaDomyslna);
+  if (domyslna && !plytaKorpusowa(domyslna))
+    return { cennik: null, blad: `„${domyslna.nazwa}” (${domyslna.grubosc} mm) nie może być płytą domyślną – korpus od ${GRUBOSC_KORPUSU_MIN} mm.` };
+  const dom = domyslna ?? korpusowe[0];
   return {
-    cennik: { ...skalary, plytaM2: cenaPlytyM2(domyslna, odpad), plyty, plytaDomyslna: domyslna.id, odpadPlyty: odpad, pozycje },
+    cennik: { ...skalary, plytaM2: cenaPlytyM2(dom, odpad), plyty, plytaDomyslna: dom.id, odpadPlyty: odpad, pozycje },
     blad: "",
   };
 }
@@ -204,7 +212,8 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
           <h2 id="c-plyty-h">Płyty korpusów</h2>
           <p className="lede">
             Grubość, format arkusza i cena za arkusz – cena za m² liczy się sama (z odpadem przy rozkroju). W kreatorze wybierzesz płytę dla
-            oferty (krok „Materiały”), domyślna liczy się w pozostałych ofertach i na Twojej stronie.
+            oferty (krok „Materiały”), domyślna liczy się w pozostałych ofertach i na Twojej stronie. Grubość od {GRUBOSC_PLYTY.min} mm: płyty cieńsze niż{" "}
+            {GRUBOSC_KORPUSU_MIN} mm (np. HDF 3 mm na plecy) zostają w cenniku, ale nie są do wyboru jako płyta korpusu.
           </p>
           <div className="cn-tabela" aria-label="Płyty korpusów">
             <div className="cn-wiersz cn-naglowek" aria-hidden>
@@ -231,7 +240,8 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
                       name="plyta-domyslna"
                       aria-label={`Domyślna: ${p.nazwa || `płyta ${i + 1}`}`}
                       checked={form.plytaDomyslna === p.id}
-                      disabled={!canEdit}
+                      disabled={!canEdit || num(p.grubosc) < GRUBOSC_KORPUSU_MIN}
+                      title={num(p.grubosc) < GRUBOSC_KORPUSU_MIN ? `Płyta korpusu od ${GRUBOSC_KORPUSU_MIN} mm` : undefined}
                       onChange={() => setForm({ ...form, plytaDomyslna: p.id })}
                     />
                   </span>

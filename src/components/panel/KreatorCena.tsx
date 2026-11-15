@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import type { CenaKoncowa } from "@/lib/cenaKoncowa";
 import { bladIlosciDodatku, bledyWlasnegoDodatku, MAX_NAZWA_DODATKU, wlasnyDodatek, type DodatekOferty } from "@/lib/dodatki";
-import { cenaPlytyM2, JEDNOSTKA_LABEL, JEDNOSTKI, MAX_POZYCJI, plytaOferty, plytyCennika, type JednostkaPozycji, type ModulCennik } from "@/lib/modul";
+import { cenaPlytyM2, JEDNOSTKA_LABEL, JEDNOSTKI, MAX_POZYCJI, plytaKorpusowa, plytaOferty, plytyCennika, type JednostkaPozycji, type ModulCennik } from "@/lib/modul";
 import { formatPln } from "../pricing";
 import { liczDoplaty, MAX_CENA_RECZNA, TRYB_CEN_LABEL, trybCen, wycenianyElement, type PlanKuchni, type TrybCen } from "@/lib/kuchnia";
 
@@ -168,7 +168,9 @@ export function KreatorCena({
   setDodatki: (d: DodatekOferty[]) => void;
   cena: CenaKoncowa;
 }) {
-  const plyty = cennik.plyty?.length ? cennik.plyty : plytyCennika(cennik);
+  const wszystkie = cennik.plyty?.length ? cennik.plyty : plytyCennika(cennik);
+  // HDF i inne cienkie płyty (plecy, dna) są w cenniku, ale nie jako płyta korpusu.
+  const plyty = wszystkie.some(plytaKorpusowa) ? wszystkie.filter(plytaKorpusowa) : wszystkie;
   const wybrana = plytaOferty(cennik, plytaId).plyta;
   const zCennika = (cennik.pozycje ?? []).filter((p) => !dodatki.some((d) => d.id === p.id));
   const [doDodania, setDoDodania] = useState("");
@@ -242,7 +244,7 @@ export function KreatorCena({
         <label className="lab" htmlFor="k-plyta">
           Płyta korpusów
         </label>
-        {cennik.plyty && cennik.plyty.length > 1 ? (
+        {plyty.length > 1 ? (
           <select id="k-plyta" className="input" value={wybrana?.id ?? ""} onChange={(e) => setPlytaId(e.target.value === cennik.plytaDomyslna ? undefined : e.target.value)}>
             {plyty.map((p) => (
               <option key={p.id} value={p.id}>

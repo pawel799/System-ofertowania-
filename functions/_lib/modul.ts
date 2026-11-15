@@ -5,12 +5,15 @@
 import {
   cenaPlytyM2,
   DEFAULT_CENNIK,
+  GRUBOSC_KORPUSU_MIN,
+  GRUBOSC_PLYTY,
   JEDNOSTKI,
   LINIA_LIMITS,
   MAX_MODULY,
   MAX_PLYT,
   MAX_POZYCJI,
   modulCena,
+  plytaKorpusowa,
   type JednostkaPozycji,
   type ModulCennik,
   type ModulItem,
@@ -57,7 +60,7 @@ function validatePlyty(v: unknown): PlytaKorpusu[] {
     return {
       id,
       nazwa: n,
-      grubosc: liczba(o.grubosc, `${n} – grubość [mm]`, 8, 40),
+      grubosc: liczba(o.grubosc, `${n} – grubość [mm]`, GRUBOSC_PLYTY.min, GRUBOSC_PLYTY.max),
       dl: Math.round(liczba(o.dl, `${n} – długość arkusza [mm]`, 500, 5600)),
       szer: Math.round(liczba(o.szer, `${n} – szerokość arkusza [mm]`, 300, 2800)),
       cenaArkusza: liczba(o.cenaArkusza, `${n} – cena za arkusz`, 0, 100_000),
@@ -88,7 +91,10 @@ export function validateCennik(v: unknown): ModulCennik {
   const b = v as Record<string, unknown>;
   const plyty = b.plyty === undefined || b.plyty === null ? undefined : validatePlyty(b.plyty);
   const odpadPlyty = b.odpadPlyty === undefined || b.odpadPlyty === null ? 0 : liczba(b.odpadPlyty, "Odpad płyty [%]", 0, 50);
-  const plytaDomyslna = plyty?.length ? (plyty.find((p) => p.id === b.plytaDomyslna) ?? plyty[0]).id : undefined;
+  // Płyta domyślna liczy cenę korpusu, więc musi być korpusowa (od 8 mm) – HDF zostaje tylko w cenniku.
+  const korpusowe = plyty?.filter(plytaKorpusowa) ?? [];
+  if (plyty?.length && !korpusowe.length) throw bad(`Dodaj choć jedną płytę korpusu od ${GRUBOSC_KORPUSU_MIN} mm.`);
+  const plytaDomyslna = plyty?.length ? (korpusowe.find((p) => p.id === b.plytaDomyslna) ?? korpusowe[0]).id : undefined;
   const pozycje = b.pozycje === undefined || b.pozycje === null ? undefined : validatePozycje(b.pozycje);
   const domyslna = plyty?.find((p) => p.id === plytaDomyslna);
   return {

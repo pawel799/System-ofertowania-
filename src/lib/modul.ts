@@ -79,6 +79,14 @@ export function cenaPlytyM2(p: Pick<PlytaKorpusu, "dl" | "szer" | "cenaArkusza">
   return pole > 0 ? Math.round((p.cenaArkusza / pole) * (1 + Math.max(0, odpad) / 100) * 100) / 100 : 0;
 }
 
+/**
+ * Grubość płyty w cenniku [mm]. Od 3 mm, żeby dało się wpisać HDF na plecy i dna szuflad;
+ * płytą korpusu (wybór w ofercie, płyta domyślna) może być tylko płyta od 8 mm.
+ */
+export const GRUBOSC_PLYTY = { min: 3, max: 40 } as const;
+export const GRUBOSC_KORPUSU_MIN = 8;
+export const plytaKorpusowa = (p: Pick<PlytaKorpusu, "grubosc">) => p.grubosc >= GRUBOSC_KORPUSU_MIN;
+
 /** Płyty cennika; stary cennik bez listy – jedna płyta 18 mm odtworzona z plytaM2 (cena za m² ta sama). */
 export function plytyCennika(c: ModulCennik): PlytaKorpusu[] {
   if (c.plyty?.length) return c.plyty;
@@ -88,7 +96,9 @@ export function plytyCennika(c: ModulCennik): PlytaKorpusu[] {
 /** Płyta oferty (id z planu) albo domyślna; cenaM2 – do wzoru modułu. */
 export function plytaOferty(c: ModulCennik, id?: string | null): { plyta: PlytaKorpusu | null; cenaM2: number } {
   if (!c.plyty?.length) return { plyta: null, cenaM2: c.plytaM2 };
-  const p = c.plyty.find((x) => x.id === id) ?? c.plyty.find((x) => x.id === c.plytaDomyslna) ?? c.plyty[0];
+  const korpusowe = c.plyty.filter(plytaKorpusowa);
+  const lista = korpusowe.length ? korpusowe : c.plyty;
+  const p = lista.find((x) => x.id === id) ?? lista.find((x) => x.id === c.plytaDomyslna) ?? lista[0];
   return { plyta: p, cenaM2: cenaPlytyM2(p, c.odpadPlyty) };
 }
 
