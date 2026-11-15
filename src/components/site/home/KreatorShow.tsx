@@ -552,7 +552,7 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
               const on = i === phase;
               return (
                 <li key={s.title} aria-current={on ? "step" : undefined} className={`${on ? "block" : "hidden"} relative lg:block`}>
-                  <button type="button" onClick={() => jumpTo(i)} className="block w-full text-left lg:py-4 lg:pl-6" aria-label={`Pokaż krok ${i + 1}: ${s.title}`}>
+                  <button type="button" onClick={() => jumpTo(i)} className="block w-full text-left lg:py-3 lg:pl-6" aria-label={`Pokaż krok ${i + 1}: ${s.title}`}>
                   <span aria-hidden className="absolute inset-y-0 left-0 hidden w-px bg-white/15 lg:block" />
                   <span
                     aria-hidden
@@ -561,11 +561,14 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
                   <span className="block text-[11px] tabular-nums tracking-[0.25em] text-stone-400">
                     {nr(i)} <span className="lg:hidden">/ {nr(k.steps.length - 1)}</span>
                   </span>
-                  <span className={`mt-1 block text-xl transition-colors duration-200 lg:mt-2 lg:text-2xl ${on ? "text-stone-50" : "text-stone-500"}`}>
+                  <span className={`mt-1 block text-xl transition-colors duration-200 lg:mt-1.5 lg:text-[1.35rem] lg:leading-snug ${on ? "text-stone-50" : "text-stone-500"}`}>
                     {s.title}
                   </span>
-                  <span className={`mt-1 block max-w-md text-sm leading-relaxed transition-colors duration-200 ${on ? "text-stone-300" : "text-stone-600"}`}>
-                    {s.text}
+                  {/* Na komputerze opis tylko przy aktywnym kroku (płynne rozwinięcie) – lista mieści się w wysokości ekranu. */}
+                  <span className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] ${on ? "grid-rows-[1fr]" : "grid-rows-[1fr] lg:grid-rows-[0fr]"}`}>
+                    <span className={`block overflow-hidden text-sm leading-relaxed transition-colors duration-200 ${on ? "text-stone-300" : "text-stone-600"}`}>
+                      <span className="mt-1 block max-w-md">{s.text}</span>
+                    </span>
                   </span>
                   </button>
                 </li>
@@ -576,7 +579,7 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
           {/* Makieta kreatora z kursorem */}
           <div
             ref={mockBox}
-            className="absolute inset-x-3 bottom-14 z-10 h-[36%] sm:inset-x-6 lg:bottom-[8%] lg:left-auto lg:right-[3%] lg:h-[46%] lg:w-[42%] xl:right-[max(2.5rem,calc((100vw-72rem)/2))]"
+            className="absolute inset-x-3 bottom-14 z-10 h-[36%] sm:inset-x-6 lg:bottom-[7%] lg:left-auto lg:right-[3%] lg:h-[42%] lg:w-[40%] xl:right-[max(2.5rem,calc((100vw-72rem)/2))]"
           >
             <div
               ref={mockRoot}

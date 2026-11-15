@@ -265,8 +265,9 @@ function Director({ kitchenReady, kitchenShown, piecesHidden }: {
   const cam = useMemo(() => ({ pos: new Vector3(), look: new Vector3() }), []);
   const lastFront = useRef("");
   const wide = size.width >= 1024;
-  // Kamera dalej na pełnym ekranie, żeby całość mieściła się obok tekstu i makiety.
-  const dist = wide ? 1.85 : 1.75;
+  // Kamera dalej na pełnym ekranie, żeby całość mieściła się obok tekstu i nad makietą (nie wchodzi pod nagłówek).
+  // Szerszy kadr (duży monitor) – jeszcze trochę dalej, bo pionowy kąt widzenia jest stały.
+  const dist = wide ? Math.min(3.1, 2.5 * Math.max(1, size.width / size.height / 1.9)) : 1.75;
 
   useEffect(() => subscribeProgress(() => invalidate()), [invalidate]);
 
@@ -277,7 +278,7 @@ function Director({ kitchenReady, kitchenShown, piecesHidden }: {
     (kitchen: boolean) => {
       const { width: w, height: h } = size;
       if (kitchen) camera.setViewOffset(w, h, wide ? -0.06 * w : 0, 0, w, h);
-      else camera.setViewOffset(w, h, wide ? -0.06 * w : 0, wide ? 0.1 * h : 0.14 * h, w, h);
+      else camera.setViewOffset(w, h, wide ? -0.07 * w : 0, wide ? 0.17 * h : 0.14 * h, w, h);
       camera.updateProjectionMatrix();
     },
     [camera, size, wide],
