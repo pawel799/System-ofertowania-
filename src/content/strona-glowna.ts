@@ -108,7 +108,7 @@ export const HOME = {
     id: "kreator",
     eyebrow: "Kreator na żywo",
     title: "Od szafki do arkusza płyty i linku dla klienta",
-    lead: "Zobacz, jak wygląda praca w kreatorze: dodajesz szafki, system składa je w 3D, rozkłada formatki na płytach, a klient dostaje kuchnię do obracania. Pokaz gra sam jak film – wystarczy patrzeć, a kliknięciem w krok przeskoczysz do niego.",
+    lead: "Zobacz, jak wygląda praca w kreatorze: dodajesz szafki, system składa je w 3D, rozkłada formatki na płytach, a klient dostaje kuchnię do obracania. Kliknij krok po lewej, żeby przejść prosto do niego.",
     steps: [
       { title: "Dodajesz szafki", text: "Typ, szerokość, wysokość, głębokość. Szafki z szufladami liczą dna i tyły same." },
       { title: "Formatki liczą się same", text: "Boki, wieńce, półki, plecy i fronty z oklejaniem. Bez Excela i kalkulatora." },
@@ -128,7 +128,7 @@ export const HOME = {
       video: "/strona/oferta-3d.mp4",
       videoWebm: "/strona/oferta-3d.webm",
       poster: "/strona/oferta-3d.webp",
-      alt: "Nagranie: klient zmienia fronty, blat i uchwyty, a cena przelicza się na bieżąco",
+      alt: "Klient zmienia fronty, blat i uchwyty, a cena przelicza się na bieżąco",
       ratio: "16 / 9",
     } as Media,
   },

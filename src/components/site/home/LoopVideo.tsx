@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from "react";
 /*
  * Nagranie w pętli bez dźwięku. Gra tylko, gdy jest na ekranie (oszczędza baterię).
  * Przy „ograniczonym ruchu” stoi na kadrze startowym (poster) – także gdy ktoś zmieni
- * ustawienie w trakcie wizyty. Przycisk pauzy/odtwarzania w rogu (WCAG 2.2.2).
+ * ustawienie w trakcie wizyty. Bez widocznych kontrolek (wygląda jak żywa aplikacja, nie film); przycisk
+ * pauzy pojawia się tylko po przejściu klawiszem Tab (WCAG 2.2.2).
  */
 export default function LoopVideo({
   mp4,
@@ -76,7 +77,7 @@ export default function LoopVideo({
           setUserPaused(playing);
         }}
         aria-label={playing ? "Zatrzymaj nagranie" : "Odtwórz nagranie"}
-        className="absolute bottom-3 right-3 z-[1] flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-stone-100 transition-colors hover:bg-black/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+        className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:bottom-3 focus-visible:right-3 focus-visible:z-[1] focus-visible:flex focus-visible:h-10 focus-visible:w-10 focus-visible:items-center focus-visible:justify-center focus-visible:rounded-full focus-visible:border focus-visible:border-white/20 focus-visible:bg-black/60 focus-visible:text-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
       >
         <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4" fill="currentColor">
           {playing ? <path d="M4.5 3h2.5v10H4.5zM9 3h2.5v10H9z" /> : <path d="M5 3l8 5-8 5z" />}

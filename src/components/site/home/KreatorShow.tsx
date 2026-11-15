@@ -2,7 +2,8 @@
 
 /*
  * "Kreator na żywo": pokaz grający sam jak film, gdy sekcja jest na ekranie (bez przewijania i myszki).
- * Pauza, kliknięcie kroku przeskakuje do niego, na końcu odtwarza się od nowa.
+ * Bez sterowania jak w odtwarzaczu (wygląda jak żywa aplikacja): kliknięcie kroku przeskakuje do niego,
+ * na końcu odtwarza się od nowa; przy „ogranicz ruch” w systemie stoi w miejscu.
  * Po lewej kroki, po prawej scena 3D (formatki składają się w szafki, lecą na arkusze,
  * potem prawdziwy model kuchni) i makieta kreatora, po której jeździ kursor i klika.
  *
@@ -309,7 +310,6 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
   const mockRoot = useRef<HTMLDivElement>(null);
   const cursor = useRef<HTMLDivElement>(null);
   const canvasWrap = useRef<HTMLDivElement>(null);
-  const bar = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState(0);
   const [pressed, setPressed] = useState("");
   const [scale, setScale] = useState(0.8);
@@ -317,7 +317,6 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
   const [reduced, setReduced] = useState(false);
   const [kitchen, setKitchen] = useState(false);
   const [small, setSmall] = useState(false);
-  const [paused, setPaused] = useState(false);
   const light = useJasnaStrona();
   const clockRef = useRef({ t: 0, visible: false, paused: false });
   const kitchenAllowed = useRef(false);
@@ -455,7 +454,6 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
         canvasWrap.current.style.clipPath =
           phone > 0 ? `inset(${phone * top}% ${phone * side}% ${phone * bottom}% ${phone * side}% round ${phone * 36}px)` : "";
       }
-      if (bar.current) bar.current.style.transform = `scaleX(${Math.min(1, clock.t / TOTAL)})`;
     };
     function kick() {
       if (!raf) raf = requestAnimationFrame(frame);
@@ -472,11 +470,6 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
     };
   }, [reduced]);
 
-  const togglePause = () => {
-    clockRef.current.paused = !clockRef.current.paused;
-    setPaused(clockRef.current.paused);
-    frameRef.current();
-  };
   const jumpTo = (i: number) => {
     clockRef.current.t = PHASE_START[i];
     frameRef.current();
@@ -602,29 +595,6 @@ export default function KreatorShow({ inline = false }: { inline?: boolean }) {
                 </svg>
                 <i className="ks-ripple" />
               </div>
-            </div>
-          </div>
-
-          {/* Sterowanie jak w filmie: pauza i pasek postępu */}
-          <div className="absolute inset-x-0 bottom-0 z-20 flex items-center gap-3 px-3 pb-3 sm:px-6 lg:px-[3%] xl:px-[max(2.5rem,calc((100vw-72rem)/2))]">
-            <button
-              type="button"
-              onClick={togglePause}
-              aria-label={paused ? "Odtwórz pokaz" : "Zatrzymaj pokaz"}
-              className="grid size-8 shrink-0 place-items-center rounded-full border border-white/15 bg-black/40 text-stone-100 backdrop-blur transition-colors hover:bg-black/60"
-            >
-              {paused ? (
-                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden>
-                  <path d="M4 2.5v11l9-5.5z" fill="currentColor" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden>
-                  <path d="M4 2.5h2.6v11H4zM9.4 2.5H12v11H9.4z" fill="currentColor" />
-                </svg>
-              )}
-            </button>
-            <div aria-hidden className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/15">
-              <div ref={bar} className="h-0.5 origin-left bg-stone-100" style={{ transform: "scaleX(0)" }} />
             </div>
           </div>
         </div>
