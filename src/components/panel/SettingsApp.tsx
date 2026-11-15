@@ -14,6 +14,7 @@ import { EmbedTab } from "./EmbedTab";
 import { CennikTab } from "./CennikTab";
 import { PlanTab } from "./PlanTab";
 import { BledyTab } from "./BledyTab";
+import { KopiaZapasowa } from "./KopiaZapasowa";
 import { GRUPY_BIBLIOTEKI, podzielModele, wpisPoId } from "@/lib/bibliotekaModeli";
 import { ApiError, assetsApi, authApi, brandApi, forgetLogin, hasLogin, panelAuth, type DomainView, type Me, type ModelMeta } from "./offerApi";
 import { EMAIL_RE, isPhone, wyslijZapytanie } from "@/lib/zapytania";
@@ -137,7 +138,10 @@ export default function SettingsApp() {
           ) : tab === "katalog" ? (
             <KatalogTab canEdit={me?.role !== "member"} onAuthError={onAuthError} />
           ) : tab === "konto" ? (
-            <AccountTab me={me} onAuthError={onAuthError} />
+            <>
+              <AccountTab me={me} onAuthError={onAuthError} />
+              {me?.role === "owner" || me?.role === "admin" ? <KopiaZapasowa onAuthError={onAuthError} /> : null}
+            </>
           ) : tab === "zespol" ? (
             <TeamTab me={me} onAuthError={onAuthError} />
           ) : tab === "osadzanie" ? (
