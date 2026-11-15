@@ -1104,3 +1104,11 @@ html[data-motyw="ciemny"] .pnl {
 /* Pole poza zakresem: komunikat przy polu zamiast cichego obcięcia wartości. */
 .pnl .kr-hint[data-blad] { color: var(--red); }
 .pnl .input[aria-invalid="true"] { box-shadow: inset 0 0 0 1px var(--red); }
+/*
+ * Nagłówek panelu na tablecie (641–1180 px): same ikony, podpisy tylko dla czytników ekranu.
+ * Wcześniej podpisy wypychały „Nowa” i przełącznik motywu poza ekran (szerokość strony > okno),
+ * a sąsiednie przyciski przechwytywały kliknięcie w „Wyloguj”.
+ */
+@media (max-width: 1180px) {
+  .pnl .top .hide-sm { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+}
