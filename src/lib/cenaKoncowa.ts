@@ -1,18 +1,19 @@
 /*
  * Cena końcowa oferty z kreatora – jedna funkcja, która zlicza każdą składową:
  *   meble      – moduły i modele z cennika (z płytą wybraną w ofercie i dopłatą za wnętrze),
+ *   okucia     – wysuwy z wybranym typem prowadnic, kosze cargo, LeMans (okucia.ts; przy cenach ręcznych 0),
  *   dodatki    – własne pozycje z cennika i z oferty (kpl., szt., mb zabudowy, % ceny mebli, rabat),
  *   materiały  – dopłaty za front, blat i okucia (tylko grupy, które projekt ma – opcjeProjektu.ts).
- * razem = max(1, meble + dodatki) + materiały – dokładnie tyle co base oferty (bazaKuchni) + dopłaty (totalPrice),
+ * razem = max(1, meble + okucia + dodatki) + materiały – dokładnie tyle co base oferty (bazaKuchni) + dopłaty (totalPrice),
  * więc kreator, panel, PDF i strona klienta pokazują tę samą kwotę. W React: useCenaKoncowa (panel/useCenaKoncowa.ts).
  */
 import { wycenDodatki, type DodatekWyceniony } from "./dodatki";
-import { metryBiezace, plytaProjektu, sumaMebli, trybCen, type PlanKuchni } from "./kuchnia";
+import { metryBiezace, okuciaOferty, plytaProjektu, sumaMebli, trybCen, type PlanKuchni } from "./kuchnia";
 import { JEDNOSTKA_LABEL, plytaOferty, powierzchniaArkusza, type ModulCennik } from "./modul";
 
 export type SkladnikCeny = {
   klucz: string;
-  rodzaj: "meble" | "dodatek" | "material";
+  rodzaj: "meble" | "okucia" | "dodatek" | "material";
   nazwa: string;
   /** Np. „12 mb × 150 zł”, „10% od 18 400 zł”. */
   opis?: string;
@@ -21,6 +22,8 @@ export type SkladnikCeny = {
 
 export type CenaKoncowa = {
   meble: number;
+  /** Okucia jako osobne pozycje (wysuwy, cargo, LeMans); 0 w starych ofertach i przy cenach ręcznych. */
+  okucia: number;
   dodatki: number;
   materialy: number;
   /** Kwota jak base oferty: meble + dodatki, min. 1 zł przy niepustym projekcie. */
@@ -48,10 +51,13 @@ export function cenaKoncowa(args: {
   const zl = args.zl ?? ((n: number) => `${Math.round(n)} zł`);
   const pusty = !plan.elementy.length;
   const meble = pusty ? 0 : sumaMebli(plan, cennik);
+  const pozycjeOkuc = pusty ? [] : okuciaOferty(plan, cennik);
+  const okucia = pozycjeOkuc.reduce((s, p) => s + (p.kwota ?? 0), 0);
   const mb = metryBiezace(plan);
-  const dodatkiWycenione = pusty ? [] : wycenDodatki(plan.dodatki, cennik, { meble, mb });
+  // Procent od ceny mebli liczy się od mebli z okuciami – tak samo jak bazaKuchni na serwerze.
+  const dodatkiWycenione = pusty ? [] : wycenDodatki(plan.dodatki, cennik, { meble: meble + okucia, mb });
   const dodatki = dodatkiWycenione.reduce((s, d) => s + d.kwota, 0);
-  const baza = pusty ? 0 : Math.max(1, meble + dodatki);
+  const baza = pusty ? 0 : Math.max(1, meble + okucia + dodatki);
   const doplaty = (args.doplaty ?? []).filter((d) => d.kwota !== 0);
   const materialy = pusty ? 0 : doplaty.reduce((s, d) => s + d.kwota, 0);
 
@@ -80,11 +86,19 @@ export function cenaKoncowa(args: {
       opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : trybCen(plan) === "reczne" ? (plan.cenaOgolna !== undefined ? "cena całej zabudowy" : "ceny pozycji wpisane ręcznie") : undefined,
       kwota: meble,
     });
+    if (okucia > 0)
+      skladniki.push({
+        klucz: "okucia",
+        rodzaj: "okucia",
+        nazwa: "Okucia: wysuwy, cargo, narożnik",
+        opis: pozycjeOkuc.map((p) => `${p.nazwa.replace(/ \(kpl\.\)$/, "")} × ${p.ilosc}`).join(", "),
+        kwota: okucia,
+      });
     for (const d of dodatkiWycenione) {
       if (d.brak) continue;
       const opis =
         d.jednostka === "proc"
-          ? `${liczba(d.cena)}% od ${zl(meble)}`
+          ? `${liczba(d.cena)}% od ${zl(meble + okucia)}`
           : d.jednostka === "kpl"
             ? undefined
             : `${liczba(d.ilosc)} ${JEDNOSTKA_LABEL[d.jednostka]} × ${zl(d.cena)}`;
@@ -92,5 +106,5 @@ export function cenaKoncowa(args: {
     }
     for (const d of doplaty) skladniki.push({ klucz: `m:${d.klucz}`, rodzaj: "material", nazwa: d.nazwa, kwota: d.kwota });
   }
-  return { meble, dodatki, materialy, baza, razem: baza + materialy, skladniki, dodatkiWycenione, mb, plyta };
+  return { meble, okucia, dodatki, materialy, baza, razem: baza + materialy, skladniki, dodatkiWycenione, mb, plyta };
 }

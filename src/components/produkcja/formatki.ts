@@ -13,6 +13,7 @@ import { MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type Plan
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { CzescMebla } from "@/lib/kolory";
 import { frontyElementu } from "../rysunek/rysunekTechniczny";
+import { cargoWysokie, dlugoscProwadnicy, koszeCargoWysokiego, PROWADNICE_LABEL, prowadniceElementu } from "@/lib/okucia";
 
 export type Okleina = { d1: boolean; d2: boolean; s1: boolean; s2: boolean };
 export const BEZ_OKLEINY: Okleina = { d1: false, d2: false, s1: false, s2: false };
@@ -223,6 +224,25 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
   return true;
 }
 
+/**
+ * Cargo (dolne i wysokie): korpus bez półek (kosze wiszą na mechanizmie), jeden front na całą wysokość,
+ * w okuciach kosz / mechanizm i prowadnice wybranego typu.
+ */
+function cargo(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
+  const W = mm(el.w);
+  const H = mm(el.h);
+  const D = mm(el.d);
+  korpus(z, mebel, W, H, D, mat("korpus"), u);
+  front(z, mebel, "Front cargo", mat("front"), H, W, u, "front na mechanizmie cargo");
+  const typ = prowadniceElementu(el)!;
+  const dl = dlugoscProwadnicy(el.d);
+  if (cargoWysokie(el)) z.okucie(`Mechanizm cargo wysokie ${W} mm, ${koszeCargoWysokiego(el.h)} koszy, wys. korpusu ${H} mm`, 1, "kpl.");
+  else z.okucie(`Kosz cargo ${W} mm, 2 poziomy`, 1, "kpl.");
+  z.okucie(`Prowadnice cargo ${PROWADNICE_LABEL[typ]} ${dl} mm`, 1, "kpl.");
+  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
+  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
+}
+
 /** Słupek albo szafka z piekarnikiem: korpus, półki pod i nad piekarnikiem, fronty nad i pod (proporcje jak w 3D). */
 function piekarnik(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
   const W = mm(el.w);
@@ -263,7 +283,7 @@ function zabudowaAgd(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: Cze
   if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
 }
 
-const NOZKI = new Set(["szafka", "szuflady", "narozna", "zlew", "piekarnik", "lodowka-zabudowa"]);
+const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "zlew", "piekarnik", "lodowka-zabudowa"]);
 
 /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
 function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
@@ -321,6 +341,7 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
       continue;
     }
     if (r === "piekarnik") piekarnik(z, mebel, el, mat, u, uchwyt);
+    else if (r === "cargo") cargo(z, mebel, el, mat, u, uchwyt);
     else if (r === "lodowka-zabudowa" || r === "zmywarka") zabudowaAgd(z, mebel, el, mat, u, uchwyt);
     else if (r === "blat") continue;
     else if (!parametryczny(z, mebel, el, mat, u, uchwyt)) {

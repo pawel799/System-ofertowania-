@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
 import MebelParametryczny from "./MebelParametryczny";
+import { CargoBryla } from "./MebelOkucia";
 import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
 
 type Props = {
@@ -359,6 +360,8 @@ export default function AgdBryla(props: Props) {
     <group>
       {rodzaj === "zmywarka" ? (
         <Zmywarka {...props} />
+      ) : rodzaj === "cargo" ? (
+        <CargoBryla el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
       ) : (
         // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
         <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />

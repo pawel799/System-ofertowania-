@@ -11,6 +11,7 @@
  */
 import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
+import { cenaOkucia, okuciaPlanu, type PozycjaOkuc } from "./okucia";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
 
 export type { StronaLP } from "./wnetrze";
@@ -29,6 +30,8 @@ export type RodzajElementu =
   | "szafka"
   | "szuflady"
   | "narozna"
+  // Cargo: wąski wysuw z koszem (strefa dolna: 2 poziomy; wysoka – słupek: 5–6 koszy).
+  | "cargo"
   | "zlew"
   | "zlewozmywak"
   | "bateria"
@@ -59,6 +62,7 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "szafka",
   "szuflady",
   "narozna",
+  "cargo",
   "zlew",
   "zlewozmywak",
   "bateria",
@@ -181,6 +185,7 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   szafka: "Szafka",
   szuflady: "Szuflady",
   narozna: "Narożna",
+  cargo: "Cargo",
   zlew: "Szafka pod zlew",
   zlewozmywak: "Zlewozmywak",
   bateria: "Bateria",
@@ -237,6 +242,7 @@ export const PRESETY: PresetModul[] = [
   { id: "dolna-80", nazwa: "Szafka dolna 80", grupa: "dolne", strefa: "dolna", rodzaj: "szafka", w: 80, h: 72, d: 56 },
   { id: "szuflady-45", nazwa: "Szuflady 45", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 45, h: 72, d: 56 },
   { id: "szuflady-60", nazwa: "Szuflady 60", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 60, h: 72, d: 56 },
+  { id: "cargo-30", nazwa: "Cargo 30", grupa: "dolne", strefa: "dolna", rodzaj: "cargo", w: 30, h: 72, d: 56 },
   { id: "narozna-90", nazwa: "Szafka narożna 90", grupa: "dolne", strefa: "dolna", rodzaj: "narozna", w: 90, h: 72, d: 90 },
   { id: "zlew-80", nazwa: "Szafka pod zlew 80", grupa: "dolne", strefa: "dolna", rodzaj: "zlew", w: 80, h: 72, d: 56 },
   { id: "gorna-40", nazwa: "Szafka górna 40", grupa: "gorne", strefa: "gorna", rodzaj: "szafka", w: 40, h: 72, d: 32 },
@@ -248,6 +254,7 @@ export const PRESETY: PresetModul[] = [
   { id: "polka-120", nazwa: "Półka ścienna 120", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 120, h: 6, d: 28 },
   { id: "polka-podwojna-80", nazwa: "Półka podwójna 80", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 80, h: 36, d: 28 },
   { id: "slupek-60", nazwa: "Słupek 60", grupa: "slupki", strefa: "wysoka", rodzaj: "szafka", w: 60, h: 210, d: 56 },
+  { id: "cargo-wysokie-30", nazwa: "Cargo wysokie 30", grupa: "slupki", strefa: "wysoka", rodzaj: "cargo", w: 30, h: 210, d: 56 },
   { id: "piekarnik-60", nazwa: "Słupek z piekarnikiem 60", grupa: "slupki", strefa: "wysoka", rodzaj: "piekarnik", w: 60, h: 210, d: 56 },
   { id: "lodowka-zabudowa-60", nazwa: "Zabudowa lodówki 60", grupa: "slupki", strefa: "wysoka", rodzaj: "lodowka-zabudowa", w: 60, h: 210, d: 56 },
   { id: "zmywarka-60", nazwa: "Zmywarka do zabudowy 60", grupa: "agd", strefa: "dolna", rodzaj: "zmywarka", w: 60, h: 72, d: 56 },
@@ -305,6 +312,9 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
       return { w: zakres(30, 100), h: zakres(55, 92), d: zakres(45, 65) };
     case "narozna":
       return { w: zakres(80, 110), h: zakres(60, 92), d: zakres(80, 110) };
+    // Cargo: szerokości 15/20/30/40 cm (wybór w panelu), wysokość jak szafki dolne albo słupki.
+    case "cargo":
+      return strefa === "wysoka" ? { w: zakres(15, 40), h: zakres(160, 230), d: zakres(45, 65) } : { w: zakres(15, 40), h: zakres(55, 92), d: zakres(45, 65) };
     case "zlew":
       return { w: zakres(50, 120), h: zakres(60, 92), d: zakres(45, 65) };
     case "zlewozmywak":
@@ -399,6 +409,7 @@ export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
   const NAZWY: Partial<Record<RodzajElementu, string>> = {
     szuflady: "szuflady",
     narozna: "narożna",
+    cargo: "cargo",
     zlew: "pod zlew",
     zlewozmywak: "zlew",
     bateria: "bateria",
@@ -454,6 +465,8 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
       return "SZ";
     case "narozna":
       return "N";
+    case "cargo":
+      return "CG";
     case "szafa":
     case "szafa-przesuwna":
       return "SZF";
@@ -1007,6 +1020,23 @@ export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
 
+/**
+ * Okucia oferty jako osobne pozycje (okucia.ts): wysuwy z wybranym typem prowadnic, kosze cargo, LeMans.
+ * Ceny z cennika tylko przy cenach z cennika; przy cenach wpisanych ręcznie firma podaje kwotę mebla z okuciami,
+ * więc pozycje mają samą ilość (cena undefined).
+ */
+export function okuciaOferty(plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik): (PozycjaOkuc & { cena?: number; kwota?: number })[] {
+  const lista = okuciaPlanu(plan.elementy.filter(wycenianyElement));
+  if (trybCen(plan) === "reczne") return lista;
+  return lista.map((p) => {
+    const cena = cenaOkucia(p.klucz, cennik);
+    return { ...p, cena, kwota: Math.round(cena * p.ilosc * 100) / 100 };
+  });
+}
+
+/** Suma okuć w ofercie [zł netto]; 0 przy cenach ręcznych i w starych ofertach (bez nowych okuć). */
+export const sumaOkuc = (plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik) => okuciaOferty(plan, cennik).reduce((s, p) => s + (p.kwota ?? 0), 0);
+
 /** Pozycje bez wpisanej ceny (ceny ręczne bez ceny ogólnej) – do podpowiedzi „uzupełnij ceny”. */
 export const bezCeny = (plan: PlanKuchni) =>
   trybCen(plan) === "reczne" && plan.cenaOgolna === undefined ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : [];
@@ -1031,10 +1061,10 @@ export function plytaProjektu(plan: PlanKuchni) {
   return Math.round(m2 * 100) / 100;
 }
 
-/** Suma netto oferty bez dopłat za materiały: meble + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
+/** Suma netto oferty bez dopłat za materiały: meble + okucia + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
-  const meble = sumaMebli(plan, cennik);
+  const meble = sumaMebli(plan, cennik) + sumaOkuc(plan, cennik);
   const dodatki = wycenDodatki(plan.dodatki, cennik, { meble, mb: metryBiezace(plan) }).reduce((s, d) => s + d.kwota, 0);
   return Math.max(1, meble + dodatki);
 }

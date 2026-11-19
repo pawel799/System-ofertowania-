@@ -96,6 +96,8 @@ function przestrzenie(kol: Wnetrze["kolumny"][number], H: number) {
 export function frontyElementu(el: ElementKuchni): FrontRys[] {
   const W = el.w;
   const H = el.h;
+  // Cargo: jeden front na mechanizmie (wysuw na wprost) – rysowany jak front szuflady.
+  if (el.rodzaj === "cargo" && el.zrodlo !== "model") return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "szuflada", napis: "cargo" }];
   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
   if (!wn || !wn.kolumny.length) return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "agd", napis: nazwaNaRzucie(el) || el.nazwa }];
   const T = PLYTA_CM;

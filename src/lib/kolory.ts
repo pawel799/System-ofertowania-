@@ -110,6 +110,8 @@ export function czesciMebla(el: ElementKolorow): Record<CzescMebla, number> {
   // Zmywarka i lodówka w zabudowie: front meblowy; obudowa AGD zostaje jak w urządzeniu.
   if (ZABUDOWA.has(rodzaj)) return { front: w * h, korpus: 0, srodek: 0 };
   if (el.zrodlo === "model") return { front: w * h, korpus: obudowa, srodek: 0 };
+  // Cargo i LeMans: front i korpus, bez półek (kosze to okucia).
+  if (rodzaj === "cargo" || rodzaj === "lemans") return { front: w * h, korpus: obudowa, srodek: 0 };
   if (!kategoriaWnetrza(el)) return zero;
   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
   const maFront = !!wn && (wn.front !== "otwarte" || wn.kolumny.some((k) => k.sekcje.some((s) => s.typ === "szuflada")));

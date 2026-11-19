@@ -14,9 +14,9 @@ import { useDrewno } from "../modul/Szafka";
 import { wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
 import type { ElementKuchni } from "@/lib/kuchnia";
 
-const T = 0.018;
-const PLECY = 0.003;
-const GAP = 0.002;
+export const T = 0.018;
+export const PLECY = 0.003;
+export const GAP = 0.002;
 const KAT_DRZWI = (100 * Math.PI) / 180;
 
 /** Płynne otwieranie: 0 → 1 w ok. 0,5 s; klatki tylko w trakcie ruchu (frameloop="demand"). */
@@ -41,7 +41,7 @@ export function useRuch(otwarte: boolean, ustaw: (p: number) => void) {
   });
 }
 
-function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: number; pivot: [number, number, number]; otwarte: boolean; children: ReactNode }) {
+export function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: number; pivot: [number, number, number]; otwarte: boolean; children: ReactNode }) {
   const g = useRef<THREE.Group>(null);
   useRuch(otwarte, (p) => {
     if (!g.current) return;
@@ -55,7 +55,7 @@ function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: num
   );
 }
 
-function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwarte: boolean; children: ReactNode }) {
+export function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwarte: boolean; children: ReactNode }) {
   const g = useRef<THREE.Group>(null);
   useRuch(otwarte, (p) => {
     g.current?.position.set(o[0] * p, o[1] * p, o[2] * p);
@@ -67,12 +67,38 @@ function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwart
   );
 }
 
-function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, number]; m: THREE.Material }) {
+export function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, number]; m: THREE.Material }) {
   return (
     <mesh position={p} material={m} castShadow receiveShadow>
       <boxGeometry args={s} />
     </mesh>
   );
+}
+
+export type KoloryBryly = {
+  kolor: string;
+  chropowatosc: number;
+  korpus?: { color: string; roughness: number };
+  srodek?: { color: string; roughness: number };
+  kolorUchwytu?: string;
+};
+
+/** Materiały mebla na wymiar: m.korpus – boki i wieńce, m.srodek – półki i skrzynki, m.plecy; front, uchwyt, chrom. */
+export function useMaterialyMebla({ kolor, chropowatosc, korpus, srodek, kolorUchwytu }: KoloryBryly) {
+  const drewno = useDrewno();
+  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
+  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorUchwytu ?? "#2b2b2b", metalness: 0.8, roughness: 0.35 }), [kolorUchwytu]);
+  const chrom = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9ccd0", metalness: 0.9, roughness: 0.25 }), []);
+  // Każdy materiał zwalniany osobno – zmiana jednego koloru nie może zwolnić materiału, który dalej jest w użyciu.
+  useEffect(() => () => korpusMat?.dispose(), [korpusMat]);
+  useEffect(() => () => srodekMat?.dispose(), [srodekMat]);
+  useEffect(() => () => frontMat.dispose(), [frontMat]);
+  useEffect(() => () => metal.dispose(), [metal]);
+  useEffect(() => () => chrom.dispose(), [chrom]);
+  const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
+  return { m, frontMat, metal, chrom };
 }
 
 type Kawalek = { x0: number; x1: number; y0: number; y1: number };
@@ -116,19 +142,11 @@ export default function MebelParametryczny({
   /** Kolor uchwytów (okucia tego mebla); brak = ciemny metal. */
   kolorUchwytu?: string;
 }) {
-  const drewno = useDrewno();
-  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
-  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => () => [korpusMat, srodekMat].forEach((x) => x?.dispose()), [korpusMat, srodekMat]);
-  // m.korpus – boki i wieńce; m.srodek – półki, przegrody i skrzynki szuflad.
-  const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
+  const { m, frontMat, metal, chrom } = useMaterialyMebla({ kolor, chropowatosc, korpus, srodek, kolorUchwytu });
   const wn = useMemo(() => el.wnetrze ?? wnetrzeDomyslne(el), [el]);
-  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
-  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorUchwytu ?? "#2b2b2b", metalness: 0.8, roughness: 0.35 }), [kolorUchwytu]);
-  const chrom = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9ccd0", metalness: 0.9, roughness: 0.25 }), []);
   const dno = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e9e4dc", roughness: 0.85 }), []);
   const ceramika = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f4f4f2", roughness: 0.25 }), []);
-  useEffect(() => () => [frontMat, metal, chrom, dno, ceramika].forEach((x) => x.dispose()), [frontMat, metal, chrom, dno, ceramika]);
+  useEffect(() => () => [dno, ceramika].forEach((x) => x.dispose()), [dno, ceramika]);
 
   const W = el.w / 100;
   const H = el.h / 100;

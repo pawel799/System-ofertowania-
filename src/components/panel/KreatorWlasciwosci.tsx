@@ -207,7 +207,7 @@ export function KreatorWlasciwosci({
           </button>
         </p>
       ) : null}
-      {onZmien ? <KreatorOpcjeMebla element={element} onZmien={onZmien} /> : null}
+      {onZmien ? <KreatorOpcjeMebla element={element} onZmien={onZmien} onWymiar={onWymiar} /> : null}
       {onKat ? <PoleKata key={element.id} kat={katElementu(element)} onKat={onKat} /> : null}
       <div className="actions">
         <button type="button" className="btn btn-ghost" onClick={onObrot}>
