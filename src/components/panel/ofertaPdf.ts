@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, opisOpcjiMebla, uwagiWykonawcze, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -58,6 +58,8 @@ export type PdfDane = {
   slowa: SlowaProjektu;
   /** Są urządzenia AGD – dopisek, że nie są wliczone. */
   agd: boolean;
+  /** Uwagi wykonawcze (np. waterfall – łączenie na 45°). */
+  uwagi: string[];
 };
 
 const esc = (s: string) =>
@@ -122,7 +124,7 @@ export function danePdf(args: {
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
-    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
+    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${opisOpcjiMebla(e).map((x) => ` · ${x}`).join("")}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
     w: e.w,
     h: e.h,
     d: e.d,
@@ -172,6 +174,7 @@ export function danePdf(args: {
     grupy,
     slowa: slowaProjektu(args.projekt),
     agd: maAgd(args.plan),
+    uwagi: uwagiWykonawcze(args.plan),
   };
 }
 
@@ -326,6 +329,7 @@ ${zdjecie}
 </table>
 <p class="note">Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
 ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
+${d.uwagi.map((u) => `<p class="note">${esc(u)}</p>`).join("")}
 ${link}
 <footer>
   Dokument jest ofertą handlową. Nie zawiera rozkroju płyt, nestingu ani listy formatek do cięcia.

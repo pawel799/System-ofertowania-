@@ -22,6 +22,7 @@ export function zrodloMaterialow(ctx: KontekstMaterialow, w: WyborMaterialow): Z
       return { nazwa: m?.name ?? "uchwyt", bez: !!m?.bezUchwytu };
     },
     blat: findMaterial("countertop", w.countertop, ctx)?.name,
+    gruboscBlatu: findMaterial("countertop", w.countertop, ctx)?.thicknessMm,
   };
 }
 

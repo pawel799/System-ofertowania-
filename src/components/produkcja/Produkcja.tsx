@@ -31,6 +31,7 @@ function wczytajUstawienia(): Ustawienia {
       szuflady: z.szuflady === "systemowe" ? "systemowe" : "plyta",
       plecy: z.plecy === "brak" ? "brak" : "hdf",
       nawisBlatu: num(z.nawisBlatu, DOMYSLNE.nawisBlatu, 0, 100),
+      nozki: num(z.nozki, DOMYSLNE.nozki, 0, 250),
       arkusz: { dl: num(z.arkusz?.dl, 2800, 500, 6000), szer: num(z.arkusz?.szer, 2070, 300, 3000) },
       rzaz: num(z.rzaz, 4, 0, 10),
       obrzeze: num(z.obrzeze, 10, 0, 50),
@@ -314,6 +315,7 @@ export default function Produkcja({
             <>
               <Liczba id="pr-szcz" label="Szczelina frontów" value={u.szczelina} min={0} max={10} onChange={(v) => zmien({ szczelina: v })} />
               <Liczba id="pr-nawis" label="Nawis blatu" value={u.nawisBlatu} min={0} max={100} onChange={(v) => zmien({ nawisBlatu: v })} />
+              <Liczba id="pr-nozki" label="Nóżki (wysokość)" value={u.nozki} min={0} max={250} onChange={(v) => zmien({ nozki: v })} />
               <label htmlFor="pr-szuf" className="pr-pole">
                 <span>Szuflady</span>
                 <select id="pr-szuf" className="input" value={u.szuflady} onChange={(e) => zmien({ szuflady: e.target.value === "systemowe" ? "systemowe" : "plyta" })}>

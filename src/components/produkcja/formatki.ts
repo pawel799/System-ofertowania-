@@ -9,7 +9,7 @@
  *
  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
  */
-import { lemansElementu, MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { lemansElementu, MEBLE, rect, rodzajElementu, stronyWaterfall, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { podzialLemans } from "@/lib/lemans";
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { CzescMebla } from "@/lib/kolory";
@@ -47,7 +47,8 @@ export type Formatka = {
   uwagi?: string;
 };
 
-export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string };
+/** Kawałek blatu [mm]; bok waterfall: dl = wysokość od podłogi do spodu blatu, szer = głębokość blatu. */
+export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string; waterfall?: boolean };
 export type Okucie = { nazwa: string; ilosc: number; jednostka: "szt." | "kpl." | "mm" };
 
 export type ListaFormatek = {
@@ -69,9 +70,13 @@ export type UstawieniaFormatek = {
   plecy: "hdf" | "brak";
   /** Nawis blatu nad frontami [mm]. */
   nawisBlatu: number;
+  /** Wysokość nóżek szafek dolnych i słupków [mm] – nazwa nóżek w okuciach i wysokość boku waterfall (nóżki + korpus). */
+  nozki: number;
 };
 
-export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20 };
+export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20, nozki: 100 };
+/** Grubość blatu, gdy materiał blatu jej nie podaje [mm]. */
+export const GRUBOSC_BLATU_DOMYSLNA = 38;
 
 export type ZrodloMaterialow = {
   /** Materiał części mebla (front, boki, środek). */
@@ -80,6 +85,8 @@ export type ZrodloMaterialow = {
   uchwyt?: (el: ElementKuchni) => { nazwa: string; bez: boolean };
   /** Nazwa blatu z oferty. */
   blat?: string;
+  /** Grubość blatu z oferty [mm] (bok waterfall); brak = GRUBOSC_BLATU_DOMYSLNA. */
+  gruboscBlatu?: number;
 };
 
 export const HDF: MaterialFormatki = { klucz: "hdf-3", nazwa: "HDF 3 mm biały", grubosc: 3, sloje: false, rodzaj: "hdf" };
@@ -306,18 +313,29 @@ function zabudowaAgd(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: Cze
 const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "lemans", "zlew", "piekarnik", "lodowka-zabudowa"]);
 
 /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
-function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
+function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>, gruboscBlatu: number): Blat[] {
   const out: Blat[] = [];
+  const boki: Blat[] = [];
   const dolne = plan.elementy.filter((e) => e.strefa === "dolna" && !MEBLE.has(rodzajElementu(e)) && !WYPOSAZENIE.has(rodzajElementu(e)));
-  type Odc = { a0: number; a1: number; d: number; nazwy: string[] };
+  // naddatek – boki waterfall w odcinku: blat sięga do zewnętrznej krawędzi boku (+ grubość blatu na każdy bok).
+  type Odc = { a0: number; a1: number; d: number; nazwy: string[]; naddatek: number };
   const ciagi = new Map<string, Odc[]>();
   for (const e of dolne) {
     const r = rect(e);
     const wzdluzX = e.rot % 180 === 0;
     const klucz = wzdluzX ? `x:${Math.round(e.rot === 0 ? r.z0 : r.z1)}` : `z:${Math.round(e.rot === 90 ? r.x0 : r.x1)}`;
     const lista = ciagi.get(klucz) ?? [];
-    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa] });
+    const wf = e.zrodlo === "model" ? [] : stronyWaterfall(e);
+    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa], naddatek: wf.length * gruboscBlatu });
     ciagi.set(klucz, lista);
+    for (const s of wf)
+      boki.push({
+        mebel: `bok waterfall – ${numer.get(e.id) ?? e.nazwa}, ${s === "L" ? "lewy" : "prawy"}`,
+        dl: u.nozki + mm(e.h),
+        szer: mm(e.d) + u.nawisBlatu,
+        waterfall: true,
+        uwagi: `z materiału blatu, gr. ${gruboscBlatu} mm; wys. od podłogi do spodu blatu (nóżki ${u.nozki} + korpus ${mm(e.h)} mm). Łączenie z blatem na 45° – dolicz ${gruboscBlatu} mm i ucios (kreator nie liczy uciosu).`,
+      });
   }
   for (const [, lista] of Array.from(ciagi.entries()).sort(([a], [b]) => a.localeCompare(b))) {
     lista.sort((a, b) => a.a0 - b.a0);
@@ -328,19 +346,25 @@ function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, 
         ost.a1 = Math.max(ost.a1, o.a1);
         ost.d = Math.max(ost.d, o.d);
         ost.nazwy.push(...o.nazwy);
+        ost.naddatek += o.naddatek;
       } else sklejone.push({ ...o, nazwy: [...o.nazwy] });
     }
     for (const o of sklejone) {
       const nr = o.nazwy.map((x) => x.split(".")[0]).join(", ");
-      out.push({ mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0], dl: mm(o.a1 - o.a0), szer: mm(o.d) + u.nawisBlatu });
+      out.push({
+        mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0],
+        dl: mm(o.a1 - o.a0) + o.naddatek,
+        szer: mm(o.d) + u.nawisBlatu,
+        ...(o.naddatek ? { uwagi: `z naddatkiem ${o.naddatek} mm na bok waterfall (łączenie na 45°)` } : {}),
+      });
     }
   }
   // Osobne elementy „blat” (np. wyspa, nadstawka).
   for (const e of plan.elementy) if (rodzajElementu(e) === "blat") out.push({ mebel: numer.get(e.id) ?? e.nazwa, dl: mm(e.w), szer: mm(e.d) });
   // L / U: blaty z dwóch ścian spotykają się w narożniku – długości liczone po szafkach, łączenie do ustalenia.
   const kierunki = new Set(Array.from(ciagi.keys()).map((k) => k[0]));
-  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = "narożnik – dolicz zakładkę na łączenie blatów"));
-  return out;
+  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = [b.uwagi, "narożnik – dolicz zakładkę na łączenie blatów"].filter(Boolean).join("; ")));
+  return [...out, ...boki];
 }
 
 /** Lista formatek z planu. */
@@ -369,13 +393,13 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
       pominiete.push({ mebel, powod: "urządzenie / dodatek – bez formatek" });
       continue;
     }
-    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie("Nóżki meblowe 100 mm", el.w > 90 ? 6 : 4);
+    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie(`Nóżki meblowe ${u.nozki} mm`, el.w > 90 ? 6 : 4);
     if (el.strefa === "gorna" && r !== "okap" && r !== "okap-podszafkowy") z.okucie("Zawieszki szafek górnych", 2);
   }
   return {
     formatki,
     materialy: Array.from(materialy.values()),
-    blaty: blatyPlanu(plan, u, numer),
+    blaty: blatyPlanu(plan, u, numer, zrodlo.gruboscBlatu ?? GRUBOSC_BLATU_DOMYSLNA),
     blatNazwa: zrodlo.blat ?? "Blat",
     okucia: Array.from(okucia.values()),
     pominiete,

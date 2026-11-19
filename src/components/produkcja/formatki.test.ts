@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { formatkiProjektu, type MaterialFormatki, type ZrodloMaterialow } from "./formatki";
-import { okuciaOferty, ostrzezeniaLemans, parseKuchnia, pustyPlan, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { formatkiProjektu, USTAWIENIA_DOMYSLNE, type MaterialFormatki, type ZrodloMaterialow } from "./formatki";
+import { okuciaOferty, ostrzezeniaLemans, ostrzezeniaWaterfall, parseKuchnia, pustyPlan, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { DEFAULT_CENNIK } from "@/lib/modul";
 
 const PLYTA: MaterialFormatki = { klucz: "plyta", nazwa: "Płyta biała 18 mm", grubosc: 18, sloje: false, rodzaj: "plyta" };
@@ -93,4 +93,27 @@ test("LeMans: parser zachowuje ustawienia, odrzuca blendę spoza 50–100 mm", (
   assert.throws(() => parseKuchnia(plan(lemansL({ lemans: { strona: "L", blenda: 120, front: 450 } }))), /Blenda LeMans/);
   // Stary plan bez pola – domyślne ustawienia, bez zmian w zapisie.
   assert.equal(parseKuchnia(plan(lemansL())).elementy[0].lemans, undefined);
+});
+
+test("waterfall P na końcu ciągu: bok 820 mm (nóżki 100 + korpus 720), gł. blatu, blat dłuższy o grubość", () => {
+  const p = plan(el({ id: "szafka01", x: 30 }), el({ id: "szafka02", x: 90, waterfall: "P" }));
+  const l = formatkiProjektu(p, { ...zrodlo, gruboscBlatu: 38 });
+  const blaty = l.blaty.map((b) => `${b.mebel}: ${b.dl}×${b.szer}`);
+  assert.deepEqual(blaty, ["nad poz. 1, 2: 1238×580", "bok waterfall – 2. Mebel, prawy: 820×580"]);
+  const bok = l.blaty.find((b) => b.waterfall)!;
+  assert.match(bok.uwagi ?? "", /gr\. 38 mm/);
+  assert.match(bok.uwagi ?? "", /45°/);
+  // Wysokość z ustawień nóżek, nie na sztywno.
+  const wyzsze = formatkiProjektu(p, zrodlo, { ...USTAWIENIA_DOMYSLNE, nozki: 150 });
+  assert.equal(wyzsze.blaty.find((b) => b.waterfall)!.dl, 870);
+  assert.deepEqual(ostrzezeniaWaterfall(p), []);
+});
+
+test("waterfall: oba boki, ostrzeżenie w środku ciągu, parser tylko dla szafek pod blatem", () => {
+  const p = plan(el({ id: "szafka01", x: 30, waterfall: "LP" }));
+  assert.equal(lista(p).blaty.filter((b) => b.waterfall).length, 2);
+  const srodek = plan(el({ id: "szafka01", x: 30, waterfall: "P" }), el({ id: "szafka02", x: 90 }));
+  assert.match(ostrzezeniaWaterfall(srodek).join(" "), /po prawej styka się/);
+  assert.equal(parseKuchnia(p).elementy[0].waterfall, "LP");
+  assert.throws(() => parseKuchnia(plan(el({ strefa: "gorna", h: 72, d: 32, waterfall: "L" }))), /waterfall tylko przy szafce dolnej/);
 });

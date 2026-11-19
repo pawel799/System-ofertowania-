@@ -6,7 +6,7 @@
  *
  * Jednostki rysunku: centymetry (viewBox w cm, skala dopasowana do kartki). Numery mebli = numery pozycji w PDF.
  */
-import { lemansElementu, nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { GRUBOSC_BLATU_3D, lemansElementu, nazwaNaRzucie, rectBazowy, rodzajElementu, stronyWaterfall, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { podzialLemans } from "@/lib/lemans";
 import { meblaPrzyScianie } from "@/lib/otwory";
 import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
@@ -177,6 +177,11 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
 function frontySvg(out: string[], el: ElementKuchni, X: number, Ydol: number, fs: number) {
   const W = el.w;
   out.push(`<rect class="rys-mebel" x="${n(X)}" y="${n(Ydol - el.h)}" width="${n(W)}" height="${n(el.h)}" />`);
+  // Blat waterfall: bok z materiału blatu od podłogi do wierzchu blatu, po wybranej stronie (patrząc na front).
+  for (const s of stronyWaterfall(el)) {
+    const t = GRUBOSC_BLATU_3D;
+    out.push(`<rect class="rys-blat" x="${n(s === "L" ? X - t : X + W)}" y="${n(Ydol - el.h - 3)}" width="${n(t)}" height="${n(el.h + 3)}" />`);
+  }
   for (const f of frontyElementu(el)) {
     const x0 = X + f.x0;
     const x1 = X + f.x1;

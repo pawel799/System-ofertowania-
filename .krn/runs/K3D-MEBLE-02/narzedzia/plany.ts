@@ -33,6 +33,7 @@ function lemans(strona: "L" | "P"): PlanKuchni {
 }
 
 plany["lemans-L"] = () => lemans("L");
+plany.waterfall = () => zPresetow("ciag", [["dolna-60", "A"], ["cargo-30", "A"], ["dolna-80", "A", { waterfall: "P" }]], 240);
 plany["lemans-P"] = () => lemans("P");
 
 const nazwa = process.argv[2] ?? "pokaz";

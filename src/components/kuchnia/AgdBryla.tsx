@@ -5,7 +5,7 @@ import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
 import MebelParametryczny from "./MebelParametryczny";
 import { CargoBryla, LemansBryla } from "./MebelOkucia";
-import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
+import { GRUBOSC_BLATU_3D, MEBLE, rodzajElementu, stronyWaterfall, type ElementKuchni } from "@/lib/kuchnia";
 
 type Props = {
   el: ElementKuchni;
@@ -26,13 +26,33 @@ const STAL = "#d5d8dc";
 const SZKLO = "#16181b";
 const CHROM = "#e4e6e8";
 
+/**
+ * Blat na szafce; przy waterfall (el.waterfall) blat sięga do zewnętrznej krawędzi boku, a bok z materiału blatu
+ * (grubość blatu, głębokość blatu) schodzi do podłogi po wybranej stronie.
+ */
 function Blat({ el, kolor }: { el: ElementKuchni; kolor: string }) {
   const H = el.h / 100;
-  return (
-    <mesh position={[0, H + 0.016, 0.01]} castShadow receiveShadow>
-      <boxGeometry args={[el.w / 100, 0.028, el.d / 100 + 0.02]} />
+  const W = el.w / 100;
+  const G = el.d / 100 + 0.02;
+  const t = GRUBOSC_BLATU_3D / 100;
+  const strony = stronyWaterfall(el);
+  const l = strony.includes("L") ? t : 0;
+  const p = strony.includes("P") ? t : 0;
+  const bok = (x: number, k: string) => (
+    <mesh key={k} position={[x, (H + 0.002) / 2, 0.01]} castShadow receiveShadow>
+      <boxGeometry args={[t, H + 0.002, G]} />
       <meshStandardMaterial color={kolor} roughness={0.45} />
     </mesh>
+  );
+  return (
+    <group>
+      <mesh position={[(p - l) / 2, H + 0.016, 0.01]} castShadow receiveShadow>
+        <boxGeometry args={[W + l + p, 0.028, G]} />
+        <meshStandardMaterial color={kolor} roughness={0.45} />
+      </mesh>
+      {l ? bok(-W / 2 - t / 2, "wl") : null}
+      {p ? bok(W / 2 + t / 2, "wp") : null}
+    </group>
   );
 }
 

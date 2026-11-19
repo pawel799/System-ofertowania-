@@ -2,12 +2,12 @@
 
 /*
  * Opcje zaznaczonego mebla w kroku „Meble”: strona zawiasu drzwi jednoskrzydłowych, szerokość cargo,
- * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce).
+ * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce), blat waterfall.
  * Pokazuje się tylko to, co ma sens dla danego mebla; brak opcji = nic się nie rysuje.
  */
 import type { ReactNode } from "react";
 import { Seg } from "./ui";
-import { lemansElementu, ostrzezeniaLemans, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { lemansElementu, maBlatKuchenny, ostrzezeniaLemans, ostrzezeniaWaterfall, type ElementKuchni, type PlanKuchni, type StronaWaterfall } from "@/lib/kuchnia";
 import { LEMANS, podzialLemans, sprawdzLemans, type UstawieniaLemans } from "@/lib/lemans";
 import { PoleCm } from "./KreatorWlasciwosci";
 import { jednoSkrzydlo } from "@/lib/wnetrze";
@@ -100,6 +100,35 @@ export function KreatorOpcjeMebla({
             { value: "P", label: "Prawe" },
           ]}
         />
+      </Opcja>,
+    );
+  }
+  if (maBlatKuchenny(element)) {
+    const ostrzezenia = ostrzezeniaWaterfall(plan, element.id);
+    opcje.push(
+      <Opcja key="waterfall" tytul="Blat waterfall" opis="Bok z materiału blatu schodzi do podłogi przy boku mebla – zwykle na końcu ciągu. Łączenie z blatem na 45°.">
+        <Seg
+          label="Blat waterfall"
+          value={element.waterfall ?? "brak"}
+          onChange={(v) =>
+            onZmien((el) => {
+              const { waterfall: _stary, ...bez } = el;
+              void _stary;
+              return v === "brak" ? bez : { ...bez, waterfall: v as StronaWaterfall };
+            })
+          }
+          options={[
+            { value: "brak", label: "Brak" },
+            { value: "L", label: "Lewy" },
+            { value: "P", label: "Prawy" },
+            { value: "LP", label: "Oba" },
+          ]}
+        />
+        {ostrzezenia.map((t) => (
+          <p key={t} className="kr-warn" role="status">
+            {t}
+          </p>
+        ))}
       </Opcja>,
     );
   }

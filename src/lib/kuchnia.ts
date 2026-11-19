@@ -91,6 +91,10 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "dekoracja",
 ];
 
+/** Strona boku waterfall: lewa, prawa albo obie (patrząc na front mebla). */
+export type StronaWaterfall = "L" | "P" | "LP";
+export const STRONY_WATERFALL: readonly StronaWaterfall[] = ["L", "P", "LP"];
+
 /** Rodzaje mebli spoza kuchni: własne widełki wymiarów (szafa do 4 m szerokości, do sufitu), bez blatu kuchennego. */
 export const MEBLE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["szafa", "szafa-przesuwna", "komoda", "regal", "rtv", "umywalka"]);
 
@@ -129,6 +133,8 @@ export type ElementKuchni = {
   hinge?: StronaLP;
   /** Narożnik LeMans: strona części ślepej, blenda i front [mm]. Brak = LEMANS_DOMYSLNIE. */
   lemans?: UstawieniaLemans;
+  /** Blat waterfall: bok z materiału blatu schodzi do podłogi po lewej, prawej albo obu stronach mebla (patrząc na front). */
+  waterfall?: StronaWaterfall;
 };
 
 /**
@@ -1034,6 +1040,76 @@ export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
 
+/** Mebel na wymiar stojący pod blatem kuchennym (szafki dolne, cargo, LeMans, zabudowy AGD pod blatem). */
+export const maBlatKuchenny = (el: { rodzaj?: RodzajElementu; strefa: Strefa; zrodlo?: ZrodloElementu }) =>
+  el.zrodlo !== "model" && el.strefa === "dolna" && !MEBLE.has(rodzajElementu(el)) && wycenianyElement(el);
+
+/** Strony boku waterfall mebla (pusta lista = bez waterfall). */
+export const stronyWaterfall = (el: { waterfall?: StronaWaterfall }): StronaLP[] => (el.waterfall === "LP" ? ["L", "P"] : el.waterfall ? [el.waterfall] : []);
+
+/** Grubość blatu w 3D [cm] – jak bryła blatu w AgdBryla (rozkrój bierze grubość z materiału blatu). */
+export const GRUBOSC_BLATU_3D = 2.8;
+
+/**
+ * Bok waterfall w środku ciągu: po tej stronie mebla stoi inny mebel (bok nie ma gdzie zejść).
+ * Waterfall zwykle zamyka ciąg albo wyspę.
+ */
+export function ostrzezeniaWaterfall(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
+  const out: string[] = [];
+  for (const el of plan.elementy) {
+    if (!el.waterfall || (id && el.id !== id) || el.kat) continue;
+    const th = (el.rot * Math.PI) / 180;
+    const R = { x: Math.cos(th), z: -Math.sin(th) };
+    const F = { x: Math.sin(th), z: Math.cos(th) };
+    for (const s of stronyWaterfall(el)) {
+      const sasiad = plan.elementy.find((o) => {
+        if (o.id === el.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) return false;
+        const r = rect(o);
+        const rogi = [
+          [r.x0, r.z0],
+          [r.x1, r.z0],
+          [r.x0, r.z1],
+          [r.x1, r.z1],
+        ].map(([x, z]) => ({ u: (x - el.x) * R.x + (z - el.z) * R.z, v: (x - el.x) * F.x + (z - el.z) * F.z }));
+        const u0 = Math.min(...rogi.map((q) => q.u));
+        const u1 = Math.max(...rogi.map((q) => q.u));
+        const v0 = Math.min(...rogi.map((q) => q.v));
+        const v1 = Math.max(...rogi.map((q) => q.v));
+        if (v1 <= -el.d / 2 + 1 || v0 >= el.d / 2 - 1) return false;
+        const krawedz = s === "L" ? -el.w / 2 : el.w / 2;
+        return s === "L" ? u1 > krawedz - GRUBOSC_BLATU_3D - 0.5 && u0 < krawedz : u0 < krawedz + GRUBOSC_BLATU_3D + 0.5 && u1 > krawedz;
+      });
+      if (sasiad) out.push(`„${el.nazwa}”: bok waterfall po ${s === "L" ? "lewej" : "prawej"} styka się z „${sasiad.nazwa}” – waterfall zamyka ciąg, przesuń go na koniec rzędu.`);
+    }
+  }
+  return out;
+}
+
+/** Krótki opis opcji mebla do PDF i listy pozycji: strona zawiasu, LeMans, cargo, waterfall. Pusta lista = brak opcji. */
+export function opisOpcjiMebla(el: ElementKuchni): string[] {
+  const out: string[] = [];
+  if (el.hinge) out.push(`zawiasy ${el.hinge === "L" ? "lewe" : "prawe"}`);
+  const r = rodzajElementu(el);
+  if (r === "lemans" && el.zrodlo !== "model") {
+    const u = lemansElementu(el);
+    out.push(`narożnik ${u.strona === "L" ? "lewy" : "prawy"}, front ${u.front} mm, blenda ${u.blenda} mm`);
+  }
+  if (r === "cargo" && el.zrodlo !== "model") out.push(el.strefa === "wysoka" ? "cargo wysokie z koszami" : "cargo z koszem 2-poziomowym");
+  if (el.waterfall) out.push(`blat waterfall ${el.waterfall === "LP" ? "z obu stron" : el.waterfall === "L" ? "z lewej" : "z prawej"}`);
+  return out;
+}
+
+/** Uwagi wykonawcze do PDF oferty (np. łączenie blatu waterfall na 45°). */
+export function uwagiWykonawcze(plan: Pick<PlanKuchni, "elementy">): string[] {
+  const out: string[] = [];
+  const wf = plan.elementy.filter((e) => e.waterfall);
+  if (wf.length)
+    out.push(
+      `Blat waterfall (${wf.map((e) => e.nazwa).join(", ")}): bok z materiału blatu schodzi do podłogi, grubość i głębokość jak blat. Łączenie boku z blatem na 45° (ucios) – wymiar do ustalenia na pomiarze; kreator nie liczy uciosu.`,
+    );
+  return out;
+}
+
 /** Ustawienia narożnika LeMans (brak w elemencie = domyślne). */
 export const lemansElementu = (el: { lemans?: UstawieniaLemans }): UstawieniaLemans => el.lemans ?? LEMANS_DOMYSLNIE;
 
@@ -1253,6 +1329,12 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     }
     const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
     const hinge = e.hinge === undefined || e.hinge === null ? undefined : jedno(e.hinge, STRONY_LP, `strona zawiasu „${nazwa}”`);
+    const waterfall =
+      e.waterfall === undefined || e.waterfall === null
+        ? undefined
+        : maBlatKuchenny({ rodzaj, strefa, zrodlo })
+          ? jedno(e.waterfall, STRONY_WATERFALL, `blat waterfall „${nazwa}”`)
+          : blad(`„${nazwa}”: blat waterfall tylko przy szafce dolnej pod blatem.`);
     let lemans: UstawieniaLemans | undefined;
     if (rodzaj === "lemans" && e.lemans !== undefined && e.lemans !== null) {
       try {
@@ -1280,6 +1362,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(cena !== undefined ? { cena } : {}),
       ...(hinge ? { hinge } : {}),
       ...(lemans ? { lemans } : {}),
+      ...(waterfall ? { waterfall } : {}),
     };
   });
   let wywiad: Wywiad | undefined;
