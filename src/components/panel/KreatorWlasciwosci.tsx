@@ -1,6 +1,7 @@
 "use client";
 
 import { PoleCeny } from "./KreatorCena";
+import { KreatorOpcjeMebla } from "./KreatorOpcjeMebla";
 import { useEffect, useState } from "react";
 import {
   katElementu,
@@ -134,7 +135,10 @@ export function KreatorWlasciwosci({
   onDociagnij,
   onWnetrze,
   onCena,
+  onZmien,
 }: {
+  /** Zmiana opcji mebla (strona zawiasu, prowadnice, LeMans, waterfall) – KreatorOpcjeMebla. */
+  onZmien?: (fn: (el: ElementKuchni) => ElementKuchni) => void;
   /** Ceny ręczne: pole „Cena netto” zaznaczonego mebla (brak = ceny z cennika). */
   onCena?: (n: number | undefined) => void;
   plan: PlanKuchni;
@@ -203,6 +207,7 @@ export function KreatorWlasciwosci({
           </button>
         </p>
       ) : null}
+      {onZmien ? <KreatorOpcjeMebla element={element} onZmien={onZmien} /> : null}
       {onKat ? <PoleKata key={element.id} kat={katElementu(element)} onKat={onKat} /> : null}
       <div className="actions">
         <button type="button" className="btn btn-ghost" onClick={onObrot}>

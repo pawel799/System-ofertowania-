@@ -11,7 +11,9 @@
  */
 import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
-import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
+import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
+
+export type { StronaLP } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
 import { parseUstawieniaScian, type UstawieniaScian, mebelZaSciana } from "./sciany";
@@ -115,6 +117,8 @@ export type ElementKuchni = {
   kolory?: KoloryMebla;
   /** Cena netto wpisana ręcznie [zł] – liczy się, gdy plan ma ceny „reczne”. Brak = jeszcze nie wpisana (0 zł). */
   cena?: number;
+  /** Strona zawiasu drzwi jednoskrzydłowych (patrząc na front). Brak = lewa (jak w starszych ofertach). */
+  hinge?: StronaLP;
 };
 
 /**
@@ -1152,6 +1156,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
     }
     const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
+    const hinge = e.hinge === undefined || e.hinge === null ? undefined : jedno(e.hinge, STRONY_LP, `strona zawiasu „${nazwa}”`);
     return {
       id,
       nazwa,
@@ -1169,6 +1174,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(wnetrze ? { wnetrze } : {}),
       ...(kolory ? { kolory } : {}),
       ...(cena !== undefined ? { cena } : {}),
+      ...(hinge ? { hinge } : {}),
     };
   });
   let wywiad: Wywiad | undefined;

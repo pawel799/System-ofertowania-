@@ -1442,6 +1442,9 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                     onWnetrze={() => {
                       if (element) setOkno({ tryb: "edycja", id: element.id });
                     }}
+                    onZmien={(fn) => {
+                      if (element) aktualizujElement(element.id, fn);
+                    }}
                   />
                   {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
                 </div>

@@ -11,7 +11,7 @@ import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useDrewno } from "../modul/Szafka";
-import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
+import { wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
 import type { ElementKuchni } from "@/lib/kuchnia";
 
 const T = 0.018;
@@ -254,7 +254,7 @@ export default function MebelParametryczny({
           ]
         : [{ x0: fx0, x1: fx1, y0: fy0, y1: fy1 }];
       skrzydla.forEach((k, li) => {
-        const lewy = dwa ? li === 0 : n === 1 || c < n / 2;
+        const lewy = dwa ? li === 0 : zawiasLewy(el.hinge, c, n);
         const hx = lewy ? k.x0 + GAP : k.x1 - GAP;
         const fh = k.y1 - k.y0 - 2 * GAP;
         const uy = wysokoUchwyt === "gora" ? k.y1 - 0.08 : wysokoUchwyt === "dol" ? k.y0 + 0.08 : Math.min(k.y1 - 0.1, k.y0 + 1.05);

@@ -23,6 +23,9 @@ export type Kolumna = {
   bezFrontu?: boolean;
 };
 export type RodzajFrontu = "drzwi" | "przesuwne" | "otwarte";
+/** Strona (lewa / prawa) – zawias drzwi jednoskrzydłowych, orientacja narożnika LeMans, bok waterfall. */
+export type StronaLP = "L" | "P";
+export const STRONY_LP: readonly StronaLP[] = ["L", "P"];
 export type Wnetrze = {
   front: RodzajFrontu;
   kolumny: Kolumna[];
@@ -442,6 +445,26 @@ export function dopasujWnetrze(wn: Wnetrze, el: ElementWnetrza): Wnetrze | null 
   });
   const out: Wnetrze = { ...wn, kolumny };
   return sprawdzWnetrze(el, out).bledy.length ? null : out;
+}
+
+/* ---------- strona zawiasu ---------- */
+
+/**
+ * Czy skrzydło w kolumnie `c` z `n` ma zawias po lewej. Jedna kolumna (szafka jednodrzwiowa): pole `hinge`
+ * mebla, brak = lewa (jak przed dodaniem pola). Kilka kolumn: lewa połowa na lewo, prawa na prawo.
+ * Dwa skrzydła w jednej kolumnie (front > 60 cm) liczy wywołujący: zawsze na zewnątrz.
+ * Ta sama reguła w 3D (MebelParametryczny) i na rysunku (frontyElementu) – trójkąt i animacja się zgadzają.
+ */
+export const zawiasLewy = (hinge: StronaLP | undefined, c: number, n: number) => (n === 1 ? hinge !== "P" : c < n / 2);
+
+/** Mebel z jednym skrzydłem drzwi na kolumnę i jedną kolumną: tylko tu ma sens wybór strony zawiasu. */
+export function jednoSkrzydlo(el: ElementWnetrza & { wnetrze?: Wnetrze; zrodlo?: string }): boolean {
+  if (el.zrodlo === "model") return false;
+  const wn = el.wnetrze ?? wnetrzeDomyslne(el);
+  if (!wn || wn.front !== "drzwi" || wn.kolumny.length !== 1) return false;
+  const k = wn.kolumny[0];
+  if (k.bezFrontu || el.w > GRANICE.skrzydloMax + 0.1) return false;
+  return !!wn.szufladyZaDrzwiami || k.sekcje.some((s) => s.typ !== "szuflada");
 }
 
 /* ---------- liczenie (cena, opis, PDF) ---------- */

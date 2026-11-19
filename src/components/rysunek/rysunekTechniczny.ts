@@ -9,7 +9,7 @@
 import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
 import { meblaPrzyScianie } from "@/lib/otwory";
 import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
-import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
+import { PLYTA_CM, wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
 import type { PunktInstalacji } from "@/lib/wywiad";
 import { yElementu } from "@/components/kuchnia/uklad3d";
 
@@ -148,7 +148,7 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
       if (szer > 60.1) {
         out.push({ x0: fx0, x1: fx0 + szer / 2, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: true });
         out.push({ x0: fx0 + szer / 2, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: false });
-      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: k === 1 || c < k / 2 });
+      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: zawiasLewy(el.hinge, c, k) });
     }
   });
   if (wn.front === "przesuwne") {
