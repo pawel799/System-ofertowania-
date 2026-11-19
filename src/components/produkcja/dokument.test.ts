@@ -56,6 +56,7 @@ test("PDF oferty bez cen: żadnej kwoty w HTML i w mailu, okucia z ilością zos
     cennik: DEFAULT_CENNIK,
     cennikUwaga: null,
     link3d: null,
+    zdjecie: null,
   };
   const zCenami = danePdf({ ...args, plan });
   assert.match(pdfHtml(zCenami), /zł/);
