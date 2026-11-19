@@ -1,0 +1,12 @@
+Round: 1
+zawiasy-L-P zamkniete/otwarte: OK
+cargo-30 zamkniete/otwarte: OK
+cargo-wysokie-30 zamkniete/otwarte: OK
+lemans-L zamkniete: OK
+lemans-L otwarte: ERROR; w otwartej połowie LeMans 110 widać zwykłą półkę, a kosza "nerki" z obrotem nie widać (co najwyżej drobny szary fragment za drzwiami ok. x=790,y=455); poprawka: wyświetlać kosz nerkę po otwarciu i nie chować go za frontem szafki ze ściany B.
+lemans-P zamkniete: ERROR; (a) szafka 60 obrócona (x≈935–1130) nie ma widocznego uchwytu ani frontu od strony pokoju, więc front wygląda na pełny bok, (b) jej lewa krawędź zasłania prawą część frontu LeMans (uchwyt przy x≈1000,y≈385 przy krawędzi), co łamie "sąsiednia szafka nie może zasłaniać frontu"; (c) na jej prawym boku (x≈1115–1200,y≈430–610) jest raster/z-fighting. Poprawka: odsunąć lub obrócić szafkę tak, by nie zachodziła na front LeMans, dać jej front z uchwytem, usunąć nakładające się współpłaszczyznowe ściany.
+lemans-P otwarte: ERROR; ta sama szafka 60 zasłania część wysuniętego kosza (x≈940–950) i front nie otwiera się; ten sam artefakt na boku; poprawka j.w.
+waterfall-P zamkniete/otwarte: OK
+kuchnia-12 zamkniete/otwarte: OK
+zmiany.diff: OK
+Missing evidence: brak obrazów referencyjnych; geometria LeMans/cargo oceniona tylko z jednego kąta kamery

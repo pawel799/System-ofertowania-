@@ -16,7 +16,10 @@ Czytaj najpierw: `kitchen3d-plan/prompty/PROMPT_2_nowe_meble.md` (zasady i defin
 4. `342cc32` waterfall – `ostrzezeniaWaterfall`, Blat w AgdBryla, `blatyPlanu` (boki), `UstawieniaFormatek.nozki`.
 Testy: `npm test` (16 zielonych). Pomiar przed: `.krn/runs/K3D-MEBLE-02/pomiar-przed.md`. Narzędzia: `narzedzia/fps.mjs`, `zrzut.mjs`, `plany.ts`.
 
-## Dalej (w tej kolejności)
+## Stan końcowy
+Kroki 1–7 gotowe (commity 27b5994 … 6bd7b76), raport `raport.md`, review 2 rundy, paczka .zip poza repo. Czeka na „deploy” Pawła i potwierdzenie wysokości waterfall z Kubą.
+
+## (historia) Dalej (w tej kolejności)
 6. Wysuwy: pole `prowadnice` (rolkowe/kulkowe/ukryte) dla szuflad i cargo; okucia oferty już liczą to w `okuciaElementu` (brak pola = stara cena przez `cennik.szuflada`); dopisać: pole w ElementKuchni + parser, wybór w panelu, `cenaElementu` bez dopłaty `szuflada` przy wybranym typie, nazwa prowadnic w formatkach, wiersze okuć w PDF oferty (`ofertaPdf.ts`: dziś `razem` zawiera okucia, a tabela ich nie pokazuje – do naprawy), ceny okuć w cenniku (CennikTab + `functions/_lib/modul.ts` – pole `okucia`).
 7. Tryb „bez cen”: `plan.bezCen` (parser), przełącznik oferty; PDF oferty bez kwot; CSV hurtowni `materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis`, okleina mb per materiał, liczba formatek/cięć, okucia; w UI wzór boku/dna (dno = W − 2×18).
 Potem: build, pomiar po (FPS desktop/telefon, `out/`), zrzuty nowych szafek do `.krn/runs/K3D-MEBLE-02/zrzuty/`, niezależne review (świeży subagent read-only, folder `.krn/review/K3D-MEBLE-02-r1/`, BLOCKER/ERROR/OK), raport `raport.md`, paczka .zip (`OPIS.txt`, `zmiany.diff` od main, `pliki/`).

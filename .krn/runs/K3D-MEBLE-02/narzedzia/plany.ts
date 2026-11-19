@@ -29,10 +29,32 @@ function lemans(strona: "L" | "P"): PlanKuchni {
   const sz = (o: Partial<ElementKuchni>): ElementKuchni => ({ id: "szafkab1", nazwa: "Szafka dolna 60", zrodlo: "modul", strefa: "dolna", rodzaj: "szafka", w: 60, h: 72, d: 56, x: 28, z: 86, rot: 90, ...o });
   if (strona === "L") return { ...pustyPlan("L"), scianaA: 240, scianaB: 200, elementy: [lm({}), sz({}), sz({ id: "szafkaa1", x: 140, z: 28, rot: 0 })] };
   // P: narożnik po prawej – LeMans przy prawym końcu ściany A (ściana A 240 cm), szafka prostopadła po prawej.
-  return { ...pustyPlan("ciag"), scianaA: 240, scianaB: 200, elementy: [lm({ x: 185, lemans: { strona: "P", blenda: 70, front: 450 } }), sz({ x: 212, rot: 270 }), sz({ id: "szafkaa1", x: 100, z: 28, rot: 0 })] };
+  // Ściana 260 cm: bok szafki prostopadłej nie wypada na końcu ściany (bez migotania współpłaszczyznowych ścian).
+  return { ...pustyPlan("ciag"), scianaA: 260, scianaB: 200, elementy: [lm({ x: 185, lemans: { strona: "P", blenda: 70, front: 450 } }), sz({ x: 212, rot: 270 }), sz({ id: "szafkaa1", x: 100, z: 28, rot: 0 })] };
 }
 
 plany["lemans-L"] = () => lemans("L");
+/** Kuchnia ~12 mebli z nowymi szafkami (pomiar FPS po zmianach). */
+plany["nowe-12"] = () =>
+  zPresetow(
+    "L",
+    [
+      ["lemans-110", "A"],
+      ["cargo-30", "A", { prowadnice: "ukryte" }],
+      ["szuflady-60", "A", { prowadnice: "kulkowe" }],
+      ["zlew-80", "A"],
+      ["dolna-60", "A", { waterfall: "P", hinge: "P" }],
+      ["dolna-60", "B"],
+      ["cargo-wysokie-30", "B"],
+      ["slupek-60", "B", { hinge: "P" }],
+      ["gorna-60", "A"],
+      ["gorna-60", "A", { hinge: "P" }],
+      ["gorna-60", "A"],
+      ["gorna-60", "A"],
+    ],
+    420,
+    300,
+  );
 plany.waterfall = () => zPresetow("ciag", [["dolna-60", "A"], ["cargo-30", "A"], ["dolna-80", "A", { waterfall: "P" }]], 240);
 plany["lemans-P"] = () => lemans("P");
 

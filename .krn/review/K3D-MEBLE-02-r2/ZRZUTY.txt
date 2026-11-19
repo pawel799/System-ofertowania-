@@ -1,0 +1,1 @@
+Zrzuty oceniane w tej rundzie (PNG 1440×900) są w repo jako JPEG w .krn/runs/K3D-MEBLE-02/zrzuty/ – kopie PNG usunięte, żeby nie powiększać repo.

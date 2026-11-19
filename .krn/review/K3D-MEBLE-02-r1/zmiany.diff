@@ -1,0 +1,2530 @@
+diff --git a/functions/_lib/modul.ts b/functions/_lib/modul.ts
+index fa8d237..1437afe 100644
+--- a/functions/_lib/modul.ts
++++ b/functions/_lib/modul.ts
+@@ -18,6 +18,7 @@ import {
+   type PozycjaCennika,
+ } from "../../src/lib/modul";
+ import { HttpError, type KVNamespace } from "./offers";
++import { KLUCZE_OKUC, OKUCIE_LABEL, type KluczOkucia } from "../../src/lib/okucia";
+ 
+ export const CENNIK_KEY = "settings:cennik-modulow";
+ 
+@@ -91,6 +92,14 @@ export function validateCennik(v: unknown): ModulCennik {
+   const plytaDomyslna = plyty?.length ? (plyty.find((p) => p.id === b.plytaDomyslna) ?? plyty[0]).id : undefined;
+   const pozycje = b.pozycje === undefined || b.pozycje === null ? undefined : validatePozycje(b.pozycje);
+   const domyslna = plyty?.find((p) => p.id === plytaDomyslna);
++  // Ceny okuć pokazywanych osobno (okucia.ts); brak = ceny domyślne. Nieznane klucze pomijamy.
++  let okucia: Partial<Record<KluczOkucia, number>> | undefined;
++  if (b.okucia !== undefined && b.okucia !== null) {
++    if (typeof b.okucia !== "object" || Array.isArray(b.okucia)) throw bad("Ceny okuć mają zły format.");
++    const o = b.okucia as Record<string, unknown>;
++    okucia = {};
++    for (const k of KLUCZE_OKUC) if (o[k] !== undefined && o[k] !== null) okucia[k] = money(o[k], OKUCIE_LABEL[k]);
++  }
+   return {
+     baza: money(b.baza, "baza"),
+     plytaM2: money(b.plytaM2, "płyta za m²"),
+@@ -101,6 +110,7 @@ export function validateCennik(v: unknown): ModulCennik {
+     drazek: b.drazek === undefined || b.drazek === null ? (DEFAULT_CENNIK.drazek ?? 0) : money(b.drazek, "drążek"),
+     ...(plyty?.length ? { plyty, plytaDomyslna, odpadPlyty } : {}),
+     ...(pozycje?.length ? { pozycje } : {}),
++    ...(okucia ? { okucia } : {}),
+     // Płyty z listy: plytaM2 = cena za m² płyty domyślnej (z arkusza i odpadu) – stare wyliczenia liczą tak samo.
+     ...(domyslna ? { plytaM2: cenaPlytyM2(domyslna, odpadPlyty) } : {}),
+   };
+diff --git a/package.json b/package.json
+index b831580..667c676 100644
+--- a/package.json
++++ b/package.json
+@@ -7,6 +7,7 @@
+     "build": "next build",
+     "start": "next start",
+     "lint": "next lint",
++    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+     "pages:dev": "wrangler pages dev out --kv OFFERS --r2 MODELS",
+     "seed:modele:check": "node seed/modele-kuchnia-50/seed.mjs --check",
+     "seed:szafy:check": "node seed/modele-szafy-komody-100/seed.mjs --check",
+@@ -40,6 +41,7 @@
+     "eslint-config-next": "^14.2.35",
+     "postcss": "^8.5.28",
+     "tailwindcss": "^3.4.10",
++    "tsx": "^4.23.15",
+     "typescript": "^5",
+     "wrangler": "4.156.0"
+   }
+diff --git a/src/app/panel/panel.css b/src/app/panel/panel.css
+index 5f029a9..fff5729 100644
+--- a/src/app/panel/panel.css
++++ b/src/app/panel/panel.css
+@@ -490,6 +490,7 @@ html[data-motyw="ciemny"] .pnl {
+ .pnl .kr-badges span { font-size: 11px; letter-spacing: 0.02em; color: var(--text-2); background: var(--g2); border-radius: 999px; padding: 2px 8px; }
+ .pnl .kr-dims { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+ .pnl .kr-dims.kr-dims-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
++.pnl .kr-dims.kr-dims-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+ .pnl .kr-dims label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-2); }
+ .pnl .kr-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+ .pnl .kr-card { margin-top: 8px; padding: 12px; border-radius: 10px; box-shadow: inset 0 0 0 1px var(--g3); display: flex; flex-direction: column; gap: 8px; }
+@@ -647,6 +648,11 @@ html[data-motyw="ciemny"] .pnl {
+ }
+ .pnl .kr-wn-skrot { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-2); flex-wrap: wrap; }
+ .pnl .kr-wn-skrot .btn { min-height: 30px; padding: 4px 10px; font-size: 12.5px; }
++.pnl .kr-opcje-mebla { display: grid; gap: 10px; }
++.pnl .kr-opcja { display: grid; gap: 4px; font-size: 12.5px; color: var(--text-2); }
++.pnl .kr-opcja-tytul { font-weight: 600; color: var(--text); }
++.pnl .kr-opcja-opis { font-size: 12px; }
++.pnl .kr-opcja .kr-warn { margin: 0; }
+ .pnl .kr-narzedzia3d { position: absolute; top: 10px; right: 10px; z-index: 3; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100% - 20px); }
+ .pnl .kr-narzedzia3d .kr-otworz { position: static; }
+ .pnl .kr-sciany-panel { padding: 12px; border-radius: 10px; background: var(--panel); color: var(--text); box-shadow: var(--sh-lg, 0 12px 40px rgba(0, 0, 0, 0.25)); }
+diff --git a/src/components/kuchnia/AgdBryla.tsx b/src/components/kuchnia/AgdBryla.tsx
+index 7a67e94..6ad5619 100644
+--- a/src/components/kuchnia/AgdBryla.tsx
++++ b/src/components/kuchnia/AgdBryla.tsx
+@@ -4,7 +4,8 @@ import { useEffect, useMemo } from "react";
+ import * as THREE from "three";
+ import Szafka, { useDrewno } from "../modul/Szafka";
+ import MebelParametryczny from "./MebelParametryczny";
+-import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
++import { CargoBryla, LemansBryla } from "./MebelOkucia";
++import { GRUBOSC_BLATU_3D, MEBLE, rodzajElementu, stronyWaterfall, type ElementKuchni } from "@/lib/kuchnia";
+ 
+ type Props = {
+   el: ElementKuchni;
+@@ -25,14 +26,34 @@ const STAL = "#d5d8dc";
+ const SZKLO = "#16181b";
+ const CHROM = "#e4e6e8";
+ 
++/**
++ * Blat na szafce; przy waterfall (el.waterfall) blat sięga do zewnętrznej krawędzi boku, a bok z materiału blatu
++ * (grubość blatu, głębokość blatu) schodzi do podłogi po wybranej stronie.
++ */
+ function Blat({ el, kolor }: { el: ElementKuchni; kolor: string }) {
+   const H = el.h / 100;
+-  return (
+-    <mesh position={[0, H + 0.016, 0.01]} castShadow receiveShadow>
+-      <boxGeometry args={[el.w / 100, 0.028, el.d / 100 + 0.02]} />
++  const W = el.w / 100;
++  const G = el.d / 100 + 0.02;
++  const t = GRUBOSC_BLATU_3D / 100;
++  const strony = stronyWaterfall(el);
++  const l = strony.includes("L") ? t : 0;
++  const p = strony.includes("P") ? t : 0;
++  const bok = (x: number, k: string) => (
++    <mesh key={k} position={[x, (H + 0.002) / 2, 0.01]} castShadow receiveShadow>
++      <boxGeometry args={[t, H + 0.002, G]} />
+       <meshStandardMaterial color={kolor} roughness={0.45} />
+     </mesh>
+   );
++  return (
++    <group>
++      <mesh position={[(p - l) / 2, H + 0.016, 0.01]} castShadow receiveShadow>
++        <boxGeometry args={[W + l + p, 0.028, G]} />
++        <meshStandardMaterial color={kolor} roughness={0.45} />
++      </mesh>
++      {l ? bok(-W / 2 - t / 2, "wl") : null}
++      {p ? bok(W / 2 + t / 2, "wp") : null}
++    </group>
++  );
+ }
+ 
+ function Korpus({
+@@ -359,6 +380,10 @@ export default function AgdBryla(props: Props) {
+     <group>
+       {rodzaj === "zmywarka" ? (
+         <Zmywarka {...props} />
++      ) : rodzaj === "lemans" ? (
++        <LemansBryla el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
++      ) : rodzaj === "cargo" ? (
++        <CargoBryla el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
+       ) : (
+         // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
+         <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
+diff --git a/src/components/kuchnia/MebelOkucia.tsx b/src/components/kuchnia/MebelOkucia.tsx
+new file mode 100644
+index 0000000..843cde8
+--- /dev/null
++++ b/src/components/kuchnia/MebelOkucia.tsx
+@@ -0,0 +1,215 @@
++"use client";
++
++/*
++ * Meble, w których najważniejsze są okucia: cargo (dolne i wysokie) i narożnik typu LeMans. Własna, uproszczona geometria
++ * (prostopadłościany), bez modeli i wyglądu konkretnych producentów.
++ *
++ * Kosze całego mebla są sklejone w jedną geometrię (jedno wywołanie rysowania), żeby kuchnia z kilkoma
++ * cargo nie spowalniała sceny. Początek układu jak w MebelParametryczny: środek podstawy, front w +Z, metry.
++ */
++import { useEffect, useMemo, useRef } from "react";
++import * as THREE from "three";
++import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
++import { lemansElementu, type ElementKuchni } from "@/lib/kuchnia";
++import { podzialLemans } from "@/lib/lemans";
++import { cargoWysokie, koszeCargoWysokiego } from "@/lib/okucia";
++import { Box, GAP, KAT_DRZWI, PLECY, Przesuw, T, useMaterialyMebla, useRuch, Zawias, type KoloryBryly } from "./MebelParametryczny";
++
++type Klocek = { s: [number, number, number]; p: [number, number, number] };
++
++/** Jedna geometria z wielu prostopadłościanów (pręty i dna koszy). */
++function useSklejone(klocki: Klocek[], klucz: string) {
++  const geo = useMemo(() => {
++    if (!klocki.length) return null;
++    const czesci = klocki.map((k) => new THREE.BoxGeometry(...k.s).translate(...k.p));
++    const g = mergeGeometries(czesci, false);
++    czesci.forEach((c) => c.dispose());
++    return g;
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [klucz]);
++  useEffect(() => () => geo?.dispose(), [geo]);
++  return geo;
++}
++
++/** Materiał koszy: jasny, półmatowy (pełny metal bez mapy otoczenia wychodzi w scenie prawie czarny). */
++function useDrut() {
++  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c4c8cd", metalness: 0.35, roughness: 0.45 }), []);
++  useEffect(() => () => mat.dispose(), [mat]);
++  return mat;
++}
++
++/** Kosz z drutu w uproszczeniu: dno, dwa boki i dwie poprzeczki (przód, tył). */
++function kosz(out: Klocek[], szer: number, gl: number, y: number, zSrodek: number, h = 0.08) {
++  const g = 0.006;
++  out.push({ s: [szer, g, gl], p: [0, y, zSrodek] });
++  out.push({ s: [g, h, gl], p: [-szer / 2 + g / 2, y + h / 2, zSrodek] });
++  out.push({ s: [g, h, gl], p: [szer / 2 - g / 2, y + h / 2, zSrodek] });
++  out.push({ s: [szer, h, g], p: [0, y + h / 2, zSrodek + gl / 2 - g / 2] });
++  out.push({ s: [szer, h, g], p: [0, y + h / 2, zSrodek - gl / 2 + g / 2] });
++}
++
++/** Korpus bez półek: boki, wieniec dolny i górny, plecy (jak MebelParametryczny). */
++function korpusBez(m: { korpus: THREE.Material; plecy: THREE.Material }, W: number, H: number, D: number) {
++  const dK = D - PLECY;
++  const zK = PLECY / 2;
++  return [
++    <Box key="bl" m={m.korpus} s={[T, H, dK]} p={[-W / 2 + T / 2, H / 2, zK]} />,
++    <Box key="bp" m={m.korpus} s={[T, H, dK]} p={[W / 2 - T / 2, H / 2, zK]} />,
++    <Box key="wd" m={m.korpus} s={[W - 2 * T, T, dK]} p={[0, T / 2, zK]} />,
++    <Box key="wg" m={m.korpus} s={[W - 2 * T, T, dK]} p={[0, H - T / 2, zK]} />,
++    <Box key="pl" m={m.plecy} s={[W, H, PLECY]} p={[0, H / 2, -D / 2 + PLECY / 2]} />,
++  ];
++}
++
++/**
++ * Cargo: front na całą wysokość wyjeżdża na wprost razem ze stelażem i koszami.
++ * Dolne – 2 kosze, wysokie (słupek) – 5 albo 6 (koszeCargoWysokiego).
++ */
++export function CargoBryla({ el, uchwyt, otwarte = false, ...kolory }: { el: ElementKuchni; uchwyt: boolean; otwarte?: boolean } & KoloryBryly) {
++  const { m, frontMat, metal } = useMaterialyMebla(kolory);
++  const drut = useDrut();
++  const W = el.w / 100;
++  const H = el.h / 100;
++  const D = el.d / 100;
++  const wysokie = cargoWysokie(el);
++  const dK = D - PLECY;
++  const zFront = D / 2 + T / 2 + 0.001;
++  const wew = W - 2 * T;
++  const szerKosza = Math.max(0.06, wew - 0.03);
++  const glKosza = dK - 0.08;
++  const zKosza = PLECY / 2 + 0.01;
++  const ile = wysokie ? koszeCargoWysokiego(el.h) : 2;
++  const klucz = `${W}|${H}|${D}|${ile}`;
++  const klocki = useMemo(() => {
++    const out: Klocek[] = [];
++    const od = T + 0.06;
++    const doo = H - T - (wysokie ? 0.22 : 0.2);
++    for (let i = 0; i < ile; i++) kosz(out, szerKosza, glKosza, od + ((doo - od) * i) / (ile - 1), zKosza, wysokie ? 0.1 : 0.09);
++    // Stelaż: słupek za frontem i z tyłu, łączy kosze z frontem.
++    const sl = H - 2 * T - 0.04;
++    out.push({ s: [0.012, sl, 0.012], p: [0, H / 2, zKosza + glKosza / 2 + 0.012] });
++    out.push({ s: [0.012, sl, 0.012], p: [0, H / 2, zKosza - glKosza / 2 - 0.006] });
++    return out;
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [klucz]);
++  const geo = useSklejone(klocki, klucz);
++  const fh = H - 2 * GAP;
++  const fw = W - 2 * GAP;
++  return (
++    <group>
++      {korpusBez(m, W, H, D)}
++      <Przesuw o={[0, 0, dK * 0.85]} otwarte={otwarte}>
++        <Box m={frontMat} s={[fw, fh, T]} p={[0, H / 2, zFront]} />
++        {geo ? <mesh geometry={geo} material={drut} castShadow receiveShadow /> : null}
++        {uchwyt ? (
++          wysokie ? (
++            <Box m={metal} s={[0.012, Math.min(0.5, fh * 0.3), 0.012]} p={[0, Math.min(1.1, H / 2), zFront + T / 2 + 0.012]} />
++          ) : (
++            <Box m={metal} s={[Math.min(0.16, fw * 0.6), 0.012, 0.012]} p={[0, H - 0.05, zFront + T / 2 + 0.012]} />
++          )
++        ) : null}
++      </Przesuw>
++    </group>
++  );
++}
++
++/** Kosz „nerka” w rzucie: wydłużony owal z lekko wklęsłym bokiem od strony zawiasu (plaszczyzna XZ, środek w 0). */
++function ksztaltNerki(L: number, G: number) {
++  const r = G / 2;
++  const s = new THREE.Shape();
++  s.moveTo(-L / 2 + r, -r);
++  s.quadraticCurveTo(0, -r * 0.55, L / 2 - r, -r);
++  s.absarc(L / 2 - r, 0, r, -Math.PI / 2, Math.PI / 2, false);
++  s.lineTo(-L / 2 + r, r);
++  s.absarc(-L / 2 + r, 0, r, Math.PI / 2, (3 * Math.PI) / 2, false);
++  return s;
++}
++
++/** Dno i burta kosza na wysokości y (jedna geometria na poziom; wszystkie poziomy potem sklejone). */
++function poziomNerki(L: number, G: number, y: number) {
++  const ks = ksztaltNerki(L, G);
++  const dno = new THREE.ExtrudeGeometry(ks, { depth: 0.006, bevelEnabled: false, curveSegments: 10 });
++  const burta = new THREE.Shape(ks.getPoints(10));
++  const wew = ksztaltNerki(L - 0.016, G - 0.016).getPoints(10);
++  burta.holes.push(new THREE.Path(wew));
++  const rant = new THREE.ExtrudeGeometry(burta, { depth: 0.06, bevelEnabled: false, curveSegments: 10 });
++  // Kształt w XY, wyciągnięcie w +Z → obrót: dno leży w XZ, wyciągnięcie w górę.
++  for (const g of [dno, rant]) g.rotateX(-Math.PI / 2).translate(0, y, 0);
++  const out = mergeGeometries([dno, rant], false);
++  dno.dispose();
++  rant.dispose();
++  return out;
++}
++
++/**
++ * Kosze LeMans: wyjeżdżają do przodu z obrotem (0,5 rad) i lekko w stronę otworu – tak, żeby nie wchodziły
++ * w szafkę prostopadłą stojącą przed częścią ślepą.
++ */
++function KoszeLemans({ geo, pivot, kierunek, otwarte, mat }: { geo: THREE.BufferGeometry; pivot: [number, number, number]; kierunek: 1 | -1; otwarte: boolean; mat: THREE.Material }) {
++  const g = useRef<THREE.Group>(null);
++  useRuch(otwarte, (p) => {
++    if (!g.current) return;
++    g.current.rotation.y = kierunek * 0.5 * p;
++    g.current.position.set(pivot[0] + kierunek * 0.1 * p, pivot[1], pivot[2] + 0.42 * p);
++  });
++  return (
++    <group ref={g} position={pivot} userData={{ ruchomy: true }}>
++      <mesh geometry={geo} material={mat} position={[-pivot[0], -pivot[1], -pivot[2]]} castShadow receiveShadow />
++    </group>
++  );
++}
++
++/**
++ * Narożnik typu LeMans: korpus na całą szerokość, część ślepa bez frontu (zasłania ją szafka prostopadła),
++ * blenda przy styku, drzwi z zawiasem po stronie zewnętrznej (uchwyt przy blendzie), 2 poziomy koszy „nerek”.
++ */
++export function LemansBryla({ el, uchwyt, otwarte = false, ...kolory }: { el: ElementKuchni; uchwyt: boolean; otwarte?: boolean } & KoloryBryly) {
++  const { m, frontMat, metal } = useMaterialyMebla(kolory);
++  const drut = useDrut();
++  const u = lemansElementu(el);
++  const p = podzialLemans(el.w, u);
++  const W = el.w / 100;
++  const H = el.h / 100;
++  const D = el.d / 100;
++  const dK = D - PLECY;
++  const zK = PLECY / 2;
++  const zFront = D / 2 + T / 2 + 0.001;
++  const lewo = u.strona === "L";
++  // mm od lewej krawędzi → x lokalne [m].
++  const x = (mmOdLewej: number) => mmOdLewej / 1000 - W / 2;
++  const wew = W - 2 * T;
++  const L = Math.min(wew - 0.04, (p.front + p.slepa * 0.25) / 1000);
++  const G = Math.max(0.2, dK - 0.1);
++  // Zewnętrzny koniec kosza przy boku po stronie otworu.
++  const xZew = lewo ? W / 2 - T - 0.02 : -W / 2 + T + 0.02;
++  const xSrodek = lewo ? xZew - L / 2 : xZew + L / 2;
++  const klucz = `${W}|${H}|${D}|${u.strona}|${u.front}|${u.blenda}`;
++  const geo = useMemo(() => {
++    const poziomy = [poziomNerki(L, G, T + 0.05), poziomNerki(L, G, Math.max(T + 0.25, H * 0.5))];
++    const g = mergeGeometries(poziomy, false);
++    poziomy.forEach((x) => x.dispose());
++    g.translate(xSrodek, 0, zK);
++    return g;
++    // eslint-disable-next-line react-hooks/exhaustive-deps
++  }, [klucz]);
++  useEffect(() => () => geo.dispose(), [geo]);
++  const pivot: [number, number, number] = [lewo ? xZew - 0.05 : xZew + 0.05, 0, zK + G / 2 - 0.03];
++  const fx0 = x(p.xFront[0]) + GAP;
++  const fx1 = x(p.xFront[1]) - GAP;
++  const fh = H - 2 * GAP;
++  const hx = lewo ? fx1 : fx0;
++  // Uchwyt przy blendzie (po stronie przeciwnej do zawiasu).
++  const ux = lewo ? fx0 + 0.04 : fx1 - 0.04;
++  return (
++    <group>
++      {korpusBez(m, W, H, D)}
++      <Box m={drut} s={[0.025, H - 2 * T, 0.025]} p={[pivot[0], H / 2, pivot[2]]} />
++      <KoszeLemans geo={geo} pivot={pivot} kierunek={lewo ? 1 : -1} otwarte={otwarte} mat={drut} />
++      <Box m={frontMat} s={[p.blenda / 1000 - GAP, fh, T]} p={[(x(p.xBlenda[0]) + x(p.xBlenda[1])) / 2, H / 2, zFront]} />
++      <Zawias os="y" kat={lewo ? KAT_DRZWI : -KAT_DRZWI} pivot={[hx, 0, zFront + T / 2]} otwarte={otwarte}>
++        <Box m={frontMat} s={[fx1 - fx0, fh, T]} p={[(fx0 + fx1) / 2, H / 2, zFront]} />
++        {uchwyt ? <Box m={metal} s={[0.012, Math.min(0.14, fh * 0.35), 0.012]} p={[ux, H - 0.08, zFront + T / 2 + 0.012]} /> : null}
++      </Zawias>
++    </group>
++  );
++}
+diff --git a/src/components/kuchnia/MebelParametryczny.tsx b/src/components/kuchnia/MebelParametryczny.tsx
+index 320e074..cd1faff 100644
+--- a/src/components/kuchnia/MebelParametryczny.tsx
++++ b/src/components/kuchnia/MebelParametryczny.tsx
+@@ -11,13 +11,13 @@ import { useEffect, useMemo, useRef, type ReactNode } from "react";
+ import { useFrame, useThree } from "@react-three/fiber";
+ import * as THREE from "three";
+ import { useDrewno } from "../modul/Szafka";
+-import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
++import { wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
+ import type { ElementKuchni } from "@/lib/kuchnia";
+ 
+-const T = 0.018;
+-const PLECY = 0.003;
+-const GAP = 0.002;
+-const KAT_DRZWI = (100 * Math.PI) / 180;
++export const T = 0.018;
++export const PLECY = 0.003;
++export const GAP = 0.002;
++export const KAT_DRZWI = (100 * Math.PI) / 180;
+ 
+ /** Płynne otwieranie: 0 → 1 w ok. 0,5 s; klatki tylko w trakcie ruchu (frameloop="demand"). */
+ export function useRuch(otwarte: boolean, ustaw: (p: number) => void) {
+@@ -41,7 +41,7 @@ export function useRuch(otwarte: boolean, ustaw: (p: number) => void) {
+   });
+ }
+ 
+-function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: number; pivot: [number, number, number]; otwarte: boolean; children: ReactNode }) {
++export function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: number; pivot: [number, number, number]; otwarte: boolean; children: ReactNode }) {
+   const g = useRef<THREE.Group>(null);
+   useRuch(otwarte, (p) => {
+     if (!g.current) return;
+@@ -55,7 +55,7 @@ function Zawias({ os, kat, pivot, otwarte, children }: { os: "y" | "x"; kat: num
+   );
+ }
+ 
+-function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwarte: boolean; children: ReactNode }) {
++export function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwarte: boolean; children: ReactNode }) {
+   const g = useRef<THREE.Group>(null);
+   useRuch(otwarte, (p) => {
+     g.current?.position.set(o[0] * p, o[1] * p, o[2] * p);
+@@ -67,7 +67,7 @@ function Przesuw({ o, otwarte, children }: { o: [number, number, number]; otwart
+   );
+ }
+ 
+-function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, number]; m: THREE.Material }) {
++export function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, number]; m: THREE.Material }) {
+   return (
+     <mesh position={p} material={m} castShadow receiveShadow>
+       <boxGeometry args={s} />
+@@ -75,6 +75,32 @@ function Box({ s, p, m }: { s: [number, number, number]; p: [number, number, num
+   );
+ }
+ 
++export type KoloryBryly = {
++  kolor: string;
++  chropowatosc: number;
++  korpus?: { color: string; roughness: number };
++  srodek?: { color: string; roughness: number };
++  kolorUchwytu?: string;
++};
++
++/** Materiały mebla na wymiar: m.korpus – boki i wieńce, m.srodek – półki i skrzynki, m.plecy; front, uchwyt, chrom. */
++export function useMaterialyMebla({ kolor, chropowatosc, korpus, srodek, kolorUchwytu }: KoloryBryly) {
++  const drewno = useDrewno();
++  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
++  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
++  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
++  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorUchwytu ?? "#2b2b2b", metalness: 0.8, roughness: 0.35 }), [kolorUchwytu]);
++  const chrom = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9ccd0", metalness: 0.9, roughness: 0.25 }), []);
++  // Każdy materiał zwalniany osobno – zmiana jednego koloru nie może zwolnić materiału, który dalej jest w użyciu.
++  useEffect(() => () => korpusMat?.dispose(), [korpusMat]);
++  useEffect(() => () => srodekMat?.dispose(), [srodekMat]);
++  useEffect(() => () => frontMat.dispose(), [frontMat]);
++  useEffect(() => () => metal.dispose(), [metal]);
++  useEffect(() => () => chrom.dispose(), [chrom]);
++  const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
++  return { m, frontMat, metal, chrom };
++}
++
+ type Kawalek = { x0: number; x1: number; y0: number; y1: number };
+ 
+ /** Granice przestrzeni w kolumnie (m, od podłogi). Płyta między przestrzeniami, poza parą szuflada–szuflada. */
+@@ -116,19 +142,11 @@ export default function MebelParametryczny({
+   /** Kolor uchwytów (okucia tego mebla); brak = ciemny metal. */
+   kolorUchwytu?: string;
+ }) {
+-  const drewno = useDrewno();
+-  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+-  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+-  useEffect(() => () => [korpusMat, srodekMat].forEach((x) => x?.dispose()), [korpusMat, srodekMat]);
+-  // m.korpus – boki i wieńce; m.srodek – półki, przegrody i skrzynki szuflad.
+-  const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
++  const { m, frontMat, metal, chrom } = useMaterialyMebla({ kolor, chropowatosc, korpus, srodek, kolorUchwytu });
+   const wn = useMemo(() => el.wnetrze ?? wnetrzeDomyslne(el), [el]);
+-  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
+-  const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorUchwytu ?? "#2b2b2b", metalness: 0.8, roughness: 0.35 }), [kolorUchwytu]);
+-  const chrom = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9ccd0", metalness: 0.9, roughness: 0.25 }), []);
+   const dno = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e9e4dc", roughness: 0.85 }), []);
+   const ceramika = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f4f4f2", roughness: 0.25 }), []);
+-  useEffect(() => () => [frontMat, metal, chrom, dno, ceramika].forEach((x) => x.dispose()), [frontMat, metal, chrom, dno, ceramika]);
++  useEffect(() => () => [dno, ceramika].forEach((x) => x.dispose()), [dno, ceramika]);
+ 
+   const W = el.w / 100;
+   const H = el.h / 100;
+@@ -254,7 +272,7 @@ export default function MebelParametryczny({
+           ]
+         : [{ x0: fx0, x1: fx1, y0: fy0, y1: fy1 }];
+       skrzydla.forEach((k, li) => {
+-        const lewy = dwa ? li === 0 : n === 1 || c < n / 2;
++        const lewy = dwa ? li === 0 : zawiasLewy(el.hinge, c, n);
+         const hx = lewy ? k.x0 + GAP : k.x1 - GAP;
+         const fh = k.y1 - k.y0 - 2 * GAP;
+         const uy = wysokoUchwyt === "gora" ? k.y1 - 0.08 : wysokoUchwyt === "dol" ? k.y0 + 0.08 : Math.min(k.y1 - 0.1, k.y0 + 1.05);
+diff --git a/src/components/panel/CennikTab.tsx b/src/components/panel/CennikTab.tsx
+index 1dfc220..b2e51db 100644
+--- a/src/components/panel/CennikTab.tsx
++++ b/src/components/panel/CennikTab.tsx
+@@ -26,6 +26,7 @@ import {
+   type ModulCennik,
+ } from "@/lib/modul";
+ import { formatPln } from "../pricing";
++import { CENY_OKUC_DOMYSLNE, KLUCZE_OKUC, OKUCIE_LABEL, type KluczOkucia } from "@/lib/okucia";
+ import { cennikApi } from "./offerApi";
+ import { toast } from "./ui";
+ 
+@@ -49,7 +50,9 @@ const zl = (n: number) => `${String(Math.round(n * 100) / 100).replace(".", ",")
+ 
+ type PlytaForm = { id: string; nazwa: string; grubosc: string; dl: string; szer: string; cenaArkusza: string };
+ type PozycjaForm = { id: string; nazwa: string; cena: string; jednostka: JednostkaPozycji; domyslna: boolean };
+-type Form = Record<Pole, string> & { odpad: string; plytaDomyslna: string; plyty: PlytaForm[]; pozycje: PozycjaForm[] };
++type Form = Record<Pole, string> & { odpad: string; plytaDomyslna: string; plyty: PlytaForm[]; pozycje: PozycjaForm[]; okucia: Record<KluczOkucia, string> };
++
++const okuciaFormularza = (c?: Pick<ModulCennik, "okucia">) => Object.fromEntries(KLUCZE_OKUC.map((k) => [k, String(c?.okucia?.[k] ?? CENY_OKUC_DOMYSLNE[k])])) as Record<KluczOkucia, string>;
+ 
+ const noweId = (p: string) => `${p}${Math.random().toString(36).slice(2, 9)}`;
+ 
+@@ -65,6 +68,7 @@ function doFormularza(c: ModulCennik): Form {
+     plytaDomyslna: c.plytaDomyslna && plyty.some((p) => p.id === c.plytaDomyslna) ? c.plytaDomyslna : plyty[0].id,
+     plyty: plyty.map((p) => ({ id: p.id, nazwa: p.nazwa, grubosc: String(p.grubosc), dl: String(p.dl), szer: String(p.szer), cenaArkusza: String(p.cenaArkusza) })),
+     pozycje: (c.pozycje ?? []).map((p) => ({ id: p.id, nazwa: p.nazwa, cena: String(p.cena), jednostka: p.jednostka, domyslna: !!p.domyslna })),
++    okucia: okuciaFormularza(c),
+   };
+ }
+ 
+@@ -98,9 +102,15 @@ function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
+     if (Number.isNaN(cena)) return { cennik: null, blad: `„${nazwa}”: ${p.jednostka === "proc" ? "procent od −50 do 100" : "kwota od −1 000 000 do 1 000 000 zł"}.` };
+     pozycje.push({ id: p.id, nazwa, cena, jednostka: p.jednostka, ...(p.domyslna ? { domyslna: true } : {}) });
+   }
++  const okucia = {} as Record<KluczOkucia, number>;
++  for (const k of KLUCZE_OKUC) {
++    const n = kw(f.okucia[k]);
++    if (Number.isNaN(n)) return { cennik: null, blad: `${OKUCIE_LABEL[k]}: kwota od 0 do 1 000 000 zł.` };
++    okucia[k] = n;
++  }
+   const domyslna = plyty.find((p) => p.id === f.plytaDomyslna) ?? plyty[0];
+   return {
+-    cennik: { ...skalary, plytaM2: cenaPlytyM2(domyslna, odpad), plyty, plytaDomyslna: domyslna.id, odpadPlyty: odpad, pozycje },
++    cennik: { ...skalary, plytaM2: cenaPlytyM2(domyslna, odpad), plyty, plytaDomyslna: domyslna.id, odpadPlyty: odpad, pozycje, okucia },
+     blad: "",
+   };
+ }
+@@ -167,6 +177,21 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
+               />
+             </div>
+           ))}
++          <h3>Okucia osobno w ofercie (zł netto za komplet)</h3>
++          <p className="faint">Wysuwy z wybranym typem prowadnic, kosze cargo i mechanizm narożny – oferta pokazuje je jako osobne pozycje z ilością.</p>
++          {KLUCZE_OKUC.map((k) => (
++            <div className="field" key={k}>
++              <label htmlFor={`c-ok-${k}`}>{OKUCIE_LABEL[k]}</label>
++              <input
++                id={`c-ok-${k}`}
++                className="input"
++                inputMode="decimal"
++                disabled={!canEdit}
++                value={form.okucia[k]}
++                onChange={(e) => setForm({ ...form, okucia: { ...form.okucia, [k]: e.target.value } })}
++              />
++            </div>
++          ))}
+           {!canEdit ? <p className="faint">Cennik zmienia właściciel konta firmy.</p> : null}
+           {err ? (
+             <p className="err" role="alert">
+@@ -189,6 +214,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
+                     mb: String(DEFAULT_CENNIK.mb),
+                     szuflada: String(DEFAULT_CENNIK.szuflada),
+                     drazek: String(DEFAULT_CENNIK.drazek),
++                    okucia: okuciaFormularza(),
+                   })
+                 }
+               >
+diff --git a/src/components/panel/KreatorApp.tsx b/src/components/panel/KreatorApp.tsx
+index a92b192..9c8aac8 100644
+--- a/src/components/panel/KreatorApp.tsx
++++ b/src/components/panel/KreatorApp.tsx
+@@ -49,6 +49,7 @@ import {
+   wstawPrzyklad,
+   wstawPrzykladMebli,
+   wystajePozaSciany,
++  ostrzezeniaLemans,
+   wycenianyElement,
+   opisPozaWycena,
+   zmienWymiar,
+@@ -1442,8 +1443,18 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
+                     onWnetrze={() => {
+                       if (element) setOkno({ tryb: "edycja", id: element.id });
+                     }}
++                    onZmien={(fn) => {
++                      if (element) aktualizujElement(element.id, fn);
++                    }}
+                   />
+                   {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
++                  {element?.rodzaj === "lemans"
++                    ? null
++                    : ostrzezeniaLemans(plan).map((t) => (
++                        <p key={t} className="kr-warn">
++                          {t}
++                        </p>
++                      ))}
+                 </div>
+               ) : krok === "materialy" ? (
+                 <div className="kr-krok" data-krok="materialy">
+@@ -1556,6 +1567,20 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
+                   <section className="kr-card">
+                     <h3>Produkcja</h3>
+                     <p className="lede">Formatki do cięcia z okleiną, okucia, blaty i rozkrój płyt. Wydruk dla warsztatu i plik CSV dla hurtowni.</p>
++                    <label className="kr-check">
++                      <input
++                        type="checkbox"
++                        checked={!!plan.bezCen}
++                        onChange={(e) =>
++                          setPlan((p) => {
++                            const { bezCen: _stare, ...bez } = p;
++                            void _stare;
++                            return e.target.checked ? { ...bez, bezCen: true } : bez;
++                          })
++                        }
++                      />
++                      <span>Oferta bez cen – PDF i mail bez kwot (zestawienie do zamówienia w hurtowni)</span>
++                    </label>
+                     <div className="actions">
+                       <button type="button" className="btn btn-ghost" onClick={() => setFormatki(true)} disabled={!plan.elementy.length}>
+                         Formatki i rozkrój
+diff --git a/src/components/panel/KreatorBiblioteka.tsx b/src/components/panel/KreatorBiblioteka.tsx
+index 6d6da04..b681244 100644
+--- a/src/components/panel/KreatorBiblioteka.tsx
++++ b/src/components/panel/KreatorBiblioteka.tsx
+@@ -37,6 +37,7 @@ const OPIS_RODZAJU: Partial<Record<RodzajElementu, string>> = {
+   szafka: "Moduł na wymiar: korpus, front, uchwyt",
+   szuflady: "Moduł na wymiar z szufladami",
+   narozna: "Narożna na wymiar, dwa fronty",
++  cargo: "Wysuw z koszem: 15–40 cm, dolne albo słupek",
+   zlew: "Szafka pod zlew, bez wieńca górnego",
+   polka: "Półka ścienna na wymiar",
+ };
+diff --git a/src/components/panel/KreatorOpcjeMebla.tsx b/src/components/panel/KreatorOpcjeMebla.tsx
+new file mode 100644
+index 0000000..219beb6
+--- /dev/null
++++ b/src/components/panel/KreatorOpcjeMebla.tsx
+@@ -0,0 +1,170 @@
++"use client";
++
++/*
++ * Opcje zaznaczonego mebla w kroku „Meble”: strona zawiasu drzwi jednoskrzydłowych, szerokość cargo,
++ * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce), blat waterfall, typ prowadnic (wysuwy).
++ * Pokazuje się tylko to, co ma sens dla danego mebla; brak opcji = nic się nie rysuje.
++ */
++import type { ReactNode } from "react";
++import { Seg } from "./ui";
++import { lemansElementu, maBlatKuchenny, ostrzezeniaLemans, ostrzezeniaWaterfall, type ElementKuchni, type PlanKuchni, type StronaWaterfall } from "@/lib/kuchnia";
++import { LEMANS, podzialLemans, sprawdzLemans, type UstawieniaLemans } from "@/lib/lemans";
++import { PoleCm } from "./KreatorWlasciwosci";
++import { jednoSkrzydlo } from "@/lib/wnetrze";
++import { cargoWysokie, jestCargo, kompletyProwadnic, koszeCargoWysokiego, maProwadnice, PROWADNICE_CARGO, type TypProwadnic } from "@/lib/okucia";
++
++const SZEROKOSCI_CARGO = ["15", "20", "30", "40"] as const;
++
++function Opcja({ tytul, opis, children }: { tytul: string; opis?: string; children: ReactNode }) {
++  return (
++    <div className="kr-opcja">
++      <span className="kr-opcja-tytul">{tytul}</span>
++      {children}
++      {opis ? <span className="faint kr-opcja-opis">{opis}</span> : null}
++    </div>
++  );
++}
++
++export function KreatorOpcjeMebla({
++  plan,
++  element,
++  onZmien,
++  onWymiar,
++}: {
++  plan: PlanKuchni;
++  element: ElementKuchni;
++  onZmien: (fn: (el: ElementKuchni) => ElementKuchni) => void;
++  /** Zmiana wymiaru z dosunięciem rzędu (jak pola wymiarów). */
++  onWymiar: (key: "w" | "h" | "d", value: number) => boolean | void;
++}) {
++  const opcje: ReactNode[] = [];
++  if (jestCargo(element) && element.zrodlo !== "model") {
++    const szer = String(element.w);
++    opcje.push(
++      <Opcja
++        key="cargo"
++        tytul="Szerokość cargo"
++        opis={cargoWysokie(element) ? `Słupek cargo: ${koszeCargoWysokiego(element.h)} koszy na mechanizmie, jeden front na całą wysokość.` : "Front na prowadnicach z koszem na 2 poziomach."}
++      >
++        <Seg
++          label="Szerokość cargo"
++          value={(SZEROKOSCI_CARGO as readonly string[]).includes(szer) ? szer : "inna"}
++          onChange={(v) => {
++            if (v !== "inna") onWymiar("w", Number(v));
++          }}
++          options={[...SZEROKOSCI_CARGO.map((v) => ({ value: v, label: `${v} cm` })), ...((SZEROKOSCI_CARGO as readonly string[]).includes(szer) ? [] : [{ value: "inna", label: `${szer} cm` }])]}
++        />
++      </Opcja>,
++    );
++  }
++  if (element.rodzaj === "lemans" && element.zrodlo !== "model") {
++    const u = lemansElementu(element);
++    const p = podzialLemans(element.w, u);
++    const ustaw = (zm: Partial<UstawieniaLemans>) => {
++      const nowe = { ...u, ...zm };
++      if (!sprawdzLemans(element.w, nowe)) onZmien((el) => ({ ...el, lemans: nowe }));
++    };
++    const ostrzezenia = ostrzezeniaLemans(plan, element.id);
++    opcje.push(
++      <Opcja key="lemans" tytul="Narożnik LeMans" opis={`Część ślepa ${p.slepa} mm (za szafką prostopadłą) + blenda ${p.blenda} mm + front ${p.front} mm = ${p.W} mm.`}>
++        <Seg
++          label="Strona części ślepej narożnika LeMans"
++          value={u.strona}
++          onChange={(v) => ustaw({ strona: v })}
++          options={[
++            { value: "L", label: "Narożnik po lewej" },
++            { value: "P", label: "Narożnik po prawej" },
++          ]}
++        />
++        <div className="kr-dims kr-dims-2">
++          <PoleCm id="k-lm-front" label="Front" jedn="mm" value={u.front} min={LEMANS.front.min} max={Math.min(LEMANS.front.max, p.W - u.blenda - LEMANS.slepaMin)} onCommit={(n) => ustaw({ front: Math.round(n) })} />
++          <PoleCm id="k-lm-blenda" label="Blenda" jedn="mm" value={u.blenda} min={LEMANS.blenda.min} max={LEMANS.blenda.max} onCommit={(n) => ustaw({ blenda: Math.round(n) })} />
++        </div>
++        {ostrzezenia.map((t) => (
++          <p key={t} className="kr-warn" role="status">
++            {t}
++          </p>
++        ))}
++      </Opcja>,
++    );
++  }
++  if (jednoSkrzydlo(element)) {
++    opcje.push(
++      <Opcja key="zawias" tytul="Zawiasy drzwi" opis="Patrząc na front. Uchwyt po przeciwnej stronie.">
++        <Seg
++          label="Strona zawiasów drzwi"
++          value={element.hinge ?? "L"}
++          onChange={(v) => onZmien((el) => ({ ...el, hinge: v }))}
++          options={[
++            { value: "L", label: "Lewe" },
++            { value: "P", label: "Prawe" },
++          ]}
++        />
++      </Opcja>,
++    );
++  }
++  if (maProwadnice(element)) {
++    const cargo = jestCargo(element);
++    const n = kompletyProwadnic(element);
++    opcje.push(
++      <Opcja
++        key="prowadnice"
++        tytul="Wysuwy (prowadnice)"
++        opis={
++          element.prowadnice || cargo
++            ? `W ofercie osobna pozycja okuć: ${n} kpl.`
++            : "Standard: prowadnice w cenie mebla, jak dotąd. Wybrany typ trafia do oferty jako osobna pozycja okuć."
++        }
++      >
++        <Seg
++          label="Typ prowadnic"
++          value={element.prowadnice ?? (cargo ? PROWADNICE_CARGO : "standard")}
++          onChange={(v) =>
++            onZmien((el) => {
++              const { prowadnice: _stare, ...bez } = el;
++              void _stare;
++              return v === "standard" ? bez : { ...bez, prowadnice: v as TypProwadnic };
++            })
++          }
++          options={[
++            ...(cargo ? [] : [{ value: "standard", label: "Standard" }]),
++            { value: "rolkowe", label: "Rolkowe" },
++            { value: "kulkowe", label: "Kulkowe" },
++            { value: "ukryte", label: "Ukryte, cichy domyk" },
++          ]}
++        />
++      </Opcja>,
++    );
++  }
++  if (maBlatKuchenny(element)) {
++    const ostrzezenia = ostrzezeniaWaterfall(plan, element.id);
++    opcje.push(
++      <Opcja key="waterfall" tytul="Blat waterfall" opis="Bok z materiału blatu schodzi do podłogi przy boku mebla – zwykle na końcu ciągu. Łączenie z blatem na 45°.">
++        <Seg
++          label="Blat waterfall"
++          value={element.waterfall ?? "brak"}
++          onChange={(v) =>
++            onZmien((el) => {
++              const { waterfall: _stary, ...bez } = el;
++              void _stary;
++              return v === "brak" ? bez : { ...bez, waterfall: v as StronaWaterfall };
++            })
++          }
++          options={[
++            { value: "brak", label: "Brak" },
++            { value: "L", label: "Lewy" },
++            { value: "P", label: "Prawy" },
++            { value: "LP", label: "Oba" },
++          ]}
++        />
++        {ostrzezenia.map((t) => (
++          <p key={t} className="kr-warn" role="status">
++            {t}
++          </p>
++        ))}
++      </Opcja>,
++    );
++  }
++  if (!opcje.length) return null;
++  return <div className="kr-opcje-mebla">{opcje}</div>;
++}
+diff --git a/src/components/panel/KreatorWlasciwosci.tsx b/src/components/panel/KreatorWlasciwosci.tsx
+index 836df9f..e487353 100644
+--- a/src/components/panel/KreatorWlasciwosci.tsx
++++ b/src/components/panel/KreatorWlasciwosci.tsx
+@@ -1,6 +1,7 @@
+ "use client";
+ 
+ import { PoleCeny } from "./KreatorCena";
++import { KreatorOpcjeMebla } from "./KreatorOpcjeMebla";
+ import { useEffect, useState } from "react";
+ import {
+   katElementu,
+@@ -134,7 +135,10 @@ export function KreatorWlasciwosci({
+   onDociagnij,
+   onWnetrze,
+   onCena,
++  onZmien,
+ }: {
++  /** Zmiana opcji mebla (strona zawiasu, prowadnice, LeMans, waterfall) – KreatorOpcjeMebla. */
++  onZmien?: (fn: (el: ElementKuchni) => ElementKuchni) => void;
+   /** Ceny ręczne: pole „Cena netto” zaznaczonego mebla (brak = ceny z cennika). */
+   onCena?: (n: number | undefined) => void;
+   plan: PlanKuchni;
+@@ -203,6 +207,7 @@ export function KreatorWlasciwosci({
+           </button>
+         </p>
+       ) : null}
++      {onZmien ? <KreatorOpcjeMebla plan={plan} element={element} onZmien={onZmien} onWymiar={onWymiar} /> : null}
+       {onKat ? <PoleKata key={element.id} kat={katElementu(element)} onKat={onKat} /> : null}
+       <div className="actions">
+         <button type="button" className="btn btn-ghost" onClick={onObrot}>
+diff --git a/src/components/panel/ofertaPdf.ts b/src/components/panel/ofertaPdf.ts
+index 697362a..ac0a0a9 100644
+--- a/src/components/panel/ofertaPdf.ts
++++ b/src/components/panel/ofertaPdf.ts
+@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
+ import { opisWnetrza } from "@/lib/wnetrze";
+ import { opisPunktow } from "@/lib/punkty";
+ import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
+-import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
++import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, okuciaOferty, opisOpcjiMebla, uwagiWykonawcze, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+ import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
+ import { cenaKoncowa } from "@/lib/cenaKoncowa";
+ import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
+@@ -58,6 +58,12 @@ export type PdfDane = {
+   slowa: SlowaProjektu;
+   /** Są urządzenia AGD – dopisek, że nie są wliczone. */
+   agd: boolean;
++  /** Uwagi wykonawcze (np. waterfall – łączenie na 45°). */
++  uwagi: string[];
++  /** Oferta „bez cen” (PlanKuchni.bezCen): zestawienie do zamówienia, bez żadnych kwot. */
++  bezCen: boolean;
++  /** Okucia jako osobne pozycje (wysuwy, cargo, LeMans); kwota undefined = w cenie mebli (ceny ręczne). */
++  okucia: { nazwa: string; ilosc: number; cena?: number; kwota?: number }[];
+ };
+ 
+ const esc = (s: string) =>
+@@ -122,7 +128,7 @@ export function danePdf(args: {
+   const pozycje = args.plan.elementy.map((e) => ({
+     nazwa: e.nazwa,
+     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
+-    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
++    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${opisOpcjiMebla(e).map((x) => ` · ${x}`).join("")}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
+     w: e.w,
+     h: e.h,
+     d: e.d,
+@@ -172,6 +178,9 @@ export function danePdf(args: {
+     grupy,
+     slowa: slowaProjektu(args.projekt),
+     agd: maAgd(args.plan),
++    uwagi: uwagiWykonawcze(args.plan),
++    okucia: okuciaOferty(args.plan, args.cennik),
++    bezCen: !!args.plan.bezCen,
+   };
+ }
+ 
+@@ -213,7 +222,7 @@ export function pdfHtml(d: PdfDane) {
+   const wiersze = d.pozycje
+     .map(
+       (p, i) =>
+-        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${p.cena === null ? `<span class="muted">${esc(p.poza ?? "AGD, poza ceną")}</span>` : esc(pln(p.cena))}</td></tr>`,
++        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${d.bezCen ? "" : p.cena === null ? `<span class="muted">${esc(p.poza ?? "AGD, poza ceną")}</span>` : esc(pln(p.cena))}</td></tr>`,
+     )
+     .join("");
+   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
+@@ -231,7 +240,7 @@ export function pdfHtml(d: PdfDane) {
+           if (WYPOSAZENIE.has(rodzajElementu(e))) return "";
+           const p = d.pozycje[i];
+           const foto = d.zdjeciaElementow[i];
+-          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p ? ` · ${p.cena === null ? esc(p.poza ?? "AGD, poza ceną") : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
++          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p && !d.bezCen ? ` · ${p.cena === null ? esc(p.poza ?? "AGD, poza ceną") : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
+         })
+         .join("")}</div></section>`
+     : "";
+@@ -316,16 +325,18 @@ ${zdjecie}
+   <thead><tr><th>Pozycja</th><th class="num">Wymiary (szer. × wys. × gł.)</th><th class="num">Netto</th></tr></thead>
+   <tbody>
+     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
+-    <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
+-    ${d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
+-    ${wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
+-    ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
+-    ${wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
+-    <tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>
++    ${d.bezCen ? "" : `<tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>`}
++    ${d.okucia.map((x) => `<tr><td>${esc(x.nazwa.replace(/ \(kpl\.\)$/, ""))} <span class="muted">(${x.ilosc} kpl.${x.cena !== undefined && !d.bezCen ? ` × ${esc(pln(x.cena))}` : ""})</span></td><td></td><td class="num">${d.bezCen ? "" : x.kwota !== undefined ? esc(pln(x.kwota)) : "w cenie mebli"}</td></tr>`).join("")}
++    ${d.bezCen ? "" : d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
++    ${d.bezCen ? "" : wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
++    ${d.bezCen ? "" : wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
++    ${d.bezCen ? "" : wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
++    ${d.bezCen ? "" : `<tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>`}
+   </tbody>
+ </table>
+-<p class="note">Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
++${d.bezCen ? `<p class="note">Zestawienie bez cen – do zamówienia materiałów i okuć (formatki, okleina i rozkrój: „Formatki i rozkrój” → PDF / CSV).</p>` : ""}<p class="note"${d.bezCen ? ' hidden' : ""}>Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
+ ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
++${d.uwagi.map((u) => `<p class="note">${esc(u)}</p>`).join("")}
+ ${link}
+ <footer>
+   Dokument jest ofertą handlową. Nie zawiera rozkroju płyt, nestingu ani listy formatek do cięcia.
+@@ -340,7 +351,7 @@ ${rysunek}
+ /** Treść maila z ofertą PDF — osobna od maila z linkiem 3D. */
+ export function pdfTekst(d: PdfDane) {
+   const linie = d.pozycje.map(
+-    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${p.cena === null ? (p.poza ?? "AGD, poza ceną") : pln(p.cena).replaceAll("\u00a0", " ")}`,
++    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm${d.bezCen ? "" : ` — ${p.cena === null ? (p.poza ?? "AGD, poza ceną") : pln(p.cena).replaceAll("\u00a0", " ")}`}`,
+   );
+   const plnSp = (n: number) => pln(n).replaceAll("\u00a0", " ");
+   return [
+@@ -350,15 +361,20 @@ export function pdfTekst(d: PdfDane) {
+     `Układ: ${UKLAD_KUCHNI_LABEL[d.plan.uklad]}.`,
+     ...(materialyTekst(d, ". ") ? [`${materialyTekst(d, ". ")}.`] : []),
+     "",
+-    "Pozycje (netto):",
++    d.bezCen ? "Pozycje (zestawienie bez cen):" : "Pozycje (netto):",
+     ...(linie.length ? linie : ["(brak pozycji)"]),
++    ...d.okucia.map((x) => `${x.nazwa.replace(/ \(kpl\.\)$/, "")}: ${x.ilosc} kpl.${d.bezCen ? "" : x.kwota !== undefined ? ` — ${plnSp(x.kwota)}` : " (w cenie mebli)"}`),
+     "",
+-    `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
+-    ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
+-    ...(d.dopFront ? [`Kolor mebli: ${plnSp(d.dopFront)}`] : []),
+-    ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
+-    ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
+-    `Razem netto: ${plnSp(d.razem)}`,
++    ...(d.bezCen
++      ? []
++      : [
++          `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
++          ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
++          ...(d.dopFront ? [`Kolor mebli: ${plnSp(d.dopFront)}`] : []),
++          ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
++          ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
++          `Razem netto: ${plnSp(d.razem)}`,
++        ]),
+     "",
+     "Plik PDF z ofertą pobierzesz w panelu przyciskiem „Pobierz PDF” – dołącz go do tej wiadomości.",
+     ...(d.link3d
+diff --git a/src/components/produkcja/Produkcja.tsx b/src/components/produkcja/Produkcja.tsx
+index 620efb0..74ab670 100644
+--- a/src/components/produkcja/Produkcja.tsx
++++ b/src/components/produkcja/Produkcja.tsx
+@@ -9,11 +9,11 @@ import { useEffect, useMemo, useState } from "react";
+ import type { PlanKuchni } from "@/lib/kuchnia";
+ import { Seg, toast } from "../panel/ui";
+ import { pobierzPdf } from "../panel/pdfPlik";
+-import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
++import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, wzoryFormatek, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
+ import { rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
+ import { importujListe, type WynikImportu } from "./importListy";
+ import { formatkiProjektow, type ProjektDoRozkroju } from "./zrodloOferty";
+-import { csvFormatek, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
++import { csvFormatek, csvHurtownia, csvZamowienia, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
+ 
+ type Zrodlo = "ostatnie" | "projekt" | "lista" | "model";
+ type Ustawienia = UstawieniaFormatek & UstawieniaRozkroju;
+@@ -31,6 +31,7 @@ function wczytajUstawienia(): Ustawienia {
+       szuflady: z.szuflady === "systemowe" ? "systemowe" : "plyta",
+       plecy: z.plecy === "brak" ? "brak" : "hdf",
+       nawisBlatu: num(z.nawisBlatu, DOMYSLNE.nawisBlatu, 0, 100),
++      nozki: num(z.nozki, DOMYSLNE.nozki, 0, 250),
+       arkusz: { dl: num(z.arkusz?.dl, 2800, 500, 6000), szer: num(z.arkusz?.szer, 2070, 300, 3000) },
+       rzaz: num(z.rzaz, 4, 0, 10),
+       obrzeze: num(z.obrzeze, 10, 0, 50),
+@@ -113,7 +114,9 @@ export default function Produkcja({
+   }, [zrodlo, projekt, wybrane, u, zListy, model]);
+ 
+   const materialy = useMemo(() => (dane?.materialy ?? []).map((m) => (m.klucz in sloje ? { ...m, sloje: sloje[m.klucz] } : m)), [dane, sloje]);
+-  const daneM = useMemo(() => (dane ? { ...dane, materialy } : null), [dane, materialy]);
++  // Wzory (bok, dno, front) tylko dla formatek liczonych z projektu – z listy i z modelu wymiary są gotowe.
++  const zProjektu = zrodlo === "projekt" || zrodlo === "ostatnie";
++  const daneM = useMemo(() => (dane ? { ...dane, materialy, ...(zProjektu ? { wzory: wzoryFormatek(u) } : {}) } : null), [dane, materialy, zProjektu, u]);
+   const nr = useMemo(() => (daneM ? numeruj(daneM) : new Map<string, number>()), [daneM]);
+ 
+   const wyniki = useMemo(() => {
+@@ -174,12 +177,15 @@ export default function Produkcja({
+     }
+   };
+ 
+-  const csv = () => {
++  const ciecia = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.reduce((t, a) => t + a.ciecia, 0), 0);
++  const csv = (rodzaj: "numery" | "hurtownia" | "zamowienie") => {
+     if (!daneM) return;
+-    const blob = new Blob([csvFormatek(daneM)], { type: "text/csv;charset=utf-8" });
++    const tresc = rodzaj === "hurtownia" ? csvHurtownia(daneM) : rodzaj === "zamowienie" ? csvZamowienia(daneM, ciecia) : csvFormatek(daneM);
++    const przedrostek = rodzaj === "hurtownia" ? "hurtownia" : rodzaj === "zamowienie" ? "okucia-okleina" : "formatki";
++    const blob = new Blob([tresc], { type: "text/csv;charset=utf-8" });
+     const a = document.createElement("a");
+     a.href = URL.createObjectURL(blob);
+-    a.download = `formatki-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.csv`;
++    a.download = `${przedrostek}-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.csv`;
+     document.body.appendChild(a);
+     a.click();
+     a.remove();
+@@ -201,8 +207,14 @@ export default function Produkcja({
+       <div className="pr-top">
+         <Seg label="Źródło formatek" value={zrodlo} onChange={setZrodlo} options={opcje} />
+         <span className="grow" style={{ flex: 1 }} />
+-        <button type="button" className="btn btn-ghost" onClick={csv} disabled={!daneM?.formatki.length}>
+-          Pobierz CSV
++        <button type="button" className="btn btn-ghost" onClick={() => csv("hurtownia")} disabled={!daneM?.formatki.length} title="materiał;grubość;długość;szerokość;ilość;okleina…;słoje;opis – bez cen">
++          CSV do hurtowni
++        </button>
++        <button type="button" className="btn btn-ghost" onClick={() => csv("zamowienie")} disabled={!daneM?.formatki.length} title="Okucia, okleina w mb na materiał, blaty, liczba formatek i cięć">
++          CSV okuć i okleiny
++        </button>
++        <button type="button" className="btn btn-plain" onClick={() => csv("numery")} disabled={!daneM?.formatki.length}>
++          CSV z numerami
+         </button>
+         <button type="button" className="btn btn-ink" onClick={() => void wydruk()} disabled={!daneM?.formatki.length || sklada} aria-busy={sklada}>
+           {sklada ? "Przygotowuję PDF…" : "Pobierz PDF"}
+@@ -314,6 +326,7 @@ export default function Produkcja({
+             <>
+               <Liczba id="pr-szcz" label="Szczelina frontów" value={u.szczelina} min={0} max={10} onChange={(v) => zmien({ szczelina: v })} />
+               <Liczba id="pr-nawis" label="Nawis blatu" value={u.nawisBlatu} min={0} max={100} onChange={(v) => zmien({ nawisBlatu: v })} />
++              <Liczba id="pr-nozki" label="Nóżki (wysokość)" value={u.nozki} min={0} max={250} onChange={(v) => zmien({ nozki: v })} />
+               <label htmlFor="pr-szuf" className="pr-pole">
+                 <span>Szuflady</span>
+                 <select id="pr-szuf" className="input" value={u.szuflady} onChange={(e) => zmien({ szuflady: e.target.value === "systemowe" ? "systemowe" : "plyta" })}>
+@@ -447,6 +460,21 @@ export default function Produkcja({
+             );
+           })}
+ 
++          <p className="faint">
++            Formatek razem: {sztuk} szt. ({daneM.formatki.length} wymiarów) · cięć z rozkroju: {ciecia} · okleina: {daneM.formatki.reduce((s, f) => s + okleinaMb(f), 0).toFixed(2).replace(".", ",")} mb
++          </p>
++          {daneM.wzory?.length ? (
++            <details className="pr-mat">
++              <summary>Jak liczymy formatki (bok, dno, front)</summary>
++              <ul className="pr-lista pr-wzory">
++                {daneM.wzory.map((w) => (
++                  <li key={w}>
++                    <span>{w}</span>
++                  </li>
++                ))}
++              </ul>
++            </details>
++          ) : null}
+           {daneM.okucia?.length ? (
+             <details className="pr-mat" open>
+               <summary>Okucia</summary>
+diff --git a/src/components/produkcja/dokument.test.ts b/src/components/produkcja/dokument.test.ts
+new file mode 100644
+index 0000000..7f7a44d
+--- /dev/null
++++ b/src/components/produkcja/dokument.test.ts
+@@ -0,0 +1,69 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { csvHurtownia, csvZamowienia, NAGLOWEK_HURTOWNIA } from "./dokument";
++import { rozkroj } from "./rozkroj";
++import { formatkiProjektu, wzoryFormatek, USTAWIENIA_DOMYSLNE, type MaterialFormatki } from "./formatki";
++import { pustyPlan, type ElementKuchni } from "@/lib/kuchnia";
++import { DEFAULT_CENNIK } from "@/lib/modul";
++import { danePdf, pdfHtml, pdfTekst } from "../panel/ofertaPdf";
++
++const PLYTA: MaterialFormatki = { klucz: "plyta", nazwa: "Płyta biała", grubosc: 18, sloje: false, rodzaj: "plyta" };
++const el = (o: Partial<ElementKuchni>): ElementKuchni => ({ id: "abcd1234", nazwa: "Szafka dolna 60", zrodlo: "modul", strefa: "dolna", rodzaj: "szafka", w: 60, h: 72, d: 56, x: 30, z: 28, rot: 0, ...o });
++const plan = { ...pustyPlan("ciag"), scianaA: 300, elementy: [el({}), el({ id: "cargo001", nazwa: "Cargo 30", rodzaj: "cargo", w: 30, x: 75 })] };
++const lista = formatkiProjektu(plan, { material: () => PLYTA, blat: "Blat" });
++
++test("CSV hurtowni: dokładny nagłówek, wiersz dna szafki 60 (564 × 557), okleina 1/0, bez cen", () => {
++  const csv = csvHurtownia(lista).replace(/^﻿/, "");
++  const linie = csv.trim().split("\r\n");
++  assert.equal(linie[0], "materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis");
++  assert.equal(linie[0], NAGLOWEK_HURTOWNIA);
++  assert.ok(linie.some((l) => /^Płyta biała;18;564;557;1;1;0;0;0;0;\d+\. 1\. Szafka dolna 60 – Wieniec dolny$/.test(l)), linie.join("\n"));
++  assert.ok(linie.every((l) => l.split(";").length >= 11));
++  assert.ok(!/zł/.test(csv));
++});
++
++test("CSV okuć i okleiny: formatki, cięcia, okleina w mb, okucia cargo", () => {
++  const csv = csvZamowienia(lista, 42);
++  assert.match(csv, /Formatki razem;\d+;szt\./);
++  assert.match(csv, /Cięcia \(z rozkroju\);42;szt\./);
++  assert.match(csv, /Okleina – Płyta biała;[\d.]+;mb/);
++  assert.match(csv, /Kosz cargo 300 mm, 2 poziomy;1;kpl\./);
++  assert.ok(!/zł/.test(csv));
++});
++
++test("rozkrój liczy cięcia: obrzeże 4 + do 2 na formatkę", () => {
++  const w = rozkroj([{ ref: "a", nr: 1, dl: 1000, szer: 500, ilosc: 2 }], false);
++  assert.equal(w.arkusze.length, 1);
++  assert.ok(w.arkusze[0].ciecia >= 5 && w.arkusze[0].ciecia <= 8, String(w.arkusze[0].ciecia));
++});
++
++test("wzory: dno szafki 60 = 600 − 2 × 18 = 564 mm", () => {
++  assert.ok(wzoryFormatek(USTAWIENIA_DOMYSLNE).some((x) => x.includes("600 − 2 × 18 = 564 mm")));
++});
++
++test("PDF oferty bez cen: żadnej kwoty w HTML i w mailu, okucia z ilością zostają", () => {
++  const args = {
++    id: "K-1",
++    title: "Test",
++    client: "Klient",
++    contact: "",
++    firma: "Firma",
++    logo: null,
++    front: "dab-naturalny",
++    countertop: "kwarcyt-calacatta",
++    hardware: "czarny-mat",
++    palettes: [],
++    cennik: DEFAULT_CENNIK,
++    cennikUwaga: null,
++    link3d: null,
++    zdjecie: null,
++  };
++  const zCenami = danePdf({ ...args, plan });
++  assert.match(pdfHtml(zCenami), /zł/);
++  assert.match(pdfHtml(zCenami), /Kosz cargo dolny/);
++  const bez = danePdf({ ...args, plan: { ...plan, bezCen: true } });
++  const html = pdfHtml(bez);
++  assert.doesNotMatch(html.replace(/hidden>[^<]*/g, ""), /\d zł/);
++  assert.match(html, /Kosz cargo dolny, 2 poziomy <span class="muted">\(1 kpl\.\)/);
++  assert.doesNotMatch(pdfTekst(bez), /zł/);
++});
+diff --git a/src/components/produkcja/dokument.ts b/src/components/produkcja/dokument.ts
+index 9147d4f..11c9841 100644
+--- a/src/components/produkcja/dokument.ts
++++ b/src/components/produkcja/dokument.ts
+@@ -12,6 +12,8 @@ export type DaneProdukcji = {
+   blatNazwa?: string;
+   okucia?: Okucie[];
+   pominiete?: { mebel: string; powod: string }[];
++  /** Jak liczone są formatki (wzoryFormatek) – do porównania ze wzorem stolarza. */
++  wzory?: string[];
+ };
+ 
+ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+@@ -87,6 +89,43 @@ export function csvFormatek(d: Pick<DaneProdukcji, "formatki" | "materialy">) {
+   return "﻿" + wiersze.map((w) => w.map(pole).join(";")).join("\r\n") + "\r\n";
+ }
+ 
++/**
++ * CSV do zamówienia w hurtowni (format z zamówień płyt z cięciem i oklejaniem):
++ * materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis
++ * Okleina: 1 = oklejona krawędź, 0 = bez. Słoje: 1 = długość wzdłuż słojów (nie obracać), 0 = dowolnie. Bez cen.
++ */
++export const NAGLOWEK_HURTOWNIA = "materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis";
++
++const poleCsv = (v: string | number) => {
++  const s = String(v);
++  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
++};
++
++export function csvHurtownia(d: Pick<DaneProdukcji, "formatki" | "materialy">) {
++  const nr = numeruj(d);
++  const mat = new Map(d.materialy.map((m) => [m.klucz, m]));
++  const posort = [...d.formatki].sort((a, b) => (nr.get(a.id) ?? 0) - (nr.get(b.id) ?? 0));
++  const b = (x: boolean) => (x ? "1" : "0");
++  const wiersze = posort.map((f) => {
++    const m = mat.get(f.material);
++    return [m?.nazwa ?? f.material, m?.grubosc ?? "", f.dl, f.szer, f.ilosc, b(f.okleina.d1), b(f.okleina.d2), b(f.okleina.s1), b(f.okleina.s2), b(!!m?.sloje), `${nr.get(f.id)}. ${f.mebel} – ${f.element}${f.uwagi ? ` (${f.uwagi})` : ""}`]
++      .map(poleCsv)
++      .join(";");
++  });
++  return "\uFEFF" + [NAGLOWEK_HURTOWNIA, ...wiersze].join("\r\n") + "\r\n";
++}
++
++/** Druga część zamówienia: okucia, okleina (mb na materiał), blaty i boki waterfall, liczba formatek i cięć. Bez cen. */
++export function csvZamowienia(d: DaneProdukcji, ciecia?: number) {
++  const w: (string | number)[][] = [["pozycja", "ilość", "jednostka", "opis"]];
++  w.push(["Formatki razem", d.formatki.reduce((s, f) => s + f.ilosc, 0), "szt.", `${d.formatki.length} różnych wymiarów`]);
++  if (ciecia !== undefined) w.push(["Cięcia (z rozkroju)", ciecia, "szt.", "cięcia gilotynowe z odcięciem obrzeża arkusza"]);
++  for (const p of podsumowanie(d)) if (p.okleinaMb > 0) w.push([`Okleina – ${p.material.nazwa}`, Math.round(p.okleinaMb * 100) / 100, "mb", `${p.material.grubosc} mm, bez naddatku`]);
++  for (const o of d.okucia ?? []) w.push([o.nazwa, o.ilosc, o.jednostka, "okucie"]);
++  for (const x of d.blaty ?? []) w.push([`${x.waterfall ? "Bok waterfall" : "Blat"} – ${x.mebel}`, 1, "szt.", `${x.dl} × ${x.szer} mm${x.uwagi ? `; ${x.uwagi}` : ""}`]);
++  return "\uFEFF" + w.map((r) => r.map(poleCsv).join(";")).join("\r\n") + "\r\n";
++}
++
+ export type MetaProdukcji = { firma: string; tytul: string; kod: string; data: string };
+ 
+ const CSS = `
+@@ -118,7 +157,11 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
+   const pods = podsumowanie(d);
+   const h: string[] = [];
+   h.push(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Formatki i rozkrój · ${esc(meta.tytul)}</title><style>${CSS}</style></head><body>`);
+-  h.push(`<h1>Formatki i rozkrój</h1><div class="meta">${esc(meta.firma)} · ${esc(meta.kod)} · ${esc(meta.tytul)} · ${esc(meta.data)}</div>`);
++  h.push(`<h1>Formatki i rozkrój</h1><div class="meta">${esc(meta.firma)} · ${esc(meta.kod)} · ${esc(meta.tytul)} · ${esc(meta.data)} · zestawienie bez cen</div>`);
++  const ciecia = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.reduce((t, a) => t + a.ciecia, 0), 0);
++  h.push(
++    `<p><b>Formatek razem:</b> ${d.formatki.reduce((s, f) => s + f.ilosc, 0)} szt. (${d.formatki.length} wymiarów) · <b>cięć z rozkroju:</b> ${ciecia} · <b>okleina razem:</b> ${pl(d.formatki.reduce((s, f) => s + okleinaMb(f), 0))} mb</p>`,
++  );
+   h.push(`<h2>Zestawienie płyt</h2><table><thead><tr><th>Materiał</th><th class="n">Grubość</th><th class="n">Formatek</th><th class="n">m²</th><th class="n">Arkusze ${u.arkusz.dl}×${u.arkusz.szer}</th><th class="n">Odpad</th><th class="n">Okleina mb</th></tr></thead><tbody>`);
+   for (const p of pods) {
+     const w = wyniki.get(p.material.klucz);
+@@ -150,6 +193,7 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
+     for (const x of d.blaty) h.push(`<tr><td>${esc(x.mebel)}</td><td class="n">${x.dl}</td><td class="n">${x.szer}</td><td class="uw">${esc(x.uwagi ?? "")}</td></tr>`);
+     h.push(`</tbody></table><p class="uw">Płyt blatowych 4100 mm: ${b.plyty}${b.lacz.length ? ` · ${b.lacz.length} blat(y) dłuższe niż płyta – łączenie` : ""}.</p>`);
+   }
++  if (d.wzory?.length) h.push(`<h3>Jak liczymy formatki</h3><ul class="uw">${d.wzory.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`);
+   if (d.pominiete?.length) {
+     h.push(`<h3>Bez formatek</h3><ul class="uw">${d.pominiete.map((p) => `<li>${esc(p.mebel)} – ${esc(p.powod)}</li>`).join("")}</ul>`);
+   }
+diff --git a/src/components/produkcja/formatki.test.ts b/src/components/produkcja/formatki.test.ts
+new file mode 100644
+index 0000000..fd6a805
+--- /dev/null
++++ b/src/components/produkcja/formatki.test.ts
+@@ -0,0 +1,126 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { formatkiProjektu, USTAWIENIA_DOMYSLNE, type MaterialFormatki, type ZrodloMaterialow } from "./formatki";
++import { okuciaOferty, ostrzezeniaLemans, ostrzezeniaWaterfall, parseKuchnia, pustyPlan, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
++import { DEFAULT_CENNIK } from "@/lib/modul";
++
++const PLYTA: MaterialFormatki = { klucz: "plyta", nazwa: "Płyta biała 18 mm", grubosc: 18, sloje: false, rodzaj: "plyta" };
++const zrodlo: ZrodloMaterialow = { material: () => PLYTA, uchwyt: () => ({ nazwa: "listwa", bez: false }), blat: "Blat dąb 38 mm" };
++
++export const el = (o: Partial<ElementKuchni>): ElementKuchni => ({ id: "abcd1234", nazwa: "Mebel", zrodlo: "modul", strefa: "dolna", rodzaj: "szafka", w: 60, h: 72, d: 56, x: 30, z: 28, rot: 0, ...o });
++export const plan = (...elementy: ElementKuchni[]): PlanKuchni => ({ ...pustyPlan("ciag"), scianaA: 400, elementy });
++
++export const lista = (p: PlanKuchni) => formatkiProjektu(p, zrodlo);
++export const wymiary = (p: PlanKuchni, element: string) =>
++  lista(p)
++    .formatki.filter((f) => f.element === element)
++    .map((f) => `${f.dl}×${f.szer}×${f.ilosc}`);
++
++test("szafka dolna 60: dno (wieniec) = 600 − 2×18 = 564 mm, boki 720 × 557", () => {
++  const p = plan(el({}));
++  assert.deepEqual(wymiary(p, "Wieniec dolny"), ["564×557×1"]);
++  assert.deepEqual(wymiary(p, "Bok"), ["720×557×2"]);
++});
++
++test("cargo 30 dolne: korpus bez półek, jeden front, kosz 2 poziomy i prowadnice", () => {
++  const p = plan(el({ nazwa: "Cargo 30", rodzaj: "cargo", w: 30 }));
++  const l = lista(p);
++  assert.deepEqual(wymiary(p, "Bok"), ["720×557×2"]);
++  assert.deepEqual(wymiary(p, "Wieniec dolny"), ["264×557×1"]);
++  assert.deepEqual(wymiary(p, "Wieniec górny"), ["264×557×1"]);
++  assert.deepEqual(wymiary(p, "Front cargo"), ["717×297×1"]);
++  assert.equal(l.formatki.filter((f) => f.element === "Półka").length, 0);
++  const okucia = l.okucia.map((o) => `${o.nazwa} ×${o.ilosc}`);
++  assert.ok(okucia.includes("Kosz cargo 300 mm, 2 poziomy ×1"), okucia.join(" | "));
++  assert.ok(okucia.includes("Prowadnice cargo ukryte z cichym domykiem 500 mm ×1"), okucia.join(" | "));
++  assert.ok(!okucia.some((o) => o.startsWith("Zawiasy")));
++});
++
++test("słupek cargo 300 (210 cm): korpus, jeden front na wysokość, mechanizm z 6 koszami", () => {
++  const p = plan(el({ nazwa: "Cargo wysokie 30", rodzaj: "cargo", strefa: "wysoka", w: 30, h: 210 }));
++  const l = lista(p);
++  assert.deepEqual(wymiary(p, "Bok"), ["2100×557×2"]);
++  assert.deepEqual(wymiary(p, "Wieniec dolny"), ["264×557×1"]);
++  assert.deepEqual(wymiary(p, "Front cargo"), ["2097×297×1"]);
++  const okucia = l.okucia.map((o) => o.nazwa);
++  assert.ok(okucia.includes("Mechanizm cargo wysokie 300 mm, 6 koszy, wys. korpusu 2100 mm"), okucia.join(" | "));
++  // 200 cm: 5 koszy.
++  const niski = lista(plan(el({ rodzaj: "cargo", strefa: "wysoka", w: 30, h: 200 }))).okucia.map((o) => o.nazwa);
++  assert.ok(niski.some((o) => o.includes("5 koszy")));
++});
++
++// LeMans 110 w narożniku L: korpus wzdłuż ściany A (tył przy z = 0), szafka prostopadła ze ściany B stoi przed częścią ślepą.
++const lemansL = (zm: Partial<ElementKuchni> = {}) => el({ id: "lemans01", nazwa: "Narożnik LeMans 110", rodzaj: "lemans", w: 110, x: 55, z: 28, ...zm });
++const prostopadla = (zm: Partial<ElementKuchni> = {}) => el({ id: "bok00001", nazwa: "Szafka B", rot: 90, x: 28, z: 86, ...zm });
++
++test("LeMans L: korpus 1100, blenda 70, front 450, mechanizm lewy, zawiasy", () => {
++  const p = { ...plan(lemansL(), prostopadla()), uklad: "L" as const, scianaB: 300 };
++  const l = lista(p);
++  assert.deepEqual(wymiary(p, "Bok").slice(0, 1), ["720×557×2"]);
++  assert.deepEqual(wymiary(p, "Wieniec dolny").slice(0, 1), ["1064×557×1"]);
++  assert.deepEqual(wymiary(p, "Blenda (zaślepka)"), ["717×70×1"]);
++  assert.deepEqual(wymiary(p, "Front LeMans"), ["717×447×1"]);
++  const okucia = l.okucia.map((o) => o.nazwa);
++  assert.ok(okucia.includes("Mechanizm narożny typu LeMans lewy (front 450 mm, korpus 1100 mm)"), okucia.join(" | "));
++  assert.ok(okucia.includes("Zawiasy puszkowe z prowadnikami"));
++  assert.deepEqual(ostrzezeniaLemans(p), []);
++});
++
++test("LeMans P: blenda i front po lewej, mechanizm prawy, okucia oferty z wariantem P", () => {
++  const lm = lemansL({ lemans: { strona: "P", blenda: 60, front: 500 } });
++  const sasiad = prostopadla({ rot: 270, x: 82, z: 86 });
++  const p = plan(lm, sasiad);
++  assert.deepEqual(wymiary(p, "Blenda (zaślepka)"), ["717×60×1"]);
++  assert.deepEqual(wymiary(p, "Front LeMans"), ["717×497×1"]);
++  assert.ok(lista(p).okucia.some((o) => o.nazwa.startsWith("Mechanizm narożny typu LeMans prawy")));
++  assert.deepEqual(
++    okuciaOferty(p, DEFAULT_CENNIK).map((o) => [o.klucz, o.wariant, o.ilosc]),
++    [["lemans", "P", 1]],
++  );
++  // Sąsiad stoi po prawej (od strony ślepej): wolne = 1100 − 500 − 578 = 22 mm < 40 → ostrzeżenie.
++  assert.match(ostrzezeniaLemans(p).join(" "), /22 mm od frontu/);
++});
++
++test("LeMans: sąsiad za głęboki zasłania front, brak sąsiada – podpowiedź", () => {
++  const p = plan(lemansL(), prostopadla({ d: 65, x: 32.5 }));
++  assert.match(ostrzezeniaLemans(p).join(" "), /zasłania front .* o 18 mm/);
++  assert.match(ostrzezeniaLemans(plan(lemansL())).join(" "), /brak szafki prostopadłej/);
++});
++
++test("LeMans: parser zachowuje ustawienia, odrzuca blendę spoza 50–100 mm", () => {
++  const p = plan(lemansL({ lemans: { strona: "P", blenda: 60, front: 500 } }));
++  assert.deepEqual(parseKuchnia(p).elementy[0].lemans, { strona: "P", blenda: 60, front: 500 });
++  assert.throws(() => parseKuchnia(plan(lemansL({ lemans: { strona: "L", blenda: 120, front: 450 } }))), /Blenda LeMans/);
++  // Stary plan bez pola – domyślne ustawienia, bez zmian w zapisie.
++  assert.equal(parseKuchnia(plan(lemansL())).elementy[0].lemans, undefined);
++});
++
++test("waterfall P na końcu ciągu: bok 820 mm (nóżki 100 + korpus 720), gł. blatu, blat dłuższy o grubość", () => {
++  const p = plan(el({ id: "szafka01", x: 30 }), el({ id: "szafka02", x: 90, waterfall: "P" }));
++  const l = formatkiProjektu(p, { ...zrodlo, gruboscBlatu: 38 });
++  const blaty = l.blaty.map((b) => `${b.mebel}: ${b.dl}×${b.szer}`);
++  assert.deepEqual(blaty, ["nad poz. 1, 2: 1238×580", "bok waterfall – 2. Mebel, prawy: 820×580"]);
++  const bok = l.blaty.find((b) => b.waterfall)!;
++  assert.match(bok.uwagi ?? "", /gr\. 38 mm/);
++  assert.match(bok.uwagi ?? "", /45°/);
++  // Wysokość z ustawień nóżek, nie na sztywno.
++  const wyzsze = formatkiProjektu(p, zrodlo, { ...USTAWIENIA_DOMYSLNE, nozki: 150 });
++  assert.equal(wyzsze.blaty.find((b) => b.waterfall)!.dl, 870);
++  assert.deepEqual(ostrzezeniaWaterfall(p), []);
++});
++
++test("waterfall: oba boki, ostrzeżenie w środku ciągu, parser tylko dla szafek pod blatem", () => {
++  const p = plan(el({ id: "szafka01", x: 30, waterfall: "LP" }));
++  assert.equal(lista(p).blaty.filter((b) => b.waterfall).length, 2);
++  const srodek = plan(el({ id: "szafka01", x: 30, waterfall: "P" }), el({ id: "szafka02", x: 90 }));
++  assert.match(ostrzezeniaWaterfall(srodek).join(" "), /po prawej styka się/);
++  assert.equal(parseKuchnia(p).elementy[0].waterfall, "LP");
++  assert.throws(() => parseKuchnia(plan(el({ strefa: "gorna", h: 72, d: 32, waterfall: "L" }))), /waterfall tylko przy szafce dolnej/);
++});
++
++test("wysuwy w rozkroju: nazwa prowadnic z typem, cargo z wybranym typem", () => {
++  const okucia = lista(plan(el({ rodzaj: "szuflady", prowadnice: "ukryte" }))).okucia.map((o) => o.nazwa);
++  assert.ok(okucia.some((o) => o === "Prowadnice ukryte z cichym domykiem 500 mm"), okucia.join(" | "));
++  const cargo = lista(plan(el({ rodzaj: "cargo", w: 30, prowadnice: "rolkowe" }))).okucia.map((o) => o.nazwa);
++  assert.ok(cargo.includes("Prowadnice cargo rolkowe 500 mm"), cargo.join(" | "));
++});
+diff --git a/src/components/produkcja/formatki.ts b/src/components/produkcja/formatki.ts
+index 3430cc2..d1fdcb5 100644
+--- a/src/components/produkcja/formatki.ts
++++ b/src/components/produkcja/formatki.ts
+@@ -9,10 +9,12 @@
+  *
+  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
+  */
+-import { MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
++import { lemansElementu, MEBLE, rect, rodzajElementu, stronyWaterfall, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
++import { podzialLemans } from "@/lib/lemans";
+ import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
+ import type { CzescMebla } from "@/lib/kolory";
+ import { frontyElementu } from "../rysunek/rysunekTechniczny";
++import { cargoWysokie, dlugoscProwadnicy, koszeCargoWysokiego, PROWADNICE_LABEL, prowadniceElementu } from "@/lib/okucia";
+ 
+ export type Okleina = { d1: boolean; d2: boolean; s1: boolean; s2: boolean };
+ export const BEZ_OKLEINY: Okleina = { d1: false, d2: false, s1: false, s2: false };
+@@ -45,7 +47,8 @@ export type Formatka = {
+   uwagi?: string;
+ };
+ 
+-export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string };
++/** Kawałek blatu [mm]; bok waterfall: dl = wysokość od podłogi do spodu blatu, szer = głębokość blatu. */
++export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string; waterfall?: boolean };
+ export type Okucie = { nazwa: string; ilosc: number; jednostka: "szt." | "kpl." | "mm" };
+ 
+ export type ListaFormatek = {
+@@ -67,9 +70,13 @@ export type UstawieniaFormatek = {
+   plecy: "hdf" | "brak";
+   /** Nawis blatu nad frontami [mm]. */
+   nawisBlatu: number;
++  /** Wysokość nóżek szafek dolnych i słupków [mm] – nazwa nóżek w okuciach i wysokość boku waterfall (nóżki + korpus). */
++  nozki: number;
+ };
+ 
+-export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20 };
++export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20, nozki: 100 };
++/** Grubość blatu, gdy materiał blatu jej nie podaje [mm]. */
++export const GRUBOSC_BLATU_DOMYSLNA = 38;
+ 
+ export type ZrodloMaterialow = {
+   /** Materiał części mebla (front, boki, środek). */
+@@ -78,6 +85,8 @@ export type ZrodloMaterialow = {
+   uchwyt?: (el: ElementKuchni) => { nazwa: string; bez: boolean };
+   /** Nazwa blatu z oferty. */
+   blat?: string;
++  /** Grubość blatu z oferty [mm] (bok waterfall); brak = GRUBOSC_BLATU_DOMYSLNA. */
++  gruboscBlatu?: number;
+ };
+ 
+ export const HDF: MaterialFormatki = { klucz: "hdf-3", nazwa: "HDF 3 mm biały", grubosc: 3, sloje: false, rodzaj: "hdf" };
+@@ -191,7 +200,7 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
+       if (s.typ === "drazek") z.okucie(`Drążek ${zaokr(colW)} mm z uchwytami`, 1, "kpl.");
+       if (s.typ === "szuflada") {
+         const bd = prowadnica(g);
+-        z.okucie(`Prowadnice ${bd} mm`, 1, "kpl.");
++        z.okucie(el.prowadnice ? `Prowadnice ${PROWADNICE_LABEL[el.prowadnice]} ${bd} mm` : `Prowadnice ${bd} mm`, 1, "kpl.");
+         if (u.szuflady === "plyta") {
+           const hb = Math.max(50, Math.min(220, Math.round((s.y1 - s.y0) * 0.78)));
+           const bw = colW - 26;
+@@ -223,6 +232,44 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
+   return true;
+ }
+ 
++/**
++ * Cargo (dolne i wysokie): korpus bez półek (kosze wiszą na mechanizmie), jeden front na całą wysokość,
++ * w okuciach kosz / mechanizm i prowadnice wybranego typu.
++ */
++function cargo(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
++  const W = mm(el.w);
++  const H = mm(el.h);
++  const D = mm(el.d);
++  korpus(z, mebel, W, H, D, mat("korpus"), u);
++  front(z, mebel, "Front cargo", mat("front"), H, W, u, "front na mechanizmie cargo");
++  const typ = prowadniceElementu(el)!;
++  const dl = dlugoscProwadnicy(el.d);
++  if (cargoWysokie(el)) z.okucie(`Mechanizm cargo wysokie ${W} mm, ${koszeCargoWysokiego(el.h)} koszy, wys. korpusu ${H} mm`, 1, "kpl.");
++  else z.okucie(`Kosz cargo ${W} mm, 2 poziomy`, 1, "kpl.");
++  z.okucie(`Prowadnice cargo ${PROWADNICE_LABEL[typ]} ${dl} mm`, 1, "kpl.");
++  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
++  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
++}
++
++/**
++ * Narożnik LeMans: korpus na całą szerokość (część ślepa za szafką prostopadłą), blenda na wysokość frontu
++ * przy styku z sąsiednią szafką, jeden front (drzwi), w okuciach mechanizm z koszami L/P i zawiasy.
++ */
++function lemans(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
++  const W = mm(el.w);
++  const H = mm(el.h);
++  const D = mm(el.d);
++  const lm = lemansElementu(el);
++  const p = podzialLemans(el.w, lm);
++  korpus(z, mebel, W, H, D, mat("korpus"), u);
++  z.dodaj(mebel, "Blenda (zaślepka)", mat("front"), H - u.szczelina, p.blenda, DOOKOLA, 1, `przy styku z szafką prostopadłą, część ślepa ${p.slepa} mm`);
++  front(z, mebel, "Front LeMans", mat("front"), H, p.front, u);
++  z.okucie(`Mechanizm narożny typu LeMans ${lm.strona === "L" ? "lewy" : "prawy"} (front ${p.front} mm, korpus ${W} mm)`, 1, "kpl.");
++  z.okucie("Zawiasy puszkowe z prowadnikami", zawiasyNaDrzwi(H));
++  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
++  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
++}
++
+ /** Słupek albo szafka z piekarnikiem: korpus, półki pod i nad piekarnikiem, fronty nad i pod (proporcje jak w 3D). */
+ function piekarnik(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
+   const W = mm(el.w);
+@@ -263,21 +310,32 @@ function zabudowaAgd(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: Cze
+   if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
+ }
+ 
+-const NOZKI = new Set(["szafka", "szuflady", "narozna", "zlew", "piekarnik", "lodowka-zabudowa"]);
++const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "lemans", "zlew", "piekarnik", "lodowka-zabudowa"]);
+ 
+ /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
+-function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
++function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>, gruboscBlatu: number): Blat[] {
+   const out: Blat[] = [];
++  const boki: Blat[] = [];
+   const dolne = plan.elementy.filter((e) => e.strefa === "dolna" && !MEBLE.has(rodzajElementu(e)) && !WYPOSAZENIE.has(rodzajElementu(e)));
+-  type Odc = { a0: number; a1: number; d: number; nazwy: string[] };
++  // naddatek – boki waterfall w odcinku: blat sięga do zewnętrznej krawędzi boku (+ grubość blatu na każdy bok).
++  type Odc = { a0: number; a1: number; d: number; nazwy: string[]; naddatek: number };
+   const ciagi = new Map<string, Odc[]>();
+   for (const e of dolne) {
+     const r = rect(e);
+     const wzdluzX = e.rot % 180 === 0;
+     const klucz = wzdluzX ? `x:${Math.round(e.rot === 0 ? r.z0 : r.z1)}` : `z:${Math.round(e.rot === 90 ? r.x0 : r.x1)}`;
+     const lista = ciagi.get(klucz) ?? [];
+-    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa] });
++    const wf = e.zrodlo === "model" ? [] : stronyWaterfall(e);
++    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa], naddatek: wf.length * gruboscBlatu });
+     ciagi.set(klucz, lista);
++    for (const s of wf)
++      boki.push({
++        mebel: `bok waterfall – ${numer.get(e.id) ?? e.nazwa}, ${s === "L" ? "lewy" : "prawy"}`,
++        dl: u.nozki + mm(e.h),
++        szer: mm(e.d) + u.nawisBlatu,
++        waterfall: true,
++        uwagi: `z materiału blatu, gr. ${gruboscBlatu} mm; wys. od podłogi do spodu blatu (nóżki ${u.nozki} + korpus ${mm(e.h)} mm). Łączenie z blatem na 45° – dolicz ${gruboscBlatu} mm i ucios (kreator nie liczy uciosu).`,
++      });
+   }
+   for (const [, lista] of Array.from(ciagi.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+     lista.sort((a, b) => a.a0 - b.a0);
+@@ -288,19 +346,25 @@ function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string,
+         ost.a1 = Math.max(ost.a1, o.a1);
+         ost.d = Math.max(ost.d, o.d);
+         ost.nazwy.push(...o.nazwy);
++        ost.naddatek += o.naddatek;
+       } else sklejone.push({ ...o, nazwy: [...o.nazwy] });
+     }
+     for (const o of sklejone) {
+       const nr = o.nazwy.map((x) => x.split(".")[0]).join(", ");
+-      out.push({ mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0], dl: mm(o.a1 - o.a0), szer: mm(o.d) + u.nawisBlatu });
++      out.push({
++        mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0],
++        dl: mm(o.a1 - o.a0) + o.naddatek,
++        szer: mm(o.d) + u.nawisBlatu,
++        ...(o.naddatek ? { uwagi: `z naddatkiem ${o.naddatek} mm na bok waterfall (łączenie na 45°)` } : {}),
++      });
+     }
+   }
+   // Osobne elementy „blat” (np. wyspa, nadstawka).
+   for (const e of plan.elementy) if (rodzajElementu(e) === "blat") out.push({ mebel: numer.get(e.id) ?? e.nazwa, dl: mm(e.w), szer: mm(e.d) });
+   // L / U: blaty z dwóch ścian spotykają się w narożniku – długości liczone po szafkach, łączenie do ustalenia.
+   const kierunki = new Set(Array.from(ciagi.keys()).map((k) => k[0]));
+-  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = "narożnik – dolicz zakładkę na łączenie blatów"));
+-  return out;
++  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = [b.uwagi, "narożnik – dolicz zakładkę na łączenie blatów"].filter(Boolean).join("; ")));
++  return [...out, ...boki];
+ }
+ 
+ /** Lista formatek z planu. */
+@@ -321,25 +385,44 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u:
+       continue;
+     }
+     if (r === "piekarnik") piekarnik(z, mebel, el, mat, u, uchwyt);
++    else if (r === "cargo") cargo(z, mebel, el, mat, u, uchwyt);
++    else if (r === "lemans") lemans(z, mebel, el, mat, u, uchwyt);
+     else if (r === "lodowka-zabudowa" || r === "zmywarka") zabudowaAgd(z, mebel, el, mat, u, uchwyt);
+     else if (r === "blat") continue;
+     else if (!parametryczny(z, mebel, el, mat, u, uchwyt)) {
+       pominiete.push({ mebel, powod: "urządzenie / dodatek – bez formatek" });
+       continue;
+     }
+-    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie("Nóżki meblowe 100 mm", el.w > 90 ? 6 : 4);
++    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie(`Nóżki meblowe ${u.nozki} mm`, el.w > 90 ? 6 : 4);
+     if (el.strefa === "gorna" && r !== "okap" && r !== "okap-podszafkowy") z.okucie("Zawieszki szafek górnych", 2);
+   }
+   return {
+     formatki,
+     materialy: Array.from(materialy.values()),
+-    blaty: blatyPlanu(plan, u, numer),
++    blaty: blatyPlanu(plan, u, numer, zrodlo.gruboscBlatu ?? GRUBOSC_BLATU_DOMYSLNA),
+     blatNazwa: zrodlo.blat ?? "Blat",
+     okucia: Array.from(okucia.values()),
+     pominiete,
+   };
+ }
+ 
++/**
++ * Jak liczone są boki, wieńce (dno), fronty i plecy – do porównania z wzorem stolarza (UI i PDF).
++ * Przykład na szafce dolnej 60 × 72 × 56 cm.
++ */
++export function wzoryFormatek(u: UstawieniaFormatek): string[] {
++  const g = u.plecy === "hdf" ? `głębokość − ${PLECY} mm plecy HDF` : "głębokość (bez pleców)";
++  const gl = 560 - (u.plecy === "hdf" ? PLECY : 0);
++  return [
++    `Płyta korpusu ${T} mm. Boki na całą wysokość, wieńce (dno i góra) między bokami.`,
++    `Bok = wysokość korpusu × (${g}) – szafka 60: 720 × ${gl} mm, 2 szt.`,
++    `Wieniec dolny (dno) i górny = (szerokość − 2 × ${T}) × (${g}) – szafka 60: 600 − 2 × ${T} = ${600 - 2 * T} mm × ${gl} mm.`,
++    `Front = pole frontu − szczelina ${u.szczelina} mm (na wysokości i szerokości) – drzwi szafki 60: ${720 - u.szczelina} × ${600 - u.szczelina} mm.`,
++    u.plecy === "hdf" ? `Plecy HDF ${PLECY} mm nakładane = (wysokość − 4) × (szerokość − 4) – szafka 60: 716 × 596 mm.` : "Bez pleców.",
++    `Półka = szerokość wnętrza × (${g} − 20 mm). Nóżki ${u.nozki} mm (bok waterfall = nóżki + korpus).`,
++  ];
++}
++
+ /* ---------- podsumowania ---------- */
+ 
+ /** Okleina w metrach bieżących dla jednej formatki (z ilością). */
+diff --git a/src/components/produkcja/rozkroj.ts b/src/components/produkcja/rozkroj.ts
+index 884e78e..3be3ece 100644
+--- a/src/components/produkcja/rozkroj.ts
++++ b/src/components/produkcja/rozkroj.ts
+@@ -21,7 +21,8 @@ export type DoRozkroju = { ref: string; nr: number; dl: number; szer: number; il
+ 
+ /** Położenie formatki na arkuszu: x wzdłuż długości arkusza, y w poprzek; w × h po ewentualnym obrocie. */
+ export type Polozenie = { ref: string; nr: number; x: number; y: number; w: number; h: number; obrocona: boolean };
+-export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number };
++/** ciecia – cięcia gilotynowe na arkuszu: odcięcie obrzeża (4, gdy obrzeże > 0) + 0–2 cięcia przy każdej formatce. */
++export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number; ciecia: number };
+ export type WynikRozkroju = {
+   arkusze: ArkuszRozkroju[];
+   /** Formatki większe niż arkusz (po obrzeżu). */
+@@ -38,9 +39,9 @@ function ulozenie(sztuki: Szt[], obrot: boolean, u: UstawieniaRozkroju, podzial:
+   const L = u.arkusz.dl - 2 * u.obrzeze;
+   const S = u.arkusz.szer - 2 * u.obrzeze;
+   const k = u.rzaz;
+-  const arkusze: { wolne: Wolny[]; kawalki: Polozenie[]; pole: number }[] = [];
++  const arkusze: { wolne: Wolny[]; kawalki: Polozenie[]; pole: number; ciecia: number }[] = [];
+   const nowy = () => {
+-    const a = { wolne: [{ x: u.obrzeze, y: u.obrzeze, w: L, h: S }], kawalki: [] as Polozenie[], pole: 0 };
++    const a = { wolne: [{ x: u.obrzeze, y: u.obrzeze, w: L, h: S }], kawalki: [] as Polozenie[], pole: 0, ciecia: u.obrzeze > 0 ? 4 : 0 };
+     arkusze.push(a);
+     return a;
+   };
+@@ -70,6 +71,8 @@ function ulozenie(sztuki: Szt[], obrot: boolean, u: UstawieniaRozkroju, podzial:
+     const [pw, ph, obr] = opcje[b.o];
+     a.kawalki.push({ ref: s.ref, nr: s.nr, x: f.x, y: f.y, w: pw, h: ph, obrocona: obr });
+     a.pole += pw * ph;
++    // Formatka odcinana od reszty wolnego prostokąta: cięcie wzdłuż i/lub w poprzek (0, gdy wypełnia go dokładnie).
++    a.ciecia += (f.w > pw ? 1 : 0) + (f.h > ph ? 1 : 0);
+     const restW = f.w - pw - k;
+     const restH = f.h - ph - k;
+     // Podział gilotynowy pozostałego miejsca na dwa prostokąty.
+@@ -110,7 +113,7 @@ export function rozkroj(lista: readonly DoRozkroju[], sloje: boolean, u: Ustawie
+         if (n1 < n0 || (n1 === n0 && r1 < r0)) najlepszy = wynik;
+       }
+     }
+-  const arkusze = (najlepszy ?? []).map((a) => ({ kawalki: a.kawalki, pole: a.pole }));
++  const arkusze = (najlepszy ?? []).map((a) => ({ kawalki: a.kawalki, pole: a.pole, ciecia: a.ciecia }));
+   const calosc = arkusze.length * u.arkusz.dl * u.arkusz.szer;
+   const zajete = arkusze.reduce((s, a) => s + a.pole, 0);
+   return { arkusze, zaDuze, odpad: calosc ? 1 - zajete / calosc : 0 };
+diff --git a/src/components/produkcja/zrodloOferty.ts b/src/components/produkcja/zrodloOferty.ts
+index 48022f2..592fbae 100644
+--- a/src/components/produkcja/zrodloOferty.ts
++++ b/src/components/produkcja/zrodloOferty.ts
+@@ -22,6 +22,7 @@ export function zrodloMaterialow(ctx: KontekstMaterialow, w: WyborMaterialow): Z
+       return { nazwa: m?.name ?? "uchwyt", bez: !!m?.bezUchwytu };
+     },
+     blat: findMaterial("countertop", w.countertop, ctx)?.name,
++    gruboscBlatu: findMaterial("countertop", w.countertop, ctx)?.thicknessMm,
+   };
+ }
+ 
+diff --git a/src/components/rysunek/rysunekTechniczny.ts b/src/components/rysunek/rysunekTechniczny.ts
+index 1e67a4d..10f5138 100644
+--- a/src/components/rysunek/rysunekTechniczny.ts
++++ b/src/components/rysunek/rysunekTechniczny.ts
+@@ -6,10 +6,11 @@
+  *
+  * Jednostki rysunku: centymetry (viewBox w cm, skala dopasowana do kartki). Numery mebli = numery pozycji w PDF.
+  */
+-import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
++import { GRUBOSC_BLATU_3D, lemansElementu, nazwaNaRzucie, rectBazowy, rodzajElementu, stronyWaterfall, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
++import { podzialLemans } from "@/lib/lemans";
+ import { meblaPrzyScianie } from "@/lib/otwory";
+ import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
+-import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
++import { PLYTA_CM, wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
+ import type { PunktInstalacji } from "@/lib/wywiad";
+ import { yElementu } from "@/components/kuchnia/uklad3d";
+ 
+@@ -70,7 +71,8 @@ export type FrontRys = {
+   x1: number;
+   y0: number;
+   y1: number;
+-  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd";
++  /** blenda – zaślepka narożnika LeMans przy styku z szafką prostopadłą. */
++  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd" | "blenda";
+   /** Drzwi: zawiasy po lewej. */
+   zawiasLewy?: boolean;
+   napis?: string;
+@@ -96,6 +98,19 @@ function przestrzenie(kol: Wnetrze["kolumny"][number], H: number) {
+ export function frontyElementu(el: ElementKuchni): FrontRys[] {
+   const W = el.w;
+   const H = el.h;
++  // Cargo: jeden front na mechanizmie (wysuw na wprost) – rysowany jak front szuflady.
++  if (el.rodzaj === "cargo" && el.zrodlo !== "model") return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "szuflada", napis: "cargo" }];
++  // LeMans: część ślepa (za szafką prostopadłą, przekreślona), blenda i drzwi z zawiasem po stronie zewnętrznej.
++  if (el.rodzaj === "lemans" && el.zrodlo !== "model") {
++    const u = lemansElementu(el);
++    const p = podzialLemans(W, u);
++    const cm = (a: readonly [number, number]) => ({ x0: a[0] / 10, x1: a[1] / 10 });
++    return [
++      { ...cm(p.xSlepa), y0: 0, y1: H, typ: "agd", napis: "część ślepa" },
++      { ...cm(p.xBlenda), y0: 0, y1: H, typ: "blenda" },
++      { ...cm(p.xFront), y0: 0, y1: H, typ: "drzwi", zawiasLewy: u.strona === "P" },
++    ];
++  }
+   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
+   if (!wn || !wn.kolumny.length) return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "agd", napis: nazwaNaRzucie(el) || el.nazwa }];
+   const T = PLYTA_CM;
+@@ -148,7 +163,7 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
+       if (szer > 60.1) {
+         out.push({ x0: fx0, x1: fx0 + szer / 2, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: true });
+         out.push({ x0: fx0 + szer / 2, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: false });
+-      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: k === 1 || c < k / 2 });
++      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: zawiasLewy(el.hinge, c, k) });
+     }
+   });
+   if (wn.front === "przesuwne") {
+@@ -162,6 +177,11 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
+ function frontySvg(out: string[], el: ElementKuchni, X: number, Ydol: number, fs: number) {
+   const W = el.w;
+   out.push(`<rect class="rys-mebel" x="${n(X)}" y="${n(Ydol - el.h)}" width="${n(W)}" height="${n(el.h)}" />`);
++  // Blat waterfall: bok z materiału blatu od podłogi do wierzchu blatu, po wybranej stronie (patrząc na front).
++  for (const s of stronyWaterfall(el)) {
++    const t = GRUBOSC_BLATU_3D;
++    out.push(`<rect class="rys-blat" x="${n(s === "L" ? X - t : X + W)}" y="${n(Ydol - el.h - 3)}" width="${n(t)}" height="${n(el.h + 3)}" />`);
++  }
+   for (const f of frontyElementu(el)) {
+     const x0 = X + f.x0;
+     const x1 = X + f.x1;
+diff --git a/src/lib/cenaKoncowa.ts b/src/lib/cenaKoncowa.ts
+index 1acdbc5..744e60c 100644
+--- a/src/lib/cenaKoncowa.ts
++++ b/src/lib/cenaKoncowa.ts
+@@ -1,18 +1,19 @@
+ /*
+  * Cena końcowa oferty z kreatora – jedna funkcja, która zlicza każdą składową:
+  *   meble      – moduły i modele z cennika (z płytą wybraną w ofercie i dopłatą za wnętrze),
++ *   okucia     – wysuwy z wybranym typem prowadnic, kosze cargo, LeMans (okucia.ts; przy cenach ręcznych 0),
+  *   dodatki    – własne pozycje z cennika i z oferty (kpl., szt., mb zabudowy, % ceny mebli, rabat),
+  *   materiały  – dopłaty za front, blat i okucia (tylko grupy, które projekt ma – opcjeProjektu.ts).
+- * razem = max(1, meble + dodatki) + materiały – dokładnie tyle co base oferty (bazaKuchni) + dopłaty (totalPrice),
++ * razem = max(1, meble + okucia + dodatki) + materiały – dokładnie tyle co base oferty (bazaKuchni) + dopłaty (totalPrice),
+  * więc kreator, panel, PDF i strona klienta pokazują tę samą kwotę. W React: useCenaKoncowa (panel/useCenaKoncowa.ts).
+  */
+ import { wycenDodatki, type DodatekWyceniony } from "./dodatki";
+-import { metryBiezace, plytaProjektu, sumaMebli, trybCen, type PlanKuchni } from "./kuchnia";
++import { metryBiezace, okuciaOferty, plytaProjektu, sumaMebli, trybCen, type PlanKuchni } from "./kuchnia";
+ import { JEDNOSTKA_LABEL, plytaOferty, powierzchniaArkusza, type ModulCennik } from "./modul";
+ 
+ export type SkladnikCeny = {
+   klucz: string;
+-  rodzaj: "meble" | "dodatek" | "material";
++  rodzaj: "meble" | "okucia" | "dodatek" | "material";
+   nazwa: string;
+   /** Np. „12 mb × 150 zł”, „10% od 18 400 zł”. */
+   opis?: string;
+@@ -21,6 +22,8 @@ export type SkladnikCeny = {
+ 
+ export type CenaKoncowa = {
+   meble: number;
++  /** Okucia jako osobne pozycje (wysuwy, cargo, LeMans); 0 w starych ofertach i przy cenach ręcznych. */
++  okucia: number;
+   dodatki: number;
+   materialy: number;
+   /** Kwota jak base oferty: meble + dodatki, min. 1 zł przy niepustym projekcie. */
+@@ -48,10 +51,13 @@ export function cenaKoncowa(args: {
+   const zl = args.zl ?? ((n: number) => `${Math.round(n)} zł`);
+   const pusty = !plan.elementy.length;
+   const meble = pusty ? 0 : sumaMebli(plan, cennik);
++  const pozycjeOkuc = pusty ? [] : okuciaOferty(plan, cennik);
++  const okucia = pozycjeOkuc.reduce((s, p) => s + (p.kwota ?? 0), 0);
+   const mb = metryBiezace(plan);
+-  const dodatkiWycenione = pusty ? [] : wycenDodatki(plan.dodatki, cennik, { meble, mb });
++  // Procent od ceny mebli liczy się od mebli z okuciami – tak samo jak bazaKuchni na serwerze.
++  const dodatkiWycenione = pusty ? [] : wycenDodatki(plan.dodatki, cennik, { meble: meble + okucia, mb });
+   const dodatki = dodatkiWycenione.reduce((s, d) => s + d.kwota, 0);
+-  const baza = pusty ? 0 : Math.max(1, meble + dodatki);
++  const baza = pusty ? 0 : Math.max(1, meble + okucia + dodatki);
+   const doplaty = (args.doplaty ?? []).filter((d) => d.kwota !== 0);
+   const materialy = pusty ? 0 : doplaty.reduce((s, d) => s + d.kwota, 0);
+ 
+@@ -80,11 +86,19 @@ export function cenaKoncowa(args: {
+       opis: plyta ? `${plyta.nazwa}, ${liczba(m2)} m² płyty` : trybCen(plan) === "reczne" ? (plan.cenaOgolna !== undefined ? "cena całej zabudowy" : "ceny pozycji wpisane ręcznie") : undefined,
+       kwota: meble,
+     });
++    if (okucia > 0)
++      skladniki.push({
++        klucz: "okucia",
++        rodzaj: "okucia",
++        nazwa: "Okucia: wysuwy, cargo, narożnik",
++        opis: pozycjeOkuc.map((p) => `${p.nazwa.replace(/ \(kpl\.\)$/, "")} × ${p.ilosc}`).join(", "),
++        kwota: okucia,
++      });
+     for (const d of dodatkiWycenione) {
+       if (d.brak) continue;
+       const opis =
+         d.jednostka === "proc"
+-          ? `${liczba(d.cena)}% od ${zl(meble)}`
++          ? `${liczba(d.cena)}% od ${zl(meble + okucia)}`
+           : d.jednostka === "kpl"
+             ? undefined
+             : `${liczba(d.ilosc)} ${JEDNOSTKA_LABEL[d.jednostka]} × ${zl(d.cena)}`;
+@@ -92,5 +106,5 @@ export function cenaKoncowa(args: {
+     }
+     for (const d of doplaty) skladniki.push({ klucz: `m:${d.klucz}`, rodzaj: "material", nazwa: d.nazwa, kwota: d.kwota });
+   }
+-  return { meble, dodatki, materialy, baza, razem: baza + materialy, skladniki, dodatkiWycenione, mb, plyta };
++  return { meble, okucia, dodatki, materialy, baza, razem: baza + materialy, skladniki, dodatkiWycenione, mb, plyta };
+ }
+diff --git a/src/lib/kolory.ts b/src/lib/kolory.ts
+index da3194a..9eb4590 100644
+--- a/src/lib/kolory.ts
++++ b/src/lib/kolory.ts
+@@ -110,6 +110,8 @@ export function czesciMebla(el: ElementKolorow): Record<CzescMebla, number> {
+   // Zmywarka i lodówka w zabudowie: front meblowy; obudowa AGD zostaje jak w urządzeniu.
+   if (ZABUDOWA.has(rodzaj)) return { front: w * h, korpus: 0, srodek: 0 };
+   if (el.zrodlo === "model") return { front: w * h, korpus: obudowa, srodek: 0 };
++  // Cargo i LeMans: front i korpus, bez półek (kosze to okucia).
++  if (rodzaj === "cargo" || rodzaj === "lemans") return { front: w * h, korpus: obudowa, srodek: 0 };
+   if (!kategoriaWnetrza(el)) return zero;
+   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
+   const maFront = !!wn && (wn.front !== "otwarte" || wn.kolumny.some((k) => k.sekcje.some((s) => s.typ === "szuflada")));
+diff --git a/src/lib/kuchnia.ts b/src/lib/kuchnia.ts
+index 1da6846..3b5f151 100644
+--- a/src/lib/kuchnia.ts
++++ b/src/lib/kuchnia.ts
+@@ -11,7 +11,11 @@
+  */
+ import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
+ import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
+-import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
++import { cenaOkucia, maProwadnice, okuciaPlanu, TYPY_PROWADNIC, type PozycjaOkuc, type TypProwadnic } from "./okucia";
++import { LEMANS, LEMANS_DOMYSLNIE, parseLemans, podzialLemans, type UstawieniaLemans } from "./lemans";
++import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
++
++export type { StronaLP } from "./wnetrze";
+ import { parseWywiad, type Wywiad } from "./wywiad";
+ import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
+ import { parseUstawieniaScian, type UstawieniaScian, mebelZaSciana } from "./sciany";
+@@ -27,6 +31,10 @@ export type RodzajElementu =
+   | "szafka"
+   | "szuflady"
+   | "narozna"
++  // Cargo: wąski wysuw z koszem (strefa dolna: 2 poziomy; wysoka – słupek: 5–6 koszy).
++  | "cargo"
++  // Narożnik typu LeMans: część ślepa za szafką prostopadłą, blenda, front z koszami „nerkami” (lemans.ts).
++  | "lemans"
+   | "zlew"
+   | "zlewozmywak"
+   | "bateria"
+@@ -57,6 +65,8 @@ export const RODZAJE: readonly RodzajElementu[] = [
+   "szafka",
+   "szuflady",
+   "narozna",
++  "cargo",
++  "lemans",
+   "zlew",
+   "zlewozmywak",
+   "bateria",
+@@ -81,6 +91,10 @@ export const RODZAJE: readonly RodzajElementu[] = [
+   "dekoracja",
+ ];
+ 
++/** Strona boku waterfall: lewa, prawa albo obie (patrząc na front mebla). */
++export type StronaWaterfall = "L" | "P" | "LP";
++export const STRONY_WATERFALL: readonly StronaWaterfall[] = ["L", "P", "LP"];
++
+ /** Rodzaje mebli spoza kuchni: własne widełki wymiarów (szafa do 4 m szerokości, do sufitu), bez blatu kuchennego. */
+ export const MEBLE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["szafa", "szafa-przesuwna", "komoda", "regal", "rtv", "umywalka"]);
+ 
+@@ -115,6 +129,17 @@ export type ElementKuchni = {
+   kolory?: KoloryMebla;
+   /** Cena netto wpisana ręcznie [zł] – liczy się, gdy plan ma ceny „reczne”. Brak = jeszcze nie wpisana (0 zł). */
+   cena?: number;
++  /** Strona zawiasu drzwi jednoskrzydłowych (patrząc na front). Brak = lewa (jak w starszych ofertach). */
++  hinge?: StronaLP;
++  /** Narożnik LeMans: strona części ślepej, blenda i front [mm]. Brak = LEMANS_DOMYSLNIE. */
++  lemans?: UstawieniaLemans;
++  /**
++   * Typ prowadnic szuflad i cargo (wysuwy jako osobna pozycja okuć). Brak = szuflady jak dotąd (dopłata „szuflada”
++   * z cennika w cenie mebla), cargo – ukryte z cichym domykiem.
++   */
++  prowadnice?: TypProwadnic;
++  /** Blat waterfall: bok z materiału blatu schodzi do podłogi po lewej, prawej albo obu stronach mebla (patrząc na front). */
++  waterfall?: StronaWaterfall;
+ };
+ 
+ /**
+@@ -158,6 +183,11 @@ export type PlanKuchni = {
+    * przy cenach wpisanych ręcznie nie (firma podaje kwotę z materiałami). Przełącznik w kroku „Materiały”.
+    */
+   doplaty?: boolean;
++  /**
++   * Oferta „bez cen”: PDF i treść maila bez kwot (zestawienie do zamówienia materiałów w hurtowni).
++   * Cena dalej liczy się na serwerze (base), tylko się jej nie pokazuje. Brak = z cenami.
++   */
++  bezCen?: boolean;
+ };
+ 
+ export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
+@@ -177,6 +207,8 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
+   szafka: "Szafka",
+   szuflady: "Szuflady",
+   narozna: "Narożna",
++  cargo: "Cargo",
++  lemans: "Narożnik LeMans",
+   zlew: "Szafka pod zlew",
+   zlewozmywak: "Zlewozmywak",
+   bateria: "Bateria",
+@@ -233,6 +265,8 @@ export const PRESETY: PresetModul[] = [
+   { id: "dolna-80", nazwa: "Szafka dolna 80", grupa: "dolne", strefa: "dolna", rodzaj: "szafka", w: 80, h: 72, d: 56 },
+   { id: "szuflady-45", nazwa: "Szuflady 45", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 45, h: 72, d: 56 },
+   { id: "szuflady-60", nazwa: "Szuflady 60", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 60, h: 72, d: 56 },
++  { id: "cargo-30", nazwa: "Cargo 30", grupa: "dolne", strefa: "dolna", rodzaj: "cargo", w: 30, h: 72, d: 56 },
++  { id: "lemans-110", nazwa: "Narożnik LeMans 110", grupa: "dolne", strefa: "dolna", rodzaj: "lemans", w: 110, h: 72, d: 56 },
+   { id: "narozna-90", nazwa: "Szafka narożna 90", grupa: "dolne", strefa: "dolna", rodzaj: "narozna", w: 90, h: 72, d: 90 },
+   { id: "zlew-80", nazwa: "Szafka pod zlew 80", grupa: "dolne", strefa: "dolna", rodzaj: "zlew", w: 80, h: 72, d: 56 },
+   { id: "gorna-40", nazwa: "Szafka górna 40", grupa: "gorne", strefa: "gorna", rodzaj: "szafka", w: 40, h: 72, d: 32 },
+@@ -244,6 +278,7 @@ export const PRESETY: PresetModul[] = [
+   { id: "polka-120", nazwa: "Półka ścienna 120", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 120, h: 6, d: 28 },
+   { id: "polka-podwojna-80", nazwa: "Półka podwójna 80", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 80, h: 36, d: 28 },
+   { id: "slupek-60", nazwa: "Słupek 60", grupa: "slupki", strefa: "wysoka", rodzaj: "szafka", w: 60, h: 210, d: 56 },
++  { id: "cargo-wysokie-30", nazwa: "Cargo wysokie 30", grupa: "slupki", strefa: "wysoka", rodzaj: "cargo", w: 30, h: 210, d: 56 },
+   { id: "piekarnik-60", nazwa: "Słupek z piekarnikiem 60", grupa: "slupki", strefa: "wysoka", rodzaj: "piekarnik", w: 60, h: 210, d: 56 },
+   { id: "lodowka-zabudowa-60", nazwa: "Zabudowa lodówki 60", grupa: "slupki", strefa: "wysoka", rodzaj: "lodowka-zabudowa", w: 60, h: 210, d: 56 },
+   { id: "zmywarka-60", nazwa: "Zmywarka do zabudowy 60", grupa: "agd", strefa: "dolna", rodzaj: "zmywarka", w: 60, h: 72, d: 56 },
+@@ -301,6 +336,12 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
+       return { w: zakres(30, 100), h: zakres(55, 92), d: zakres(45, 65) };
+     case "narozna":
+       return { w: zakres(80, 110), h: zakres(60, 92), d: zakres(80, 110) };
++    // LeMans: korpus 100–120 cm (część ślepa za szafką prostopadłą), front 40–60 cm.
++    case "lemans":
++      return { w: zakres(100, 120), h: zakres(55, 92), d: zakres(50, 65) };
++    // Cargo: szerokości 15/20/30/40 cm (wybór w panelu), wysokość jak szafki dolne albo słupki.
++    case "cargo":
++      return strefa === "wysoka" ? { w: zakres(15, 40), h: zakres(160, 230), d: zakres(45, 65) } : { w: zakres(15, 40), h: zakres(55, 92), d: zakres(45, 65) };
+     case "zlew":
+       return { w: zakres(50, 120), h: zakres(60, 92), d: zakres(45, 65) };
+     case "zlewozmywak":
+@@ -395,6 +436,8 @@ export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
+   const NAZWY: Partial<Record<RodzajElementu, string>> = {
+     szuflady: "szuflady",
+     narozna: "narożna",
++    cargo: "cargo",
++    lemans: "LeMans",
+     zlew: "pod zlew",
+     zlewozmywak: "zlew",
+     bateria: "bateria",
+@@ -450,6 +493,10 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
+       return "SZ";
+     case "narozna":
+       return "N";
++    case "cargo":
++      return "CG";
++    case "lemans":
++      return "LM";
+     case "szafa":
+     case "szafa-przesuwna":
+       return "SZF";
+@@ -959,8 +1006,11 @@ export const opisPozaWycena = (el: { rodzaj?: RodzajElementu }) => (WYPOSAZENIE.
+ export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
+ 
+ /** Cena netto elementu z cennika modułów (z dopłatą za zapisane wnętrze); null = urządzenie AGD poza wyceną. */
+-export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze }, cennik: ModulCennik): number | null {
+-  return wycenianyElement(el) ? modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, cennik, DOMYSLNE_DODATKI) : null;
++export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze; prowadnice?: TypProwadnic }, cennik: ModulCennik): number | null {
++  if (!wycenianyElement(el)) return null;
++  // Wybrany typ prowadnic: wysuwy liczą się jako osobna pozycja okuć (okuciaOferty), więc bez dopłaty „szuflada”.
++  const bezSzuflad = el.prowadnice ? { ...cennik, szuflada: 0 } : cennik;
++  return modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, bezSzuflad, el.prowadnice ? { ...DOMYSLNE_DODATKI, szuflada: 0 } : DOMYSLNE_DODATKI);
+ }
+ 
+ /** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
+@@ -1003,6 +1053,145 @@ export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
+   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
+ }
+ 
++/** Mebel na wymiar stojący pod blatem kuchennym (szafki dolne, cargo, LeMans, zabudowy AGD pod blatem). */
++export const maBlatKuchenny = (el: { rodzaj?: RodzajElementu; strefa: Strefa; zrodlo?: ZrodloElementu }) =>
++  el.zrodlo !== "model" && el.strefa === "dolna" && !MEBLE.has(rodzajElementu(el)) && wycenianyElement(el);
++
++/** Strony boku waterfall mebla (pusta lista = bez waterfall). */
++export const stronyWaterfall = (el: { waterfall?: StronaWaterfall }): StronaLP[] => (el.waterfall === "LP" ? ["L", "P"] : el.waterfall ? [el.waterfall] : []);
++
++/** Grubość blatu w 3D [cm] – jak bryła blatu w AgdBryla (rozkrój bierze grubość z materiału blatu). */
++export const GRUBOSC_BLATU_3D = 2.8;
++
++/**
++ * Bok waterfall w środku ciągu: po tej stronie mebla stoi inny mebel (bok nie ma gdzie zejść).
++ * Waterfall zwykle zamyka ciąg albo wyspę.
++ */
++export function ostrzezeniaWaterfall(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
++  const out: string[] = [];
++  for (const el of plan.elementy) {
++    if (!el.waterfall || (id && el.id !== id) || el.kat) continue;
++    const th = (el.rot * Math.PI) / 180;
++    const R = { x: Math.cos(th), z: -Math.sin(th) };
++    const F = { x: Math.sin(th), z: Math.cos(th) };
++    for (const s of stronyWaterfall(el)) {
++      const sasiad = plan.elementy.find((o) => {
++        if (o.id === el.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) return false;
++        const r = rect(o);
++        const rogi = [
++          [r.x0, r.z0],
++          [r.x1, r.z0],
++          [r.x0, r.z1],
++          [r.x1, r.z1],
++        ].map(([x, z]) => ({ u: (x - el.x) * R.x + (z - el.z) * R.z, v: (x - el.x) * F.x + (z - el.z) * F.z }));
++        const u0 = Math.min(...rogi.map((q) => q.u));
++        const u1 = Math.max(...rogi.map((q) => q.u));
++        const v0 = Math.min(...rogi.map((q) => q.v));
++        const v1 = Math.max(...rogi.map((q) => q.v));
++        if (v1 <= -el.d / 2 + 1 || v0 >= el.d / 2 - 1) return false;
++        const krawedz = s === "L" ? -el.w / 2 : el.w / 2;
++        return s === "L" ? u1 > krawedz - GRUBOSC_BLATU_3D - 0.5 && u0 < krawedz : u0 < krawedz + GRUBOSC_BLATU_3D + 0.5 && u1 > krawedz;
++      });
++      if (sasiad) out.push(`„${el.nazwa}”: bok waterfall po ${s === "L" ? "lewej" : "prawej"} styka się z „${sasiad.nazwa}” – waterfall zamyka ciąg, przesuń go na koniec rzędu.`);
++    }
++  }
++  return out;
++}
++
++/** Krótki opis opcji mebla do PDF i listy pozycji: strona zawiasu, LeMans, cargo, waterfall. Pusta lista = brak opcji. */
++export function opisOpcjiMebla(el: ElementKuchni): string[] {
++  const out: string[] = [];
++  if (el.hinge) out.push(`zawiasy ${el.hinge === "L" ? "lewe" : "prawe"}`);
++  const r = rodzajElementu(el);
++  if (r === "lemans" && el.zrodlo !== "model") {
++    const u = lemansElementu(el);
++    out.push(`narożnik ${u.strona === "L" ? "lewy" : "prawy"}, front ${u.front} mm, blenda ${u.blenda} mm`);
++  }
++  if (r === "cargo" && el.zrodlo !== "model") out.push(el.strefa === "wysoka" ? "cargo wysokie z koszami" : "cargo z koszem 2-poziomowym");
++  if (el.waterfall) out.push(`blat waterfall ${el.waterfall === "LP" ? "z obu stron" : el.waterfall === "L" ? "z lewej" : "z prawej"}`);
++  return out;
++}
++
++/** Uwagi wykonawcze do PDF oferty (np. łączenie blatu waterfall na 45°). */
++export function uwagiWykonawcze(plan: Pick<PlanKuchni, "elementy">): string[] {
++  const out: string[] = [];
++  const wf = plan.elementy.filter((e) => e.waterfall);
++  if (wf.length)
++    out.push(
++      `Blat waterfall (${wf.map((e) => e.nazwa).join(", ")}): bok z materiału blatu schodzi do podłogi, grubość i głębokość jak blat. Łączenie boku z blatem na 45° (ucios) – wymiar do ustalenia na pomiarze; kreator nie liczy uciosu.`,
++    );
++  return out;
++}
++
++/** Ustawienia narożnika LeMans (brak w elemencie = domyślne). */
++export const lemansElementu = (el: { lemans?: UstawieniaLemans }): UstawieniaLemans => el.lemans ?? LEMANS_DOMYSLNIE;
++
++/**
++ * Czy szafka prostopadła do narożnika LeMans zostawia miejsce na front i uchwyt. Dla każdego LeMans:
++ * mebel stojący przed jego frontem (pas 30 cm) od strony części ślepej – ile zajmuje szerokości [mm]
++ * razem z frontem (18 mm). Wolne = szerokość − front LeMans − zajęte; mniej niż LEMANS.odstepUchwyt – ostrzeżenie;
++ * dużo więcej niż blenda – część ślepa odkryta. Dokładny kąt (kat) pomijamy – tylko obroty co 90°.
++ */
++export function ostrzezeniaLemans(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
++  const out: string[] = [];
++  for (const lm of plan.elementy) {
++    if (rodzajElementu(lm) !== "lemans" || lm.zrodlo === "model" || lm.kat || (id && lm.id !== id)) continue;
++    const u = lemansElementu(lm);
++    const p = podzialLemans(lm.w, u);
++    const th = (lm.rot * Math.PI) / 180;
++    // Oś szerokości (w prawo patrząc na front) i oś frontu w rzucie [cm] – jak obrót w scenie 3D (rotation.y).
++    const R = { x: Math.cos(th), z: -Math.sin(th) };
++    const F = { x: Math.sin(th), z: Math.cos(th) };
++    const lok = (x: number, z: number) => ({ u: (x - lm.x) * R.x + (z - lm.z) * R.z, v: (x - lm.x) * F.x + (z - lm.z) * F.z });
++    let zajete = 0;
++    let sasiad: ElementKuchni | null = null;
++    for (const o of plan.elementy) {
++      if (o.id === lm.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) continue;
++      const r = rect(o);
++      const rogi = [lok(r.x0, r.z0), lok(r.x1, r.z0), lok(r.x0, r.z1), lok(r.x1, r.z1)];
++      const u0 = Math.min(...rogi.map((q) => q.u));
++      const u1 = Math.max(...rogi.map((q) => q.u));
++      const v0 = Math.min(...rogi.map((q) => q.v));
++      const v1 = Math.max(...rogi.map((q) => q.v));
++      // Stoi przed frontem (od płaszczyzny frontu do 30 cm przed nią) i w obrębie szerokości korpusu.
++      if (v1 <= lm.d / 2 + 0.5 || v0 >= lm.d / 2 + 30 || u1 <= -lm.w / 2 + 0.5 || u0 >= lm.w / 2 - 0.5) continue;
++      const odSlepej = u.strona === "L" ? u1 + lm.w / 2 : lm.w / 2 - u0;
++      const mm = Math.round(odSlepej * 10) + (o.zrodlo === "model" ? 0 : 18);
++      if (mm > zajete) {
++        zajete = mm;
++        sasiad = o;
++      }
++    }
++    const wolne = p.W - u.front - zajete;
++    if (!sasiad) out.push(`„${lm.nazwa}”: brak szafki prostopadłej przed częścią ślepą (${p.slepa} mm) – w narożniku L dosuń szafkę ze ściany obok.`);
++    else if (wolne < LEMANS.odstepUchwyt)
++      out.push(
++        wolne < 0
++          ? `„${sasiad.nazwa}” zasłania front narożnika „${lm.nazwa}” o ${-wolne} mm – odsuń ją albo zmień stronę LeMans.`
++          : `„${sasiad.nazwa}” stoi ${wolne} mm od frontu „${lm.nazwa}” – za mało na uchwyt i otwarcie (min. ${LEMANS.odstepUchwyt} mm).`,
++      );
++    else if (wolne > u.blenda + 20) out.push(`„${lm.nazwa}”: między szafką „${sasiad.nazwa}” a frontem jest ${wolne} mm, blenda ma ${u.blenda} mm – poszerz blendę albo dosuń szafkę.`);
++  }
++  return out;
++}
++
++/**
++ * Okucia oferty jako osobne pozycje (okucia.ts): wysuwy z wybranym typem prowadnic, kosze cargo, LeMans.
++ * Ceny z cennika tylko przy cenach z cennika; przy cenach wpisanych ręcznie firma podaje kwotę mebla z okuciami,
++ * więc pozycje mają samą ilość (cena undefined).
++ */
++export function okuciaOferty(plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik): (PozycjaOkuc & { cena?: number; kwota?: number })[] {
++  const lista = okuciaPlanu(plan.elementy.filter(wycenianyElement));
++  if (trybCen(plan) === "reczne") return lista;
++  return lista.map((p) => {
++    const cena = cenaOkucia(p.klucz, cennik);
++    return { ...p, cena, kwota: Math.round(cena * p.ilosc * 100) / 100 };
++  });
++}
++
++/** Suma okuć w ofercie [zł netto]; 0 przy cenach ręcznych i w starych ofertach (bez nowych okuć). */
++export const sumaOkuc = (plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik) => okuciaOferty(plan, cennik).reduce((s, p) => s + (p.kwota ?? 0), 0);
++
+ /** Pozycje bez wpisanej ceny (ceny ręczne bez ceny ogólnej) – do podpowiedzi „uzupełnij ceny”. */
+ export const bezCeny = (plan: PlanKuchni) =>
+   trybCen(plan) === "reczne" && plan.cenaOgolna === undefined ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : [];
+@@ -1027,10 +1216,10 @@ export function plytaProjektu(plan: PlanKuchni) {
+   return Math.round(m2 * 100) / 100;
+ }
+ 
+-/** Suma netto oferty bez dopłat za materiały: meble + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
++/** Suma netto oferty bez dopłat za materiały: meble + okucia + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
+ export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
+   if (!plan.elementy.length) return 0;
+-  const meble = sumaMebli(plan, cennik);
++  const meble = sumaMebli(plan, cennik) + sumaOkuc(plan, cennik);
+   const dodatki = wycenDodatki(plan.dodatki, cennik, { meble, mb: metryBiezace(plan) }).reduce((s, d) => s + d.kwota, 0);
+   return Math.max(1, meble + dodatki);
+ }
+@@ -1152,6 +1341,23 @@ export function parseKuchnia(v: unknown): PlanKuchni {
+       blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
+     }
+     const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
++    const hinge = e.hinge === undefined || e.hinge === null ? undefined : jedno(e.hinge, STRONY_LP, `strona zawiasu „${nazwa}”`);
++    const waterfall =
++      e.waterfall === undefined || e.waterfall === null
++        ? undefined
++        : maBlatKuchenny({ rodzaj, strefa, zrodlo })
++          ? jedno(e.waterfall, STRONY_WATERFALL, `blat waterfall „${nazwa}”`)
++          : blad(`„${nazwa}”: blat waterfall tylko przy szafce dolnej pod blatem.`);
++    // Typ prowadnic: zostaje tylko przy meblu z szufladami albo cargo (po zmianie wnętrza bez szuflad – znika).
++    const prowadniceSurowe = e.prowadnice === undefined || e.prowadnice === null ? undefined : jedno(e.prowadnice, TYPY_PROWADNIC, `prowadnice „${nazwa}”`);
++    let lemans: UstawieniaLemans | undefined;
++    if (rodzaj === "lemans" && e.lemans !== undefined && e.lemans !== null) {
++      try {
++        lemans = parseLemans(e.lemans, w, `„${nazwa}”`);
++      } catch (err) {
++        blad(err instanceof Error ? err.message : `„${nazwa}”: złe ustawienia LeMans.`);
++      }
++    }
+     return {
+       id,
+       nazwa,
+@@ -1169,6 +1375,10 @@ export function parseKuchnia(v: unknown): PlanKuchni {
+       ...(wnetrze ? { wnetrze } : {}),
+       ...(kolory ? { kolory } : {}),
+       ...(cena !== undefined ? { cena } : {}),
++      ...(hinge ? { hinge } : {}),
++      ...(lemans ? { lemans } : {}),
++      ...(waterfall ? { waterfall } : {}),
++      ...(prowadniceSurowe && maProwadnice({ rodzaj, strefa, zrodlo, w, h, d, wnetrze }) ? { prowadnice: prowadniceSurowe } : {}),
+     };
+   });
+   let wywiad: Wywiad | undefined;
+@@ -1215,6 +1425,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
+     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
+     ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),
+     ...(typeof o.doplaty === "boolean" ? { doplaty: o.doplaty } : {}),
++    ...(o.bezCen === true ? { bezCen: true } : {}),
+   };
+   const kolizja = opiszKolizje(plan);
+   if (kolizja) blad(kolizja);
+diff --git a/src/lib/lemans.ts b/src/lib/lemans.ts
+new file mode 100644
+index 0000000..5d0916c
+--- /dev/null
++++ b/src/lib/lemans.ts
+@@ -0,0 +1,68 @@
++/*
++ * Narożnik typu LeMans (szafka dolna w narożniku L): korpus 100–120 cm, którego część „ślepa” chowa się za
++ * szafką prostopadłą, w miejscu styku blenda (zaślepka) na całą wysokość frontu, dalej otwierany front z koszami
++ * „nerkami”, które wyjeżdżają z obrotem. Strona L = część ślepa po lewej (patrząc na front), P = po prawej.
++ *
++ * Podział szerokości (mm): ślepa + blenda + front = szerokość korpusu. Wymiary mebla w cm, tu mm.
++ * Bez importów z kuchnia.ts (kuchnia.ts importuje ten plik).
++ */
++import type { StronaLP } from "./wnetrze";
++
++export type UstawieniaLemans = {
++  /** Strona części ślepej (narożnika), patrząc na front. */
++  strona: StronaLP;
++  /** Szerokość blendy [mm], 50–100. */
++  blenda: number;
++  /** Szerokość frontu [mm], 400–600. */
++  front: number;
++};
++
++export const LEMANS = {
++  blenda: { min: 50, max: 100 },
++  front: { min: 400, max: 600 },
++  /** Najmniejsza część ślepa [mm] – mechanizm potrzebuje miejsca na kosz tylny. */
++  slepaMin: 300,
++  /** Najmniejszy odstęp od frontu sąsiedniej szafki do krawędzi frontu LeMans [mm] – miejsce na uchwyt. */
++  odstepUchwyt: 40,
++} as const;
++
++export const LEMANS_DOMYSLNIE: UstawieniaLemans = { strona: "L", blenda: 70, front: 450 };
++
++/** Podział korpusu [mm] od lewej krawędzi (patrząc na front): ślepa, blenda, front – dla strony L i P. */
++export function podzialLemans(wCm: number, u: UstawieniaLemans) {
++  const W = Math.round(wCm * 10);
++  const slepa = W - u.front - u.blenda;
++  const lewo = u.strona === "L";
++  return {
++    W,
++    slepa,
++    blenda: u.blenda,
++    front: u.front,
++    /** Przedziały [od, do] w mm od lewej krawędzi korpusu. */
++    xSlepa: lewo ? ([0, slepa] as const) : ([W - slepa, W] as const),
++    xBlenda: lewo ? ([slepa, slepa + u.blenda] as const) : ([u.front, u.front + u.blenda] as const),
++    xFront: lewo ? ([W - u.front, W] as const) : ([0, u.front] as const),
++  };
++}
++
++/** Błąd ustawień (null = dobrze). */
++export function sprawdzLemans(wCm: number, u: UstawieniaLemans): string | null {
++  if (u.blenda < LEMANS.blenda.min || u.blenda > LEMANS.blenda.max) return `Blenda LeMans: od ${LEMANS.blenda.min} do ${LEMANS.blenda.max} mm.`;
++  if (u.front < LEMANS.front.min || u.front > LEMANS.front.max) return `Front LeMans: od ${LEMANS.front.min} do ${LEMANS.front.max} mm.`;
++  if (podzialLemans(wCm, u).slepa < LEMANS.slepaMin) return `Narożnik LeMans: na część ślepą zostaje mniej niż ${LEMANS.slepaMin} mm – poszerz korpus albo zwęź front.`;
++  return null;
++}
++
++export function parseLemans(v: unknown, wCm: number, gdzie: string): UstawieniaLemans {
++  const zle = (m: string): never => {
++    throw new Error(`${gdzie}: ${m}`);
++  };
++  if (!v || typeof v !== "object" || Array.isArray(v)) zle("ustawienia narożnika LeMans mają zły format.");
++  const o = v as Record<string, unknown>;
++  if (o.strona !== "L" && o.strona !== "P") zle("strona narożnika LeMans musi być L albo P.");
++  const liczba = (x: unknown, pole: string) => (typeof x === "number" && Number.isFinite(x) ? Math.round(x) : zle(`${pole} narożnika LeMans musi być liczbą.`));
++  const u: UstawieniaLemans = { strona: o.strona as StronaLP, blenda: liczba(o.blenda, "blenda"), front: liczba(o.front, "front") };
++  const blad = sprawdzLemans(wCm, u);
++  if (blad) zle(blad);
++  return u;
++}
+diff --git a/src/lib/modul.ts b/src/lib/modul.ts
+index 5d10b46..199dd16 100644
+--- a/src/lib/modul.ts
++++ b/src/lib/modul.ts
+@@ -8,6 +8,8 @@
+  *   2 listwy górne (szer × 10 cm)
+  *   front: szer × wys
+  */
++import type { KluczOkucia } from "./okucia";
++
+ export type ModulDims = {
+   /** szerokość [cm] */
+   w: number;
+@@ -32,6 +34,8 @@ export type ModulCennik = {
+   szuflada?: number;
+   /** Drążek w szafie (za sztukę). */
+   drazek?: number;
++  /** Okucia pokazywane w ofercie osobno (wysuwy, kosze cargo, LeMans) – za komplet. Brak = CENY_OKUC_DOMYSLNE (okucia.ts). */
++  okucia?: Partial<Record<KluczOkucia, number>>;
+   /**
+    * Płyty korpusów do wyboru w ofercie (grubość, format arkusza, cena za arkusz). Brak = jedna płyta 18 mm
+    * z ceną plytaM2. Przy zapisie cennika plytaM2 = cena za m² płyty domyślnej (stare wyliczenia działają dalej).
+diff --git a/src/lib/okucia.test.ts b/src/lib/okucia.test.ts
+new file mode 100644
+index 0000000..507018b
+--- /dev/null
++++ b/src/lib/okucia.test.ts
+@@ -0,0 +1,71 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { bazaKuchni, okuciaOferty, pustyPlan, sumaMebli, type ElementKuchni, type PlanKuchni } from "./kuchnia";
++import { cenaKoncowa } from "./cenaKoncowa";
++import { DEFAULT_CENNIK } from "./modul";
++import { CENY_OKUC_DOMYSLNE } from "./okucia";
++
++const el = (o: Partial<ElementKuchni>): ElementKuchni => ({ id: "abcd1234", nazwa: "Mebel", zrodlo: "modul", strefa: "dolna", rodzaj: "szafka", w: 60, h: 72, d: 56, x: 30, z: 28, rot: 0, ...o });
++const plan = (...elementy: ElementKuchni[]): PlanKuchni => ({ ...pustyPlan("ciag"), scianaA: 400, elementy });
++
++test("stara oferta (bez cargo i typów prowadnic): brak pozycji okuć, cena = meble + dodatki jak dotąd", () => {
++  const p = plan(el({}), el({ id: "efgh5678", rodzaj: "szuflady", x: 90 }));
++  assert.deepEqual(okuciaOferty(p, DEFAULT_CENNIK), []);
++  assert.equal(bazaKuchni(p, DEFAULT_CENNIK), Math.max(1, sumaMebli(p, DEFAULT_CENNIK)));
++  assert.equal(cenaKoncowa({ plan: p, cennik: DEFAULT_CENNIK }).okucia, 0);
++});
++
++test("cargo: kosz i prowadnice ukryte jako osobne pozycje okuć, doliczone do ceny", () => {
++  const p = plan(el({ rodzaj: "cargo", w: 30 }), el({ id: "efgh5678", rodzaj: "cargo", strefa: "wysoka", w: 30, h: 210, x: 90 }));
++  const o = okuciaOferty(p, DEFAULT_CENNIK);
++  assert.deepEqual(
++    o.map((x) => [x.klucz, x.ilosc]),
++    [
++      ["prowadnice-ukryte", 2],
++      ["kosz-cargo", 1],
++      ["cargo-wysokie", 1],
++    ],
++  );
++  const okucia = 2 * CENY_OKUC_DOMYSLNE["prowadnice-ukryte"] + CENY_OKUC_DOMYSLNE["kosz-cargo"] + CENY_OKUC_DOMYSLNE["cargo-wysokie"];
++  assert.equal(bazaKuchni(p, DEFAULT_CENNIK), sumaMebli(p, DEFAULT_CENNIK) + okucia);
++  const c = cenaKoncowa({ plan: p, cennik: DEFAULT_CENNIK });
++  assert.equal(c.okucia, okucia);
++  assert.equal(c.baza, bazaKuchni(p, DEFAULT_CENNIK));
++});
++
++test("ceny ręczne: okucia z ilością, bez kwot i bez wpływu na sumę", () => {
++  const p = { ...plan(el({ rodzaj: "cargo", w: 30, cena: 1000 })), ceny: "reczne" as const };
++  const o = okuciaOferty(p, DEFAULT_CENNIK);
++  assert.equal(o.length, 2);
++  assert.ok(o.every((x) => x.kwota === undefined));
++  assert.equal(bazaKuchni(p, DEFAULT_CENNIK), 1000);
++});
++
++test("wysuwy: szuflady 60 z typem prowadnic – osobna pozycja z ilością, bez podwójnej dopłaty", async () => {
++  const { wnetrzeDomyslne, zliczWnetrze } = await import("./wnetrze");
++  const { cenaElementu } = await import("./kuchnia");
++  const baza = el({ rodzaj: "szuflady" });
++  const n = zliczWnetrze(baza, wnetrzeDomyslne(baza)!).szuflady;
++  assert.ok(n >= 2);
++  const p = plan({ ...baza, prowadnice: "kulkowe" });
++  assert.deepEqual(
++    okuciaOferty(p, DEFAULT_CENNIK).map((x) => [x.klucz, x.ilosc, x.kwota]),
++    [["prowadnice-kulkowe", n, n * CENY_OKUC_DOMYSLNE["prowadnice-kulkowe"]]],
++  );
++  // Zapisane wnętrze z szufladami: dopłata „szuflada” znika, gdy prowadnice są osobną pozycją.
++  const wn = wnetrzeDomyslne(baza)!;
++  const bez = cenaElementu({ ...baza, wnetrze: wn }, DEFAULT_CENNIK)!;
++  const z = cenaElementu({ ...baza, wnetrze: wn, prowadnice: "ukryte" }, DEFAULT_CENNIK)!;
++  assert.equal(bez - z, n * (DEFAULT_CENNIK.szuflada ?? 0));
++  // Cennik firmy z własną ceną prowadnic.
++  const c = { ...DEFAULT_CENNIK, okucia: { "prowadnice-kulkowe": 99 } };
++  assert.equal(okuciaOferty(p, c)[0].kwota, n * 99);
++});
++
++test("wysuwy: parser zostawia typ przy szufladach i cargo, usuwa przy szafce z samymi drzwiami", async () => {
++  const { parseKuchnia } = await import("./kuchnia");
++  assert.equal(parseKuchnia(plan(el({ rodzaj: "szuflady", prowadnice: "rolkowe" }))).elementy[0].prowadnice, "rolkowe");
++  assert.equal(parseKuchnia(plan(el({ rodzaj: "cargo", w: 30, prowadnice: "kulkowe" }))).elementy[0].prowadnice, "kulkowe");
++  assert.equal(parseKuchnia(plan(el({ prowadnice: "rolkowe" }))).elementy[0].prowadnice, undefined);
++  assert.throws(() => parseKuchnia(plan(el({ rodzaj: "szuflady", prowadnice: "magnetyczne" as never }))), /prowadnice/);
++});
+diff --git a/src/lib/okucia.ts b/src/lib/okucia.ts
+new file mode 100644
+index 0000000..34bbab8
+--- /dev/null
++++ b/src/lib/okucia.ts
+@@ -0,0 +1,121 @@
++/*
++ * Okucia, które oferta pokazuje jako osobne pozycje: wysuwy (typ prowadnic szuflad i cargo), kosze cargo,
++ * mechanizm cargo wysokie, mechanizm narożnika typu LeMans. Wspólne dla ceny (kuchnia.ts → bazaKuchni,
++ * cenaKoncowa), PDF oferty i listy formatek. Nazwy systemów tylko opisowo, bez marek producentów.
++ *
++ * Zgodność wstecz: szuflada bez wybranego typu prowadnic liczy się jak dotąd (dopłata „szuflada” z cennika
++ * w cenie mebla) i nie trafia tutaj. Pozycja okuć powstaje dopiero, gdy mebel ma typ prowadnic albo jest
++ * cargo / LeMans (nowe rodzaje) – stare oferty mają tu pustą listę i tę samą cenę.
++ *
++ * Wymiary elementu w cm (jak plan), długości okuć w mm.
++ */
++import type { ModulCennik } from "./modul";
++import { wnetrzeDomyslne, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
++
++export type TypProwadnic = "rolkowe" | "kulkowe" | "ukryte";
++export const TYPY_PROWADNIC: readonly TypProwadnic[] = ["rolkowe", "kulkowe", "ukryte"];
++export const PROWADNICE_LABEL: Record<TypProwadnic, string> = {
++  rolkowe: "rolkowe",
++  kulkowe: "kulkowe, pełny wysuw",
++  ukryte: "ukryte z cichym domykiem",
++};
++/** Cargo i LeMans bez wybranego typu: ukryte z cichym domykiem (tak się je zwykle zamawia). */
++export const PROWADNICE_CARGO: TypProwadnic = "ukryte";
++
++export type KluczOkucia = "prowadnice-rolkowe" | "prowadnice-kulkowe" | "prowadnice-ukryte" | "kosz-cargo" | "cargo-wysokie" | "lemans";
++export const KLUCZE_OKUC: readonly KluczOkucia[] = ["prowadnice-rolkowe", "prowadnice-kulkowe", "prowadnice-ukryte", "kosz-cargo", "cargo-wysokie", "lemans"];
++export const OKUCIE_LABEL: Record<KluczOkucia, string> = {
++  "prowadnice-rolkowe": "Prowadnice rolkowe (kpl.)",
++  "prowadnice-kulkowe": "Prowadnice kulkowe, pełny wysuw (kpl.)",
++  "prowadnice-ukryte": "Prowadnice ukryte z cichym domykiem (kpl.)",
++  "kosz-cargo": "Kosz cargo dolny, 2 poziomy (kpl.)",
++  "cargo-wysokie": "Mechanizm cargo wysokie z koszami (kpl.)",
++  lemans: "Mechanizm narożny typu LeMans (kpl.)",
++};
++/** Ceny netto za komplet, gdy cennik firmy ich nie ma [zł]. */
++export const CENY_OKUC_DOMYSLNE: Record<KluczOkucia, number> = {
++  "prowadnice-rolkowe": 30,
++  "prowadnice-kulkowe": 70,
++  "prowadnice-ukryte": 160,
++  "kosz-cargo": 420,
++  "cargo-wysokie": 1500,
++  lemans: 1100,
++};
++
++export const cenaOkucia = (k: KluczOkucia, c: Pick<ModulCennik, "okucia">) => c.okucia?.[k] ?? CENY_OKUC_DOMYSLNE[k];
++
++type ElementOkuc = {
++  rodzaj?: string;
++  strefa: string;
++  zrodlo?: string;
++  w: number;
++  h: number;
++  d: number;
++  wnetrze?: Wnetrze;
++  prowadnice?: TypProwadnic;
++  lemans?: { strona: StronaLP };
++};
++
++/** Długość prowadnicy [mm] z głębokości mebla [cm]: najbliższa mniejsza pełna 50-tka (plecy i luz 40 mm). */
++export const dlugoscProwadnicy = (dCm: number) => Math.max(250, Math.min(650, Math.floor((dCm * 10 - 3 - 40) / 50) * 50));
++
++/** Kosze w cargo wysokim: 5 do 200 cm wysokości, wyżej 6. */
++export const koszeCargoWysokiego = (hCm: number) => (hCm > 200 ? 6 : 5);
++
++export const jestCargo = (el: { rodzaj?: string }) => el.rodzaj === "cargo";
++export const cargoWysokie = (el: { rodzaj?: string; strefa: string }) => jestCargo(el) && el.strefa === "wysoka";
++
++/** Typ prowadnic mebla: wybrany, a dla cargo bez wyboru – ukryte. null = szuflady „jak dotąd” (bez osobnej pozycji). */
++export function prowadniceElementu(el: Pick<ElementOkuc, "rodzaj" | "prowadnice">): TypProwadnic | null {
++  if (el.prowadnice) return el.prowadnice;
++  return jestCargo(el) ? PROWADNICE_CARGO : null;
++}
++
++/** Ile kompletów prowadnic mebel ma: szuflady z wnętrza (z frontem albo za drzwiami) albo 1 dla cargo. */
++export function kompletyProwadnic(el: ElementOkuc): number {
++  if (el.zrodlo === "model") return 0;
++  if (jestCargo(el)) return 1;
++  if (el.rodzaj === "lemans") return 0;
++  const wn = el.wnetrze ?? wnetrzeDomyslne(el);
++  return wn ? zliczWnetrze(el, wn).szuflady : 0;
++}
++
++/** Czy przy tym meblu wybór typu prowadnic ma sens (szuflady albo cargo). */
++export const maProwadnice = (el: ElementOkuc) => kompletyProwadnic(el) > 0;
++
++/** wariant – np. strona mechanizmu LeMans (L/P): osobna pozycja do zamówienia, ta sama cena. */
++export type PozycjaOkuc = { klucz: KluczOkucia; wariant?: StronaLP; nazwa: string; ilosc: number };
++
++const nazwaOkucia = (k: KluczOkucia, wariant?: StronaLP) =>
++  wariant ? OKUCIE_LABEL[k].replace(" (kpl.)", `, ${wariant === "L" ? "lewy" : "prawy"} (kpl.)`) : OKUCIE_LABEL[k];
++
++/** Okucia jednego mebla jako pozycje oferty (patrz komentarz na górze: stare meble – pusta lista). */
++export function okuciaElementu(el: ElementOkuc): PozycjaOkuc[] {
++  if (el.zrodlo === "model") return [];
++  const out: PozycjaOkuc[] = [];
++  const typ = prowadniceElementu(el);
++  const n = kompletyProwadnic(el);
++  if (typ && n) out.push({ klucz: `prowadnice-${typ}`, nazwa: OKUCIE_LABEL[`prowadnice-${typ}`], ilosc: n });
++  if (jestCargo(el)) {
++    if (cargoWysokie(el)) out.push({ klucz: "cargo-wysokie", nazwa: OKUCIE_LABEL["cargo-wysokie"], ilosc: 1 });
++    else out.push({ klucz: "kosz-cargo", nazwa: OKUCIE_LABEL["kosz-cargo"], ilosc: 1 });
++  }
++  if (el.rodzaj === "lemans") {
++    const strona = el.lemans?.strona ?? "L";
++    out.push({ klucz: "lemans", wariant: strona, nazwa: nazwaOkucia("lemans", strona), ilosc: 1 });
++  }
++  return out;
++}
++
++/** Okucia całego planu zsumowane po rodzaju i wariancie (kolejność jak KLUCZE_OKUC, potem L przed P). */
++export function okuciaPlanu(elementy: readonly ElementOkuc[]): PozycjaOkuc[] {
++  const suma = new Map<string, PozycjaOkuc>();
++  for (const el of elementy)
++    for (const p of okuciaElementu(el)) {
++      const k = `${p.klucz}|${p.wariant ?? ""}`;
++      const b = suma.get(k);
++      suma.set(k, b ? { ...b, ilosc: b.ilosc + p.ilosc } : { ...p });
++    }
++  const kolej = (p: PozycjaOkuc) => KLUCZE_OKUC.indexOf(p.klucz) * 3 + (p.wariant === "P" ? 2 : p.wariant === "L" ? 1 : 0);
++  return Array.from(suma.values()).sort((a, b) => kolej(a) - kolej(b));
++}
+diff --git a/src/lib/opcjeProjektu.ts b/src/lib/opcjeProjektu.ts
+index f9f9a06..3c8dba3 100644
+--- a/src/lib/opcjeProjektu.ts
++++ b/src/lib/opcjeProjektu.ts
+@@ -41,6 +41,8 @@ function grupyModulu(el: ElementKuchni): GrupyMaterialow {
+   if (ZABUDOWA.has(rodzaj)) return { front: true, blat: el.strefa === "dolna", okucia: true };
+   // Piekarnik pod blatem: blat nad nim; drzwi piekarnika to nie front meblowy.
+   if (rodzaj === "piekarnik") return { front: false, blat: el.strefa === "dolna", okucia: false };
++  // Cargo i narożnik LeMans: front meblowy z uchwytem, bez edytowalnego wnętrza.
++  if (rodzaj === "cargo" || rodzaj === "lemans") return { front: true, blat: el.strefa === "dolna", okucia: true };
+   if (!kategoriaWnetrza(el)) return { front: false, blat: false, okucia: false };
+   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
+   const maFront = !!wn && (wn.front !== "otwarte" || wn.kolumny.some((k) => k.sekcje.some((s) => s.typ === "szuflada")));
+diff --git a/src/lib/wnetrze.test.ts b/src/lib/wnetrze.test.ts
+new file mode 100644
+index 0000000..6fcc696
+--- /dev/null
++++ b/src/lib/wnetrze.test.ts
+@@ -0,0 +1,40 @@
++import { test } from "node:test";
++import assert from "node:assert/strict";
++import { jednoSkrzydlo, zawiasLewy } from "./wnetrze";
++import { frontyElementu } from "../components/rysunek/rysunekTechniczny";
++import { parseKuchnia, pustyPlan, type ElementKuchni } from "./kuchnia";
++
++const szafka = (o: Partial<ElementKuchni> = {}): ElementKuchni => ({ id: "abcd1234", nazwa: "Szafka dolna 60", zrodlo: "modul", strefa: "dolna", rodzaj: "szafka", w: 60, h: 72, d: 56, x: 30, z: 28, rot: 0, ...o });
++
++test("strona zawiasu: brak pola = lewa (jak dotąd), P = prawa, kolumny bez zmian", () => {
++  assert.equal(zawiasLewy(undefined, 0, 1), true);
++  assert.equal(zawiasLewy("L", 0, 1), true);
++  assert.equal(zawiasLewy("P", 0, 1), false);
++  assert.equal(zawiasLewy("P", 0, 2), true);
++  assert.equal(zawiasLewy("P", 1, 2), false);
++});
++
++test("rysunek: trójkąt otwierania po stronie zawiasu", () => {
++  const drzwi = (el: ElementKuchni) => frontyElementu(el).filter((f) => f.typ === "drzwi");
++  assert.deepEqual(drzwi(szafka()).map((f) => f.zawiasLewy), [true]);
++  assert.deepEqual(drzwi(szafka({ hinge: "P" })).map((f) => f.zawiasLewy), [false]);
++  // Szafka 80 ma dwa skrzydła – pole nie zmienia nic.
++  assert.deepEqual(drzwi(szafka({ w: 80, hinge: "P" })).map((f) => f.zawiasLewy), [true, false]);
++});
++
++test("jednoSkrzydlo: szafka 60, górna i słupek tak; 80, szuflady i model nie", () => {
++  assert.equal(jednoSkrzydlo(szafka()), true);
++  assert.equal(jednoSkrzydlo(szafka({ strefa: "gorna", h: 72, d: 32 })), true);
++  assert.equal(jednoSkrzydlo(szafka({ strefa: "wysoka", h: 210 })), true);
++  assert.equal(jednoSkrzydlo(szafka({ w: 80 })), false);
++  assert.equal(jednoSkrzydlo(szafka({ rodzaj: "szuflady" })), false);
++  assert.equal(jednoSkrzydlo(szafka({ zrodlo: "model", modelId: "abcdefghij12" })), false);
++});
++
++test("parser: hinge zostaje, stara oferta bez pola bez zmian, zła wartość odrzucona", () => {
++  const plan = { ...pustyPlan("ciag"), elementy: [szafka({ hinge: "P" })] };
++  assert.equal(parseKuchnia(plan).elementy[0].hinge, "P");
++  const stary = { ...pustyPlan("ciag"), elementy: [szafka()] };
++  assert.deepEqual(parseKuchnia(stary), stary);
++  assert.throws(() => parseKuchnia({ ...plan, elementy: [{ ...szafka(), hinge: "X" }] }), /strona zawiasu/);
++});
+diff --git a/src/lib/wnetrze.ts b/src/lib/wnetrze.ts
+index 1cb83b9..3c19760 100644
+--- a/src/lib/wnetrze.ts
++++ b/src/lib/wnetrze.ts
+@@ -23,6 +23,9 @@ export type Kolumna = {
+   bezFrontu?: boolean;
+ };
+ export type RodzajFrontu = "drzwi" | "przesuwne" | "otwarte";
++/** Strona (lewa / prawa) – zawias drzwi jednoskrzydłowych, orientacja narożnika LeMans, bok waterfall. */
++export type StronaLP = "L" | "P";
++export const STRONY_LP: readonly StronaLP[] = ["L", "P"];
+ export type Wnetrze = {
+   front: RodzajFrontu;
+   kolumny: Kolumna[];
+@@ -444,6 +447,26 @@ export function dopasujWnetrze(wn: Wnetrze, el: ElementWnetrza): Wnetrze | null
+   return sprawdzWnetrze(el, out).bledy.length ? null : out;
+ }
+ 
++/* ---------- strona zawiasu ---------- */
++
++/**
++ * Czy skrzydło w kolumnie `c` z `n` ma zawias po lewej. Jedna kolumna (szafka jednodrzwiowa): pole `hinge`
++ * mebla, brak = lewa (jak przed dodaniem pola). Kilka kolumn: lewa połowa na lewo, prawa na prawo.
++ * Dwa skrzydła w jednej kolumnie (front > 60 cm) liczy wywołujący: zawsze na zewnątrz.
++ * Ta sama reguła w 3D (MebelParametryczny) i na rysunku (frontyElementu) – trójkąt i animacja się zgadzają.
++ */
++export const zawiasLewy = (hinge: StronaLP | undefined, c: number, n: number) => (n === 1 ? hinge !== "P" : c < n / 2);
++
++/** Mebel z jednym skrzydłem drzwi na kolumnę i jedną kolumną: tylko tu ma sens wybór strony zawiasu. */
++export function jednoSkrzydlo(el: ElementWnetrza & { wnetrze?: Wnetrze; zrodlo?: string }): boolean {
++  if (el.zrodlo === "model") return false;
++  const wn = el.wnetrze ?? wnetrzeDomyslne(el);
++  if (!wn || wn.front !== "drzwi" || wn.kolumny.length !== 1) return false;
++  const k = wn.kolumny[0];
++  if (k.bezFrontu || el.w > GRANICE.skrzydloMax + 0.1) return false;
++  return !!wn.szufladyZaDrzwiami || k.sekcje.some((s) => s.typ !== "szuflada");
++}
++
+ /* ---------- liczenie (cena, opis, PDF) ---------- */
+ 
+ export type Zliczenie = { kolumny: number; polki: number; szuflady: number; drazki: number; przegrody: number; plytaM2: number };
