@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { formatkiProjektu, type MaterialFormatki, type ZrodloMaterialow } from "./formatki";
-import { pustyPlan, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { okuciaOferty, ostrzezeniaLemans, parseKuchnia, pustyPlan, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { DEFAULT_CENNIK } from "@/lib/modul";
 
 const PLYTA: MaterialFormatki = { klucz: "plyta", nazwa: "Płyta biała 18 mm", grubosc: 18, sloje: false, rodzaj: "plyta" };
 const zrodlo: ZrodloMaterialow = { material: () => PLYTA, uchwyt: () => ({ nazwa: "listwa", bez: false }), blat: "Blat dąb 38 mm" };
@@ -46,4 +47,50 @@ test("słupek cargo 300 (210 cm): korpus, jeden front na wysokość, mechanizm z
   // 200 cm: 5 koszy.
   const niski = lista(plan(el({ rodzaj: "cargo", strefa: "wysoka", w: 30, h: 200 }))).okucia.map((o) => o.nazwa);
   assert.ok(niski.some((o) => o.includes("5 koszy")));
+});
+
+// LeMans 110 w narożniku L: korpus wzdłuż ściany A (tył przy z = 0), szafka prostopadła ze ściany B stoi przed częścią ślepą.
+const lemansL = (zm: Partial<ElementKuchni> = {}) => el({ id: "lemans01", nazwa: "Narożnik LeMans 110", rodzaj: "lemans", w: 110, x: 55, z: 28, ...zm });
+const prostopadla = (zm: Partial<ElementKuchni> = {}) => el({ id: "bok00001", nazwa: "Szafka B", rot: 90, x: 28, z: 86, ...zm });
+
+test("LeMans L: korpus 1100, blenda 70, front 450, mechanizm lewy, zawiasy", () => {
+  const p = { ...plan(lemansL(), prostopadla()), uklad: "L" as const, scianaB: 300 };
+  const l = lista(p);
+  assert.deepEqual(wymiary(p, "Bok").slice(0, 1), ["720×557×2"]);
+  assert.deepEqual(wymiary(p, "Wieniec dolny").slice(0, 1), ["1064×557×1"]);
+  assert.deepEqual(wymiary(p, "Blenda (zaślepka)"), ["717×70×1"]);
+  assert.deepEqual(wymiary(p, "Front LeMans"), ["717×447×1"]);
+  const okucia = l.okucia.map((o) => o.nazwa);
+  assert.ok(okucia.includes("Mechanizm narożny typu LeMans lewy (front 450 mm, korpus 1100 mm)"), okucia.join(" | "));
+  assert.ok(okucia.includes("Zawiasy puszkowe z prowadnikami"));
+  assert.deepEqual(ostrzezeniaLemans(p), []);
+});
+
+test("LeMans P: blenda i front po lewej, mechanizm prawy, okucia oferty z wariantem P", () => {
+  const lm = lemansL({ lemans: { strona: "P", blenda: 60, front: 500 } });
+  const sasiad = prostopadla({ rot: 270, x: 82, z: 86 });
+  const p = plan(lm, sasiad);
+  assert.deepEqual(wymiary(p, "Blenda (zaślepka)"), ["717×60×1"]);
+  assert.deepEqual(wymiary(p, "Front LeMans"), ["717×497×1"]);
+  assert.ok(lista(p).okucia.some((o) => o.nazwa.startsWith("Mechanizm narożny typu LeMans prawy")));
+  assert.deepEqual(
+    okuciaOferty(p, DEFAULT_CENNIK).map((o) => [o.klucz, o.wariant, o.ilosc]),
+    [["lemans", "P", 1]],
+  );
+  // Sąsiad stoi po prawej (od strony ślepej): wolne = 1100 − 500 − 578 = 22 mm < 40 → ostrzeżenie.
+  assert.match(ostrzezeniaLemans(p).join(" "), /22 mm od frontu/);
+});
+
+test("LeMans: sąsiad za głęboki zasłania front, brak sąsiada – podpowiedź", () => {
+  const p = plan(lemansL(), prostopadla({ d: 65, x: 32.5 }));
+  assert.match(ostrzezeniaLemans(p).join(" "), /zasłania front .* o 18 mm/);
+  assert.match(ostrzezeniaLemans(plan(lemansL())).join(" "), /brak szafki prostopadłej/);
+});
+
+test("LeMans: parser zachowuje ustawienia, odrzuca blendę spoza 50–100 mm", () => {
+  const p = plan(lemansL({ lemans: { strona: "P", blenda: 60, front: 500 } }));
+  assert.deepEqual(parseKuchnia(p).elementy[0].lemans, { strona: "P", blenda: 60, front: 500 });
+  assert.throws(() => parseKuchnia(plan(lemansL({ lemans: { strona: "L", blenda: 120, front: 450 } }))), /Blenda LeMans/);
+  // Stary plan bez pola – domyślne ustawienia, bez zmian w zapisie.
+  assert.equal(parseKuchnia(plan(lemansL())).elementy[0].lemans, undefined);
 });

@@ -1,12 +1,15 @@
 "use client";
 
 /*
- * Opcje zaznaczonego mebla w kroku „Meble”: strona zawiasu drzwi jednoskrzydłowych, szerokość cargo.
+ * Opcje zaznaczonego mebla w kroku „Meble”: strona zawiasu drzwi jednoskrzydłowych, szerokość cargo,
+ * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce).
  * Pokazuje się tylko to, co ma sens dla danego mebla; brak opcji = nic się nie rysuje.
  */
 import type { ReactNode } from "react";
 import { Seg } from "./ui";
-import type { ElementKuchni } from "@/lib/kuchnia";
+import { lemansElementu, ostrzezeniaLemans, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { LEMANS, podzialLemans, sprawdzLemans, type UstawieniaLemans } from "@/lib/lemans";
+import { PoleCm } from "./KreatorWlasciwosci";
 import { jednoSkrzydlo } from "@/lib/wnetrze";
 import { cargoWysokie, jestCargo, koszeCargoWysokiego } from "@/lib/okucia";
 
@@ -23,10 +26,12 @@ function Opcja({ tytul, opis, children }: { tytul: string; opis?: string; childr
 }
 
 export function KreatorOpcjeMebla({
+  plan,
   element,
   onZmien,
   onWymiar,
 }: {
+  plan: PlanKuchni;
   element: ElementKuchni;
   onZmien: (fn: (el: ElementKuchni) => ElementKuchni) => void;
   /** Zmiana wymiaru z dosunięciem rzędu (jak pola wymiarów). */
@@ -49,6 +54,37 @@ export function KreatorOpcjeMebla({
           }}
           options={[...SZEROKOSCI_CARGO.map((v) => ({ value: v, label: `${v} cm` })), ...((SZEROKOSCI_CARGO as readonly string[]).includes(szer) ? [] : [{ value: "inna", label: `${szer} cm` }])]}
         />
+      </Opcja>,
+    );
+  }
+  if (element.rodzaj === "lemans" && element.zrodlo !== "model") {
+    const u = lemansElementu(element);
+    const p = podzialLemans(element.w, u);
+    const ustaw = (zm: Partial<UstawieniaLemans>) => {
+      const nowe = { ...u, ...zm };
+      if (!sprawdzLemans(element.w, nowe)) onZmien((el) => ({ ...el, lemans: nowe }));
+    };
+    const ostrzezenia = ostrzezeniaLemans(plan, element.id);
+    opcje.push(
+      <Opcja key="lemans" tytul="Narożnik LeMans" opis={`Część ślepa ${p.slepa} mm (za szafką prostopadłą) + blenda ${p.blenda} mm + front ${p.front} mm = ${p.W} mm.`}>
+        <Seg
+          label="Strona części ślepej narożnika LeMans"
+          value={u.strona}
+          onChange={(v) => ustaw({ strona: v })}
+          options={[
+            { value: "L", label: "Narożnik po lewej" },
+            { value: "P", label: "Narożnik po prawej" },
+          ]}
+        />
+        <div className="kr-dims kr-dims-2">
+          <PoleCm id="k-lm-front" label="Front" jedn="mm" value={u.front} min={LEMANS.front.min} max={Math.min(LEMANS.front.max, p.W - u.blenda - LEMANS.slepaMin)} onCommit={(n) => ustaw({ front: Math.round(n) })} />
+          <PoleCm id="k-lm-blenda" label="Blenda" jedn="mm" value={u.blenda} min={LEMANS.blenda.min} max={LEMANS.blenda.max} onCommit={(n) => ustaw({ blenda: Math.round(n) })} />
+        </div>
+        {ostrzezenia.map((t) => (
+          <p key={t} className="kr-warn" role="status">
+            {t}
+          </p>
+        ))}
       </Opcja>,
     );
   }

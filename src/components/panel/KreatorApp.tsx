@@ -49,6 +49,7 @@ import {
   wstawPrzyklad,
   wstawPrzykladMebli,
   wystajePozaSciany,
+  ostrzezeniaLemans,
   wycenianyElement,
   opisPozaWycena,
   zmienWymiar,
@@ -1447,6 +1448,13 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                     }}
                   />
                   {wystajePozaSciany(plan) ? <p className="kr-warn">Część elementów wystaje poza długość ścian. Wydłuż ścianę albo przysuń je.</p> : null}
+                  {element?.rodzaj === "lemans"
+                    ? null
+                    : ostrzezeniaLemans(plan).map((t) => (
+                        <p key={t} className="kr-warn">
+                          {t}
+                        </p>
+                      ))}
                 </div>
               ) : krok === "materialy" ? (
                 <div className="kr-krok" data-krok="materialy">

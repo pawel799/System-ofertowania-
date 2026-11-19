@@ -9,7 +9,8 @@
  *
  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
  */
-import { MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { lemansElementu, MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { podzialLemans } from "@/lib/lemans";
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { CzescMebla } from "@/lib/kolory";
 import { frontyElementu } from "../rysunek/rysunekTechniczny";
@@ -243,6 +244,25 @@ function cargo(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebl
   if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
 }
 
+/**
+ * Narożnik LeMans: korpus na całą szerokość (część ślepa za szafką prostopadłą), blenda na wysokość frontu
+ * przy styku z sąsiednią szafką, jeden front (drzwi), w okuciach mechanizm z koszami L/P i zawiasy.
+ */
+function lemans(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
+  const W = mm(el.w);
+  const H = mm(el.h);
+  const D = mm(el.d);
+  const lm = lemansElementu(el);
+  const p = podzialLemans(el.w, lm);
+  korpus(z, mebel, W, H, D, mat("korpus"), u);
+  z.dodaj(mebel, "Blenda (zaślepka)", mat("front"), H - u.szczelina, p.blenda, DOOKOLA, 1, `przy styku z szafką prostopadłą, część ślepa ${p.slepa} mm`);
+  front(z, mebel, "Front LeMans", mat("front"), H, p.front, u);
+  z.okucie(`Mechanizm narożny typu LeMans ${lm.strona === "L" ? "lewy" : "prawy"} (front ${p.front} mm, korpus ${W} mm)`, 1, "kpl.");
+  z.okucie("Zawiasy puszkowe z prowadnikami", zawiasyNaDrzwi(H));
+  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
+  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
+}
+
 /** Słupek albo szafka z piekarnikiem: korpus, półki pod i nad piekarnikiem, fronty nad i pod (proporcje jak w 3D). */
 function piekarnik(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
   const W = mm(el.w);
@@ -283,7 +303,7 @@ function zabudowaAgd(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: Cze
   if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
 }
 
-const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "zlew", "piekarnik", "lodowka-zabudowa"]);
+const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "lemans", "zlew", "piekarnik", "lodowka-zabudowa"]);
 
 /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
 function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
@@ -342,6 +362,7 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
     }
     if (r === "piekarnik") piekarnik(z, mebel, el, mat, u, uchwyt);
     else if (r === "cargo") cargo(z, mebel, el, mat, u, uchwyt);
+    else if (r === "lemans") lemans(z, mebel, el, mat, u, uchwyt);
     else if (r === "lodowka-zabudowa" || r === "zmywarka") zabudowaAgd(z, mebel, el, mat, u, uchwyt);
     else if (r === "blat") continue;
     else if (!parametryczny(z, mebel, el, mat, u, uchwyt)) {

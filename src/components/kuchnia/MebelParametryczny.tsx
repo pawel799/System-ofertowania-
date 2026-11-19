@@ -17,7 +17,7 @@ import type { ElementKuchni } from "@/lib/kuchnia";
 export const T = 0.018;
 export const PLECY = 0.003;
 export const GAP = 0.002;
-const KAT_DRZWI = (100 * Math.PI) / 180;
+export const KAT_DRZWI = (100 * Math.PI) / 180;
 
 /** Płynne otwieranie: 0 → 1 w ok. 0,5 s; klatki tylko w trakcie ruchu (frameloop="demand"). */
 export function useRuch(otwarte: boolean, ustaw: (p: number) => void) {

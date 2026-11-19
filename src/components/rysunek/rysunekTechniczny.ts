@@ -6,7 +6,8 @@
  *
  * Jednostki rysunku: centymetry (viewBox w cm, skala dopasowana do kartki). Numery mebli = numery pozycji w PDF.
  */
-import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { lemansElementu, nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { podzialLemans } from "@/lib/lemans";
 import { meblaPrzyScianie } from "@/lib/otwory";
 import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
 import { PLYTA_CM, wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
@@ -70,7 +71,8 @@ export type FrontRys = {
   x1: number;
   y0: number;
   y1: number;
-  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd";
+  /** blenda – zaślepka narożnika LeMans przy styku z szafką prostopadłą. */
+  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd" | "blenda";
   /** Drzwi: zawiasy po lewej. */
   zawiasLewy?: boolean;
   napis?: string;
@@ -98,6 +100,17 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
   const H = el.h;
   // Cargo: jeden front na mechanizmie (wysuw na wprost) – rysowany jak front szuflady.
   if (el.rodzaj === "cargo" && el.zrodlo !== "model") return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "szuflada", napis: "cargo" }];
+  // LeMans: część ślepa (za szafką prostopadłą, przekreślona), blenda i drzwi z zawiasem po stronie zewnętrznej.
+  if (el.rodzaj === "lemans" && el.zrodlo !== "model") {
+    const u = lemansElementu(el);
+    const p = podzialLemans(W, u);
+    const cm = (a: readonly [number, number]) => ({ x0: a[0] / 10, x1: a[1] / 10 });
+    return [
+      { ...cm(p.xSlepa), y0: 0, y1: H, typ: "agd", napis: "część ślepa" },
+      { ...cm(p.xBlenda), y0: 0, y1: H, typ: "blenda" },
+      { ...cm(p.xFront), y0: 0, y1: H, typ: "drzwi", zawiasLewy: u.strona === "P" },
+    ];
+  }
   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
   if (!wn || !wn.kolumny.length) return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "agd", napis: nazwaNaRzucie(el) || el.nazwa }];
   const T = PLYTA_CM;

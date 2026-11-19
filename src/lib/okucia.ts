@@ -83,7 +83,11 @@ export function kompletyProwadnic(el: ElementOkuc): number {
 /** Czy przy tym meblu wybór typu prowadnic ma sens (szuflady albo cargo). */
 export const maProwadnice = (el: ElementOkuc) => kompletyProwadnic(el) > 0;
 
-export type PozycjaOkuc = { klucz: KluczOkucia; nazwa: string; ilosc: number };
+/** wariant – np. strona mechanizmu LeMans (L/P): osobna pozycja do zamówienia, ta sama cena. */
+export type PozycjaOkuc = { klucz: KluczOkucia; wariant?: StronaLP; nazwa: string; ilosc: number };
+
+const nazwaOkucia = (k: KluczOkucia, wariant?: StronaLP) =>
+  wariant ? OKUCIE_LABEL[k].replace(" (kpl.)", `, ${wariant === "L" ? "lewy" : "prawy"} (kpl.)`) : OKUCIE_LABEL[k];
 
 /** Okucia jednego mebla jako pozycje oferty (patrz komentarz na górze: stare meble – pusta lista). */
 export function okuciaElementu(el: ElementOkuc): PozycjaOkuc[] {
@@ -96,13 +100,22 @@ export function okuciaElementu(el: ElementOkuc): PozycjaOkuc[] {
     if (cargoWysokie(el)) out.push({ klucz: "cargo-wysokie", nazwa: OKUCIE_LABEL["cargo-wysokie"], ilosc: 1 });
     else out.push({ klucz: "kosz-cargo", nazwa: OKUCIE_LABEL["kosz-cargo"], ilosc: 1 });
   }
-  if (el.rodzaj === "lemans") out.push({ klucz: "lemans", nazwa: OKUCIE_LABEL.lemans, ilosc: 1 });
+  if (el.rodzaj === "lemans") {
+    const strona = el.lemans?.strona ?? "L";
+    out.push({ klucz: "lemans", wariant: strona, nazwa: nazwaOkucia("lemans", strona), ilosc: 1 });
+  }
   return out;
 }
 
-/** Okucia całego planu zsumowane po rodzaju (kolejność jak KLUCZE_OKUC). */
+/** Okucia całego planu zsumowane po rodzaju i wariancie (kolejność jak KLUCZE_OKUC, potem L przed P). */
 export function okuciaPlanu(elementy: readonly ElementOkuc[]): PozycjaOkuc[] {
-  const suma = new Map<KluczOkucia, number>();
-  for (const el of elementy) for (const p of okuciaElementu(el)) suma.set(p.klucz, (suma.get(p.klucz) ?? 0) + p.ilosc);
-  return KLUCZE_OKUC.filter((k) => suma.has(k)).map((k) => ({ klucz: k, nazwa: OKUCIE_LABEL[k], ilosc: suma.get(k)! }));
+  const suma = new Map<string, PozycjaOkuc>();
+  for (const el of elementy)
+    for (const p of okuciaElementu(el)) {
+      const k = `${p.klucz}|${p.wariant ?? ""}`;
+      const b = suma.get(k);
+      suma.set(k, b ? { ...b, ilosc: b.ilosc + p.ilosc } : { ...p });
+    }
+  const kolej = (p: PozycjaOkuc) => KLUCZE_OKUC.indexOf(p.klucz) * 3 + (p.wariant === "P" ? 2 : p.wariant === "L" ? 1 : 0);
+  return Array.from(suma.values()).sort((a, b) => kolej(a) - kolej(b));
 }

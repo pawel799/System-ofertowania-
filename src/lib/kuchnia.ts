@@ -12,6 +12,7 @@
 import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
 import { cenaOkucia, okuciaPlanu, type PozycjaOkuc } from "./okucia";
+import { LEMANS, LEMANS_DOMYSLNIE, parseLemans, podzialLemans, type UstawieniaLemans } from "./lemans";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
 
 export type { StronaLP } from "./wnetrze";
@@ -32,6 +33,8 @@ export type RodzajElementu =
   | "narozna"
   // Cargo: wąski wysuw z koszem (strefa dolna: 2 poziomy; wysoka – słupek: 5–6 koszy).
   | "cargo"
+  // Narożnik typu LeMans: część ślepa za szafką prostopadłą, blenda, front z koszami „nerkami” (lemans.ts).
+  | "lemans"
   | "zlew"
   | "zlewozmywak"
   | "bateria"
@@ -63,6 +66,7 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "szuflady",
   "narozna",
   "cargo",
+  "lemans",
   "zlew",
   "zlewozmywak",
   "bateria",
@@ -123,6 +127,8 @@ export type ElementKuchni = {
   cena?: number;
   /** Strona zawiasu drzwi jednoskrzydłowych (patrząc na front). Brak = lewa (jak w starszych ofertach). */
   hinge?: StronaLP;
+  /** Narożnik LeMans: strona części ślepej, blenda i front [mm]. Brak = LEMANS_DOMYSLNIE. */
+  lemans?: UstawieniaLemans;
 };
 
 /**
@@ -186,6 +192,7 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   szuflady: "Szuflady",
   narozna: "Narożna",
   cargo: "Cargo",
+  lemans: "Narożnik LeMans",
   zlew: "Szafka pod zlew",
   zlewozmywak: "Zlewozmywak",
   bateria: "Bateria",
@@ -243,6 +250,7 @@ export const PRESETY: PresetModul[] = [
   { id: "szuflady-45", nazwa: "Szuflady 45", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 45, h: 72, d: 56 },
   { id: "szuflady-60", nazwa: "Szuflady 60", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 60, h: 72, d: 56 },
   { id: "cargo-30", nazwa: "Cargo 30", grupa: "dolne", strefa: "dolna", rodzaj: "cargo", w: 30, h: 72, d: 56 },
+  { id: "lemans-110", nazwa: "Narożnik LeMans 110", grupa: "dolne", strefa: "dolna", rodzaj: "lemans", w: 110, h: 72, d: 56 },
   { id: "narozna-90", nazwa: "Szafka narożna 90", grupa: "dolne", strefa: "dolna", rodzaj: "narozna", w: 90, h: 72, d: 90 },
   { id: "zlew-80", nazwa: "Szafka pod zlew 80", grupa: "dolne", strefa: "dolna", rodzaj: "zlew", w: 80, h: 72, d: 56 },
   { id: "gorna-40", nazwa: "Szafka górna 40", grupa: "gorne", strefa: "gorna", rodzaj: "szafka", w: 40, h: 72, d: 32 },
@@ -312,6 +320,9 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
       return { w: zakres(30, 100), h: zakres(55, 92), d: zakres(45, 65) };
     case "narozna":
       return { w: zakres(80, 110), h: zakres(60, 92), d: zakres(80, 110) };
+    // LeMans: korpus 100–120 cm (część ślepa za szafką prostopadłą), front 40–60 cm.
+    case "lemans":
+      return { w: zakres(100, 120), h: zakres(55, 92), d: zakres(50, 65) };
     // Cargo: szerokości 15/20/30/40 cm (wybór w panelu), wysokość jak szafki dolne albo słupki.
     case "cargo":
       return strefa === "wysoka" ? { w: zakres(15, 40), h: zakres(160, 230), d: zakres(45, 65) } : { w: zakres(15, 40), h: zakres(55, 92), d: zakres(45, 65) };
@@ -410,6 +421,7 @@ export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
     szuflady: "szuflady",
     narozna: "narożna",
     cargo: "cargo",
+    lemans: "LeMans",
     zlew: "pod zlew",
     zlewozmywak: "zlew",
     bateria: "bateria",
@@ -467,6 +479,8 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
       return "N";
     case "cargo":
       return "CG";
+    case "lemans":
+      return "LM";
     case "szafa":
     case "szafa-przesuwna":
       return "SZF";
@@ -1020,6 +1034,58 @@ export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
 
+/** Ustawienia narożnika LeMans (brak w elemencie = domyślne). */
+export const lemansElementu = (el: { lemans?: UstawieniaLemans }): UstawieniaLemans => el.lemans ?? LEMANS_DOMYSLNIE;
+
+/**
+ * Czy szafka prostopadła do narożnika LeMans zostawia miejsce na front i uchwyt. Dla każdego LeMans:
+ * mebel stojący przed jego frontem (pas 30 cm) od strony części ślepej – ile zajmuje szerokości [mm]
+ * razem z frontem (18 mm). Wolne = szerokość − front LeMans − zajęte; mniej niż LEMANS.odstepUchwyt – ostrzeżenie;
+ * dużo więcej niż blenda – część ślepa odkryta. Dokładny kąt (kat) pomijamy – tylko obroty co 90°.
+ */
+export function ostrzezeniaLemans(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
+  const out: string[] = [];
+  for (const lm of plan.elementy) {
+    if (rodzajElementu(lm) !== "lemans" || lm.zrodlo === "model" || lm.kat || (id && lm.id !== id)) continue;
+    const u = lemansElementu(lm);
+    const p = podzialLemans(lm.w, u);
+    const th = (lm.rot * Math.PI) / 180;
+    // Oś szerokości (w prawo patrząc na front) i oś frontu w rzucie [cm] – jak obrót w scenie 3D (rotation.y).
+    const R = { x: Math.cos(th), z: -Math.sin(th) };
+    const F = { x: Math.sin(th), z: Math.cos(th) };
+    const lok = (x: number, z: number) => ({ u: (x - lm.x) * R.x + (z - lm.z) * R.z, v: (x - lm.x) * F.x + (z - lm.z) * F.z });
+    let zajete = 0;
+    let sasiad: ElementKuchni | null = null;
+    for (const o of plan.elementy) {
+      if (o.id === lm.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) continue;
+      const r = rect(o);
+      const rogi = [lok(r.x0, r.z0), lok(r.x1, r.z0), lok(r.x0, r.z1), lok(r.x1, r.z1)];
+      const u0 = Math.min(...rogi.map((q) => q.u));
+      const u1 = Math.max(...rogi.map((q) => q.u));
+      const v0 = Math.min(...rogi.map((q) => q.v));
+      const v1 = Math.max(...rogi.map((q) => q.v));
+      // Stoi przed frontem (od płaszczyzny frontu do 30 cm przed nią) i w obrębie szerokości korpusu.
+      if (v1 <= lm.d / 2 + 0.5 || v0 >= lm.d / 2 + 30 || u1 <= -lm.w / 2 + 0.5 || u0 >= lm.w / 2 - 0.5) continue;
+      const odSlepej = u.strona === "L" ? u1 + lm.w / 2 : lm.w / 2 - u0;
+      const mm = Math.round(odSlepej * 10) + (o.zrodlo === "model" ? 0 : 18);
+      if (mm > zajete) {
+        zajete = mm;
+        sasiad = o;
+      }
+    }
+    const wolne = p.W - u.front - zajete;
+    if (!sasiad) out.push(`„${lm.nazwa}”: brak szafki prostopadłej przed częścią ślepą (${p.slepa} mm) – w narożniku L dosuń szafkę ze ściany obok.`);
+    else if (wolne < LEMANS.odstepUchwyt)
+      out.push(
+        wolne < 0
+          ? `„${sasiad.nazwa}” zasłania front narożnika „${lm.nazwa}” o ${-wolne} mm – odsuń ją albo zmień stronę LeMans.`
+          : `„${sasiad.nazwa}” stoi ${wolne} mm od frontu „${lm.nazwa}” – za mało na uchwyt i otwarcie (min. ${LEMANS.odstepUchwyt} mm).`,
+      );
+    else if (wolne > u.blenda + 20) out.push(`„${lm.nazwa}”: między szafką „${sasiad.nazwa}” a frontem jest ${wolne} mm, blenda ma ${u.blenda} mm – poszerz blendę albo dosuń szafkę.`);
+  }
+  return out;
+}
+
 /**
  * Okucia oferty jako osobne pozycje (okucia.ts): wysuwy z wybranym typem prowadnic, kosze cargo, LeMans.
  * Ceny z cennika tylko przy cenach z cennika; przy cenach wpisanych ręcznie firma podaje kwotę mebla z okuciami,
@@ -1187,6 +1253,14 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     }
     const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
     const hinge = e.hinge === undefined || e.hinge === null ? undefined : jedno(e.hinge, STRONY_LP, `strona zawiasu „${nazwa}”`);
+    let lemans: UstawieniaLemans | undefined;
+    if (rodzaj === "lemans" && e.lemans !== undefined && e.lemans !== null) {
+      try {
+        lemans = parseLemans(e.lemans, w, `„${nazwa}”`);
+      } catch (err) {
+        blad(err instanceof Error ? err.message : `„${nazwa}”: złe ustawienia LeMans.`);
+      }
+    }
     return {
       id,
       nazwa,
@@ -1205,6 +1279,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(kolory ? { kolory } : {}),
       ...(cena !== undefined ? { cena } : {}),
       ...(hinge ? { hinge } : {}),
+      ...(lemans ? { lemans } : {}),
     };
   });
   let wywiad: Wywiad | undefined;
