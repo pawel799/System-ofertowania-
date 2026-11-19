@@ -406,6 +406,23 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
   };
 }
 
+/**
+ * Jak liczone są boki, wieńce (dno), fronty i plecy – do porównania z wzorem stolarza (UI i PDF).
+ * Przykład na szafce dolnej 60 × 72 × 56 cm.
+ */
+export function wzoryFormatek(u: UstawieniaFormatek): string[] {
+  const g = u.plecy === "hdf" ? `głębokość − ${PLECY} mm plecy HDF` : "głębokość (bez pleców)";
+  const gl = 560 - (u.plecy === "hdf" ? PLECY : 0);
+  return [
+    `Płyta korpusu ${T} mm. Boki na całą wysokość, wieńce (dno i góra) między bokami.`,
+    `Bok = wysokość korpusu × (${g}) – szafka 60: 720 × ${gl} mm, 2 szt.`,
+    `Wieniec dolny (dno) i górny = (szerokość − 2 × ${T}) × (${g}) – szafka 60: 600 − 2 × ${T} = ${600 - 2 * T} mm × ${gl} mm.`,
+    `Front = pole frontu − szczelina ${u.szczelina} mm (na wysokości i szerokości) – drzwi szafki 60: ${720 - u.szczelina} × ${600 - u.szczelina} mm.`,
+    u.plecy === "hdf" ? `Plecy HDF ${PLECY} mm nakładane = (wysokość − 4) × (szerokość − 4) – szafka 60: 716 × 596 mm.` : "Bez pleców.",
+    `Półka = szerokość wnętrza × (${g} − 20 mm). Nóżki ${u.nozki} mm (bok waterfall = nóżki + korpus).`,
+  ];
+}
+
 /* ---------- podsumowania ---------- */
 
 /** Okleina w metrach bieżących dla jednej formatki (z ilością). */

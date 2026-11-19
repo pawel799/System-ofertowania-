@@ -21,7 +21,8 @@ export type DoRozkroju = { ref: string; nr: number; dl: number; szer: number; il
 
 /** Położenie formatki na arkuszu: x wzdłuż długości arkusza, y w poprzek; w × h po ewentualnym obrocie. */
 export type Polozenie = { ref: string; nr: number; x: number; y: number; w: number; h: number; obrocona: boolean };
-export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number };
+/** ciecia – cięcia gilotynowe na arkuszu: odcięcie obrzeża (4, gdy obrzeże > 0) + 0–2 cięcia przy każdej formatce. */
+export type ArkuszRozkroju = { kawalki: Polozenie[]; pole: number; ciecia: number };
 export type WynikRozkroju = {
   arkusze: ArkuszRozkroju[];
   /** Formatki większe niż arkusz (po obrzeżu). */
@@ -38,9 +39,9 @@ function ulozenie(sztuki: Szt[], obrot: boolean, u: UstawieniaRozkroju, podzial:
   const L = u.arkusz.dl - 2 * u.obrzeze;
   const S = u.arkusz.szer - 2 * u.obrzeze;
   const k = u.rzaz;
-  const arkusze: { wolne: Wolny[]; kawalki: Polozenie[]; pole: number }[] = [];
+  const arkusze: { wolne: Wolny[]; kawalki: Polozenie[]; pole: number; ciecia: number }[] = [];
   const nowy = () => {
-    const a = { wolne: [{ x: u.obrzeze, y: u.obrzeze, w: L, h: S }], kawalki: [] as Polozenie[], pole: 0 };
+    const a = { wolne: [{ x: u.obrzeze, y: u.obrzeze, w: L, h: S }], kawalki: [] as Polozenie[], pole: 0, ciecia: u.obrzeze > 0 ? 4 : 0 };
     arkusze.push(a);
     return a;
   };
@@ -70,6 +71,8 @@ function ulozenie(sztuki: Szt[], obrot: boolean, u: UstawieniaRozkroju, podzial:
     const [pw, ph, obr] = opcje[b.o];
     a.kawalki.push({ ref: s.ref, nr: s.nr, x: f.x, y: f.y, w: pw, h: ph, obrocona: obr });
     a.pole += pw * ph;
+    // Formatka odcinana od reszty wolnego prostokąta: cięcie wzdłuż i/lub w poprzek (0, gdy wypełnia go dokładnie).
+    a.ciecia += (f.w > pw ? 1 : 0) + (f.h > ph ? 1 : 0);
     const restW = f.w - pw - k;
     const restH = f.h - ph - k;
     // Podział gilotynowy pozostałego miejsca na dwa prostokąty.
@@ -110,7 +113,7 @@ export function rozkroj(lista: readonly DoRozkroju[], sloje: boolean, u: Ustawie
         if (n1 < n0 || (n1 === n0 && r1 < r0)) najlepszy = wynik;
       }
     }
-  const arkusze = (najlepszy ?? []).map((a) => ({ kawalki: a.kawalki, pole: a.pole }));
+  const arkusze = (najlepszy ?? []).map((a) => ({ kawalki: a.kawalki, pole: a.pole, ciecia: a.ciecia }));
   const calosc = arkusze.length * u.arkusz.dl * u.arkusz.szer;
   const zajete = arkusze.reduce((s, a) => s + a.pole, 0);
   return { arkusze, zaDuze, odpad: calosc ? 1 - zajete / calosc : 0 };

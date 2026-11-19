@@ -183,6 +183,11 @@ export type PlanKuchni = {
    * przy cenach wpisanych ręcznie nie (firma podaje kwotę z materiałami). Przełącznik w kroku „Materiały”.
    */
   doplaty?: boolean;
+  /**
+   * Oferta „bez cen”: PDF i treść maila bez kwot (zestawienie do zamówienia materiałów w hurtowni).
+   * Cena dalej liczy się na serwerze (base), tylko się jej nie pokazuje. Brak = z cenami.
+   */
+  bezCen?: boolean;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -1420,6 +1425,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
     ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),
     ...(typeof o.doplaty === "boolean" ? { doplaty: o.doplaty } : {}),
+    ...(o.bezCen === true ? { bezCen: true } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

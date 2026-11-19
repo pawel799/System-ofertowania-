@@ -1567,6 +1567,20 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                   <section className="kr-card">
                     <h3>Produkcja</h3>
                     <p className="lede">Formatki do cięcia z okleiną, okucia, blaty i rozkrój płyt. Wydruk dla warsztatu i plik CSV dla hurtowni.</p>
+                    <label className="kr-check">
+                      <input
+                        type="checkbox"
+                        checked={!!plan.bezCen}
+                        onChange={(e) =>
+                          setPlan((p) => {
+                            const { bezCen: _stare, ...bez } = p;
+                            void _stare;
+                            return e.target.checked ? { ...bez, bezCen: true } : bez;
+                          })
+                        }
+                      />
+                      <span>Oferta bez cen – PDF i mail bez kwot (zestawienie do zamówienia w hurtowni)</span>
+                    </label>
                     <div className="actions">
                       <button type="button" className="btn btn-ghost" onClick={() => setFormatki(true)} disabled={!plan.elementy.length}>
                         Formatki i rozkrój
