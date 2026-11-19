@@ -30,6 +30,7 @@ import { useKoloryProjektu } from "../koloryStore";
 import PaletaSciany, { type EdycjaKolorowScian } from "./PaletaSciany";
 import Sciany, { type EdycjaOtworow } from "./Sciany";
 import { koloryMebla, uchwytMebla } from "@/lib/kolory";
+import { gruboscBlatu, zPlytami, type MaterialyPlyt, type WykonczeniePlyty } from "@/lib/plyty";
 
 /** Zdjęcia do PDF oferty: kilka ujęć całości i każdy mebel osobno (klucz: id elementu). */
 /** glowne – najlepszy kadr całości (szeroki, na pierwszą stronę PDF); widoki – kilka ujęć; elementy – każdy mebel osobno. */
@@ -614,6 +615,7 @@ function ModelBryla({
   kolorFrontu,
   kolorKorpusu,
   kolorUchwytu,
+  plyty,
 }: {
   model: PublicModel;
   w: number;
@@ -625,6 +627,8 @@ function ModelBryla({
   kolorKorpusu?: string;
   /** Okucia tego mebla (id); brak = okucia oferty. */
   kolorUchwytu?: string;
+  /** Płyty producentów z projektu – „brd:…” w kolorach i blat (plyty.ts). */
+  plyty?: MaterialyPlyt;
 }) {
   const { scene } = useGLTF(model.url, DRACO, true);
   // Kopia sceny w osobnym węźle: plik zostaje nietknięty, dopasowanie robi grupa nad nim.
@@ -647,14 +651,15 @@ function ModelBryla({
   const invalidate = useThree((s) => s.invalidate);
   const frontWspolny = useFront();
   const front = kolorFrontu ?? frontWspolny;
-  const countertop = useCountertop();
+  const countertopOferty = useCountertop();
+  const countertop = plyty?.blat ? "brd:blat" : countertopOferty;
   const hardwareWspolny = useHardware();
   const hardware = kolorUchwytu ?? hardwareWspolny;
   const palettes = usePalettes();
   const katalogMat = useKatalog();
   useEffect(() => {
-    return applyRoles(uchwyt, tagi, { front, countertop, hardware, korpus: kolorKorpusu ?? front }, palettes, katalogMat);
-  }, [uchwyt, tagi, front, countertop, hardware, kolorKorpusu, palettes, katalogMat]);
+    return applyRoles(uchwyt, tagi, { front, countertop, hardware, korpus: kolorKorpusu ?? front }, palettes, katalogMat, plyty);
+  }, [uchwyt, tagi, front, countertop, hardware, kolorKorpusu, palettes, katalogMat, plyty]);
   useEffect(() => invalidate(), [fit, invalidate]);
   return (
     <group position={fit.position} scale={fit.scale}>
@@ -681,6 +686,9 @@ function ElementWidok({
   kolor,
   chropowatosc,
   blat,
+  blatMm,
+  blatWzor,
+  wzorFrontu,
   uchwyt,
   onWybierz,
   otwarte,
@@ -697,12 +705,16 @@ function ElementWidok({
   kolor: string;
   chropowatosc: number;
   blat: string;
+  /** Grubość blatu z płyty producenta [mm]; null = jak dotąd. */
+  blatMm?: number | null;
+  blatWzor?: WykonczeniePlyty;
+  wzorFrontu?: WykonczeniePlyty;
   uchwyt: boolean;
   onWybierz?: (id: string) => void;
   otwarte: boolean;
   /** Boki i środek (kolory.ts) – wygląd z próbki; ids do modeli GLB. */
-  korpus: { color: string; roughness: number };
-  srodek: { color: string; roughness: number };
+  korpus: { color: string; roughness: number; wzor?: WykonczeniePlyty };
+  srodek: { color: string; roughness: number; wzor?: WykonczeniePlyty };
   ids: { front: string; korpus: string; uchwyt: string; uchwytKolor?: string };
   /** Kreator: przeciąganie mebla w 3D. */
   onChwyt?: (e: ThreeEvent<PointerEvent>, el: ElementKuchni) => void;
@@ -710,7 +722,7 @@ function ElementWidok({
   zly?: boolean;
 }) {
   const y = yElementu(el, plan);
-  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={ids.uchwytKolor} />;
+  const szafka = <AgdBryla el={el} kolor={kolor} chropowatosc={chropowatosc} blat={blat} blatMm={blatMm} blatWzor={blatWzor} wzorFrontu={wzorFrontu} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={ids.uchwytKolor} />;
   return (
     <group
       name={`el-${el.id}`}
@@ -738,7 +750,7 @@ function ElementWidok({
         {model ? (
           <BladModelu fallback={szafka}>
             <Suspense fallback={szafka}>
-              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} kolorFrontu={ids.front} kolorKorpusu={ids.korpus} kolorUchwytu={ids.uchwyt} />
+              <ModelBryla model={model} w={el.w} h={el.h} d={el.d} otwarte={otwarte} kolorFrontu={ids.front} kolorKorpusu={ids.korpus} kolorUchwytu={ids.uchwyt} plyty={plan.plyty} />
             </Suspense>
           </BladModelu>
         ) : (
@@ -815,25 +827,32 @@ function Wnetrze({
   }, [plan, podgladOtworu, podgladPunktu]);
   // Przeciągany mebel ma swoje wymiary na żywo, nawet gdy nie jest zaznaczony.
   const wybor3d: Wybor3D = przesuwany ? { typ: "element", id: przesuwany.id } : (wyborInny ?? (zaznaczony ? { typ: "element", id: zaznaczony } : null));
-  const front = useFront();
-  const countertop = useCountertop();
+  const frontOferty = useFront();
+  const countertopOferty = useCountertop();
   const hardware = useHardware();
   const palettes = usePalettes();
   const katalogMat = useKatalog();
   const invalidate = useThree((s) => s.invalidate);
+  const projektKoloryOferty = useKoloryProjektu();
+  // Płyty producentów z projektu (plan.plyty) zastępują front, boki i blat oferty (plyty.ts).
+  const plyty = plan.plyty;
+  const zp = zPlytami({ front: frontOferty, countertop: countertopOferty }, { plyty }, projektKoloryOferty);
+  const front = zp.wybor.front;
+  const countertop = zp.wybor.countertop;
+  const projektKolory = zp.kolory ?? projektKoloryOferty;
+  const blatMm = gruboscBlatu(plan);
   const wybor = { front, countertop, hardware };
-  const wyglad = lookFor("front", wybor, palettes, katalogMat);
-  const blatLook = lookFor("blat", wybor, palettes, katalogMat);
+  const wyglad = lookFor("front", wybor, palettes, katalogMat, plyty);
+  const blatLook = lookFor("blat", wybor, palettes, katalogMat, plyty);
   const kolor = wyglad.color ?? "#c9bcaa";
   const blat = blatLook.color ?? BLAT[countertop] ?? "#ece8e1";
-  const uchwyt = !lookFor("uchwyt", wybor, palettes, katalogMat).hidden;
+  const uchwyt = !lookFor("uchwyt", wybor, palettes, katalogMat, plyty).hidden;
   const katalog = useMemo(() => new Map(modele.map((m) => [m.id, m])), [modele]);
   const otwarcie = useOtwarcie();
-  const projektKolory = useKoloryProjektu();
   // Wygląd próbki (kolor, połysk) – ta sama funkcja co front, dla boków i środka każdego mebla.
   const wygladProbki = (id: string) => {
-    const l = id === front ? wyglad : lookFor("front", { ...wybor, front: id }, palettes, katalogMat);
-    return { color: l.color ?? "#c9bcaa", roughness: l.roughness };
+    const l = id === front ? wyglad : lookFor("front", { ...wybor, front: id }, palettes, katalogMat, plyty);
+    return { color: l.color ?? "#c9bcaa", roughness: l.roughness, wzor: l.wzor };
   };
   const { x0, x1, z0, z1 } = zakres(plan);
 
@@ -879,8 +898,8 @@ function Wnetrze({
           const kol = koloryMebla(el, front, projektKolory);
           // Okucia tego mebla (okno elementu) – widoczność i kolor uchwytu.
           const uId = uchwytMebla(el, hardware);
-          const uLook = uId !== hardware ? lookFor("uchwyt", { ...wybor, hardware: uId }, palettes, katalogMat) : null;
-          const fr = kol.front === front ? { color: kolor, roughness: wyglad.roughness } : wygladProbki(kol.front);
+          const uLook = uId !== hardware ? lookFor("uchwyt", { ...wybor, hardware: uId }, palettes, katalogMat, plyty) : null;
+          const fr = kol.front === front ? { color: kolor, roughness: wyglad.roughness, wzor: wyglad.wzor } : wygladProbki(kol.front);
           return (
             <ElementWidok
               key={el.id}
@@ -891,6 +910,9 @@ function Wnetrze({
               kolor={fr.color}
               chropowatosc={fr.roughness}
               blat={blat}
+              blatMm={blatMm}
+              blatWzor={blatLook.wzor}
+              wzorFrontu={fr.wzor}
               uchwyt={uLook ? !uLook.hidden : uchwyt}
               onWybierz={wybierzElement}
               otwarte={otwarty(otwarcie, el.id)}

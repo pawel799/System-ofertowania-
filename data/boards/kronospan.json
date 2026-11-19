@@ -1,0 +1,110 @@
+[
+ {
+  "id": "kronospan-0101-plyta",
+  "producer": "Kronospan",
+  "code": "0101",
+  "name": "Biały",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#f1f0ec",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-0190-plyta",
+  "producer": "Kronospan",
+  "code": "0190",
+  "name": "Czarny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#222222",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-0162-plyta",
+  "producer": "Kronospan",
+  "code": "0162",
+  "name": "Antracyt",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#3d3f41",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-k001-plyta",
+  "producer": "Kronospan",
+  "code": "K001",
+  "name": "Dąb Craft biały",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#d9cdb9",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-k002-plyta",
+  "producer": "Kronospan",
+  "code": "K002",
+  "name": "Dąb Craft złoty",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b98d5c",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-k003-plyta",
+  "producer": "Kronospan",
+  "code": "K003",
+  "name": "Dąb Craft szary",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#9d968b",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ }
+]

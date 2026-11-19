@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "node --test --disable-warning=MODULE_TYPELESS_PACKAGE_JSON src/lib/*.test.mjs",
     "pages:dev": "wrangler pages dev out --kv OFFERS --r2 MODELS",
     "seed:modele:check": "node seed/modele-kuchnia-50/seed.mjs --check",
     "seed:szafy:check": "node seed/modele-szafy-komody-100/seed.mjs --check",

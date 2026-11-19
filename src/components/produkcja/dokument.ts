@@ -12,7 +12,16 @@ export type DaneProdukcji = {
   blatNazwa?: string;
   okucia?: Okucie[];
   pominiete?: { mebel: string; powod: string }[];
+  obrzezeNazwa?: string;
+  uwagi?: string[];
 };
+
+/** Koszt płyt z ceną z bazy (m² formatek × cena za m²); null = żadna płyta nie ma ceny (tryb „bez cen”). */
+export function kosztPlyt(pods: readonly { material: MaterialFormatki; m2: number }[]): number | null {
+  const z = pods.filter((p) => typeof p.material.cenaM2 === "number");
+  if (!z.length) return null;
+  return Math.round(z.reduce((s, p) => s + p.m2 * (p.material.cenaM2 ?? 0), 0) * 100) / 100;
+}
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 /** Nazwa z grubością, chyba że nazwa już ją ma („Biały 18 mm”). */
@@ -127,6 +136,10 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
     );
   }
   h.push(`</tbody></table><p class="uw">Rzaz ${u.rzaz} mm, obrzeże arkusza ${u.obrzeze} mm. Wymiary formatek gotowe (z okleiną). Długość = wzdłuż słojów.</p>`);
+  const koszt = kosztPlyt(pods);
+  if (koszt !== null) h.push(`<p class="uw">Płyty z ceną z bazy płyt: ${pl(koszt, 2)} zł netto (m² formatek × cena za m², bez odpadu).</p>`);
+  if (d.obrzezeNazwa) h.push(`<p class="uw">Obrzeże: ${esc(d.obrzezeNazwa)}.</p>`);
+  for (const x of d.uwagi ?? []) h.push(`<p class="uw"><b>Uwaga:</b> ${esc(x)}</p>`);
 
   for (const m of d.materialy) {
     const lista = d.formatki.filter((f) => f.material === m.klucz);

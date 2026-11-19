@@ -1,0 +1,534 @@
+[
+ {
+  "id": "egger-w1000-st9-plyta",
+  "producer": "Egger",
+  "code": "W1000",
+  "structure": "ST9",
+  "name": "Biały Premium",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#f3f2ee",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-w980-st2-plyta",
+  "producer": "Egger",
+  "code": "W980",
+  "structure": "ST2",
+  "name": "Biały platynowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#ecebe6",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u708-st9-plyta",
+  "producer": "Egger",
+  "code": "U708",
+  "structure": "ST9",
+  "name": "Szary jasny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#c9c8c3",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u702-st9-plyta",
+  "producer": "Egger",
+  "code": "U702",
+  "structure": "ST9",
+  "name": "Szary kaszmirowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b9b0a3",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u732-st9-plyta",
+  "producer": "Egger",
+  "code": "U732",
+  "structure": "ST9",
+  "name": "Szary pyłowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#8c8b86",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u727-st9-plyta",
+  "producer": "Egger",
+  "code": "U727",
+  "structure": "ST9",
+  "name": "Szary kamienny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#77746d",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u961-st2-plyta",
+  "producer": "Egger",
+  "code": "U961",
+  "structure": "ST2",
+  "name": "Czarny grafit",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#36383a",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-u999-st2-plyta",
+  "producer": "Egger",
+  "code": "U999",
+  "structure": "ST2",
+  "name": "Czarny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#232323",
+  "finish": "mat",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1145-st10-plyta",
+  "producer": "Egger",
+  "code": "H1145",
+  "structure": "ST10",
+  "name": "Dąb Bardolino naturalny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b3895c",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1146-st10-plyta",
+  "producer": "Egger",
+  "code": "H1146",
+  "structure": "ST10",
+  "name": "Dąb Bardolino szary",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#9c8e7d",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3303-st10-plyta",
+  "producer": "Egger",
+  "code": "H3303",
+  "structure": "ST10",
+  "name": "Dąb Hamilton naturalny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b48a5d",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1180-st37-plyta",
+  "producer": "Egger",
+  "code": "H1180",
+  "structure": "ST37",
+  "name": "Dąb Halifax naturalny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#a57a4f",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1176-st37-plyta",
+  "producer": "Egger",
+  "code": "H1176",
+  "structure": "ST37",
+  "name": "Dąb Halifax biały",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#d6cbb8",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3309-st28-plyta",
+  "producer": "Egger",
+  "code": "H3309",
+  "structure": "ST28",
+  "name": "Dąb Gladstone piaskowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#bf9e78",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3325-st28-plyta",
+  "producer": "Egger",
+  "code": "H3325",
+  "structure": "ST28",
+  "name": "Dąb Gladstone tabakowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#7d5c3f",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3170-st12-plyta",
+  "producer": "Egger",
+  "code": "H3170",
+  "structure": "ST12",
+  "name": "Dąb Kendal naturalny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b78e62",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1344-st32-plyta",
+  "producer": "Egger",
+  "code": "H1344",
+  "structure": "ST32",
+  "name": "Dąb Sherman koniakowo-brązowy",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#8a6343",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3730-st10-plyta",
+  "producer": "Egger",
+  "code": "H3730",
+  "structure": "ST10",
+  "name": "Hikora naturalna",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b98d63",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3700-st10-plyta",
+  "producer": "Egger",
+  "code": "H3700",
+  "structure": "ST10",
+  "name": "Orzech Pacyfik naturalny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#6e4c34",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f186-st9-plyta",
+  "producer": "Egger",
+  "code": "F186",
+  "structure": "ST9",
+  "name": "Beton Chicago jasnoszary",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#a9a7a1",
+  "finish": "beton",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f187-st9-plyta",
+  "producer": "Egger",
+  "code": "F187",
+  "structure": "ST9",
+  "name": "Beton Chicago ciemnoszary",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#6f6d69",
+  "finish": "beton",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f274-st9-plyta",
+  "producer": "Egger",
+  "code": "F274",
+  "structure": "ST9",
+  "name": "Beton jasny",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#c4c1ba",
+  "finish": "beton",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f186-st9-blat",
+  "producer": "Egger",
+  "code": "F186",
+  "structure": "ST9",
+  "name": "Beton Chicago jasnoszary",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#a9a7a1",
+  "finish": "beton",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f187-st9-blat",
+  "producer": "Egger",
+  "code": "F187",
+  "structure": "ST9",
+  "name": "Beton Chicago ciemnoszary",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#6f6d69",
+  "finish": "beton",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f812-st9-blat",
+  "producer": "Egger",
+  "code": "F812",
+  "structure": "ST9",
+  "name": "Marmur Levanto biały",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#e7e5e0",
+  "finish": "kamien",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-f204-st75-blat",
+  "producer": "Egger",
+  "code": "F204",
+  "structure": "ST75",
+  "name": "Marmur Carrara biały",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#e9e8e4",
+  "finish": "kamien",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h1145-st10-blat",
+  "producer": "Egger",
+  "code": "H1145",
+  "structure": "ST10",
+  "name": "Dąb Bardolino naturalny",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#b3895c",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "egger-h3303-st10-blat",
+  "producer": "Egger",
+  "code": "H3303",
+  "structure": "ST10",
+  "name": "Dąb Hamilton naturalny",
+  "type": "blat",
+  "thicknesses": [
+   38
+  ],
+  "format": [
+   4100,
+   600
+  ],
+  "hex": "#b48a5d",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ }
+]

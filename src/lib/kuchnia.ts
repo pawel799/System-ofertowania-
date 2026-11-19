@@ -14,6 +14,7 @@ import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
+import { parseMaterialyPlyt, type MaterialyPlyt } from "./plyty";
 import { parseUstawieniaScian, type UstawieniaScian, mebelZaSciana } from "./sciany";
 
 export type UkladKuchni = "ciag" | "L";
@@ -144,6 +145,11 @@ export type PlanKuchni = {
   dodatki?: DodatekOferty[];
   /** Wspólne kolory boków i środka (front jest w ofercie). Brak = jak fronty / jak boki. */
   kolory?: KoloryProjektu;
+  /**
+   * Płyty producentów (plyty.ts): korpus, fronty, blat, obrzeże – fakty dekoru z chwili wyboru i grubość.
+   * Brak = kolory jak dotąd; grubość blatu zmienia wysokość blatu w 3D i na rysunku, nie korpus.
+   */
+  plyty?: MaterialyPlyt;
   /** Ściany pokoju w 3D (sciany.ts): kolor (brak = kolor tła sceny), usunięte ściany pokoju, dodatkowe ściany, sufit. */
   sciany?: UstawieniaScian;
   /** Ceny mebli wpisywane ręcznie albo z cennika (TrybCen). Brak = cennik. */
@@ -1193,6 +1199,12 @@ export function parseKuchnia(v: unknown): PlanKuchni {
   } catch (err) {
     blad(err instanceof Error ? err.message : "Złe kolory projektu.");
   }
+  let plyty: MaterialyPlyt | undefined;
+  try {
+    plyty = parseMaterialyPlyt(o.plyty);
+  } catch (err) {
+    blad(err instanceof Error ? err.message : "Złe płyty projektu.");
+  }
   let dodatki: DodatekOferty[] | undefined;
   if (o.dodatki !== undefined && o.dodatki !== null) {
     try {
@@ -1211,6 +1223,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(plyta ? { plyta } : {}),
     ...(dodatki?.length ? { dodatki } : {}),
     ...(kolory ? { kolory } : {}),
+    ...(plyty ? { plyty } : {}),
     ...(sciany ? { sciany } : {}),
     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
     ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),

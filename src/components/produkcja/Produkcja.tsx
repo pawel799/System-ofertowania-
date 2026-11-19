@@ -13,7 +13,7 @@ import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOM
 import { rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
 import { importujListe, type WynikImportu } from "./importListy";
 import { formatkiProjektow, type ProjektDoRozkroju } from "./zrodloOferty";
-import { csvFormatek, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
+import { csvFormatek, kosztPlyt, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
 
 type Zrodlo = "ostatnie" | "projekt" | "lista" | "model";
 type Ustawienia = UstawieniaFormatek & UstawieniaRozkroju;
@@ -351,6 +351,12 @@ export default function Produkcja({
         <>
           <p className="pr-suma" data-testid="pr-suma">
             <b>{sztuk}</b> formatek · <b>{arkuszy}</b> {arkuszy === 1 ? "arkusz" : arkuszy < 5 ? "arkusze" : "arkuszy"} · okleina <b>{pl(daneM.formatki.reduce((s, f) => s + okleinaMb(f), 0))}</b> mb
+            {kosztPlyt(pods) !== null ? (
+              <>
+                {" "}
+                · płyty z ceną <b>{pl(kosztPlyt(pods) ?? 0, 2)}</b> zł netto
+              </>
+            ) : null}
           </p>
           <div className="pr-tab-wrap">
             <table className="pr-tab">
@@ -482,6 +488,12 @@ export default function Produkcja({
             </details>
           ) : null}
           {daneM.pominiete?.length ? <p className="faint pr-uwagi">Bez formatek: {daneM.pominiete.map((p) => p.mebel).join(", ")}.</p> : null}
+          {daneM.obrzezeNazwa ? <p className="faint pr-uwagi">Obrzeże: {daneM.obrzezeNazwa}.</p> : null}
+          {daneM.uwagi?.map((x) => (
+            <p key={x} className="faint pr-uwagi" data-uwaga-plyty>
+              Uwaga: {x}
+            </p>
+          ))}
         </>
       )}
     </div>

@@ -32,7 +32,7 @@ function ostatnieProjekty(oferty: readonly Offer[], palettes: Palette[], katalog
       id: o.id,
       nazwa: [o.title, o.client].filter(Boolean).join(" · ") || "Projekt",
       plan: o.kuchnia!,
-      zrodlo: zrodloMaterialow({ palettes, katalog }, { front: o.front, hardware: o.hardware, countertop: o.countertop, kolory: o.kuchnia!.kolory }),
+      zrodlo: zrodloMaterialow({ palettes, katalog }, { front: o.front, hardware: o.hardware, countertop: o.countertop, kolory: o.kuchnia!.kolory, plyty: o.kuchnia!.plyty }),
     }));
 }
 

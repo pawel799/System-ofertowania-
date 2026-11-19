@@ -80,6 +80,7 @@ import { cennikZPlyta } from "@/lib/modul";
 import { useCenaKoncowa } from "./useCenaKoncowa";
 import { KreatorCena } from "./KreatorCena";
 import { KreatorKolory } from "./KreatorKolory";
+import { KreatorPlyty } from "./KreatorPlyty";
 import SterowanieScian from "../kuchnia/SterowanieScian";
 import { useSciany, zresetujSciany } from "../kuchnia/scianyStore";
 import { setKoloryProjektu, useKoloryProjektu } from "../koloryStore";
@@ -456,7 +457,7 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
     [plan, plytaId, dodatki, koloryProjektu, kolorScian],
   );
   const katalog = useKatalog();
-  const kCtx = { palettes, katalog };
+  const kCtx = { palettes, katalog, plyty: plan.plyty };
   const brand = useBrand();
   const [formatki, setFormatki] = useState(false);
   const [kreatorScian, setKreatorScian] = useState(false);
@@ -473,8 +474,8 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
   const zamknijFormatki = useCallback(() => setFormatki(false), []);
   // Materiały do formatek: kolory mebli (fronty, boki, środek) i okucia z katalogu firmy – jak w PDF oferty.
   const zrodloProdukcji = useMemo<ZrodloMaterialow>(
-    () => zrodloMaterialow({ palettes, katalog }, { front, hardware, countertop, kolory: planCeny.kolory }),
-    [palettes, katalog, front, hardware, countertop, planCeny.kolory],
+    () => zrodloMaterialow({ palettes, katalog }, { front, hardware, countertop, kolory: planCeny.kolory, plyty: planCeny.plyty }),
+    [palettes, katalog, front, hardware, countertop, planCeny.kolory, planCeny.plyty],
   );
   const modeleSceny = useMemo(
     () => models.filter((m) => plan.elementy.some((e) => e.modelId === m.id)).map(toPublicModel),
@@ -1466,12 +1467,13 @@ export default function KreatorApp({ test = false }: { test?: boolean } = {}) {
                     ctx={kCtx}
                     hardware={hardware}
                   />
-                  {grupy.blat ? (
+                  {grupy.blat && !plan.plyty?.blat ? (
                     <div className="field">
                       <span className="lab">Blat</span>
                       <Wybor label="Blat" value={countertop} onChange={setCountertopId} options={opcjeMaterialu("countertop", kCtx, countertop)} bezDoplat={!liczDoplaty(plan)} />
                     </div>
                   ) : null}
+                  <KreatorPlyty plan={plan} setPlan={setPlan} grupy={grupy} />
                   {grupy.okucia ? (
                     <div className="field">
                       <span className="lab">Okucia</span>

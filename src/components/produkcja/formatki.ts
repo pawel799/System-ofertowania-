@@ -30,6 +30,8 @@ export type MaterialFormatki = {
   /** Płyta ze słojami – formatki nie obracają się na arkuszu. */
   sloje: boolean;
   rodzaj: RodzajMaterialu;
+  /** Cena netto za m² z bazy płyt stolarni (CSV); brak = bez kwot. */
+  cenaM2?: number;
 };
 
 export type Formatka = {
@@ -56,6 +58,10 @@ export type ListaFormatek = {
   okucia: Okucie[];
   /** Pozycje bez formatek: modele 3D i urządzenia AGD. */
   pominiete: { mebel: string; powod: string }[];
+  /** Obrzeże z bazy płyt („Egger … 2 mm”). */
+  obrzezeNazwa?: string;
+  /** Ostrzeżenia, np. płyta korpusu inna niż 18 mm (wymiary liczone dla 18 mm). */
+  uwagi?: string[];
 };
 
 export type UstawieniaFormatek = {
@@ -78,6 +84,10 @@ export type ZrodloMaterialow = {
   uchwyt?: (el: ElementKuchni) => { nazwa: string; bez: boolean };
   /** Nazwa blatu z oferty. */
   blat?: string;
+  /** Obrzeże z bazy płyt. */
+  obrzeze?: string;
+  /** Ostrzeżenia do pokazania przy formatkach. */
+  uwagi?: string[];
 };
 
 export const HDF: MaterialFormatki = { klucz: "hdf-3", nazwa: "HDF 3 mm biały", grubosc: 3, sloje: false, rodzaj: "hdf" };
@@ -337,6 +347,8 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
     blatNazwa: zrodlo.blat ?? "Blat",
     okucia: Array.from(okucia.values()),
     pominiete,
+    ...(zrodlo.obrzeze ? { obrzezeNazwa: zrodlo.obrzeze } : {}),
+    ...(zrodlo.uwagi?.length ? { uwagi: zrodlo.uwagi } : {}),
   };
 }
 

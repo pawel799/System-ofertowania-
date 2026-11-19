@@ -12,6 +12,7 @@ import { formatPln, totalPrice } from "./pricing";
 import { CENA_ZAKRES, CENA_ZAKRES_MEBLE } from "@/lib/plans";
 import { WSZYSTKIE_GRUPY, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { liczDoplaty, type PlanKuchni } from "@/lib/kuchnia";
+import { NOTA_PLYT, opisPlytyPelny, zPlytami } from "@/lib/plyty";
 import type { PublicModel } from "./modelRoles";
 import KoloryMebli, { meblaKolorowe, opisKoloruKlienta } from "./KoloryMebli";
 import { setKoloryProjektu, useKoloryProjektu } from "./koloryStore";
@@ -112,7 +113,9 @@ export default function MaterialsPanel({
   // Kolory z pakietów RAL i katalog materiałów firmy (puste = zestaw startowy z catalog.ts).
   const palettes = usePalettes();
   const { katalog, snapshot } = useKatalogStan();
-  const ctx = { palettes, katalog, snapshot };
+  // Płyty producentów z oferty (plan.plyty) – ustala je firma; zastępują front, boki i blat (plyty.ts).
+  const ctx = { palettes, katalog, snapshot, plyty: plan?.plyty };
+  const plytyOferty = plan?.plyty;
   const wszystkieFronty = opcjeMaterialu("front", ctx, front);
   const plyty = wszystkieFronty.filter((f) => f.zrodlo !== "ral");
   const ralFronts = wszystkieFronty.filter((f) => f.zrodlo === "ral");
@@ -121,15 +124,17 @@ export default function MaterialsPanel({
 
   const brak = (id: string): Material => ({ id, name: "—", delta: 0, zrodlo: "katalog" });
   const selectedFront = findMaterial("front", front, ctx) ?? plyty[0] ?? { ...FRONTS[0], zrodlo: "wbudowany" as const };
-  const koloryProjektu = useKoloryProjektu();
+  const koloryProjektuOferty = useKoloryProjektu();
+  const zp = zPlytami({ front, countertop }, plan, koloryProjektuOferty);
+  const koloryProjektu = zp.kolory ?? koloryProjektuOferty;
   const zKolorami = !!plan && !!onPlan && meblaKolorowe(plan, modele).length > 0;
-  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy, plan, kolory: koloryProjektu });
+  const total = totalPrice({ front, countertop, hardware }, base, palettes, { katalog, snapshot, grupy, plan, kolory: koloryProjektuOferty });
   // Dopłaty przy materiałach tylko, gdy oferta je dolicza (ceny ręczne zwykle bez – PlanKuchni.doplaty).
   const zDoplatami = showPrice && liczDoplaty(plan);
-  const selectedCountertop = findMaterial("countertop", countertop, ctx) ?? blaty[0] ?? brak(countertop);
+  const selectedCountertop = findMaterial("countertop", zp.wybor.countertop, ctx) ?? blaty[0] ?? brak(countertop);
   const selectedHardware = findMaterial("hardware", hardware, ctx) ?? okucia[0] ?? brak(hardware);
   const summary = [
-    zKolorami && plan ? opisKoloruKlienta(plan, front, koloryProjektu, ctx) : grupy.front ? `front ${selectedFront.name}` : null,
+    zKolorami && plan ? opisKoloruKlienta(plan, zp.wybor.front, koloryProjektu, ctx) : grupy.front ? `front ${plytyOferty?.front ? opisPlytyPelny(plytyOferty.front) : selectedFront.name}` : null,
     grupy.blat ? `blat ${selectedCountertop.name}` : null,
     grupy.okucia ? `okucia ${selectedHardware.name}` : null,
     showPrice ? `szacunek ${formatPln(total)} netto` : null,
@@ -147,6 +152,20 @@ export default function MaterialsPanel({
       className={`pointer-events-auto relative border-t border-black/10 bg-white text-stone-900 desk:max-h-none desk:overflow-visible ${className}`}
     >
       <h2 className="sr-only">Materiały</h2>
+      {plytyOferty && Object.keys(plytyOferty).length ? (
+        <p className="px-5 pt-4 text-xs text-stone-600 desk:px-10" data-plyty-oferty>
+          Materiał:{" "}
+          {[
+            plytyOferty.korpus ? `korpus ${opisPlytyPelny(plytyOferty.korpus)}` : null,
+            plytyOferty.front ? `fronty ${opisPlytyPelny(plytyOferty.front)}` : null,
+            plytyOferty.blat ? `blat ${opisPlytyPelny(plytyOferty.blat)}` : null,
+            plytyOferty.obrzeze ? `obrzeże ${opisPlytyPelny(plytyOferty.obrzeze)}` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          . <span className="text-stone-500">{NOTA_PLYT}</span>
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-5 px-5 py-5 desk:flex-row desk:items-end desk:gap-8 desk:px-10 desk:py-5">
         {/* Gdy pasek się nie mieści, grupy schodzą do drugiego rzędu. */}
@@ -157,7 +176,7 @@ export default function MaterialsPanel({
               onPlan={onPlan}
               front={front}
               setFront={setFront}
-              projekt={koloryProjektu}
+              projekt={koloryProjektuOferty}
               setProjekt={setKoloryProjektu}
               wybrany={wybrany}
               onWybrany={onWybrany ?? (() => {})}
@@ -168,7 +187,7 @@ export default function MaterialsPanel({
               hardware={hardware}
               setHardware={grupy.okucia ? setHardware : undefined}
             />
-          ) : grupy.front ? (
+          ) : grupy.front && !plytyOferty?.front ? (
             <fieldset>
               <legend className={`mb-2 flex items-baseline gap-2 ${GROUP_LABEL}`}>
                 Fronty
@@ -228,7 +247,7 @@ export default function MaterialsPanel({
             </fieldset>
           ) : null}
 
-          {grupy.blat ? (
+          {grupy.blat && !plytyOferty?.blat ? (
             <OptionGroup
               title="Blat"
               options={blaty}

@@ -5,6 +5,8 @@ import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
 import MebelParametryczny from "./MebelParametryczny";
 import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
+import type { WykonczeniePlyty } from "@/lib/plyty";
+import { teksturaPlyty } from "./strukturaPlyty";
 
 type Props = {
   el: ElementKuchni;
@@ -15,22 +17,34 @@ type Props = {
   /** Drzwi i szuflady otwarte (podgląd wnętrza). */
   otwarte?: boolean;
   /** Kolor boków i obudowy oraz środka mebla (kolory.ts); brak = drewno jak dotąd. */
-  korpus?: { color: string; roughness: number };
-  srodek?: { color: string; roughness: number };
+  korpus?: { color: string; roughness: number; wzor?: WykonczeniePlyty };
+  srodek?: { color: string; roughness: number; wzor?: WykonczeniePlyty };
   /** Kolor uchwytów tego mebla (okucia wybrane w oknie elementu); brak = ciemny metal. */
   kolorUchwytu?: string;
+  /** Struktura frontu z płyty producenta (strukturaPlyty.ts). */
+  wzorFrontu?: WykonczeniePlyty;
+  /** Blat z płyty producenta: grubość [mm] (null = 28 mm jak dotąd) i struktura. */
+  blatMm?: number | null;
+  blatWzor?: WykonczeniePlyty;
 };
 
 const STAL = "#d5d8dc";
 const SZKLO = "#16181b";
 const CHROM = "#e4e6e8";
 
-function Blat({ el, kolor }: { el: ElementKuchni; kolor: string }) {
+/** Wierzch blatu nad korpusem [m]: grubość z płyty blatu, bez wyboru 3 cm (siatka 28 mm) jak dotąd. */
+const wierzchBlatu = (mm?: number | null) => (mm ? mm / 1000 : 0.03);
+
+function Blat({ el, kolor, mm, wzor }: { el: ElementKuchni; kolor: string; mm?: number | null; wzor?: WykonczeniePlyty }) {
   const H = el.h / 100;
+  // Bez wyboru płyty: dokładnie jak dotąd (28 mm, środek H + 16 mm). Z płytą: od wierzchu korpusu, pełna grubość.
+  const t = mm ? mm / 1000 : 0.028;
+  const y = mm ? H + t / 2 : H + 0.016;
+  const mapa = teksturaPlyty(wzor);
   return (
-    <mesh position={[0, H + 0.016, 0.01]} castShadow receiveShadow>
-      <boxGeometry args={[el.w / 100, 0.028, el.d / 100 + 0.02]} />
-      <meshStandardMaterial color={kolor} roughness={0.45} />
+    <mesh position={[0, y, 0.01]} castShadow receiveShadow>
+      <boxGeometry args={[el.w / 100, t, el.d / 100 + 0.02]} />
+      <meshStandardMaterial color={kolor} roughness={0.45} map={mapa} />
     </mesh>
   );
 }
@@ -85,14 +99,14 @@ function Bateria({ el, skala = 1 }: { el: ElementKuchni; skala?: number }) {
   );
 }
 
-function ZlewNaSzafce({ el }: { el: ElementKuchni }) {
+function ZlewNaSzafce({ el, blatMm }: { el: ElementKuchni; blatMm?: number | null }) {
   const W = el.w / 100;
   const H = el.h / 100;
   const D = el.d / 100;
   const bw = Math.min(0.5, W * 0.62);
   const bd = Math.min(0.4, D * 0.55);
   return (
-    <group position={[0, H + 0.032, 0.02]}>
+    <group position={[0, H + wierzchBlatu(blatMm) + 0.002, 0.02]}>
       <mesh castShadow receiveShadow>
         <boxGeometry args={[bw, 0.018, bd]} />
         <meshStandardMaterial color={STAL} metalness={0.72} roughness={0.28} />
@@ -327,7 +341,7 @@ function Polka({ el }: { el: ElementKuchni }) {
 
 
 export default function AgdBryla(props: Props) {
-  const { el, kolor, chropowatosc, blat, uchwyt, otwarte, korpus, srodek, kolorUchwytu } = props;
+  const { el, kolor, chropowatosc, blat, uchwyt, otwarte, korpus, srodek, kolorUchwytu, wzorFrontu, blatMm, blatWzor } = props;
   const rodzaj = rodzajElementu(el);
   if (rodzaj === "blat") {
     return (
@@ -348,7 +362,7 @@ export default function AgdBryla(props: Props) {
     return (
       <group>
         <Piekarnik {...props} />
-        {el.strefa === "dolna" ? <Blat el={el} kolor={blat} /> : null}
+        {el.strefa === "dolna" ? <Blat el={el} kolor={blat} mm={blatMm} wzor={blatWzor} /> : null}
       </group>
     );
   }
@@ -361,10 +375,10 @@ export default function AgdBryla(props: Props) {
         <Zmywarka {...props} />
       ) : (
         // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
-        <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} />
+        <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} wzorFrontu={wzorFrontu} />
       )}
-      {blatNaDole ? <Blat el={el} kolor={blat} /> : null}
-      {rodzaj === "zlew" ? <ZlewNaSzafce el={el} /> : null}
+      {blatNaDole ? <Blat el={el} kolor={blat} mm={blatMm} wzor={blatWzor} /> : null}
+      {rodzaj === "zlew" ? <ZlewNaSzafce el={el} blatMm={blatMm} /> : null}
     </group>
   );
 }

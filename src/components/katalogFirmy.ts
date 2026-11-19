@@ -12,6 +12,7 @@
  */
 import { COUNTERTOPS, FRONTS, HARDWARE } from "./catalog";
 import { FINISH_LOOK, findRalFront, paletteFronts, type Finish, type Palette } from "./palettes";
+import { nazwaProducenta, opisPlytyPelny, slotZRef, type MaterialyPlyt, type PlytaWybrana, type WykonczeniePlyty } from "../lib/plyty";
 
 export const KATALOG_RODZAJE = [
   "plyta_front",
@@ -95,7 +96,9 @@ export type Material = {
   bezUchwytu?: boolean;
   /** Nazwa pakietu RAL, z którego pochodzi kolor. */
   palette?: string;
-  zrodlo: "wbudowany" | "ral" | "katalog";
+  /** Proceduralna struktura w 3D (płyta producenta): drewno, kamień, beton. */
+  wzor?: WykonczeniePlyty;
+  zrodlo: "wbudowany" | "ral" | "katalog" | "plyta";
 };
 
 /** Snapshot nazw i dopłat w ofercie z chwili zapisu w panelu – link klienta nie zmienia ceny po edycji katalogu. */
@@ -132,8 +135,32 @@ const WBUDOWANE_KOLORY_BLATU: Record<string, string> = {
 };
 const WBUDOWANE_KOLORY_UCHWYTU: Record<string, string> = { mosiadz: "#b08d57", "czarny-mat": "#1c1b1a" };
 
-/** Front: wbudowany, z pakietu RAL albo z katalogu firmy. */
-export function findFront(id: string, palettes: readonly Palette[] = [], katalog: readonly KatalogPozycja[] = []): Material | undefined {
+/** Wykończenie płyty producenta → wykończenie materiału (połysk, mat, struktura). */
+const WYKONCZENIE_Z_PLYTY: Record<WykonczeniePlyty, KatalogWykonczenie> = { mat: "mat", polysk: "polysk", drewno: "struktura", kamien: "polysk", beton: "struktura", inne: "mat" };
+
+/** Płyta wybrana w projekcie (plan.plyty) jako materiał: opis „Egger H1145 ST10 Dąb…, 18 mm”, kolor poglądowy, bez dopłaty. */
+export const materialPlyty = (id: string, p: PlytaWybrana): Material => ({
+  id,
+  name: opisPlytyPelny(p),
+  color: p.hex,
+  delta: 0,
+  finish: WYKONCZENIE_Z_PLYTY[p.finish],
+  thicknessMm: p.grubosc,
+  producer: nazwaProducenta(p),
+  wzor: p.finish,
+  zrodlo: "plyta",
+});
+
+function zPlyt(id: string, plyty: MaterialyPlyt | null | undefined): Material | undefined {
+  const slot = slotZRef(id);
+  const p = slot ? plyty?.[slot] : undefined;
+  return p ? materialPlyty(id, p) : undefined;
+}
+
+/** Front: wbudowany, z pakietu RAL, z katalogu firmy albo płyta z projektu („brd:front” / „brd:korpus”). */
+export function findFront(id: string, palettes: readonly Palette[] = [], katalog: readonly KatalogPozycja[] = [], plyty?: MaterialyPlyt | null): Material | undefined {
+  const plyta = zPlyt(id, plyty);
+  if (plyta) return plyta;
   const b = FRONTS.find((f) => f.id === id);
   if (b) return { ...b, zrodlo: "wbudowany" };
   const ral = findRalFront(palettes as Palette[], id);
@@ -142,7 +169,9 @@ export function findFront(id: string, palettes: readonly Palette[] = [], katalog
   return k ? zKatalogu(k) : undefined;
 }
 
-export function findCountertop(id: string, katalog: readonly KatalogPozycja[] = []): Material | undefined {
+export function findCountertop(id: string, katalog: readonly KatalogPozycja[] = [], plyty?: MaterialyPlyt | null): Material | undefined {
+  const plyta = zPlyt(id, plyty);
+  if (plyta) return plyta;
   const b = COUNTERTOPS.find((c) => c.id === id);
   if (b) return { ...b, color: WBUDOWANE_KOLORY_BLATU[b.id], zrodlo: "wbudowany" };
   const k = katalogPozycja(katalog, id, "countertop");
@@ -161,13 +190,15 @@ export type KontekstMaterialow = {
   katalog?: readonly KatalogPozycja[];
   /** Snapshot z oferty: dla tych samych id ma pierwszeństwo (nazwa i dopłata z chwili zapisu). */
   snapshot?: MaterialySnapshot | null;
+  /** Płyty producentów z planu (plan.plyty) – id „brd:<miejsce>”. */
+  plyty?: MaterialyPlyt | null;
 };
 
 export function findMaterial(rola: RolaMaterialu, id: string, ctx: KontekstMaterialow = {}): Material | undefined {
   const snap = ctx.snapshot?.[rola];
   if (snap && snap.id === id) return snap;
-  if (rola === "front") return findFront(id, ctx.palettes, ctx.katalog);
-  if (rola === "countertop") return findCountertop(id, ctx.katalog);
+  if (rola === "front") return findFront(id, ctx.palettes, ctx.katalog, ctx.plyty);
+  if (rola === "countertop") return findCountertop(id, ctx.katalog, ctx.plyty);
   return findHardware(id, ctx.katalog);
 }
 

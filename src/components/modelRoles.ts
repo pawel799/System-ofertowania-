@@ -4,6 +4,7 @@ import { toPhysical } from "./kitchenMaterials";
 import { FINISH_LOOK, findRalFront, type Palette } from "./palettes";
 import { findCountertop, findFront, findHardware, LOOK_WYKONCZENIA, parseKatRef, type KatalogPozycja, type Material as MaterialKatalogu } from "./katalogFirmy";
 import { getKatalog } from "./katalogStore";
+import { slotZRef, type MaterialyPlyt, type WykonczeniePlyty } from "@/lib/plyty";
 
 /*
  * Materiały wgranego modelu (nie kuchni demo): elementy oznaczone w panelu jako
@@ -48,6 +49,8 @@ type Look = {
   hidden?: boolean;
   /** Zostaw materiał z modelu bez zmian. */
   original?: boolean;
+  /** Płyta producenta: proceduralna struktura (drewno, kamień, beton) – własna, bez tekstur producenta. */
+  wzor?: WykonczeniePlyty;
 };
 
 // Fronty z katalogu na dowolnym modelu: gładki kolor próbki (usłojenie dębu jest tylko w kuchni demo).
@@ -75,11 +78,20 @@ const HARDWARE_LOOK: Record<string, Look> = {
 function lookKatalogu(m: MaterialKatalogu, metal = false): Look {
   const f = LOOK_WYKONCZENIA[(m.finish as keyof typeof LOOK_WYKONCZENIA) ?? "satyna"] ?? LOOK_WYKONCZENIA.satyna;
   if (metal) return { color: m.color, metalness: m.finish === "mat" || m.finish === "struktura" ? 0.2 : 1, roughness: Math.min(0.7, f.roughness + 0.1), dropMap: true };
-  return { color: m.color, roughness: f.roughness, clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, dropMap: true };
+  return { color: m.color, roughness: f.roughness, clearcoat: f.clearcoat, clearcoatRoughness: f.clearcoatRoughness, dropMap: true, ...(m.wzor ? { wzor: m.wzor } : {}) };
 }
 
-export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[], katalog: readonly KatalogPozycja[] = getKatalog()): Look {
-  if (role === "korpus") return lookFor("front", { ...sel, front: sel.korpus ?? sel.front }, palettes, katalog);
+export function lookFor(role: ModelRole, sel: Selection, palettes: Palette[], katalog: readonly KatalogPozycja[] = getKatalog(), plyty?: MaterialyPlyt | null): Look {
+  if (role === "korpus") return lookFor("front", { ...sel, front: sel.korpus ?? sel.front }, palettes, katalog, plyty);
+  // Płyta producenta z projektu („brd:front”, „brd:korpus”, „brd:blat”): kolor poglądowy + wykończenie.
+  if (role === "front" && slotZRef(sel.front)) {
+    const p = findFront(sel.front, palettes, katalog, plyty);
+    if (p) return lookKatalogu(p);
+  }
+  if (role === "blat" && slotZRef(sel.countertop)) {
+    const p = findCountertop(sel.countertop, katalog, plyty);
+    if (p) return lookKatalogu(p);
+  }
   if (role === "front") {
     const kat = parseKatRef(sel.front) ? findFront(sel.front, palettes, katalog) : undefined;
     if (kat) return lookKatalogu(kat);
@@ -144,13 +156,14 @@ export function applyRoles(
   sel: Selection,
   palettes: Palette[],
   katalog: readonly KatalogPozycja[] = getKatalog(),
+  plyty?: MaterialyPlyt | null,
 ) {
   const roles = meshRoles(root, tags);
   const clones = new Map<string, Material>();
   roles.forEach((role, mesh) => {
     const original = originalOf(mesh);
     if (Array.isArray(original) || !(original instanceof MeshStandardMaterial)) return;
-    const look = lookFor(role, sel, palettes, katalog);
+    const look = lookFor(role, sel, palettes, katalog, plyty);
     mesh.visible = !look.hidden;
     if (look.original || look.hidden) {
       mesh.material = original;

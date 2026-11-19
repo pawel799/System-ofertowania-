@@ -13,6 +13,8 @@ import * as THREE from "three";
 import { useDrewno } from "../modul/Szafka";
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { ElementKuchni } from "@/lib/kuchnia";
+import type { WykonczeniePlyty } from "@/lib/plyty";
+import { teksturaPlyty } from "./strukturaPlyty";
 
 const T = 0.018;
 const PLECY = 0.003;
@@ -103,6 +105,7 @@ export default function MebelParametryczny({
   korpus,
   srodek,
   kolorUchwytu,
+  wzorFrontu,
 }: {
   el: ElementKuchni;
   kolor: string;
@@ -110,20 +113,22 @@ export default function MebelParametryczny({
   uchwyt: boolean;
   otwarte?: boolean;
   /** Boki i obudowa (boki, wieńce, przegrody zewnętrzne) – kolor z kolory.ts; brak = drewno. */
-  korpus?: { color: string; roughness: number };
+  korpus?: { color: string; roughness: number; wzor?: WykonczeniePlyty };
   /** Środek: półki, przegrody, skrzynki szuflad. */
-  srodek?: { color: string; roughness: number };
+  srodek?: { color: string; roughness: number; wzor?: WykonczeniePlyty };
   /** Kolor uchwytów (okucia tego mebla); brak = ciemny metal. */
   kolorUchwytu?: string;
+  /** Struktura frontów z płyty producenta (strukturaPlyty.ts). */
+  wzorFrontu?: WykonczeniePlyty;
 }) {
   const drewno = useDrewno();
-  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02 }) : null), [korpus?.color, korpus?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
-  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02 }) : null), [srodek?.color, srodek?.roughness]); // eslint-disable-line react-hooks/exhaustive-deps
+  const korpusMat = useMemo(() => (korpus ? new THREE.MeshStandardMaterial({ color: korpus.color, roughness: korpus.roughness, metalness: 0.02, map: teksturaPlyty(korpus.wzor) }) : null), [korpus?.color, korpus?.roughness, korpus?.wzor]); // eslint-disable-line react-hooks/exhaustive-deps
+  const srodekMat = useMemo(() => (srodek ? new THREE.MeshStandardMaterial({ color: srodek.color, roughness: srodek.roughness, metalness: 0.02, map: teksturaPlyty(srodek.wzor) }) : null), [srodek?.color, srodek?.roughness, srodek?.wzor]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => [korpusMat, srodekMat].forEach((x) => x?.dispose()), [korpusMat, srodekMat]);
   // m.korpus – boki i wieńce; m.srodek – półki, przegrody i skrzynki szuflad.
   const m = { ...drewno, korpus: korpusMat ?? drewno.korpus, srodek: srodekMat ?? korpusMat ?? drewno.korpus };
   const wn = useMemo(() => el.wnetrze ?? wnetrzeDomyslne(el), [el]);
-  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02 }), [kolor, chropowatosc]);
+  const frontMat = useMemo(() => new THREE.MeshStandardMaterial({ color: kolor, roughness: chropowatosc, metalness: 0.02, map: teksturaPlyty(wzorFrontu) }), [kolor, chropowatosc, wzorFrontu]);
   const metal = useMemo(() => new THREE.MeshStandardMaterial({ color: kolorUchwytu ?? "#2b2b2b", metalness: 0.8, roughness: 0.35 }), [kolorUchwytu]);
   const chrom = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9ccd0", metalness: 0.9, roughness: 0.25 }), []);
   const dno = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e9e4dc", roughness: 0.85 }), []);

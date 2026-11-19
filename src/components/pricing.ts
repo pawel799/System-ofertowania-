@@ -3,6 +3,7 @@ import type { Palette } from "./palettes";
 import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { doplataKolorow, doplataUchwytow, type KoloryProjektu } from "@/lib/kolory";
 import { liczDoplaty, type PlanKuchni } from "@/lib/kuchnia";
+import { zPlytami } from "@/lib/plyty";
 
 /*
  * Wspólny cennik: używa go pasek materiałów na stronie oferty (MaterialsPanel)
@@ -32,7 +33,7 @@ export function formatPln(value: number) {
  * plan + kolory: meble w różnych kolorach (fronty, boki, środek – kolory.ts) – dopłata za kolor według powierzchni.
  */
 export function totalPrice(
-  selection: { front: string; countertop: string; hardware: string },
+  wybranie: { front: string; countertop: string; hardware: string },
   base: number = BASE_PRICE,
   palettes: Palette[] = [],
   extra: {
@@ -45,11 +46,14 @@ export function totalPrice(
 ) {
   // Ceny wpisane ręcznie bez dopłat za materiały (PlanKuchni.doplaty) – sama kwota oferty.
   if (!liczDoplaty(extra.plan)) return base;
-  const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot };
+  // Płyty producentów (plan.plyty) zastępują front, boki i blat – bez dopłat (cena płyty jest w cenniku / rozkroju).
+  const zp = zPlytami(wybranie, extra.plan, extra.kolory);
+  const selection = zp.wybor;
+  const ctx = { palettes, katalog: extra.katalog, snapshot: extra.snapshot, plyty: extra.plan?.plyty };
   const g = extra.grupy;
   const kolorowe = !g || g.front || g.korpus || g.srodek;
   const zaKolor = extra.plan?.elementy.length
-    ? doplataKolorow(extra.plan.elementy, selection.front, extra.kolory ?? extra.plan.kolory, (id) => deltaMaterialu("front", id, ctx)).kwota
+    ? doplataKolorow(extra.plan.elementy, selection.front, zp.kolory, (id) => deltaMaterialu("front", id, ctx)).kwota
     : deltaMaterialu("front", selection.front, ctx);
   return (
     base +

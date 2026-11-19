@@ -12,6 +12,7 @@ import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokosc
 import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { PunktInstalacji } from "@/lib/wywiad";
 import { yElementu } from "@/components/kuchnia/uklad3d";
+import { gruboscBlatu } from "@/lib/plyty";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c);
 /** Liczba do SVG (0,1 cm). */
@@ -390,9 +391,10 @@ export function svgSciany(plan: PlanKuchni, id: ScianaPokoju): string {
     if (bokiem || e.kat) out.push(`<rect class="rys-mebel" x="${n(xa)}" y="${n(Y(y0 + e.h))}" width="${n(szer)}" height="${n(e.h)}" />`);
     else frontySvg(out, e, xa, Y(y0), fs);
     if (e.strefa === "dolna") {
-      // Blat nad szafkami dolnymi (3 cm).
-      out.push(`<rect class="rys-blatwierzch" x="${n(xa)}" y="${n(Y(y0 + e.h + 3))}" width="${n(szer)}" height="3" />`);
-      poziomy.add(Math.round(e.h + 3));
+      // Blat nad szafkami dolnymi: grubość z płyty blatu (plyty.ts), bez wyboru 3 cm jak dotąd.
+      const gb = (gruboscBlatu(plan) ?? 30) / 10;
+      out.push(`<rect class="rys-blatwierzch" x="${n(xa)}" y="${n(Y(y0 + e.h + gb))}" width="${n(szer)}" height="${n(gb)}" />`);
+      poziomy.add(Math.round(e.h + gb));
     }
     if (e.strefa === "gorna" || e.strefa === "polka") {
       gorne.push(o.a, o.b);

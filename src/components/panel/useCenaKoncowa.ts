@@ -13,6 +13,7 @@ import type { GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { deltaMaterialu, findMaterial, type KontekstMaterialow } from "../katalogFirmy";
 import { doplataKolorow, doplataUchwytow, type KoloryProjektu } from "@/lib/kolory";
 import { formatPln } from "../pricing";
+import { zPlytami } from "@/lib/plyty";
 
 export type WyborMaterialow = { front: string; countertop: string; hardware: string };
 
@@ -27,14 +28,19 @@ export function opisKolorow(udzialy: readonly { id: string; udzial: number }[], 
  * Dopłaty za materiały do rozbicia ceny (nazwa + kwota), bez grup, których projekt nie ma.
  * Z planem: kolory mebli (fronty, boki, środek) według powierzchni – kolory.ts.
  */
-export function doplatyMaterialow(wybor: WyborMaterialow, grupy: GrupyMaterialow, ctx: KontekstMaterialow, plan?: PlanKuchni | null, kolory?: KoloryProjektu | null) {
+export function doplatyMaterialow(wyborOferty: WyborMaterialow, grupy: GrupyMaterialow, ctxOferty: KontekstMaterialow, plan?: PlanKuchni | null, koloryOferty?: KoloryProjektu | null) {
+  // Płyty producentów (plan.plyty) zastępują front, boki i blat – bez dopłat.
+  const zp = zPlytami(wyborOferty, plan, koloryOferty);
+  const wybor = zp.wybor;
+  const kolory = zp.kolory;
+  const ctx: KontekstMaterialow = { ...ctxOferty, plyty: plan?.plyty };
   const out: { klucz: string; nazwa: string; kwota: number }[] = [];
   const dodaj = (klucz: string, etykieta: string, m: { name: string; delta: number } | undefined) => {
     if (m?.delta) out.push({ klucz, nazwa: `${etykieta}: ${m.name}`, kwota: m.delta });
   };
   if (plan?.elementy.length) {
     if (grupy.front || grupy.korpus || grupy.srodek) {
-      const d = doplataKolorow(plan.elementy, wybor.front, kolory ?? plan.kolory, (id) => deltaMaterialu("front", id, ctx));
+      const d = doplataKolorow(plan.elementy, wybor.front, kolory, (id) => deltaMaterialu("front", id, ctx));
       if (d.kwota) out.push({ klucz: "front", nazwa: opisKolorow(d.udzialy, ctx), kwota: d.kwota });
     }
   } else if (grupy.front) dodaj("front", "Fronty", findMaterial("front", wybor.front, ctx));

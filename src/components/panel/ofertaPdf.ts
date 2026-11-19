@@ -16,6 +16,7 @@ import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib
 import { opisKolorow } from "./useCenaKoncowa";
 import { grupyMaterialow, maAgd, opisGrup, type GrupyMaterialow } from "@/lib/opcjeProjektu";
 import { slowaProjektu, type SlowaProjektu, type TypProjektu } from "@/lib/projekt";
+import { NOTA_PLYT, opisPlytyPelny, SLOTY_PLYT, zPlytami, type SlotPlyty } from "@/lib/plyty";
 
 export type PdfDane = {
   id: string;
@@ -28,6 +29,8 @@ export type PdfDane = {
   frontNazwa: string;
   blatNazwa: string;
   okuciaNazwa: string;
+  /** Płyty producentów z projektu (plan.plyty): „Korpus: Egger H1145 ST10 Dąb…, 18 mm”. */
+  plyty: { slot: SlotPlyty; opis: string }[];
   /** cena null = urządzenie AGD, nie wchodzi do sumy. */
   pozycje: { nazwa: string; strefa: string; w: number; h: number; d: number; cena: number | null; poza?: string }[];
   /** Suma mebli (pozycje z ceną). */
@@ -101,13 +104,16 @@ export function danePdf(args: {
   projekt?: TypProjektu;
 }): PdfDane {
   const grupy = grupyMaterialow({ plan: args.plan, modele: args.modele ?? [] });
+  // Płyty producentów (plan.plyty) zastępują front, boki i blat oferty – jak w 3D i w cenie (plyty.ts).
+  const zp = zPlytami({ front: args.front, countertop: args.countertop }, args.plan, args.plan.kolory);
+  args = { ...args, front: zp.wybor.front, countertop: zp.wybor.countertop, plan: { ...args.plan, kolory: zp.kolory } };
   // Snapshot oferty → katalog firmy / RAL → zestaw wbudowany (nigdy gołe id w PDF).
-  const mctx = { palettes: args.palettes, katalog: args.katalog, snapshot: args.snapshot };
+  const mctx = { palettes: args.palettes, katalog: args.katalog, snapshot: args.snapshot, plyty: args.plan.plyty };
   const frontSw = findMaterial("front", args.front, mctx);
   const blat = findMaterial("countertop", args.countertop, mctx);
   const okucia = findMaterial("hardware", args.hardware, mctx);
   const zGruboscia = (m: { name: string; thicknessMm?: number } | undefined, id: string) =>
-    m ? `${m.name}${m.thicknessMm ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
+    m ? `${m.name}${m.thicknessMm && !/\d\s*mm\b/.test(m.name) ? ` (${String(m.thicknessMm).replace(".", ",")} mm)` : ""}` : id;
   const cennikPlyty = cennikZPlyta(args.cennik, args.plan.plyta);
   // Przed pozycjami: opis kolorów mebla korzysta z niej przy budowaniu listy (wcześniej TDZ – PDF padał, gdy mebel miał własne kolory).
   const nazwaKoloru = (id: string) => findMaterial("front", id, mctx)?.name ?? id;
@@ -152,6 +158,10 @@ export function danePdf(args: {
     frontNazwa: kolory.udzialy.length > 1 ? opisKolorow(kolory.udzialy, mctx).replace(/^Kolory: /, "") : zGruboscia(frontSw, args.front),
     blatNazwa: zGruboscia(blat, args.countertop),
     okuciaNazwa: okucia?.name ?? args.hardware,
+    plyty: SLOTY_PLYT.flatMap((s) => {
+      const p = args.plan.plyty?.[s];
+      return p ? [{ slot: s, opis: opisPlytyPelny(p) }] : [];
+    }),
     pozycje,
     sumaPozycji,
     dopFront,
@@ -184,6 +194,7 @@ function wierszDop(nazwa: string, kwota: number) {
 /** „Fronty: … · Blat: … · Okucia: …” – tylko materiały, które projekt ma. */
 function materialyTekst(d: PdfDane, sep: string) {
   return [
+    d.plyty.length ? `Materiał: ${d.plyty.map((p) => `${PLYTA_PDF[p.slot]}: ${p.opis}`).join(", ")}` : null,
     d.grupy.front || d.grupy.korpus ? `Kolor: ${d.frontNazwa}` : null,
     d.grupy.blat ? `Blat: ${d.blatNazwa}` : null,
     d.grupy.okucia ? `Okucia: ${d.okuciaNazwa}` : null,
@@ -192,7 +203,14 @@ function materialyTekst(d: PdfDane, sep: string) {
     .join(sep);
 }
 
+const PLYTA_PDF: Record<SlotPlyty, string> = { korpus: "Korpus", front: "Fronty", blat: "Blat", obrzeze: "Obrzeże" };
+
 function materialyHtml(d: PdfDane) {
+  const plyty = d.plyty.length ? `<p><b>Materiał:</b> ${d.plyty.map((p) => `${PLYTA_PDF[p.slot]}: ${esc(p.opis)}`).join(" · ")}</p>` : "";
+  return plyty + materialyKolorHtml(d);
+}
+
+function materialyKolorHtml(d: PdfDane) {
   const czesci = [
     d.grupy.front || d.grupy.korpus ? `<b>Kolor mebli:</b> ${esc(d.frontNazwa)}` : null,
     d.grupy.blat ? `<b>Blat:</b> ${esc(d.blatNazwa)}` : null,
@@ -326,6 +344,7 @@ ${zdjecie}
 </table>
 <p class="note">Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
 ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
+<p class="note">${esc(NOTA_PLYT)}</p>
 ${link}
 <footer>
   Dokument jest ofertą handlową. Nie zawiera rozkroju płyt, nestingu ani listy formatek do cięcia.

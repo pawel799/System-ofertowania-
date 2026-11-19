@@ -1,5 +1,6 @@
 import type { TypProjektu } from "@/lib/projekt";
 import type { PlanKuchni } from "@/lib/kuchnia";
+import type { Board } from "@/lib/plyty";
 import type { KatalogPozycja, MaterialySnapshot } from "../katalogFirmy";
 import type { ModulCennik, ModulItem } from "@/lib/modul";
 /*
@@ -447,6 +448,12 @@ export const cennikApi = {
   get: () => call<{ cennik: ModulCennik }>("GET", "/api/settings/cennik", { headers: panelAuth() }).then((r) => r.cennik),
   save: (c: ModulCennik) =>
     call<{ cennik: ModulCennik }>("PUT", "/api/settings/cennik", { body: c, headers: panelAuth() }).then((r) => r.cennik),
+};
+
+/** Własna baza płyt stolarni z CSV (KV boards:csv) – Ustawienia → Baza płyt i wybór płyt w kreatorze. */
+export const plytyApi = {
+  get: () => call<{ plyty: Board[]; at: string | null }>("GET", "/api/settings/plyty", { headers: panelAuth() }),
+  save: (plyty: Board[]) => call<{ plyty: Board[]; at: string | null }>("PUT", "/api/settings/plyty", { body: { plyty }, headers: panelAuth() }),
 };
 
 export const embedApi = {

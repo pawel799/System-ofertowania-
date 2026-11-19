@@ -4,14 +4,17 @@
  */
 import { odPodlogiElementu } from "@/lib/bibliotekaModeli";
 import { MEBLE, nachodzi, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { gruboscBlatu } from "@/lib/plyty";
 
 /** Dół szafek górnych nad blatem [m]. */
 export const Y_GORNA = 1.45;
-const BLAT_NAD_KORPUSEM = 0.03;
+/** Blat nad korpusem [m]: grubość płyty blatu z projektu (plyty.ts); bez wyboru 3 cm jak dotąd. */
+const nadKorpusem = (plan: PlanKuchni) => (gruboscBlatu(plan) ?? 30) / 1000;
 const GORNA_TYPOWA = 0.72;
 
 export function poziomBlatu(plan: PlanKuchni, el: ElementKuchni) {
   const r = rect(el);
+  const BLAT_NAD_KORPUSEM = nadKorpusem(plan);
   const pod = plan.elementy.filter((e) => e.strefa === "dolna" && rodzajElementu(e) !== "dekoracja" && nachodzi(r, rect(e)));
   if (!pod.length) return 0.72 + BLAT_NAD_KORPUSEM;
   // Telewizor, monitor, czajnik: na szafce kuchennej stoją na blacie, na komodzie, szafce RTV albo biurku – wprost na meblu.

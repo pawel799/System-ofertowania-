@@ -120,6 +120,16 @@ export function KreatorKolory({
         />
       ) : null}
       {(el ? [] : czesci).map((c) => {
+        // Płyta producenta (KreatorPlyty) zastępuje kolor frontów / boków wszystkich mebli.
+        const plyta = c === "front" ? plan.plyty?.front : c === "korpus" ? plan.plyty?.korpus : undefined;
+        if (plyta) {
+          return (
+            <div className="field" key={c}>
+              <span className="lab">{CZESC_LABEL[c]}</span>
+              <p className="kr-hint">Płyta producenta – zmienisz ją niżej, w „Płyty producentów”.</p>
+            </div>
+          );
+        }
         // Fronty: płyty i RAL; boki i środek: płyty (RAL tylko, gdy już wybrany) – tak samo jak u klienta.
         const wszystkie = opcjeMaterialu("front", ctx, wybrane(c) ?? teraz[c]);
         const opcje = c === "front" ? wszystkie : wszystkie.filter((f) => f.zrodlo !== "ral" || f.id === wybrane(c));
