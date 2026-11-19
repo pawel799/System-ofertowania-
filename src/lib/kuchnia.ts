@@ -11,7 +11,7 @@
  */
 import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
-import { cenaOkucia, okuciaPlanu, type PozycjaOkuc } from "./okucia";
+import { cenaOkucia, maProwadnice, okuciaPlanu, TYPY_PROWADNIC, type PozycjaOkuc, type TypProwadnic } from "./okucia";
 import { LEMANS, LEMANS_DOMYSLNIE, parseLemans, podzialLemans, type UstawieniaLemans } from "./lemans";
 import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
 
@@ -133,6 +133,11 @@ export type ElementKuchni = {
   hinge?: StronaLP;
   /** Narożnik LeMans: strona części ślepej, blenda i front [mm]. Brak = LEMANS_DOMYSLNIE. */
   lemans?: UstawieniaLemans;
+  /**
+   * Typ prowadnic szuflad i cargo (wysuwy jako osobna pozycja okuć). Brak = szuflady jak dotąd (dopłata „szuflada”
+   * z cennika w cenie mebla), cargo – ukryte z cichym domykiem.
+   */
+  prowadnice?: TypProwadnic;
   /** Blat waterfall: bok z materiału blatu schodzi do podłogi po lewej, prawej albo obu stronach mebla (patrząc na front). */
   waterfall?: StronaWaterfall;
 };
@@ -996,8 +1001,11 @@ export const opisPozaWycena = (el: { rodzaj?: RodzajElementu }) => (WYPOSAZENIE.
 export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
 
 /** Cena netto elementu z cennika modułów (z dopłatą za zapisane wnętrze); null = urządzenie AGD poza wyceną. */
-export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze }, cennik: ModulCennik): number | null {
-  return wycenianyElement(el) ? modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, cennik, DOMYSLNE_DODATKI) : null;
+export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze; prowadnice?: TypProwadnic }, cennik: ModulCennik): number | null {
+  if (!wycenianyElement(el)) return null;
+  // Wybrany typ prowadnic: wysuwy liczą się jako osobna pozycja okuć (okuciaOferty), więc bez dopłaty „szuflada”.
+  const bezSzuflad = el.prowadnice ? { ...cennik, szuflada: 0 } : cennik;
+  return modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, bezSzuflad, el.prowadnice ? { ...DOMYSLNE_DODATKI, szuflada: 0 } : DOMYSLNE_DODATKI);
 }
 
 /** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
@@ -1335,6 +1343,8 @@ export function parseKuchnia(v: unknown): PlanKuchni {
         : maBlatKuchenny({ rodzaj, strefa, zrodlo })
           ? jedno(e.waterfall, STRONY_WATERFALL, `blat waterfall „${nazwa}”`)
           : blad(`„${nazwa}”: blat waterfall tylko przy szafce dolnej pod blatem.`);
+    // Typ prowadnic: zostaje tylko przy meblu z szufladami albo cargo (po zmianie wnętrza bez szuflad – znika).
+    const prowadniceSurowe = e.prowadnice === undefined || e.prowadnice === null ? undefined : jedno(e.prowadnice, TYPY_PROWADNIC, `prowadnice „${nazwa}”`);
     let lemans: UstawieniaLemans | undefined;
     if (rodzaj === "lemans" && e.lemans !== undefined && e.lemans !== null) {
       try {
@@ -1363,6 +1373,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(hinge ? { hinge } : {}),
       ...(lemans ? { lemans } : {}),
       ...(waterfall ? { waterfall } : {}),
+      ...(prowadniceSurowe && maProwadnice({ rodzaj, strefa, zrodlo, w, h, d, wnetrze }) ? { prowadnice: prowadniceSurowe } : {}),
     };
   });
   let wywiad: Wywiad | undefined;

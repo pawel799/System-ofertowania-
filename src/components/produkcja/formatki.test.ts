@@ -117,3 +117,10 @@ test("waterfall: oba boki, ostrzeżenie w środku ciągu, parser tylko dla szafe
   assert.equal(parseKuchnia(p).elementy[0].waterfall, "LP");
   assert.throws(() => parseKuchnia(plan(el({ strefa: "gorna", h: 72, d: 32, waterfall: "L" }))), /waterfall tylko przy szafce dolnej/);
 });
+
+test("wysuwy w rozkroju: nazwa prowadnic z typem, cargo z wybranym typem", () => {
+  const okucia = lista(plan(el({ rodzaj: "szuflady", prowadnice: "ukryte" }))).okucia.map((o) => o.nazwa);
+  assert.ok(okucia.some((o) => o === "Prowadnice ukryte z cichym domykiem 500 mm"), okucia.join(" | "));
+  const cargo = lista(plan(el({ rodzaj: "cargo", w: 30, prowadnice: "rolkowe" }))).okucia.map((o) => o.nazwa);
+  assert.ok(cargo.includes("Prowadnice cargo rolkowe 500 mm"), cargo.join(" | "));
+});

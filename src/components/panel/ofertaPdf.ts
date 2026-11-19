@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, opisOpcjiMebla, uwagiWykonawcze, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, okuciaOferty, opisOpcjiMebla, uwagiWykonawcze, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -60,6 +60,8 @@ export type PdfDane = {
   agd: boolean;
   /** Uwagi wykonawcze (np. waterfall – łączenie na 45°). */
   uwagi: string[];
+  /** Okucia jako osobne pozycje (wysuwy, cargo, LeMans); kwota undefined = w cenie mebli (ceny ręczne). */
+  okucia: { nazwa: string; ilosc: number; cena?: number; kwota?: number }[];
 };
 
 const esc = (s: string) =>
@@ -175,6 +177,7 @@ export function danePdf(args: {
     slowa: slowaProjektu(args.projekt),
     agd: maAgd(args.plan),
     uwagi: uwagiWykonawcze(args.plan),
+    okucia: okuciaOferty(args.plan, args.cennik),
   };
 }
 
@@ -320,6 +323,7 @@ ${zdjecie}
   <tbody>
     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
     <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
+    ${d.okucia.map((x) => `<tr><td>${esc(x.nazwa.replace(/ \(kpl\.\)$/, ""))} <span class="muted">(${x.ilosc} kpl.${x.cena !== undefined ? ` × ${esc(pln(x.cena))}` : ""})</span></td><td></td><td class="num">${x.kwota !== undefined ? esc(pln(x.kwota)) : "w cenie mebli"}</td></tr>`).join("")}
     ${d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
     ${wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
     ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}

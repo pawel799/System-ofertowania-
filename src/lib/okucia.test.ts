@@ -40,3 +40,32 @@ test("ceny ręczne: okucia z ilością, bez kwot i bez wpływu na sumę", () => 
   assert.ok(o.every((x) => x.kwota === undefined));
   assert.equal(bazaKuchni(p, DEFAULT_CENNIK), 1000);
 });
+
+test("wysuwy: szuflady 60 z typem prowadnic – osobna pozycja z ilością, bez podwójnej dopłaty", async () => {
+  const { wnetrzeDomyslne, zliczWnetrze } = await import("./wnetrze");
+  const { cenaElementu } = await import("./kuchnia");
+  const baza = el({ rodzaj: "szuflady" });
+  const n = zliczWnetrze(baza, wnetrzeDomyslne(baza)!).szuflady;
+  assert.ok(n >= 2);
+  const p = plan({ ...baza, prowadnice: "kulkowe" });
+  assert.deepEqual(
+    okuciaOferty(p, DEFAULT_CENNIK).map((x) => [x.klucz, x.ilosc, x.kwota]),
+    [["prowadnice-kulkowe", n, n * CENY_OKUC_DOMYSLNE["prowadnice-kulkowe"]]],
+  );
+  // Zapisane wnętrze z szufladami: dopłata „szuflada” znika, gdy prowadnice są osobną pozycją.
+  const wn = wnetrzeDomyslne(baza)!;
+  const bez = cenaElementu({ ...baza, wnetrze: wn }, DEFAULT_CENNIK)!;
+  const z = cenaElementu({ ...baza, wnetrze: wn, prowadnice: "ukryte" }, DEFAULT_CENNIK)!;
+  assert.equal(bez - z, n * (DEFAULT_CENNIK.szuflada ?? 0));
+  // Cennik firmy z własną ceną prowadnic.
+  const c = { ...DEFAULT_CENNIK, okucia: { "prowadnice-kulkowe": 99 } };
+  assert.equal(okuciaOferty(p, c)[0].kwota, n * 99);
+});
+
+test("wysuwy: parser zostawia typ przy szufladach i cargo, usuwa przy szafce z samymi drzwiami", async () => {
+  const { parseKuchnia } = await import("./kuchnia");
+  assert.equal(parseKuchnia(plan(el({ rodzaj: "szuflady", prowadnice: "rolkowe" }))).elementy[0].prowadnice, "rolkowe");
+  assert.equal(parseKuchnia(plan(el({ rodzaj: "cargo", w: 30, prowadnice: "kulkowe" }))).elementy[0].prowadnice, "kulkowe");
+  assert.equal(parseKuchnia(plan(el({ prowadnice: "rolkowe" }))).elementy[0].prowadnice, undefined);
+  assert.throws(() => parseKuchnia(plan(el({ rodzaj: "szuflady", prowadnice: "magnetyczne" as never }))), /prowadnice/);
+});

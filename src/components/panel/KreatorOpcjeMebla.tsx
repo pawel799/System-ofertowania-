@@ -2,7 +2,7 @@
 
 /*
  * Opcje zaznaczonego mebla w kroku „Meble”: strona zawiasu drzwi jednoskrzydłowych, szerokość cargo,
- * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce), blat waterfall.
+ * narożnik LeMans (strona, front, blenda, ostrzeżenie o sąsiedniej szafce), blat waterfall, typ prowadnic (wysuwy).
  * Pokazuje się tylko to, co ma sens dla danego mebla; brak opcji = nic się nie rysuje.
  */
 import type { ReactNode } from "react";
@@ -11,7 +11,7 @@ import { lemansElementu, maBlatKuchenny, ostrzezeniaLemans, ostrzezeniaWaterfall
 import { LEMANS, podzialLemans, sprawdzLemans, type UstawieniaLemans } from "@/lib/lemans";
 import { PoleCm } from "./KreatorWlasciwosci";
 import { jednoSkrzydlo } from "@/lib/wnetrze";
-import { cargoWysokie, jestCargo, koszeCargoWysokiego } from "@/lib/okucia";
+import { cargoWysokie, jestCargo, kompletyProwadnic, koszeCargoWysokiego, maProwadnice, PROWADNICE_CARGO, type TypProwadnic } from "@/lib/okucia";
 
 const SZEROKOSCI_CARGO = ["15", "20", "30", "40"] as const;
 
@@ -98,6 +98,39 @@ export function KreatorOpcjeMebla({
           options={[
             { value: "L", label: "Lewe" },
             { value: "P", label: "Prawe" },
+          ]}
+        />
+      </Opcja>,
+    );
+  }
+  if (maProwadnice(element)) {
+    const cargo = jestCargo(element);
+    const n = kompletyProwadnic(element);
+    opcje.push(
+      <Opcja
+        key="prowadnice"
+        tytul="Wysuwy (prowadnice)"
+        opis={
+          element.prowadnice || cargo
+            ? `W ofercie osobna pozycja okuć: ${n} kpl.`
+            : "Standard: prowadnice w cenie mebla, jak dotąd. Wybrany typ trafia do oferty jako osobna pozycja okuć."
+        }
+      >
+        <Seg
+          label="Typ prowadnic"
+          value={element.prowadnice ?? (cargo ? PROWADNICE_CARGO : "standard")}
+          onChange={(v) =>
+            onZmien((el) => {
+              const { prowadnice: _stare, ...bez } = el;
+              void _stare;
+              return v === "standard" ? bez : { ...bez, prowadnice: v as TypProwadnic };
+            })
+          }
+          options={[
+            ...(cargo ? [] : [{ value: "standard", label: "Standard" }]),
+            { value: "rolkowe", label: "Rolkowe" },
+            { value: "kulkowe", label: "Kulkowe" },
+            { value: "ukryte", label: "Ukryte, cichy domyk" },
           ]}
         />
       </Opcja>,

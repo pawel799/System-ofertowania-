@@ -200,7 +200,7 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
       if (s.typ === "drazek") z.okucie(`Drążek ${zaokr(colW)} mm z uchwytami`, 1, "kpl.");
       if (s.typ === "szuflada") {
         const bd = prowadnica(g);
-        z.okucie(`Prowadnice ${bd} mm`, 1, "kpl.");
+        z.okucie(el.prowadnice ? `Prowadnice ${PROWADNICE_LABEL[el.prowadnice]} ${bd} mm` : `Prowadnice ${bd} mm`, 1, "kpl.");
         if (u.szuflady === "plyta") {
           const hb = Math.max(50, Math.min(220, Math.round((s.y1 - s.y0) * 0.78)));
           const bw = colW - 26;
