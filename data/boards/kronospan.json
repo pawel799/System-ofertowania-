@@ -1,9 +1,10 @@
 [
  {
-  "id": "kronospan-0101-plyta",
+  "id": "kronospan-k101-pe-plyta",
   "producer": "Kronospan",
-  "code": "0101",
-  "name": "Biały",
+  "code": "K101",
+  "structure": "PE",
+  "name": "Front White",
   "type": "plyta",
   "thicknesses": [
    18
@@ -18,46 +19,11 @@
   "source": "katalog"
  },
  {
-  "id": "kronospan-0190-plyta",
-  "producer": "Kronospan",
-  "code": "0190",
-  "name": "Czarny",
-  "type": "plyta",
-  "thicknesses": [
-   18
-  ],
-  "format": [
-   2800,
-   2070
-  ],
-  "hex": "#222222",
-  "finish": "mat",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "kronospan-0162-plyta",
-  "producer": "Kronospan",
-  "code": "0162",
-  "name": "Antracyt",
-  "type": "plyta",
-  "thicknesses": [
-   18
-  ],
-  "format": [
-   2800,
-   2070
-  ],
-  "hex": "#3d3f41",
-  "finish": "mat",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "kronospan-k001-plyta",
+  "id": "kronospan-k001-pw-plyta",
   "producer": "Kronospan",
   "code": "K001",
-  "name": "Dąb Craft biały",
+  "structure": "PW",
+  "name": "White Craft Oak",
   "type": "plyta",
   "thicknesses": [
    18
@@ -72,28 +38,11 @@
   "source": "katalog"
  },
  {
-  "id": "kronospan-k002-plyta",
+  "id": "kronospan-k002-pw-plyta",
   "producer": "Kronospan",
   "code": "K002",
-  "name": "Dąb Craft złoty",
-  "type": "plyta",
-  "thicknesses": [
-   18
-  ],
-  "format": [
-   2800,
-   2070
-  ],
-  "hex": "#b98d5c",
-  "finish": "drewno",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "kronospan-k003-plyta",
-  "producer": "Kronospan",
-  "code": "K003",
-  "name": "Dąb Craft szary",
+  "structure": "PW",
+  "name": "Grey Craft Oak",
   "type": "plyta",
   "thicknesses": [
    18
@@ -103,6 +52,25 @@
    2070
   ],
   "hex": "#9d968b",
+  "finish": "drewno",
+  "textureUrl": null,
+  "source": "katalog"
+ },
+ {
+  "id": "kronospan-k003-pw-plyta",
+  "producer": "Kronospan",
+  "code": "K003",
+  "structure": "PW",
+  "name": "Gold Craft Oak",
+  "type": "plyta",
+  "thicknesses": [
+   18
+  ],
+  "format": [
+   2800,
+   2070
+  ],
+  "hex": "#b98d5c",
   "finish": "drewno",
   "textureUrl": null,
   "source": "katalog"

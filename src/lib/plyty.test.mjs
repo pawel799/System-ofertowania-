@@ -120,3 +120,27 @@ test("wbudowane dane przechodzą walidację i mają zgodne id", async () => {
     }
   }
 });
+
+test("wbudowane dane: wymagane pola, unikalne kody, wzór kodu, źródło w ZRODLA.md", async () => {
+  const { readFileSync } = await import("node:fs");
+  const zrodla = readFileSync(new URL("../../data/boards/ZRODLA.md", import.meta.url), "utf8");
+  assert.doesNotMatch(zrodla, /z wiedzy/i, "ZRODLA.md: dane mają pochodzić ze źródeł, nie z wiedzy");
+  const WZOR = { egger: /^[A-Z]\d{3,4}$/, kronospan: /^(K\d{3}|\d{4})$/ };
+  for (const plik of ["egger", "kronospan"]) {
+    const dane = JSON.parse(readFileSync(new URL(`../../data/boards/${plik}.json`, import.meta.url), "utf8"));
+    const kody = new Set();
+    for (const d of dane) {
+      for (const pole of ["code", "name", "type", "thicknesses", "hex"]) assert.ok(d[pole] !== undefined && d[pole] !== "", `${plik} ${d.id}: brak ${pole}`);
+      assert.ok(Array.isArray(d.thicknesses) && d.thicknesses.length > 0, `${plik} ${d.id}: puste grubości`);
+      assert.match(d.code, WZOR[plik], `${plik} ${d.id}: kod ${d.code} nie pasuje do wzoru producenta`);
+      // Ten sam dekor może być płytą i blatem – unikalny ma być kod w obrębie producenta i typu.
+      const klucz = `${d.code}|${d.type}`;
+      assert.ok(!kody.has(klucz), `${plik}: powtórzony kod ${d.code} (${d.type})`);
+      kody.add(klucz);
+      const wiersz = zrodla.split("\n").find((l) => l.startsWith(`| ${d.producer} | ${d.code} | ${d.structure ?? ""} |`) && l.includes(`| ${d.type} |`));
+      assert.ok(wiersz, `${plik} ${d.id}: brak wiersza w ZRODLA.md`);
+      assert.match(wiersz, /https:\/\/\S+/, `${plik} ${d.id}: brak URL źródła`);
+      assert.match(wiersz, /\| \d{4}-\d{2}-\d{2} \|$/, `${plik} ${d.id}: brak daty sprawdzenia`);
+    }
+  }
+});

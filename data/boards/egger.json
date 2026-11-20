@@ -4,7 +4,7 @@
   "producer": "Egger",
   "code": "W1000",
   "structure": "ST9",
-  "name": "Biały Premium",
+  "name": "Biały premium",
   "type": "plyta",
   "thicknesses": [
    18
@@ -19,10 +19,10 @@
   "source": "katalog"
  },
  {
-  "id": "egger-w980-st2-plyta",
+  "id": "egger-w980-st7-plyta",
   "producer": "Egger",
   "code": "W980",
-  "structure": "ST2",
+  "structure": "ST7",
   "name": "Biały platynowy",
   "type": "plyta",
   "thicknesses": [
@@ -61,7 +61,7 @@
   "producer": "Egger",
   "code": "U702",
   "structure": "ST9",
-  "name": "Szary kaszmirowy",
+  "name": "Kaszmir",
   "type": "plyta",
   "thicknesses": [
    18
@@ -80,7 +80,7 @@
   "producer": "Egger",
   "code": "U732",
   "structure": "ST9",
-  "name": "Szary pyłowy",
+  "name": "Szary przykurzony",
   "type": "plyta",
   "thicknesses": [
    18
@@ -114,11 +114,11 @@
   "source": "katalog"
  },
  {
-  "id": "egger-u961-st2-plyta",
+  "id": "egger-u961-st7-plyta",
   "producer": "Egger",
   "code": "U961",
-  "structure": "ST2",
-  "name": "Czarny grafit",
+  "structure": "ST7",
+  "name": "Szary grafitowy",
   "type": "plyta",
   "thicknesses": [
    18
@@ -133,10 +133,10 @@
   "source": "katalog"
  },
  {
-  "id": "egger-u999-st2-plyta",
+  "id": "egger-u999-st7-plyta",
   "producer": "Egger",
   "code": "U999",
-  "structure": "ST2",
+  "structure": "ST7",
   "name": "Czarny",
   "type": "plyta",
   "thicknesses": [
@@ -166,25 +166,6 @@
    2070
   ],
   "hex": "#b3895c",
-  "finish": "drewno",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "egger-h1146-st10-plyta",
-  "producer": "Egger",
-  "code": "H1146",
-  "structure": "ST10",
-  "name": "Dąb Bardolino szary",
-  "type": "plyta",
-  "thicknesses": [
-   18
-  ],
-  "format": [
-   2800,
-   2070
-  ],
-  "hex": "#9c8e7d",
   "finish": "drewno",
   "textureUrl": null,
   "source": "katalog"
@@ -270,7 +251,7 @@
   "producer": "Egger",
   "code": "H3325",
   "structure": "ST28",
-  "name": "Dąb Gladstone tabakowy",
+  "name": "Dąb Gladstone tabak",
   "type": "plyta",
   "thicknesses": [
    18
@@ -308,7 +289,7 @@
   "producer": "Egger",
   "code": "H1344",
   "structure": "ST32",
-  "name": "Dąb Sherman koniakowo-brązowy",
+  "name": "Dąb Sherman koniakowy brązowy",
   "type": "plyta",
   "thicknesses": [
    18
@@ -346,7 +327,7 @@
   "producer": "Egger",
   "code": "H3700",
   "structure": "ST10",
-  "name": "Orzech Pacyfik naturalny",
+  "name": "Orzech Pacific naturalny",
   "type": "plyta",
   "thicknesses": [
    18
@@ -399,25 +380,6 @@
   "source": "katalog"
  },
  {
-  "id": "egger-f274-st9-plyta",
-  "producer": "Egger",
-  "code": "F274",
-  "structure": "ST9",
-  "name": "Beton jasny",
-  "type": "plyta",
-  "thicknesses": [
-   18
-  ],
-  "format": [
-   2800,
-   2070
-  ],
-  "hex": "#c4c1ba",
-  "finish": "beton",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
   "id": "egger-f186-st9-blat",
   "producer": "Egger",
   "code": "F186",
@@ -452,44 +414,6 @@
   ],
   "hex": "#6f6d69",
   "finish": "beton",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "egger-f812-st9-blat",
-  "producer": "Egger",
-  "code": "F812",
-  "structure": "ST9",
-  "name": "Marmur Levanto biały",
-  "type": "blat",
-  "thicknesses": [
-   38
-  ],
-  "format": [
-   4100,
-   600
-  ],
-  "hex": "#e7e5e0",
-  "finish": "kamien",
-  "textureUrl": null,
-  "source": "katalog"
- },
- {
-  "id": "egger-f204-st75-blat",
-  "producer": "Egger",
-  "code": "F204",
-  "structure": "ST75",
-  "name": "Marmur Carrara biały",
-  "type": "blat",
-  "thicknesses": [
-   38
-  ],
-  "format": [
-   4100,
-   600
-  ],
-  "hex": "#e9e8e4",
-  "finish": "kamien",
   "textureUrl": null,
   "source": "katalog"
  },
