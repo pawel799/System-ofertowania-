@@ -14,6 +14,8 @@ export type DaneProdukcji = {
   pominiete?: { mebel: string; powod: string }[];
   obrzezeNazwa?: string;
   uwagi?: string[];
+  /** Jak liczone są formatki (wzoryFormatek) – do porównania ze wzorem stolarza. */
+  wzory?: string[];
 };
 
 /** Koszt płyt z ceną z bazy (m² formatek × cena za m²); null = żadna płyta nie ma ceny (tryb „bez cen”). */
@@ -96,6 +98,43 @@ export function csvFormatek(d: Pick<DaneProdukcji, "formatki" | "materialy">) {
   return "﻿" + wiersze.map((w) => w.map(pole).join(";")).join("\r\n") + "\r\n";
 }
 
+/**
+ * CSV do zamówienia w hurtowni (format z zamówień płyt z cięciem i oklejaniem):
+ * materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis
+ * Okleina: 1 = oklejona krawędź, 0 = bez. Słoje: 1 = długość wzdłuż słojów (nie obracać), 0 = dowolnie. Bez cen.
+ */
+export const NAGLOWEK_HURTOWNIA = "materiał;grubość;długość;szerokość;ilość;okleina_dł1;okleina_dł2;okleina_szer1;okleina_szer2;słoje;opis";
+
+const poleCsv = (v: string | number) => {
+  const s = String(v);
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+export function csvHurtownia(d: Pick<DaneProdukcji, "formatki" | "materialy">) {
+  const nr = numeruj(d);
+  const mat = new Map(d.materialy.map((m) => [m.klucz, m]));
+  const posort = [...d.formatki].sort((a, b) => (nr.get(a.id) ?? 0) - (nr.get(b.id) ?? 0));
+  const b = (x: boolean) => (x ? "1" : "0");
+  const wiersze = posort.map((f) => {
+    const m = mat.get(f.material);
+    return [m?.nazwa ?? f.material, m?.grubosc ?? "", f.dl, f.szer, f.ilosc, b(f.okleina.d1), b(f.okleina.d2), b(f.okleina.s1), b(f.okleina.s2), b(!!m?.sloje), `${nr.get(f.id)}. ${f.mebel} – ${f.element}${f.uwagi ? ` (${f.uwagi})` : ""}`]
+      .map(poleCsv)
+      .join(";");
+  });
+  return "\uFEFF" + [NAGLOWEK_HURTOWNIA, ...wiersze].join("\r\n") + "\r\n";
+}
+
+/** Druga część zamówienia: okucia, okleina (mb na materiał), blaty i boki waterfall, liczba formatek i cięć. Bez cen. */
+export function csvZamowienia(d: DaneProdukcji, ciecia?: number) {
+  const w: (string | number)[][] = [["pozycja", "ilość", "jednostka", "opis"]];
+  w.push(["Formatki razem", d.formatki.reduce((s, f) => s + f.ilosc, 0), "szt.", `${d.formatki.length} różnych wymiarów`]);
+  if (ciecia !== undefined) w.push(["Cięcia (z rozkroju)", ciecia, "szt.", "cięcia gilotynowe z odcięciem obrzeża arkusza"]);
+  for (const p of podsumowanie(d)) if (p.okleinaMb > 0) w.push([`Okleina – ${p.material.nazwa}`, Math.round(p.okleinaMb * 100) / 100, "mb", `${p.material.grubosc} mm, bez naddatku`]);
+  for (const o of d.okucia ?? []) w.push([o.nazwa, o.ilosc, o.jednostka, "okucie"]);
+  for (const x of d.blaty ?? []) w.push([`${x.waterfall ? "Bok waterfall" : "Blat"} – ${x.mebel}`, 1, "szt.", `${x.dl} × ${x.szer} mm${x.uwagi ? `; ${x.uwagi}` : ""}`]);
+  return "\uFEFF" + w.map((r) => r.map(poleCsv).join(";")).join("\r\n") + "\r\n";
+}
+
 export type MetaProdukcji = { firma: string; tytul: string; kod: string; data: string };
 
 const CSS = `
@@ -127,7 +166,11 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
   const pods = podsumowanie(d);
   const h: string[] = [];
   h.push(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Formatki i rozkrój · ${esc(meta.tytul)}</title><style>${CSS}</style></head><body>`);
-  h.push(`<h1>Formatki i rozkrój</h1><div class="meta">${esc(meta.firma)} · ${esc(meta.kod)} · ${esc(meta.tytul)} · ${esc(meta.data)}</div>`);
+  h.push(`<h1>Formatki i rozkrój</h1><div class="meta">${esc(meta.firma)} · ${esc(meta.kod)} · ${esc(meta.tytul)} · ${esc(meta.data)} · zestawienie bez cen</div>`);
+  const ciecia = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.reduce((t, a) => t + a.ciecia, 0), 0);
+  h.push(
+    `<p><b>Formatek razem:</b> ${d.formatki.reduce((s, f) => s + f.ilosc, 0)} szt. (${d.formatki.length} wymiarów) · <b>cięć z rozkroju:</b> ${ciecia} · <b>okleina razem:</b> ${pl(d.formatki.reduce((s, f) => s + okleinaMb(f), 0))} mb</p>`,
+  );
   h.push(`<h2>Zestawienie płyt</h2><table><thead><tr><th>Materiał</th><th class="n">Grubość</th><th class="n">Formatek</th><th class="n">m²</th><th class="n">Arkusze ${u.arkusz.dl}×${u.arkusz.szer}</th><th class="n">Odpad</th><th class="n">Okleina mb</th></tr></thead><tbody>`);
   for (const p of pods) {
     const w = wyniki.get(p.material.klucz);
@@ -163,6 +206,7 @@ export function produkcjaDokument(d: DaneProdukcji, wyniki: Map<string, WynikRoz
     for (const x of d.blaty) h.push(`<tr><td>${esc(x.mebel)}</td><td class="n">${x.dl}</td><td class="n">${x.szer}</td><td class="uw">${esc(x.uwagi ?? "")}</td></tr>`);
     h.push(`</tbody></table><p class="uw">Płyt blatowych 4100 mm: ${b.plyty}${b.lacz.length ? ` · ${b.lacz.length} blat(y) dłuższe niż płyta – łączenie` : ""}.</p>`);
   }
+  if (d.wzory?.length) h.push(`<h3>Jak liczymy formatki</h3><ul class="uw">${d.wzory.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`);
   if (d.pominiete?.length) {
     h.push(`<h3>Bez formatek</h3><ul class="uw">${d.pominiete.map((p) => `<li>${esc(p.mebel)} – ${esc(p.powod)}</li>`).join("")}</ul>`);
   }

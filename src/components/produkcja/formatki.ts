@@ -9,10 +9,12 @@
  *
  * Materiał każdej części (fronty, boki, środek) podaje wywołujący – kreator zna katalog firmy i kolory mebli.
  */
-import { MEBLE, rect, rodzajElementu, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { lemansElementu, MEBLE, rect, rodzajElementu, stronyWaterfall, WYPOSAZENIE, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { podzialLemans } from "@/lib/lemans";
 import { wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
 import type { CzescMebla } from "@/lib/kolory";
 import { frontyElementu } from "../rysunek/rysunekTechniczny";
+import { cargoWysokie, dlugoscProwadnicy, koszeCargoWysokiego, PROWADNICE_LABEL, prowadniceElementu } from "@/lib/okucia";
 
 export type Okleina = { d1: boolean; d2: boolean; s1: boolean; s2: boolean };
 export const BEZ_OKLEINY: Okleina = { d1: false, d2: false, s1: false, s2: false };
@@ -47,7 +49,8 @@ export type Formatka = {
   uwagi?: string;
 };
 
-export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string };
+/** Kawałek blatu [mm]; bok waterfall: dl = wysokość od podłogi do spodu blatu, szer = głębokość blatu. */
+export type Blat = { mebel: string; dl: number; szer: number; uwagi?: string; waterfall?: boolean };
 export type Okucie = { nazwa: string; ilosc: number; jednostka: "szt." | "kpl." | "mm" };
 
 export type ListaFormatek = {
@@ -73,9 +76,13 @@ export type UstawieniaFormatek = {
   plecy: "hdf" | "brak";
   /** Nawis blatu nad frontami [mm]. */
   nawisBlatu: number;
+  /** Wysokość nóżek szafek dolnych i słupków [mm] – nazwa nóżek w okuciach i wysokość boku waterfall (nóżki + korpus). */
+  nozki: number;
 };
 
-export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20 };
+export const USTAWIENIA_DOMYSLNE: UstawieniaFormatek = { szczelina: 3, szuflady: "plyta", plecy: "hdf", nawisBlatu: 20, nozki: 100 };
+/** Grubość blatu, gdy materiał blatu jej nie podaje [mm]. */
+export const GRUBOSC_BLATU_DOMYSLNA = 38;
 
 export type ZrodloMaterialow = {
   /** Materiał części mebla (front, boki, środek). */
@@ -88,6 +95,8 @@ export type ZrodloMaterialow = {
   obrzeze?: string;
   /** Ostrzeżenia do pokazania przy formatkach. */
   uwagi?: string[];
+  /** Grubość blatu z oferty [mm] (bok waterfall); brak = GRUBOSC_BLATU_DOMYSLNA. */
+  gruboscBlatu?: number;
 };
 
 export const HDF: MaterialFormatki = { klucz: "hdf-3", nazwa: "HDF 3 mm biały", grubosc: 3, sloje: false, rodzaj: "hdf" };
@@ -201,7 +210,7 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
       if (s.typ === "drazek") z.okucie(`Drążek ${zaokr(colW)} mm z uchwytami`, 1, "kpl.");
       if (s.typ === "szuflada") {
         const bd = prowadnica(g);
-        z.okucie(`Prowadnice ${bd} mm`, 1, "kpl.");
+        z.okucie(el.prowadnice ? `Prowadnice ${PROWADNICE_LABEL[el.prowadnice]} ${bd} mm` : `Prowadnice ${bd} mm`, 1, "kpl.");
         if (u.szuflady === "plyta") {
           const hb = Math.max(50, Math.min(220, Math.round((s.y1 - s.y0) * 0.78)));
           const bw = colW - 26;
@@ -231,6 +240,44 @@ function parametryczny(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: C
   if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, zFrontem.length);
   if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", zFrontem.filter((f) => f.typ !== "przesuwne").length);
   return true;
+}
+
+/**
+ * Cargo (dolne i wysokie): korpus bez półek (kosze wiszą na mechanizmie), jeden front na całą wysokość,
+ * w okuciach kosz / mechanizm i prowadnice wybranego typu.
+ */
+function cargo(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
+  const W = mm(el.w);
+  const H = mm(el.h);
+  const D = mm(el.d);
+  korpus(z, mebel, W, H, D, mat("korpus"), u);
+  front(z, mebel, "Front cargo", mat("front"), H, W, u, "front na mechanizmie cargo");
+  const typ = prowadniceElementu(el)!;
+  const dl = dlugoscProwadnicy(el.d);
+  if (cargoWysokie(el)) z.okucie(`Mechanizm cargo wysokie ${W} mm, ${koszeCargoWysokiego(el.h)} koszy, wys. korpusu ${H} mm`, 1, "kpl.");
+  else z.okucie(`Kosz cargo ${W} mm, 2 poziomy`, 1, "kpl.");
+  z.okucie(`Prowadnice cargo ${PROWADNICE_LABEL[typ]} ${dl} mm`, 1, "kpl.");
+  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
+  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
+}
+
+/**
+ * Narożnik LeMans: korpus na całą szerokość (część ślepa za szafką prostopadłą), blenda na wysokość frontu
+ * przy styku z sąsiednią szafką, jeden front (drzwi), w okuciach mechanizm z koszami L/P i zawiasy.
+ */
+function lemans(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: CzescMebla) => MaterialFormatki, u: UstawieniaFormatek, uchwyt: { nazwa: string; bez: boolean } | null) {
+  const W = mm(el.w);
+  const H = mm(el.h);
+  const D = mm(el.d);
+  const lm = lemansElementu(el);
+  const p = podzialLemans(el.w, lm);
+  korpus(z, mebel, W, H, D, mat("korpus"), u);
+  z.dodaj(mebel, "Blenda (zaślepka)", mat("front"), H - u.szczelina, p.blenda, DOOKOLA, 1, `przy styku z szafką prostopadłą, część ślepa ${p.slepa} mm`);
+  front(z, mebel, "Front LeMans", mat("front"), H, p.front, u);
+  z.okucie(`Mechanizm narożny typu LeMans ${lm.strona === "L" ? "lewy" : "prawy"} (front ${p.front} mm, korpus ${W} mm)`, 1, "kpl.");
+  z.okucie("Zawiasy puszkowe z prowadnikami", zawiasyNaDrzwi(H));
+  if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
+  if (uchwyt?.bez) z.okucie("Push-to-open / bez uchwytów", 1);
 }
 
 /** Słupek albo szafka z piekarnikiem: korpus, półki pod i nad piekarnikiem, fronty nad i pod (proporcje jak w 3D). */
@@ -273,21 +320,32 @@ function zabudowaAgd(z: Zbieracz, mebel: string, el: ElementKuchni, mat: (c: Cze
   if (uchwyt && !uchwyt.bez) z.okucie(`Uchwyty: ${uchwyt.nazwa}`, 1);
 }
 
-const NOZKI = new Set(["szafka", "szuflady", "narozna", "zlew", "piekarnik", "lodowka-zabudowa"]);
+const NOZKI = new Set(["szafka", "szuflady", "narozna", "cargo", "lemans", "zlew", "piekarnik", "lodowka-zabudowa"]);
 
 /** Blaty: ciągi szafek dolnych wzdłuż ścian (sklejone, gdy stykają się), głębokość + nawis. */
-function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>): Blat[] {
+function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, string>, gruboscBlatu: number): Blat[] {
   const out: Blat[] = [];
+  const boki: Blat[] = [];
   const dolne = plan.elementy.filter((e) => e.strefa === "dolna" && !MEBLE.has(rodzajElementu(e)) && !WYPOSAZENIE.has(rodzajElementu(e)));
-  type Odc = { a0: number; a1: number; d: number; nazwy: string[] };
+  // naddatek – boki waterfall w odcinku: blat sięga do zewnętrznej krawędzi boku (+ grubość blatu na każdy bok).
+  type Odc = { a0: number; a1: number; d: number; nazwy: string[]; naddatek: number };
   const ciagi = new Map<string, Odc[]>();
   for (const e of dolne) {
     const r = rect(e);
     const wzdluzX = e.rot % 180 === 0;
     const klucz = wzdluzX ? `x:${Math.round(e.rot === 0 ? r.z0 : r.z1)}` : `z:${Math.round(e.rot === 90 ? r.x0 : r.x1)}`;
     const lista = ciagi.get(klucz) ?? [];
-    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa] });
+    const wf = e.zrodlo === "model" ? [] : stronyWaterfall(e);
+    lista.push({ a0: wzdluzX ? r.x0 : r.z0, a1: wzdluzX ? r.x1 : r.z1, d: e.d, nazwy: [numer.get(e.id) ?? e.nazwa], naddatek: wf.length * gruboscBlatu });
     ciagi.set(klucz, lista);
+    for (const s of wf)
+      boki.push({
+        mebel: `bok waterfall – ${numer.get(e.id) ?? e.nazwa}, ${s === "L" ? "lewy" : "prawy"}`,
+        dl: u.nozki + mm(e.h),
+        szer: mm(e.d) + u.nawisBlatu,
+        waterfall: true,
+        uwagi: `z materiału blatu, gr. ${gruboscBlatu} mm; wys. od podłogi do spodu blatu (nóżki ${u.nozki} + korpus ${mm(e.h)} mm). Łączenie z blatem na 45° – dolicz ${gruboscBlatu} mm i ucios (kreator nie liczy uciosu).`,
+      });
   }
   for (const [, lista] of Array.from(ciagi.entries()).sort(([a], [b]) => a.localeCompare(b))) {
     lista.sort((a, b) => a.a0 - b.a0);
@@ -298,19 +356,25 @@ function blatyPlanu(plan: PlanKuchni, u: UstawieniaFormatek, numer: Map<string, 
         ost.a1 = Math.max(ost.a1, o.a1);
         ost.d = Math.max(ost.d, o.d);
         ost.nazwy.push(...o.nazwy);
+        ost.naddatek += o.naddatek;
       } else sklejone.push({ ...o, nazwy: [...o.nazwy] });
     }
     for (const o of sklejone) {
       const nr = o.nazwy.map((x) => x.split(".")[0]).join(", ");
-      out.push({ mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0], dl: mm(o.a1 - o.a0), szer: mm(o.d) + u.nawisBlatu });
+      out.push({
+        mebel: o.nazwy.length > 1 ? `nad poz. ${nr}` : o.nazwy[0],
+        dl: mm(o.a1 - o.a0) + o.naddatek,
+        szer: mm(o.d) + u.nawisBlatu,
+        ...(o.naddatek ? { uwagi: `z naddatkiem ${o.naddatek} mm na bok waterfall (łączenie na 45°)` } : {}),
+      });
     }
   }
   // Osobne elementy „blat” (np. wyspa, nadstawka).
   for (const e of plan.elementy) if (rodzajElementu(e) === "blat") out.push({ mebel: numer.get(e.id) ?? e.nazwa, dl: mm(e.w), szer: mm(e.d) });
   // L / U: blaty z dwóch ścian spotykają się w narożniku – długości liczone po szafkach, łączenie do ustalenia.
   const kierunki = new Set(Array.from(ciagi.keys()).map((k) => k[0]));
-  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = "narożnik – dolicz zakładkę na łączenie blatów"));
-  return out;
+  if (kierunki.size > 1) out.forEach((b) => (b.uwagi = [b.uwagi, "narożnik – dolicz zakładkę na łączenie blatów"].filter(Boolean).join("; ")));
+  return [...out, ...boki];
 }
 
 /** Lista formatek z planu. */
@@ -331,25 +395,44 @@ export function formatkiProjektu(plan: PlanKuchni, zrodlo: ZrodloMaterialow, u: 
       continue;
     }
     if (r === "piekarnik") piekarnik(z, mebel, el, mat, u, uchwyt);
+    else if (r === "cargo") cargo(z, mebel, el, mat, u, uchwyt);
+    else if (r === "lemans") lemans(z, mebel, el, mat, u, uchwyt);
     else if (r === "lodowka-zabudowa" || r === "zmywarka") zabudowaAgd(z, mebel, el, mat, u, uchwyt);
     else if (r === "blat") continue;
     else if (!parametryczny(z, mebel, el, mat, u, uchwyt)) {
       pominiete.push({ mebel, powod: "urządzenie / dodatek – bez formatek" });
       continue;
     }
-    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie("Nóżki meblowe 100 mm", el.w > 90 ? 6 : 4);
+    if (NOZKI.has(r) && (el.strefa === "dolna" || el.strefa === "wysoka") && !MEBLE.has(r)) z.okucie(`Nóżki meblowe ${u.nozki} mm`, el.w > 90 ? 6 : 4);
     if (el.strefa === "gorna" && r !== "okap" && r !== "okap-podszafkowy") z.okucie("Zawieszki szafek górnych", 2);
   }
   return {
     formatki,
     materialy: Array.from(materialy.values()),
-    blaty: blatyPlanu(plan, u, numer),
+    blaty: blatyPlanu(plan, u, numer, zrodlo.gruboscBlatu ?? GRUBOSC_BLATU_DOMYSLNA),
     blatNazwa: zrodlo.blat ?? "Blat",
     okucia: Array.from(okucia.values()),
     pominiete,
     ...(zrodlo.obrzeze ? { obrzezeNazwa: zrodlo.obrzeze } : {}),
     ...(zrodlo.uwagi?.length ? { uwagi: zrodlo.uwagi } : {}),
   };
+}
+
+/**
+ * Jak liczone są boki, wieńce (dno), fronty i plecy – do porównania z wzorem stolarza (UI i PDF).
+ * Przykład na szafce dolnej 60 × 72 × 56 cm.
+ */
+export function wzoryFormatek(u: UstawieniaFormatek): string[] {
+  const g = u.plecy === "hdf" ? `głębokość − ${PLECY} mm plecy HDF` : "głębokość (bez pleców)";
+  const gl = 560 - (u.plecy === "hdf" ? PLECY : 0);
+  return [
+    `Płyta korpusu ${T} mm. Boki na całą wysokość, wieńce (dno i góra) między bokami.`,
+    `Bok = wysokość korpusu × (${g}) – szafka 60: 720 × ${gl} mm, 2 szt.`,
+    `Wieniec dolny (dno) i górny = (szerokość − 2 × ${T}) × (${g}) – szafka 60: 600 − 2 × ${T} = ${600 - 2 * T} mm × ${gl} mm.`,
+    `Front = pole frontu − szczelina ${u.szczelina} mm (na wysokości i szerokości) – drzwi szafki 60: ${720 - u.szczelina} × ${600 - u.szczelina} mm.`,
+    u.plecy === "hdf" ? `Plecy HDF ${PLECY} mm nakładane = (wysokość − 4) × (szerokość − 4) – szafka 60: 716 × 596 mm.` : "Bez pleców.",
+    `Półka = szerokość wnętrza × (${g} − 20 mm). Nóżki ${u.nozki} mm (bok waterfall = nóżki + korpus).`,
+  ];
 }
 
 /* ---------- podsumowania ---------- */

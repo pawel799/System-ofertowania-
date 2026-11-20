@@ -39,6 +39,8 @@ export function zrodloMaterialow(ctxOferty: KontekstMaterialow, wOferty: WyborMa
       return { nazwa: m?.name ?? "uchwyt", bez: !!m?.bezUchwytu };
     },
     blat: blatPlyta ? opisPlytyPelny(blatPlyta) : findMaterial("countertop", w.countertop, ctx)?.name,
+    // Blat z bazy płyt ma wybraną grubość (np. kompakt 12 mm) – ona liczy bok waterfall.
+    gruboscBlatu: blatPlyta ? blatPlyta.grubosc : findMaterial("countertop", w.countertop, ctx)?.thicknessMm,
     ...(plyty?.obrzeze ? { obrzeze: opisPlytyPelny(plyty.obrzeze) } : {}),
     ...(uwagi.length ? { uwagi } : {}),
   };

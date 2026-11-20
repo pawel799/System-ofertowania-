@@ -37,6 +37,7 @@ const OPIS_RODZAJU: Partial<Record<RodzajElementu, string>> = {
   szafka: "Moduł na wymiar: korpus, front, uchwyt",
   szuflady: "Moduł na wymiar z szufladami",
   narozna: "Narożna na wymiar, dwa fronty",
+  cargo: "Wysuw z koszem: 15–40 cm, dolne albo słupek",
   zlew: "Szafka pod zlew, bez wieńca górnego",
   polka: "Półka ścienna na wymiar",
 };

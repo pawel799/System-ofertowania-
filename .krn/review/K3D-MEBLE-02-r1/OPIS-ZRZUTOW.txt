@@ -1,0 +1,9 @@
+Każdy plik: <nazwa>-zamkniete.png i <nazwa>-otwarte.png (przycisk „Otwórz drzwi i szuflady”), kreator 1440×900, podgląd 3D na pełnym ekranie.
+zawiasy-L-P: ciąg 2 szafek dolnych 60 i 2 górnych 60; w każdej parze lewa ma zawias lewy (domyślny), prawa – prawy.
+cargo-30: szafka dolna 60, cargo 30, szafka dolna 60.
+cargo-wysokie-30: słupek 60, cargo wysokie 30 (210 cm), szafka dolna 60.
+lemans-L: narożnik L, LeMans 110 na ścianie A (część ślepa w narożniku, po lewej), szafka 60 ze ściany B przed częścią ślepą.
+lemans-P: LeMans 110 z częścią ślepą po prawej, szafka 60 obrócona przed częścią ślepą po prawej, szafka 60 po lewej.
+waterfall-P: szafka 60, cargo 30, szafka 80 z blatem waterfall po prawej (koniec ciągu).
+kuchnia-12: kuchnia L z 12 meblami (LeMans, cargo, cargo wysokie, szuflady, zlew, słupek, 4 górne).
+Brak obrazów referencyjnych (projektu graficznego) – oceniane są tylko zakazy i błędy obiektywne.

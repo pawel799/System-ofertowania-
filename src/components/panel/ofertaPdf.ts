@@ -9,7 +9,7 @@ import { deltaMaterialu, findMaterial, type KatalogPozycja, type MaterialySnapsh
 import { opisWnetrza } from "@/lib/wnetrze";
 import { opisPunktow } from "@/lib/punkty";
 import { RT_CSS, rysunekTechnicznyHtml, svgElementu } from "../rysunek/rysunekTechniczny";
-import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
+import { cenaOgolnaPlanu, cenaPozycji, liczDoplaty, okuciaOferty, opisOpcjiMebla, uwagiWykonawcze, wycenianyElement, katElementu, opisPozaWycena, RODZAJ_LABEL, rodzajElementu, STREFA_LABEL, UKLAD_KUCHNI_LABEL, WYPOSAZENIE, type PlanKuchni } from "@/lib/kuchnia";
 import { cennikZPlyta, type ModulCennik } from "@/lib/modul";
 import { cenaKoncowa } from "@/lib/cenaKoncowa";
 import { doplataKolorow, doplataUchwytow, koloryMebla, uchwytMebla } from "@/lib/kolory";
@@ -61,6 +61,12 @@ export type PdfDane = {
   slowa: SlowaProjektu;
   /** Są urządzenia AGD – dopisek, że nie są wliczone. */
   agd: boolean;
+  /** Uwagi wykonawcze (np. waterfall – łączenie na 45°). */
+  uwagi: string[];
+  /** Oferta „bez cen” (PlanKuchni.bezCen): zestawienie do zamówienia, bez żadnych kwot. */
+  bezCen: boolean;
+  /** Okucia jako osobne pozycje (wysuwy, cargo, LeMans); kwota undefined = w cenie mebli (ceny ręczne). */
+  okucia: { nazwa: string; ilosc: number; cena?: number; kwota?: number }[];
 };
 
 const esc = (s: string) =>
@@ -128,7 +134,7 @@ export function danePdf(args: {
   const pozycje = args.plan.elementy.map((e) => ({
     nazwa: e.nazwa,
     // Zapisane wnętrze (półki, szuflady, drążki, drzwi) – klient widzi, co dostaje w środku.
-    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
+    strefa: `${STREFA_LABEL[e.strefa]}${rodzajElementu(e) === "szafka" ? "" : ` · ${RODZAJ_LABEL[rodzajElementu(e)]}`}${e.wnetrze ? ` · ${opisWnetrza(e.wnetrze)}` : ""}${opisOpcjiMebla(e).map((x) => ` · ${x}`).join("")}${e.kat ? ` · pod kątem ${katElementu(e)}°` : ""}${opisKoloruMebla(e)}`,
     w: e.w,
     h: e.h,
     d: e.d,
@@ -182,6 +188,9 @@ export function danePdf(args: {
     grupy,
     slowa: slowaProjektu(args.projekt),
     agd: maAgd(args.plan),
+    uwagi: uwagiWykonawcze(args.plan),
+    okucia: okuciaOferty(args.plan, args.cennik),
+    bezCen: !!args.plan.bezCen,
   };
 }
 
@@ -231,7 +240,7 @@ export function pdfHtml(d: PdfDane) {
   const wiersze = d.pozycje
     .map(
       (p, i) =>
-        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${p.cena === null ? `<span class="muted">${esc(p.poza ?? "AGD, poza ceną")}</span>` : esc(pln(p.cena))}</td></tr>`,
+        `<tr><td>${i + 1}. ${esc(p.nazwa)} <span class="muted">${esc(p.strefa)}</span></td><td class="num">${p.w} × ${p.h} × ${p.d} cm</td><td class="num">${d.bezCen ? "" : p.cena === null ? `<span class="muted">${esc(p.poza ?? "AGD, poza ceną")}</span>` : esc(pln(p.cena))}</td></tr>`,
     )
     .join("");
   const logo = d.logo ? `<img class="logo" alt="" src="${esc(d.logo)}" />` : "";
@@ -249,7 +258,7 @@ export function pdfHtml(d: PdfDane) {
           if (WYPOSAZENIE.has(rodzajElementu(e))) return "";
           const p = d.pozycje[i];
           const foto = d.zdjeciaElementow[i];
-          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p ? ` · ${p.cena === null ? esc(p.poza ?? "AGD, poza ceną") : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
+          return `<article class="karta"><h3>${i + 1}. ${esc(e.nazwa)}</h3><p class="muted">${e.w} × ${e.h} × ${e.d} cm${p && !d.bezCen ? ` · ${p.cena === null ? esc(p.poza ?? "AGD, poza ceną") : esc(pln(p.cena))}` : ""}</p><div class="karta-obrazy">${foto ? `<img alt="${esc(e.nazwa)} w 3D" src="${foto}" />` : ""}<div class="karta-cad">${svgElementu(e)}</div></div></article>`;
         })
         .join("")}</div></section>`
     : "";
@@ -334,16 +343,18 @@ ${zdjecie}
   <thead><tr><th>Pozycja</th><th class="num">Wymiary (szer. × wys. × gł.)</th><th class="num">Netto</th></tr></thead>
   <tbody>
     ${wiersze || `<tr><td colspan="3">Brak pozycji.</td></tr>`}
-    <tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>
-    ${d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
-    ${wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
-    ${wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
-    ${wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
-    <tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>
+    ${d.bezCen ? "" : `<tr><td>${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` <span class="muted">(${esc(d.plytaNazwa)})</span>` : ""}</td><td></td><td class="num">${esc(pln(d.sumaPozycji))}</td></tr>`}
+    ${d.okucia.map((x) => `<tr><td>${esc(x.nazwa.replace(/ \(kpl\.\)$/, ""))} <span class="muted">(${x.ilosc} kpl.${x.cena !== undefined && !d.bezCen ? ` × ${esc(pln(x.cena))}` : ""})</span></td><td></td><td class="num">${d.bezCen ? "" : x.kwota !== undefined ? esc(pln(x.kwota)) : "w cenie mebli"}</td></tr>`).join("")}
+    ${d.bezCen ? "" : d.dodatki.map((x) => `<tr><td>${esc(x.nazwa)}${x.opis ? ` <span class="muted">(${esc(x.opis)})</span>` : ""}</td><td></td><td class="num">${esc(pln(x.kwota))}</td></tr>`).join("")}
+    ${d.bezCen ? "" : wierszDop(`Kolor mebli: ${d.frontNazwa}`, d.dopFront)}
+    ${d.bezCen ? "" : wierszDop(`Blat: ${d.blatNazwa}`, d.dopBlat)}
+    ${d.bezCen ? "" : wierszDop(`Okucia: ${d.okuciaNazwa}`, d.dopOkucia)}
+    ${d.bezCen ? "" : `<tr class="sum"><td>Razem netto</td><td></td><td class="num">${esc(pln(d.razem))}</td></tr>`}
   </tbody>
 </table>
-<p class="note">Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
+${d.bezCen ? `<p class="note">Zestawienie bez cen – do zamówienia materiałów i okuć (formatki, okleina i rozkrój: „Formatki i rozkrój” → PDF / CSV).</p>` : ""}<p class="note"${d.bezCen ? ' hidden' : ""}>Kwoty netto, bez podatku VAT. Cena mebli wynika z cennika modułów firmy (baza, płyta, front, metr bieżący) i wymiarów.${d.agd ? ` ${NOTA_AGD}` : ""}${opisGrup(d.grupy) ? ` Dopłaty za ${esc(opisGrup(d.grupy))} są takie jak na stronie podglądu 3D.` : ""}</p>
 ${d.cennikUwaga ? `<p class="note">${esc(d.cennikUwaga)}</p>` : ""}
+${d.uwagi.map((u) => `<p class="note">${esc(u)}</p>`).join("")}
 <p class="note">${esc(NOTA_PLYT)}</p>
 ${link}
 <footer>
@@ -359,7 +370,7 @@ ${rysunek}
 /** Treść maila z ofertą PDF — osobna od maila z linkiem 3D. */
 export function pdfTekst(d: PdfDane) {
   const linie = d.pozycje.map(
-    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm — ${p.cena === null ? (p.poza ?? "AGD, poza ceną") : pln(p.cena).replaceAll("\u00a0", " ")}`,
+    (p, i) => `${i + 1}. ${p.nazwa} (${p.strefa}) ${p.w}×${p.h}×${p.d} cm${d.bezCen ? "" : ` — ${p.cena === null ? (p.poza ?? "AGD, poza ceną") : pln(p.cena).replaceAll("\u00a0", " ")}`}`,
   );
   const plnSp = (n: number) => pln(n).replaceAll("\u00a0", " ");
   return [
@@ -369,15 +380,20 @@ export function pdfTekst(d: PdfDane) {
     `Układ: ${UKLAD_KUCHNI_LABEL[d.plan.uklad]}.`,
     ...(materialyTekst(d, ". ") ? [`${materialyTekst(d, ". ")}.`] : []),
     "",
-    "Pozycje (netto):",
+    d.bezCen ? "Pozycje (zestawienie bez cen):" : "Pozycje (netto):",
     ...(linie.length ? linie : ["(brak pozycji)"]),
+    ...d.okucia.map((x) => `${x.nazwa.replace(/ \(kpl\.\)$/, "")}: ${x.ilosc} kpl.${d.bezCen ? "" : x.kwota !== undefined ? ` — ${plnSp(x.kwota)}` : " (w cenie mebli)"}`),
     "",
-    `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
-    ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
-    ...(d.dopFront ? [`Kolor mebli: ${plnSp(d.dopFront)}`] : []),
-    ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
-    ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
-    `Razem netto: ${plnSp(d.razem)}`,
+    ...(d.bezCen
+      ? []
+      : [
+          `${d.slowa.nazwa === "Kuchnia" ? "Zabudowa — szafki" : "Meble na wymiar"}${d.plytaNazwa ? ` (${d.plytaNazwa})` : ""}: ${plnSp(d.sumaPozycji)}`,
+          ...d.dodatki.map((x) => `${x.nazwa}${x.opis ? ` (${x.opis.replaceAll("\u00a0", " ")})` : ""}: ${plnSp(x.kwota)}`),
+          ...(d.dopFront ? [`Kolor mebli: ${plnSp(d.dopFront)}`] : []),
+          ...(d.dopBlat ? [`Blat: ${plnSp(d.dopBlat)}`] : []),
+          ...(d.dopOkucia ? [`Okucia: ${plnSp(d.dopOkucia)}`] : []),
+          `Razem netto: ${plnSp(d.razem)}`,
+        ]),
     "",
     "Plik PDF z ofertą pobierzesz w panelu przyciskiem „Pobierz PDF” – dołącz go do tej wiadomości.",
     ...(d.link3d

@@ -1,0 +1,4 @@
+lemans-L: narożnik L, LeMans 110 na ścianie A, część ślepa w narożniku (po lewej, patrząc na front), szafka 60 ze ściany B stoi przed częścią ślepą i ma front skierowany do pokoju (prostopadle do frontu LeMans).
+lemans-P: lustrzanie – część ślepa po prawej, szafka 60 prostopadła stoi przed nią, jej front patrzy w lewo (prostopadle do frontu LeMans), więc z tej kamery widać jej bok/tył.
+*-z-gory-*: ten sam plan, kamera z góry (blat zasłania górę szafek; widać otwór LeMans i kosze).
+W planie szafka prostopadła z definicji stoi przed częścią ślepą LeMans; front LeMans i blenda są poza nią.

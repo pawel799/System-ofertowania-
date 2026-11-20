@@ -4,7 +4,8 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import Szafka, { useDrewno } from "../modul/Szafka";
 import MebelParametryczny from "./MebelParametryczny";
-import { MEBLE, rodzajElementu, type ElementKuchni } from "@/lib/kuchnia";
+import { CargoBryla, LemansBryla } from "./MebelOkucia";
+import { GRUBOSC_BLATU_3D, MEBLE, rodzajElementu, stronyWaterfall, type ElementKuchni } from "@/lib/kuchnia";
 import type { WykonczeniePlyty } from "@/lib/plyty";
 import { teksturaPlyty } from "./strukturaPlyty";
 
@@ -35,17 +36,38 @@ const CHROM = "#e4e6e8";
 /** Wierzch blatu nad korpusem [m]: grubość z płyty blatu, bez wyboru 3 cm (siatka 28 mm) jak dotąd. */
 const wierzchBlatu = (mm?: number | null) => (mm ? mm / 1000 : 0.03);
 
+/**
+ * Blat na szafce; przy waterfall (el.waterfall) blat sięga do zewnętrznej krawędzi boku, a bok z materiału blatu
+ * (grubość blatu, głębokość blatu) schodzi do podłogi po wybranej stronie.
+ * Bez wyboru płyty: jak dotąd (28 mm, środek H + 16 mm, bok GRUBOSC_BLATU_3D). Z płytą: od wierzchu korpusu, pełna grubość.
+ */
 function Blat({ el, kolor, mm, wzor }: { el: ElementKuchni; kolor: string; mm?: number | null; wzor?: WykonczeniePlyty }) {
   const H = el.h / 100;
-  // Bez wyboru płyty: dokładnie jak dotąd (28 mm, środek H + 16 mm). Z płytą: od wierzchu korpusu, pełna grubość.
-  const t = mm ? mm / 1000 : 0.028;
-  const y = mm ? H + t / 2 : H + 0.016;
+  const W = el.w / 100;
+  const G = el.d / 100 + 0.02;
+  const gora = mm ? mm / 1000 : 0.028;
+  const yGory = mm ? H + gora / 2 : H + 0.016;
+  const spod = yGory - gora / 2;
+  const t = mm ? mm / 1000 : GRUBOSC_BLATU_3D / 100;
   const mapa = teksturaPlyty(wzor);
-  return (
-    <mesh position={[0, y, 0.01]} castShadow receiveShadow>
-      <boxGeometry args={[el.w / 100, t, el.d / 100 + 0.02]} />
+  const strony = stronyWaterfall(el);
+  const l = strony.includes("L") ? t : 0;
+  const p = strony.includes("P") ? t : 0;
+  const bok = (x: number, k: string) => (
+    <mesh key={k} position={[x, spod / 2, 0.01]} castShadow receiveShadow>
+      <boxGeometry args={[t, spod, G]} />
       <meshStandardMaterial color={kolor} roughness={0.45} map={mapa} />
     </mesh>
+  );
+  return (
+    <group>
+      <mesh position={[(p - l) / 2, yGory, 0.01]} castShadow receiveShadow>
+        <boxGeometry args={[W + l + p, gora, G]} />
+        <meshStandardMaterial color={kolor} roughness={0.45} map={mapa} />
+      </mesh>
+      {l ? bok(-W / 2 - t / 2, "wl") : null}
+      {p ? bok(W / 2 + t / 2, "wp") : null}
+    </group>
   );
 }
 
@@ -373,6 +395,10 @@ export default function AgdBryla(props: Props) {
     <group>
       {rodzaj === "zmywarka" ? (
         <Zmywarka {...props} />
+      ) : rodzaj === "lemans" ? (
+        <LemansBryla el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} wzorFrontu={wzorFrontu} />
+      ) : rodzaj === "cargo" ? (
+        <CargoBryla el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} wzorFrontu={wzorFrontu} />
       ) : (
         // Szafki, szuflady, narożna, pod zlew i meble (szafa, komoda…): korpus z wnętrzem, fronty się otwierają.
         <MebelParametryczny el={el} kolor={kolor} chropowatosc={chropowatosc} uchwyt={uchwyt} otwarte={otwarte} korpus={korpus} srodek={srodek} kolorUchwytu={kolorUchwytu} wzorFrontu={wzorFrontu} />

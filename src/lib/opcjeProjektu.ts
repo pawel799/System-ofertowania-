@@ -41,6 +41,8 @@ function grupyModulu(el: ElementKuchni): GrupyMaterialow {
   if (ZABUDOWA.has(rodzaj)) return { front: true, blat: el.strefa === "dolna", okucia: true };
   // Piekarnik pod blatem: blat nad nim; drzwi piekarnika to nie front meblowy.
   if (rodzaj === "piekarnik") return { front: false, blat: el.strefa === "dolna", okucia: false };
+  // Cargo i narożnik LeMans: front meblowy z uchwytem, bez edytowalnego wnętrza.
+  if (rodzaj === "cargo" || rodzaj === "lemans") return { front: true, blat: el.strefa === "dolna", okucia: true };
   if (!kategoriaWnetrza(el)) return { front: false, blat: false, okucia: false };
   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
   const maFront = !!wn && (wn.front !== "otwarte" || wn.kolumny.some((k) => k.sekcje.some((s) => s.typ === "szuflada")));

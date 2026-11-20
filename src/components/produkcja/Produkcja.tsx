@@ -9,11 +9,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { PlanKuchni } from "@/lib/kuchnia";
 import { Seg, toast } from "../panel/ui";
 import { pobierzPdf } from "../panel/pdfPlik";
-import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
+import { blatyNaPlyty, formatkiProjektu, okleinaMb, podsumowanie, USTAWIENIA_DOMYSLNE, wzoryFormatek, type UstawieniaFormatek, type ZrodloMaterialow } from "./formatki";
 import { rozkroj, ROZKROJ_DOMYSLNY, type UstawieniaRozkroju, type WynikRozkroju } from "./rozkroj";
 import { importujListe, type WynikImportu } from "./importListy";
 import { formatkiProjektow, type ProjektDoRozkroju } from "./zrodloOferty";
-import { csvFormatek, kosztPlyt, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
+import { csvFormatek, csvHurtownia, csvZamowienia, kosztPlyt, nazwaZGruboscia, numeruj, okleinaTekst, produkcjaDokument, svgArkusza, type DaneProdukcji, type MetaProdukcji } from "./dokument";
 
 type Zrodlo = "ostatnie" | "projekt" | "lista" | "model";
 type Ustawienia = UstawieniaFormatek & UstawieniaRozkroju;
@@ -31,6 +31,7 @@ function wczytajUstawienia(): Ustawienia {
       szuflady: z.szuflady === "systemowe" ? "systemowe" : "plyta",
       plecy: z.plecy === "brak" ? "brak" : "hdf",
       nawisBlatu: num(z.nawisBlatu, DOMYSLNE.nawisBlatu, 0, 100),
+      nozki: num(z.nozki, DOMYSLNE.nozki, 0, 250),
       arkusz: { dl: num(z.arkusz?.dl, 2800, 500, 6000), szer: num(z.arkusz?.szer, 2070, 300, 3000) },
       rzaz: num(z.rzaz, 4, 0, 10),
       obrzeze: num(z.obrzeze, 10, 0, 50),
@@ -113,7 +114,9 @@ export default function Produkcja({
   }, [zrodlo, projekt, wybrane, u, zListy, model]);
 
   const materialy = useMemo(() => (dane?.materialy ?? []).map((m) => (m.klucz in sloje ? { ...m, sloje: sloje[m.klucz] } : m)), [dane, sloje]);
-  const daneM = useMemo(() => (dane ? { ...dane, materialy } : null), [dane, materialy]);
+  // Wzory (bok, dno, front) tylko dla formatek liczonych z projektu – z listy i z modelu wymiary są gotowe.
+  const zProjektu = zrodlo === "projekt" || zrodlo === "ostatnie";
+  const daneM = useMemo(() => (dane ? { ...dane, materialy, ...(zProjektu ? { wzory: wzoryFormatek(u) } : {}) } : null), [dane, materialy, zProjektu, u]);
   const nr = useMemo(() => (daneM ? numeruj(daneM) : new Map<string, number>()), [daneM]);
 
   const wyniki = useMemo(() => {
@@ -174,12 +177,15 @@ export default function Produkcja({
     }
   };
 
-  const csv = () => {
+  const ciecia = Array.from(wyniki.values()).reduce((s, w) => s + w.arkusze.reduce((t, a) => t + a.ciecia, 0), 0);
+  const csv = (rodzaj: "numery" | "hurtownia" | "zamowienie") => {
     if (!daneM) return;
-    const blob = new Blob([csvFormatek(daneM)], { type: "text/csv;charset=utf-8" });
+    const tresc = rodzaj === "hurtownia" ? csvHurtownia(daneM) : rodzaj === "zamowienie" ? csvZamowienia(daneM, ciecia) : csvFormatek(daneM);
+    const przedrostek = rodzaj === "hurtownia" ? "hurtownia" : rodzaj === "zamowienie" ? "okucia-okleina" : "formatki";
+    const blob = new Blob([tresc], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `formatki-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.csv`;
+    a.download = `${przedrostek}-${(meta.kod || "projekt").replace(/[^\w-]+/g, "_")}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -201,8 +207,14 @@ export default function Produkcja({
       <div className="pr-top">
         <Seg label="Źródło formatek" value={zrodlo} onChange={setZrodlo} options={opcje} />
         <span className="grow" style={{ flex: 1 }} />
-        <button type="button" className="btn btn-ghost" onClick={csv} disabled={!daneM?.formatki.length}>
-          Pobierz CSV
+        <button type="button" className="btn btn-ghost" onClick={() => csv("hurtownia")} disabled={!daneM?.formatki.length} title="materiał;grubość;długość;szerokość;ilość;okleina…;słoje;opis – bez cen">
+          CSV do hurtowni
+        </button>
+        <button type="button" className="btn btn-ghost" onClick={() => csv("zamowienie")} disabled={!daneM?.formatki.length} title="Okucia, okleina w mb na materiał, blaty, liczba formatek i cięć">
+          CSV okuć i okleiny
+        </button>
+        <button type="button" className="btn btn-plain" onClick={() => csv("numery")} disabled={!daneM?.formatki.length}>
+          CSV z numerami
         </button>
         <button type="button" className="btn btn-ink" onClick={() => void wydruk()} disabled={!daneM?.formatki.length || sklada} aria-busy={sklada}>
           {sklada ? "Przygotowuję PDF…" : "Pobierz PDF"}
@@ -314,6 +326,7 @@ export default function Produkcja({
             <>
               <Liczba id="pr-szcz" label="Szczelina frontów" value={u.szczelina} min={0} max={10} onChange={(v) => zmien({ szczelina: v })} />
               <Liczba id="pr-nawis" label="Nawis blatu" value={u.nawisBlatu} min={0} max={100} onChange={(v) => zmien({ nawisBlatu: v })} />
+              <Liczba id="pr-nozki" label="Nóżki (wysokość)" value={u.nozki} min={0} max={250} onChange={(v) => zmien({ nozki: v })} />
               <label htmlFor="pr-szuf" className="pr-pole">
                 <span>Szuflady</span>
                 <select id="pr-szuf" className="input" value={u.szuflady} onChange={(e) => zmien({ szuflady: e.target.value === "systemowe" ? "systemowe" : "plyta" })}>
@@ -453,6 +466,21 @@ export default function Produkcja({
             );
           })}
 
+          <p className="faint">
+            Formatek razem: {sztuk} szt. ({daneM.formatki.length} wymiarów) · cięć z rozkroju: {ciecia} · okleina: {daneM.formatki.reduce((s, f) => s + okleinaMb(f), 0).toFixed(2).replace(".", ",")} mb
+          </p>
+          {daneM.wzory?.length ? (
+            <details className="pr-mat">
+              <summary>Jak liczymy formatki (bok, dno, front)</summary>
+              <ul className="pr-lista pr-wzory">
+                {daneM.wzory.map((w) => (
+                  <li key={w}>
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
           {daneM.okucia?.length ? (
             <details className="pr-mat" open>
               <summary>Okucia</summary>

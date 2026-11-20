@@ -18,6 +18,7 @@ import {
   type PozycjaCennika,
 } from "../../src/lib/modul";
 import { HttpError, type KVNamespace } from "./offers";
+import { KLUCZE_OKUC, OKUCIE_LABEL, type KluczOkucia } from "../../src/lib/okucia";
 
 export const CENNIK_KEY = "settings:cennik-modulow";
 
@@ -91,6 +92,14 @@ export function validateCennik(v: unknown): ModulCennik {
   const plytaDomyslna = plyty?.length ? (plyty.find((p) => p.id === b.plytaDomyslna) ?? plyty[0]).id : undefined;
   const pozycje = b.pozycje === undefined || b.pozycje === null ? undefined : validatePozycje(b.pozycje);
   const domyslna = plyty?.find((p) => p.id === plytaDomyslna);
+  // Ceny okuć pokazywanych osobno (okucia.ts); brak = ceny domyślne. Nieznane klucze pomijamy.
+  let okucia: Partial<Record<KluczOkucia, number>> | undefined;
+  if (b.okucia !== undefined && b.okucia !== null) {
+    if (typeof b.okucia !== "object" || Array.isArray(b.okucia)) throw bad("Ceny okuć mają zły format.");
+    const o = b.okucia as Record<string, unknown>;
+    okucia = {};
+    for (const k of KLUCZE_OKUC) if (o[k] !== undefined && o[k] !== null) okucia[k] = money(o[k], OKUCIE_LABEL[k]);
+  }
   return {
     baza: money(b.baza, "baza"),
     plytaM2: money(b.plytaM2, "płyta za m²"),
@@ -101,6 +110,7 @@ export function validateCennik(v: unknown): ModulCennik {
     drazek: b.drazek === undefined || b.drazek === null ? (DEFAULT_CENNIK.drazek ?? 0) : money(b.drazek, "drążek"),
     ...(plyty?.length ? { plyty, plytaDomyslna, odpadPlyty } : {}),
     ...(pozycje?.length ? { pozycje } : {}),
+    ...(okucia ? { okucia } : {}),
     // Płyty z listy: plytaM2 = cena za m² płyty domyślnej (z arkusza i odpadu) – stare wyliczenia liczą tak samo.
     ...(domyslna ? { plytaM2: cenaPlytyM2(domyslna, odpadPlyty) } : {}),
   };

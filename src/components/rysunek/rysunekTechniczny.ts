@@ -6,10 +6,11 @@
  *
  * Jednostki rysunku: centymetry (viewBox w cm, skala dopasowana do kartki). Numery mebli = numery pozycji w PDF.
  */
-import { nazwaNaRzucie, rectBazowy, rodzajElementu, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { GRUBOSC_BLATU_3D, lemansElementu, nazwaNaRzucie, rectBazowy, rodzajElementu, stronyWaterfall, type ElementKuchni, type PlanKuchni } from "@/lib/kuchnia";
+import { podzialLemans } from "@/lib/lemans";
 import { meblaPrzyScianie } from "@/lib/otwory";
 import { etykietaSciany, naroznikiSciany, scianyPokoju, wysokoscOtworu, wysokoscPokoju, type Sciana, type ScianaPokoju } from "@/lib/sciany";
-import { PLYTA_CM, wnetrzeDomyslne, type Wnetrze } from "@/lib/wnetrze";
+import { PLYTA_CM, wnetrzeDomyslne, zawiasLewy, type Wnetrze } from "@/lib/wnetrze";
 import type { PunktInstalacji } from "@/lib/wywiad";
 import { yElementu } from "@/components/kuchnia/uklad3d";
 import { gruboscBlatu } from "@/lib/plyty";
@@ -71,7 +72,8 @@ export type FrontRys = {
   x1: number;
   y0: number;
   y1: number;
-  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd";
+  /** blenda – zaślepka narożnika LeMans przy styku z szafką prostopadłą. */
+  typ: "drzwi" | "szuflada" | "przesuwne" | "wneka" | "polka" | "agd" | "blenda";
   /** Drzwi: zawiasy po lewej. */
   zawiasLewy?: boolean;
   napis?: string;
@@ -97,6 +99,19 @@ function przestrzenie(kol: Wnetrze["kolumny"][number], H: number) {
 export function frontyElementu(el: ElementKuchni): FrontRys[] {
   const W = el.w;
   const H = el.h;
+  // Cargo: jeden front na mechanizmie (wysuw na wprost) – rysowany jak front szuflady.
+  if (el.rodzaj === "cargo" && el.zrodlo !== "model") return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "szuflada", napis: "cargo" }];
+  // LeMans: część ślepa (za szafką prostopadłą, przekreślona), blenda i drzwi z zawiasem po stronie zewnętrznej.
+  if (el.rodzaj === "lemans" && el.zrodlo !== "model") {
+    const u = lemansElementu(el);
+    const p = podzialLemans(W, u);
+    const cm = (a: readonly [number, number]) => ({ x0: a[0] / 10, x1: a[1] / 10 });
+    return [
+      { ...cm(p.xSlepa), y0: 0, y1: H, typ: "agd", napis: "część ślepa" },
+      { ...cm(p.xBlenda), y0: 0, y1: H, typ: "blenda" },
+      { ...cm(p.xFront), y0: 0, y1: H, typ: "drzwi", zawiasLewy: u.strona === "P" },
+    ];
+  }
   const wn = el.wnetrze ?? wnetrzeDomyslne(el);
   if (!wn || !wn.kolumny.length) return [{ x0: 0, x1: W, y0: 0, y1: H, typ: "agd", napis: nazwaNaRzucie(el) || el.nazwa }];
   const T = PLYTA_CM;
@@ -149,7 +164,7 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
       if (szer > 60.1) {
         out.push({ x0: fx0, x1: fx0 + szer / 2, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: true });
         out.push({ x0: fx0 + szer / 2, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: false });
-      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: k === 1 || c < k / 2 });
+      } else out.push({ x0: fx0, x1: fx1, y0: fy0, y1: fy1, typ: "drzwi", zawiasLewy: zawiasLewy(el.hinge, c, k) });
     }
   });
   if (wn.front === "przesuwne") {
@@ -163,6 +178,11 @@ export function frontyElementu(el: ElementKuchni): FrontRys[] {
 function frontySvg(out: string[], el: ElementKuchni, X: number, Ydol: number, fs: number) {
   const W = el.w;
   out.push(`<rect class="rys-mebel" x="${n(X)}" y="${n(Ydol - el.h)}" width="${n(W)}" height="${n(el.h)}" />`);
+  // Blat waterfall: bok z materiału blatu od podłogi do wierzchu blatu, po wybranej stronie (patrząc na front).
+  for (const s of stronyWaterfall(el)) {
+    const t = GRUBOSC_BLATU_3D;
+    out.push(`<rect class="rys-blat" x="${n(s === "L" ? X - t : X + W)}" y="${n(Ydol - el.h - 3)}" width="${n(t)}" height="${n(el.h + 3)}" />`);
+  }
   for (const f of frontyElementu(el)) {
     const x0 = X + f.x0;
     const x1 = X + f.x1;

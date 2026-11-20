@@ -11,7 +11,11 @@
  */
 import { cennikZPlyta, DOMYSLNE_DODATKI, LINIA_LIMITS, MAX_MODULY, MODUL_LIMITS, modulCena, modulPowierzchnie, type ModulCennik, type ModulItem } from "./modul";
 import { parseDodatki, wycenDodatki, type DodatekOferty } from "./dodatki";
-import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, zliczWnetrze, type Wnetrze } from "./wnetrze";
+import { cenaOkucia, maProwadnice, okuciaPlanu, TYPY_PROWADNIC, type PozycjaOkuc, type TypProwadnic } from "./okucia";
+import { LEMANS, LEMANS_DOMYSLNIE, parseLemans, podzialLemans, type UstawieniaLemans } from "./lemans";
+import { dopasujWnetrze, doplataWnetrza, maWnetrze, parseWnetrze, sprawdzWnetrze, STRONY_LP, zliczWnetrze, type StronaLP, type Wnetrze } from "./wnetrze";
+
+export type { StronaLP } from "./wnetrze";
 import { parseWywiad, type Wywiad } from "./wywiad";
 import { parseKoloryMebla, type KoloryMebla, type KoloryProjektu } from "./kolory";
 import { parseMaterialyPlyt, type MaterialyPlyt } from "./plyty";
@@ -28,6 +32,10 @@ export type RodzajElementu =
   | "szafka"
   | "szuflady"
   | "narozna"
+  // Cargo: wąski wysuw z koszem (strefa dolna: 2 poziomy; wysoka – słupek: 5–6 koszy).
+  | "cargo"
+  // Narożnik typu LeMans: część ślepa za szafką prostopadłą, blenda, front z koszami „nerkami” (lemans.ts).
+  | "lemans"
   | "zlew"
   | "zlewozmywak"
   | "bateria"
@@ -58,6 +66,8 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "szafka",
   "szuflady",
   "narozna",
+  "cargo",
+  "lemans",
   "zlew",
   "zlewozmywak",
   "bateria",
@@ -81,6 +91,10 @@ export const RODZAJE: readonly RodzajElementu[] = [
   "wyposazenie",
   "dekoracja",
 ];
+
+/** Strona boku waterfall: lewa, prawa albo obie (patrząc na front mebla). */
+export type StronaWaterfall = "L" | "P" | "LP";
+export const STRONY_WATERFALL: readonly StronaWaterfall[] = ["L", "P", "LP"];
 
 /** Rodzaje mebli spoza kuchni: własne widełki wymiarów (szafa do 4 m szerokości, do sufitu), bez blatu kuchennego. */
 export const MEBLE: ReadonlySet<RodzajElementu> = new Set<RodzajElementu>(["szafa", "szafa-przesuwna", "komoda", "regal", "rtv", "umywalka"]);
@@ -116,6 +130,17 @@ export type ElementKuchni = {
   kolory?: KoloryMebla;
   /** Cena netto wpisana ręcznie [zł] – liczy się, gdy plan ma ceny „reczne”. Brak = jeszcze nie wpisana (0 zł). */
   cena?: number;
+  /** Strona zawiasu drzwi jednoskrzydłowych (patrząc na front). Brak = lewa (jak w starszych ofertach). */
+  hinge?: StronaLP;
+  /** Narożnik LeMans: strona części ślepej, blenda i front [mm]. Brak = LEMANS_DOMYSLNIE. */
+  lemans?: UstawieniaLemans;
+  /**
+   * Typ prowadnic szuflad i cargo (wysuwy jako osobna pozycja okuć). Brak = szuflady jak dotąd (dopłata „szuflada”
+   * z cennika w cenie mebla), cargo – ukryte z cichym domykiem.
+   */
+  prowadnice?: TypProwadnic;
+  /** Blat waterfall: bok z materiału blatu schodzi do podłogi po lewej, prawej albo obu stronach mebla (patrząc na front). */
+  waterfall?: StronaWaterfall;
 };
 
 /**
@@ -164,6 +189,11 @@ export type PlanKuchni = {
    * przy cenach wpisanych ręcznie nie (firma podaje kwotę z materiałami). Przełącznik w kroku „Materiały”.
    */
   doplaty?: boolean;
+  /**
+   * Oferta „bez cen”: PDF i treść maila bez kwot (zestawienie do zamówienia materiałów w hurtowni).
+   * Cena dalej liczy się na serwerze (base), tylko się jej nie pokazuje. Brak = z cenami.
+   */
+  bezCen?: boolean;
 };
 
 export const UKLAD_KUCHNI_LABEL: Record<UkladKuchni, string> = {
@@ -183,6 +213,8 @@ export const RODZAJ_LABEL: Record<RodzajElementu, string> = {
   szafka: "Szafka",
   szuflady: "Szuflady",
   narozna: "Narożna",
+  cargo: "Cargo",
+  lemans: "Narożnik LeMans",
   zlew: "Szafka pod zlew",
   zlewozmywak: "Zlewozmywak",
   bateria: "Bateria",
@@ -239,6 +271,8 @@ export const PRESETY: PresetModul[] = [
   { id: "dolna-80", nazwa: "Szafka dolna 80", grupa: "dolne", strefa: "dolna", rodzaj: "szafka", w: 80, h: 72, d: 56 },
   { id: "szuflady-45", nazwa: "Szuflady 45", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 45, h: 72, d: 56 },
   { id: "szuflady-60", nazwa: "Szuflady 60", grupa: "dolne", strefa: "dolna", rodzaj: "szuflady", w: 60, h: 72, d: 56 },
+  { id: "cargo-30", nazwa: "Cargo 30", grupa: "dolne", strefa: "dolna", rodzaj: "cargo", w: 30, h: 72, d: 56 },
+  { id: "lemans-110", nazwa: "Narożnik LeMans 110", grupa: "dolne", strefa: "dolna", rodzaj: "lemans", w: 110, h: 72, d: 56 },
   { id: "narozna-90", nazwa: "Szafka narożna 90", grupa: "dolne", strefa: "dolna", rodzaj: "narozna", w: 90, h: 72, d: 90 },
   { id: "zlew-80", nazwa: "Szafka pod zlew 80", grupa: "dolne", strefa: "dolna", rodzaj: "zlew", w: 80, h: 72, d: 56 },
   { id: "gorna-40", nazwa: "Szafka górna 40", grupa: "gorne", strefa: "gorna", rodzaj: "szafka", w: 40, h: 72, d: 32 },
@@ -250,6 +284,7 @@ export const PRESETY: PresetModul[] = [
   { id: "polka-120", nazwa: "Półka ścienna 120", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 120, h: 6, d: 28 },
   { id: "polka-podwojna-80", nazwa: "Półka podwójna 80", grupa: "polki", strefa: "polka", rodzaj: "polka", w: 80, h: 36, d: 28 },
   { id: "slupek-60", nazwa: "Słupek 60", grupa: "slupki", strefa: "wysoka", rodzaj: "szafka", w: 60, h: 210, d: 56 },
+  { id: "cargo-wysokie-30", nazwa: "Cargo wysokie 30", grupa: "slupki", strefa: "wysoka", rodzaj: "cargo", w: 30, h: 210, d: 56 },
   { id: "piekarnik-60", nazwa: "Słupek z piekarnikiem 60", grupa: "slupki", strefa: "wysoka", rodzaj: "piekarnik", w: 60, h: 210, d: 56 },
   { id: "lodowka-zabudowa-60", nazwa: "Zabudowa lodówki 60", grupa: "slupki", strefa: "wysoka", rodzaj: "lodowka-zabudowa", w: 60, h: 210, d: 56 },
   { id: "zmywarka-60", nazwa: "Zmywarka do zabudowy 60", grupa: "agd", strefa: "dolna", rodzaj: "zmywarka", w: 60, h: 72, d: 56 },
@@ -307,6 +342,12 @@ export function limityRodzaju(rodzaj: RodzajElementu, strefa: Strefa): LimityWym
       return { w: zakres(30, 100), h: zakres(55, 92), d: zakres(45, 65) };
     case "narozna":
       return { w: zakres(80, 110), h: zakres(60, 92), d: zakres(80, 110) };
+    // LeMans: korpus 100–120 cm (część ślepa za szafką prostopadłą), front 40–60 cm.
+    case "lemans":
+      return { w: zakres(100, 120), h: zakres(55, 92), d: zakres(50, 65) };
+    // Cargo: szerokości 15/20/30/40 cm (wybór w panelu), wysokość jak szafki dolne albo słupki.
+    case "cargo":
+      return strefa === "wysoka" ? { w: zakres(15, 40), h: zakres(160, 230), d: zakres(45, 65) } : { w: zakres(15, 40), h: zakres(55, 92), d: zakres(45, 65) };
     case "zlew":
       return { w: zakres(50, 120), h: zakres(60, 92), d: zakres(45, 65) };
     case "zlewozmywak":
@@ -401,6 +442,8 @@ export function nazwaNaRzucie(el: { rodzaj?: RodzajElementu }): string {
   const NAZWY: Partial<Record<RodzajElementu, string>> = {
     szuflady: "szuflady",
     narozna: "narożna",
+    cargo: "cargo",
+    lemans: "LeMans",
     zlew: "pod zlew",
     zlewozmywak: "zlew",
     bateria: "bateria",
@@ -456,6 +499,10 @@ export function skrotElementu(el: { rodzaj?: RodzajElementu }): string {
       return "SZ";
     case "narozna":
       return "N";
+    case "cargo":
+      return "CG";
+    case "lemans":
+      return "LM";
     case "szafa":
     case "szafa-przesuwna":
       return "SZF";
@@ -965,8 +1012,11 @@ export const opisPozaWycena = (el: { rodzaj?: RodzajElementu }) => (WYPOSAZENIE.
 export const wycenianyElement = (el: { rodzaj?: RodzajElementu }) => !URZADZENIA_POZA_WYCENA.has(rodzajElementu(el));
 
 /** Cena netto elementu z cennika modułów (z dopłatą za zapisane wnętrze); null = urządzenie AGD poza wyceną. */
-export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze }, cennik: ModulCennik): number | null {
-  return wycenianyElement(el) ? modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, cennik, DOMYSLNE_DODATKI) : null;
+export function cenaElementu(el: { rodzaj?: RodzajElementu; w: number; h: number; d: number; wnetrze?: Wnetrze; prowadnice?: TypProwadnic }, cennik: ModulCennik): number | null {
+  if (!wycenianyElement(el)) return null;
+  // Wybrany typ prowadnic: wysuwy liczą się jako osobna pozycja okuć (okuciaOferty), więc bez dopłaty „szuflada”.
+  const bezSzuflad = el.prowadnice ? { ...cennik, szuflada: 0 } : cennik;
+  return modulCena(el, cennik) + doplataWnetrza(el, el.wnetrze, bezSzuflad, el.prowadnice ? { ...DOMYSLNE_DODATKI, szuflada: 0 } : DOMYSLNE_DODATKI);
 }
 
 /** Pozycje do cennika: klient nie przysyła ceny, tylko wymiary. Bez urządzeń AGD. */
@@ -1009,6 +1059,145 @@ export function sumaMebli(plan: PlanKuchni, cennik: ModulCennik) {
   return plan.elementy.reduce((s, e) => s + (cenaPozycji(e, plan, c, true) ?? 0), 0);
 }
 
+/** Mebel na wymiar stojący pod blatem kuchennym (szafki dolne, cargo, LeMans, zabudowy AGD pod blatem). */
+export const maBlatKuchenny = (el: { rodzaj?: RodzajElementu; strefa: Strefa; zrodlo?: ZrodloElementu }) =>
+  el.zrodlo !== "model" && el.strefa === "dolna" && !MEBLE.has(rodzajElementu(el)) && wycenianyElement(el);
+
+/** Strony boku waterfall mebla (pusta lista = bez waterfall). */
+export const stronyWaterfall = (el: { waterfall?: StronaWaterfall }): StronaLP[] => (el.waterfall === "LP" ? ["L", "P"] : el.waterfall ? [el.waterfall] : []);
+
+/** Grubość blatu w 3D [cm] – jak bryła blatu w AgdBryla (rozkrój bierze grubość z materiału blatu). */
+export const GRUBOSC_BLATU_3D = 2.8;
+
+/**
+ * Bok waterfall w środku ciągu: po tej stronie mebla stoi inny mebel (bok nie ma gdzie zejść).
+ * Waterfall zwykle zamyka ciąg albo wyspę.
+ */
+export function ostrzezeniaWaterfall(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
+  const out: string[] = [];
+  for (const el of plan.elementy) {
+    if (!el.waterfall || (id && el.id !== id) || el.kat) continue;
+    const th = (el.rot * Math.PI) / 180;
+    const R = { x: Math.cos(th), z: -Math.sin(th) };
+    const F = { x: Math.sin(th), z: Math.cos(th) };
+    for (const s of stronyWaterfall(el)) {
+      const sasiad = plan.elementy.find((o) => {
+        if (o.id === el.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) return false;
+        const r = rect(o);
+        const rogi = [
+          [r.x0, r.z0],
+          [r.x1, r.z0],
+          [r.x0, r.z1],
+          [r.x1, r.z1],
+        ].map(([x, z]) => ({ u: (x - el.x) * R.x + (z - el.z) * R.z, v: (x - el.x) * F.x + (z - el.z) * F.z }));
+        const u0 = Math.min(...rogi.map((q) => q.u));
+        const u1 = Math.max(...rogi.map((q) => q.u));
+        const v0 = Math.min(...rogi.map((q) => q.v));
+        const v1 = Math.max(...rogi.map((q) => q.v));
+        if (v1 <= -el.d / 2 + 1 || v0 >= el.d / 2 - 1) return false;
+        const krawedz = s === "L" ? -el.w / 2 : el.w / 2;
+        return s === "L" ? u1 > krawedz - GRUBOSC_BLATU_3D - 0.5 && u0 < krawedz : u0 < krawedz + GRUBOSC_BLATU_3D + 0.5 && u1 > krawedz;
+      });
+      if (sasiad) out.push(`„${el.nazwa}”: bok waterfall po ${s === "L" ? "lewej" : "prawej"} styka się z „${sasiad.nazwa}” – waterfall zamyka ciąg, przesuń go na koniec rzędu.`);
+    }
+  }
+  return out;
+}
+
+/** Krótki opis opcji mebla do PDF i listy pozycji: strona zawiasu, LeMans, cargo, waterfall. Pusta lista = brak opcji. */
+export function opisOpcjiMebla(el: ElementKuchni): string[] {
+  const out: string[] = [];
+  if (el.hinge) out.push(`zawiasy ${el.hinge === "L" ? "lewe" : "prawe"}`);
+  const r = rodzajElementu(el);
+  if (r === "lemans" && el.zrodlo !== "model") {
+    const u = lemansElementu(el);
+    out.push(`narożnik ${u.strona === "L" ? "lewy" : "prawy"}, front ${u.front} mm, blenda ${u.blenda} mm`);
+  }
+  if (r === "cargo" && el.zrodlo !== "model") out.push(el.strefa === "wysoka" ? "cargo wysokie z koszami" : "cargo z koszem 2-poziomowym");
+  if (el.waterfall) out.push(`blat waterfall ${el.waterfall === "LP" ? "z obu stron" : el.waterfall === "L" ? "z lewej" : "z prawej"}`);
+  return out;
+}
+
+/** Uwagi wykonawcze do PDF oferty (np. łączenie blatu waterfall na 45°). */
+export function uwagiWykonawcze(plan: Pick<PlanKuchni, "elementy">): string[] {
+  const out: string[] = [];
+  const wf = plan.elementy.filter((e) => e.waterfall);
+  if (wf.length)
+    out.push(
+      `Blat waterfall (${wf.map((e) => e.nazwa).join(", ")}): bok z materiału blatu schodzi do podłogi, grubość i głębokość jak blat. Łączenie boku z blatem na 45° (ucios) – wymiar do ustalenia na pomiarze; kreator nie liczy uciosu.`,
+    );
+  return out;
+}
+
+/** Ustawienia narożnika LeMans (brak w elemencie = domyślne). */
+export const lemansElementu = (el: { lemans?: UstawieniaLemans }): UstawieniaLemans => el.lemans ?? LEMANS_DOMYSLNIE;
+
+/**
+ * Czy szafka prostopadła do narożnika LeMans zostawia miejsce na front i uchwyt. Dla każdego LeMans:
+ * mebel stojący przed jego frontem (pas 30 cm) od strony części ślepej – ile zajmuje szerokości [mm]
+ * razem z frontem (18 mm). Wolne = szerokość − front LeMans − zajęte; mniej niż LEMANS.odstepUchwyt – ostrzeżenie;
+ * dużo więcej niż blenda – część ślepa odkryta. Dokładny kąt (kat) pomijamy – tylko obroty co 90°.
+ */
+export function ostrzezeniaLemans(plan: Pick<PlanKuchni, "elementy">, id?: string): string[] {
+  const out: string[] = [];
+  for (const lm of plan.elementy) {
+    if (rodzajElementu(lm) !== "lemans" || lm.zrodlo === "model" || lm.kat || (id && lm.id !== id)) continue;
+    const u = lemansElementu(lm);
+    const p = podzialLemans(lm.w, u);
+    const th = (lm.rot * Math.PI) / 180;
+    // Oś szerokości (w prawo patrząc na front) i oś frontu w rzucie [cm] – jak obrót w scenie 3D (rotation.y).
+    const R = { x: Math.cos(th), z: -Math.sin(th) };
+    const F = { x: Math.sin(th), z: Math.cos(th) };
+    const lok = (x: number, z: number) => ({ u: (x - lm.x) * R.x + (z - lm.z) * R.z, v: (x - lm.x) * F.x + (z - lm.z) * F.z });
+    let zajete = 0;
+    let sasiad: ElementKuchni | null = null;
+    for (const o of plan.elementy) {
+      if (o.id === lm.id || (o.strefa !== "dolna" && o.strefa !== "wysoka") || WYPOSAZENIE.has(rodzajElementu(o))) continue;
+      const r = rect(o);
+      const rogi = [lok(r.x0, r.z0), lok(r.x1, r.z0), lok(r.x0, r.z1), lok(r.x1, r.z1)];
+      const u0 = Math.min(...rogi.map((q) => q.u));
+      const u1 = Math.max(...rogi.map((q) => q.u));
+      const v0 = Math.min(...rogi.map((q) => q.v));
+      const v1 = Math.max(...rogi.map((q) => q.v));
+      // Stoi przed frontem (od płaszczyzny frontu do 30 cm przed nią) i w obrębie szerokości korpusu.
+      if (v1 <= lm.d / 2 + 0.5 || v0 >= lm.d / 2 + 30 || u1 <= -lm.w / 2 + 0.5 || u0 >= lm.w / 2 - 0.5) continue;
+      const odSlepej = u.strona === "L" ? u1 + lm.w / 2 : lm.w / 2 - u0;
+      const mm = Math.round(odSlepej * 10) + (o.zrodlo === "model" ? 0 : 18);
+      if (mm > zajete) {
+        zajete = mm;
+        sasiad = o;
+      }
+    }
+    const wolne = p.W - u.front - zajete;
+    if (!sasiad) out.push(`„${lm.nazwa}”: brak szafki prostopadłej przed częścią ślepą (${p.slepa} mm) – w narożniku L dosuń szafkę ze ściany obok.`);
+    else if (wolne < LEMANS.odstepUchwyt)
+      out.push(
+        wolne < 0
+          ? `„${sasiad.nazwa}” zasłania front narożnika „${lm.nazwa}” o ${-wolne} mm – odsuń ją albo zmień stronę LeMans.`
+          : `„${sasiad.nazwa}” stoi ${wolne} mm od frontu „${lm.nazwa}” – za mało na uchwyt i otwarcie (min. ${LEMANS.odstepUchwyt} mm).`,
+      );
+    else if (wolne > u.blenda + 20) out.push(`„${lm.nazwa}”: między szafką „${sasiad.nazwa}” a frontem jest ${wolne} mm, blenda ma ${u.blenda} mm – poszerz blendę albo dosuń szafkę.`);
+  }
+  return out;
+}
+
+/**
+ * Okucia oferty jako osobne pozycje (okucia.ts): wysuwy z wybranym typem prowadnic, kosze cargo, LeMans.
+ * Ceny z cennika tylko przy cenach z cennika; przy cenach wpisanych ręcznie firma podaje kwotę mebla z okuciami,
+ * więc pozycje mają samą ilość (cena undefined).
+ */
+export function okuciaOferty(plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik): (PozycjaOkuc & { cena?: number; kwota?: number })[] {
+  const lista = okuciaPlanu(plan.elementy.filter(wycenianyElement));
+  if (trybCen(plan) === "reczne") return lista;
+  return lista.map((p) => {
+    const cena = cenaOkucia(p.klucz, cennik);
+    return { ...p, cena, kwota: Math.round(cena * p.ilosc * 100) / 100 };
+  });
+}
+
+/** Suma okuć w ofercie [zł netto]; 0 przy cenach ręcznych i w starych ofertach (bez nowych okuć). */
+export const sumaOkuc = (plan: Pick<PlanKuchni, "elementy" | "ceny">, cennik: ModulCennik) => okuciaOferty(plan, cennik).reduce((s, p) => s + (p.kwota ?? 0), 0);
+
 /** Pozycje bez wpisanej ceny (ceny ręczne bez ceny ogólnej) – do podpowiedzi „uzupełnij ceny”. */
 export const bezCeny = (plan: PlanKuchni) =>
   trybCen(plan) === "reczne" && plan.cenaOgolna === undefined ? plan.elementy.filter((e) => wycenianyElement(e) && e.cena === undefined) : [];
@@ -1033,10 +1222,10 @@ export function plytaProjektu(plan: PlanKuchni) {
   return Math.round(m2 * 100) / 100;
 }
 
-/** Suma netto oferty bez dopłat za materiały: meble + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
+/** Suma netto oferty bez dopłat za materiały: meble + okucia + dodatki. Przy niepustej kuchni minimum 1 zł (pole base > 0). */
 export function bazaKuchni(plan: PlanKuchni, cennik: ModulCennik) {
   if (!plan.elementy.length) return 0;
-  const meble = sumaMebli(plan, cennik);
+  const meble = sumaMebli(plan, cennik) + sumaOkuc(plan, cennik);
   const dodatki = wycenDodatki(plan.dodatki, cennik, { meble, mb: metryBiezace(plan) }).reduce((s, d) => s + d.kwota, 0);
   return Math.max(1, meble + dodatki);
 }
@@ -1158,6 +1347,23 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       blad(err instanceof Error ? err.message : `„${nazwa}”: złe kolory.`);
     }
     const cena = e.cena !== undefined && e.cena !== null ? cenaReczna(e.cena, `„${nazwa}”`) : undefined;
+    const hinge = e.hinge === undefined || e.hinge === null ? undefined : jedno(e.hinge, STRONY_LP, `strona zawiasu „${nazwa}”`);
+    const waterfall =
+      e.waterfall === undefined || e.waterfall === null
+        ? undefined
+        : maBlatKuchenny({ rodzaj, strefa, zrodlo })
+          ? jedno(e.waterfall, STRONY_WATERFALL, `blat waterfall „${nazwa}”`)
+          : blad(`„${nazwa}”: blat waterfall tylko przy szafce dolnej pod blatem.`);
+    // Typ prowadnic: zostaje tylko przy meblu z szufladami albo cargo (po zmianie wnętrza bez szuflad – znika).
+    const prowadniceSurowe = e.prowadnice === undefined || e.prowadnice === null ? undefined : jedno(e.prowadnice, TYPY_PROWADNIC, `prowadnice „${nazwa}”`);
+    let lemans: UstawieniaLemans | undefined;
+    if (rodzaj === "lemans" && e.lemans !== undefined && e.lemans !== null) {
+      try {
+        lemans = parseLemans(e.lemans, w, `„${nazwa}”`);
+      } catch (err) {
+        blad(err instanceof Error ? err.message : `„${nazwa}”: złe ustawienia LeMans.`);
+      }
+    }
     return {
       id,
       nazwa,
@@ -1175,6 +1381,10 @@ export function parseKuchnia(v: unknown): PlanKuchni {
       ...(wnetrze ? { wnetrze } : {}),
       ...(kolory ? { kolory } : {}),
       ...(cena !== undefined ? { cena } : {}),
+      ...(hinge ? { hinge } : {}),
+      ...(lemans ? { lemans } : {}),
+      ...(waterfall ? { waterfall } : {}),
+      ...(prowadniceSurowe && maProwadnice({ rodzaj, strefa, zrodlo, w, h, d, wnetrze }) ? { prowadnice: prowadniceSurowe } : {}),
     };
   });
   let wywiad: Wywiad | undefined;
@@ -1228,6 +1438,7 @@ export function parseKuchnia(v: unknown): PlanKuchni {
     ...(o.ceny === "reczne" || o.ceny === "cennik" ? { ceny: o.ceny } : {}),
     ...(o.cenaOgolna !== undefined && o.cenaOgolna !== null ? { cenaOgolna: cenaReczna(o.cenaOgolna, "Cena całej zabudowy") } : {}),
     ...(typeof o.doplaty === "boolean" ? { doplaty: o.doplaty } : {}),
+    ...(o.bezCen === true ? { bezCen: true } : {}),
   };
   const kolizja = opiszKolizje(plan);
   if (kolizja) blad(kolizja);

@@ -26,6 +26,7 @@ import {
   type ModulCennik,
 } from "@/lib/modul";
 import { formatPln } from "../pricing";
+import { CENY_OKUC_DOMYSLNE, KLUCZE_OKUC, OKUCIE_LABEL, type KluczOkucia } from "@/lib/okucia";
 import { cennikApi } from "./offerApi";
 import { toast } from "./ui";
 
@@ -49,7 +50,9 @@ const zl = (n: number) => `${String(Math.round(n * 100) / 100).replace(".", ",")
 
 type PlytaForm = { id: string; nazwa: string; grubosc: string; dl: string; szer: string; cenaArkusza: string };
 type PozycjaForm = { id: string; nazwa: string; cena: string; jednostka: JednostkaPozycji; domyslna: boolean };
-type Form = Record<Pole, string> & { odpad: string; plytaDomyslna: string; plyty: PlytaForm[]; pozycje: PozycjaForm[] };
+type Form = Record<Pole, string> & { odpad: string; plytaDomyslna: string; plyty: PlytaForm[]; pozycje: PozycjaForm[]; okucia: Record<KluczOkucia, string> };
+
+const okuciaFormularza = (c?: Pick<ModulCennik, "okucia">) => Object.fromEntries(KLUCZE_OKUC.map((k) => [k, String(c?.okucia?.[k] ?? CENY_OKUC_DOMYSLNE[k])])) as Record<KluczOkucia, string>;
 
 const noweId = (p: string) => `${p}${Math.random().toString(36).slice(2, 9)}`;
 
@@ -65,6 +68,7 @@ function doFormularza(c: ModulCennik): Form {
     plytaDomyslna: c.plytaDomyslna && plyty.some((p) => p.id === c.plytaDomyslna) ? c.plytaDomyslna : plyty[0].id,
     plyty: plyty.map((p) => ({ id: p.id, nazwa: p.nazwa, grubosc: String(p.grubosc), dl: String(p.dl), szer: String(p.szer), cenaArkusza: String(p.cenaArkusza) })),
     pozycje: (c.pozycje ?? []).map((p) => ({ id: p.id, nazwa: p.nazwa, cena: String(p.cena), jednostka: p.jednostka, domyslna: !!p.domyslna })),
+    okucia: okuciaFormularza(c),
   };
 }
 
@@ -98,9 +102,15 @@ function zFormularza(f: Form): { cennik: ModulCennik | null; blad: string } {
     if (Number.isNaN(cena)) return { cennik: null, blad: `„${nazwa}”: ${p.jednostka === "proc" ? "procent od −50 do 100" : "kwota od −1 000 000 do 1 000 000 zł"}.` };
     pozycje.push({ id: p.id, nazwa, cena, jednostka: p.jednostka, ...(p.domyslna ? { domyslna: true } : {}) });
   }
+  const okucia = {} as Record<KluczOkucia, number>;
+  for (const k of KLUCZE_OKUC) {
+    const n = kw(f.okucia[k]);
+    if (Number.isNaN(n)) return { cennik: null, blad: `${OKUCIE_LABEL[k]}: kwota od 0 do 1 000 000 zł.` };
+    okucia[k] = n;
+  }
   const domyslna = plyty.find((p) => p.id === f.plytaDomyslna) ?? plyty[0];
   return {
-    cennik: { ...skalary, plytaM2: cenaPlytyM2(domyslna, odpad), plyty, plytaDomyslna: domyslna.id, odpadPlyty: odpad, pozycje },
+    cennik: { ...skalary, plytaM2: cenaPlytyM2(domyslna, odpad), plyty, plytaDomyslna: domyslna.id, odpadPlyty: odpad, pozycje, okucia },
     blad: "",
   };
 }
@@ -167,6 +177,21 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
               />
             </div>
           ))}
+          <h3>Okucia osobno w ofercie (zł netto za komplet)</h3>
+          <p className="faint">Wysuwy z wybranym typem prowadnic, kosze cargo i mechanizm narożny – oferta pokazuje je jako osobne pozycje z ilością.</p>
+          {KLUCZE_OKUC.map((k) => (
+            <div className="field" key={k}>
+              <label htmlFor={`c-ok-${k}`}>{OKUCIE_LABEL[k]}</label>
+              <input
+                id={`c-ok-${k}`}
+                className="input"
+                inputMode="decimal"
+                disabled={!canEdit}
+                value={form.okucia[k]}
+                onChange={(e) => setForm({ ...form, okucia: { ...form.okucia, [k]: e.target.value } })}
+              />
+            </div>
+          ))}
           {!canEdit ? <p className="faint">Cennik zmienia właściciel konta firmy.</p> : null}
           {err ? (
             <p className="err" role="alert">
@@ -189,6 +214,7 @@ export function CennikTab({ canEdit, onAuthError }: { canEdit: boolean; onAuthEr
                     mb: String(DEFAULT_CENNIK.mb),
                     szuflada: String(DEFAULT_CENNIK.szuflada),
                     drazek: String(DEFAULT_CENNIK.drazek),
+                    okucia: okuciaFormularza(),
                   })
                 }
               >

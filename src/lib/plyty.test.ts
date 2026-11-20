@@ -1,7 +1,11 @@
-// Testy parsera CSV bazy płyt: `npm test` (node --test, natywne obcinanie typów w Node 24 – bez zależności).
+// Testy parsera CSV i wbudowanej bazy płyt: `npm test` (node --test + tsx).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { csvZPlyt, parseCsvPlyt, parseMaterialyPlyt, opisPlyty, wybierzPlyte, zPlytami, gruboscBlatu } from "./plyty.ts";
+import { readFileSync } from "node:fs";
+import { csvZPlyt, parseCsvPlyt, walidujPlyte, parseMaterialyPlyt, opisPlyty, wybierzPlyte, zPlytami, gruboscBlatu } from "./plyty";
+
+/** Pozycja z data/boards/*.json przed walidacją. */
+type WierszBazy = { id: string; producer: string; code: string; structure?: string; name: string; type: string; thicknesses: number[]; hex: string; textureUrl?: null } & Record<string, unknown>;
 
 const NAGLOWEK = "producent;kod;nazwa;typ;grubosci;hex;cena_m2";
 
@@ -104,13 +108,12 @@ test("płyta w planie, opis i grubość blatu", () => {
   assert.equal(z.kolory?.korpus, "brd:korpus");
 });
 
-test("wbudowane dane przechodzą walidację i mają zgodne id", async () => {
-  const { readFileSync } = await import("node:fs");
-  const { walidujPlyte } = await import("./plyty.ts");
-  for (const plik of ["egger", "kronospan"]) {
-    const dane = JSON.parse(readFileSync(new URL(`../../data/boards/${plik}.json`, import.meta.url), "utf8"));
+test("wbudowane dane przechodzą walidację i mają zgodne id", () => {
+
+  for (const plik of ["egger", "kronospan"] as const) {
+    const dane: WierszBazy[] = JSON.parse(readFileSync(new URL(`../../data/boards/${plik}.json`, import.meta.url), "utf8"));
     assert.ok(dane.length > 0);
-    const ids = new Set();
+    const ids = new Set<string>();
     for (const d of dane) {
       const b = walidujPlyte(d, "katalog");
       assert.equal(b.id, d.id, `${plik}: id ${d.id}`);
@@ -121,16 +124,15 @@ test("wbudowane dane przechodzą walidację i mają zgodne id", async () => {
   }
 });
 
-test("wbudowane dane: wymagane pola, unikalne kody, wzór kodu, źródło w ZRODLA.md", async () => {
-  const { readFileSync } = await import("node:fs");
+test("wbudowane dane: wymagane pola, unikalne kody, wzór kodu, źródło w ZRODLA.md", () => {
   const zrodla = readFileSync(new URL("../../data/boards/ZRODLA.md", import.meta.url), "utf8");
   assert.doesNotMatch(zrodla, /z wiedzy/i, "ZRODLA.md: dane mają pochodzić ze źródeł, nie z wiedzy");
-  const WZOR = { egger: /^[A-Z]\d{3,4}$/, kronospan: /^(K\d{3}|\d{4})$/ };
-  for (const plik of ["egger", "kronospan"]) {
-    const dane = JSON.parse(readFileSync(new URL(`../../data/boards/${plik}.json`, import.meta.url), "utf8"));
-    const kody = new Set();
+  const WZOR: Record<"egger" | "kronospan", RegExp> = { egger: /^[A-Z]\d{3,4}$/, kronospan: /^(K\d{3}|\d{4})$/ };
+  for (const plik of ["egger", "kronospan"] as const) {
+    const dane: WierszBazy[] = JSON.parse(readFileSync(new URL(`../../data/boards/${plik}.json`, import.meta.url), "utf8"));
+    const kody = new Set<string>();
     for (const d of dane) {
-      for (const pole of ["code", "name", "type", "thicknesses", "hex"]) assert.ok(d[pole] !== undefined && d[pole] !== "", `${plik} ${d.id}: brak ${pole}`);
+      for (const pole of ["code", "name", "type", "thicknesses", "hex"] as const) assert.ok(d[pole] !== undefined && d[pole] !== "", `${plik} ${d.id}: brak ${pole}`);
       assert.ok(Array.isArray(d.thicknesses) && d.thicknesses.length > 0, `${plik} ${d.id}: puste grubości`);
       assert.match(d.code, WZOR[plik], `${plik} ${d.id}: kod ${d.code} nie pasuje do wzoru producenta`);
       // Ten sam dekor może być płytą i blatem – unikalny ma być kod w obrębie producenta i typu.

@@ -8,6 +8,8 @@
  *   2 listwy górne (szer × 10 cm)
  *   front: szer × wys
  */
+import type { KluczOkucia } from "./okucia";
+
 export type ModulDims = {
   /** szerokość [cm] */
   w: number;
@@ -32,6 +34,8 @@ export type ModulCennik = {
   szuflada?: number;
   /** Drążek w szafie (za sztukę). */
   drazek?: number;
+  /** Okucia pokazywane w ofercie osobno (wysuwy, kosze cargo, LeMans) – za komplet. Brak = CENY_OKUC_DOMYSLNE (okucia.ts). */
+  okucia?: Partial<Record<KluczOkucia, number>>;
   /**
    * Płyty korpusów do wyboru w ofercie (grubość, format arkusza, cena za arkusz). Brak = jedna płyta 18 mm
    * z ceną plytaM2. Przy zapisie cennika plytaM2 = cena za m² płyty domyślnej (stare wyliczenia działają dalej).
